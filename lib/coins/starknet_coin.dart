@@ -134,6 +134,10 @@ class StarknetCoin extends Coin {
       }
     }
 
+    if (!privateKey.startsWith('0x')) {
+      privateKey = '0x$privateKey';
+    }
+
     debugPrint("getting address from private key");
 
     final address = Contract.computeAddress(
@@ -277,6 +281,7 @@ class StarknetCoin extends Coin {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    print(signer.publicKey.toHexString());
     final tx = await Account.deployAccount(
       signer: signer,
       provider: provider,
