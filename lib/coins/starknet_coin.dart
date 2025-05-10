@@ -124,7 +124,7 @@ class StarknetCoin extends Coin {
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
     String saveKey =
-        'starknetDetailsPrivate$classHash${walletImportType.name}$api';
+        'starknetDetailsPrivateK$classHash${walletImportType.name}$api';
     Map<String, dynamic> privateKeyMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -156,7 +156,7 @@ class StarknetCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'StarknetaDetails$classHash${walletImportType.name}$api';
+    String saveKey = 'StarknetaDetailsM$classHash${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
