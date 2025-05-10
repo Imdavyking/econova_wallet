@@ -1,0 +1,45 @@
+{
+  "de": [
+    "connectionDetails",
+    "failedToStake",
+    "failedToUnStake",
+    "unstakeToken",
+    "education",
+    "setSavingGoal",
+    "goalName",
+    "deployAccount"
+  ],
+
+  "fr": [
+    "connectionDetails",
+    "failedToStake",
+    "failedToUnStake",
+    "unstakeToken",
+    "education",
+    "setSavingGoal",
+    "goalName",
+    "deployAccount"
+  ],
+
+  "hi": [
+    "connectionDetails",
+    "failedToStake",
+    "failedToUnStake",
+    "unstakeToken",
+    "education",
+    "setSavingGoal",
+    "goalName",
+    "deployAccount"
+  ],
+
+  "zh": [
+    "connectionDetails",
+    "failedToStake",
+    "failedToUnStake",
+    "unstakeToken",
+    "education",
+    "setSavingGoal",
+    "goalName",
+    "deployAccount"
+  ]
+}

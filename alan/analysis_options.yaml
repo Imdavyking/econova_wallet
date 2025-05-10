@@ -1,0 +1,19 @@
+analyzer:
+  exclude:
+    - build/**
+    - lib/proto/**
+    - lib/**/*.g.dart
+    - lib/**/*.reflectable.dart
+
+    - test/**/*.g.dart
+    - test/**/*.reflectable.dart
+    - test/**/*.mocks.dart
+
+    - tool/**/*.g.dart
+
+  # enable-experiment:
+  #  - non-nullable
+
+linter:
+  rules:
+    - camel_case_types

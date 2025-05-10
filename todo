@@ -1,0 +1,21 @@
+TAGS/MEMO
+
+Ripple (XRP)
+Stellar (XLM)
+Cosmos (ATOM)
+Kava (KAVA)
+Hedera (HBAR)
+INJECTIVE(INJ)
+ALGORAND (ALGO)
+SOLANA (SOL)
+
+Stop using setState
+===================
+1. Use face verification when opening seed phrase. ✅
+2. Reward user to create generative AI.
+3. Add import via keystore,private key and view wallet. ✅
+4. Fix NFT
+5. Fix add contact
+6. Address protect (prevent user from sending to unsafe addresses)
+
+Ethereum, Tron, VeChain, ICON, and IoTeX: Use version 3 keystore format similar to Ethereum's.
