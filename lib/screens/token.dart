@@ -617,6 +617,7 @@ class _TokenState extends State<Token> {
                                                 needDeployment.value =
                                                     !isDeployed;
                                               } catch (e) {
+                                                print(e);
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
                                                   SnackBar(
