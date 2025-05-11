@@ -231,13 +231,6 @@ class StarknetCoin extends Coin {
     return txHash;
   }
 
-  Future<void> printAccountInfo(Account account) async {
-    print('Address: ${account.accountAddress.toHexString()}');
-    print('Public key: ${account.signer.publicKey.toHexString()}');
-    final balance = await account.balance();
-    print('Balance: ${balance.toBigInt().toDouble() * 1e-18}');
-  }
-
   @override
   Future<bool> deployAccount() async {
     if (!await needDeploy()) {
@@ -265,8 +258,6 @@ class StarknetCoin extends Coin {
       final receipt = await provider.getTransactionReceipt(deployTxHash);
       prettyPrintJson(receipt.toJson());
       throw Exception("error deploying account");
-    } else {
-      await printAccountInfo(account);
     }
 
     return isAccepted;
