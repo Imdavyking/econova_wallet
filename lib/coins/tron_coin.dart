@@ -247,7 +247,7 @@ class TronCoin extends Coin {
       toAddress: toAddress,
       amount: TronHelper.toSun(amount),
     );
-    const expSeconds = 60 * 60;
+    const expSeconds = 60 * 6 * 60;
 
     final any = Any(typeUrl: contract.typeURL, value: contract);
     final transactionContract =
@@ -283,6 +283,8 @@ class TronCoin extends Coin {
     if (result.isSuccess) {
       return result.txId;
     }
+
+    print(result);
     throw Exception('sending failed');
   }
 
