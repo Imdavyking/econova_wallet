@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
@@ -11,6 +10,7 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 
 const starkDecimals = 18;
+final derivation = OpenzeppelinAccountDerivation();
 
 class StarknetCoin extends Coin {
   String api;
@@ -57,9 +57,6 @@ class StarknetCoin extends Coin {
       useStarkToken: json['useStarkToken'],
     );
   }
-
-  @override
-  bool get supportPrivateKey => true;
 
   @override
   Future<bool> needDeploy() async {
@@ -122,45 +119,8 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromPrivateKey(String privateKey) async {
-    String saveKey =
-        'starknetDetailsPrivateK$classHash${walletImportType.name}$api';
-    Map<String, dynamic> privateKeyMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      privateKeyMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (privateKeyMap.containsKey(privateKey)) {
-        return AccountData.fromJson(privateKeyMap[privateKey]);
-      }
-    }
-
-    if (!privateKey.startsWith('0x')) {
-      privateKey = '0x$privateKey';
-    }
-
-    debugPrint("getting address from private key");
-
-    final address = Contract.computeAddress(
-      classHash: Felt.fromHexString(classHash),
-      calldata: [Signer(privateKey: Felt.fromHexString(privateKey)).publicKey],
-      salt: Signer(privateKey: Felt.fromHexString(privateKey)).publicKey,
-    ).toHexString();
-
-    final keys = AccountData(
-      address: address,
-      privateKey: privateKey,
-    ).toJson();
-
-    privateKeyMap[privateKey] = keys;
-
-    await pref.put(saveKey, jsonEncode(privateKeyMap));
-
-    return AccountData.fromJson(keys);
-  }
-
-  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'StarknetaDetailsM$classHash${walletImportType.name}$api';
+    String saveKey = 'StarknetAccount${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -271,6 +231,13 @@ class StarknetCoin extends Coin {
     return txHash;
   }
 
+  Future<void> printAccountInfo(Account account) async {
+    print('Address: ${account.accountAddress.toHexString()}');
+    print('Public key: ${account.signer.publicKey.toHexString()}');
+    final balance = await account.balance();
+    print('Balance: ${balance.toBigInt().toDouble() * 1e-18}');
+  }
+
   @override
   Future<bool> deployAccount() async {
     if (!await needDeploy()) {
@@ -280,28 +247,29 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
+
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
-    final tx = await Account.deployAccount(
+    final account = Account(
       signer: signer,
       provider: provider,
-      constructorCalldata: [signer.publicKey],
-      classHash: Felt.fromHexString(classHash),
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: StarknetChainId.testNet,
     );
-
-    final results = tx.when(
-      result: (result) => TxResult(
-          result.contractAddress, result.transactionHash.toHexString()),
-      error: (error) => throw Exception('${error.code}: ${error.message}'),
-    );
-
-    debugPrint('Deploying account: ${results.toJson()}');
-
-    bool success = await waitForAcceptance(
-      transactionHash: results.transactionHash,
+    final deployTxHash = await derivation.deploy(account: account);
+    final isAccepted = await waitForAcceptance(
+      transactionHash: deployTxHash.toHexString(),
       provider: provider,
     );
 
-    return success;
+    if (!isAccepted) {
+      final receipt = await provider.getTransactionReceipt(deployTxHash);
+      prettyPrintJson(receipt.toJson());
+      throw Exception("error deploying account");
+    } else {
+      await printAccountInfo(account);
+    }
+
+    return isAccepted;
   }
 
   Future<JsonRpcProvider> apiProvider() async {
@@ -496,16 +464,14 @@ class StarknetDeriveArgs {
 }
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
-  final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
+  final signer = derivation.deriveSigner(mnemonic: config.mnemonic.split(' '));
 
-  final address = Contract.computeAddress(
-    classHash: Felt.fromHexString(config.classHash),
-    calldata: [Signer(privateKey: privateKey).publicKey],
-    salt: Signer(privateKey: privateKey).publicKey,
+  final address = derivation.computeAddress(
+    publicKey: signer.publicKey,
   );
   return {
     'address': address.toHexString(),
-    'privateKey': privateKey.toHexString(),
+    'privateKey': signer.privateKey.toHexString(),
   };
 }
 
