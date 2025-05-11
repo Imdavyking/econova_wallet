@@ -92,6 +92,7 @@ Future<List<Coin>> getAllBlockchains_fun() async {
     ...tonChains,
     ...evmChains,
     ...nearChains,
+    ...tronChains,
     ...solanaChains,
     ...multiversXchains,
     ...getNearFungibles(),
