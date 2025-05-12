@@ -161,9 +161,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                             TextFormField(
                               maxLines: 3,
                               controller: mnemonicController
-                                ..text = kDebugMode
-                                    ? 'express crane road good warm suggest genre organ cradle tuition strike manual'
-                                    : '',
+                                ..text = kDebugMode ? testMnemonic : '',
                               onChanged: (val) {
                                 final userWords = val.split(' ');
                                 final lastWord =

@@ -23,8 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  const mnemonic =
-      'express crane road good warm suggest genre organ cradle tuition strike manual';
+
   enableTestNet = false;
   setUp(() async {
     await setUpTestHive();
@@ -513,11 +512,11 @@ void main() async {
     // WARNING: These accounts, and their private keys, are publicly known.
     // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
     walletImportType = WalletType.secretPhrase;
-    seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
+    seedPhraseRoot = await compute(seedFromMnemonic, testMnemonic);
 
     for (int i = 0; i < getAllBlockchains.length; i++) {
       Coin blockchainInfo = getAllBlockchains[i];
-      AccountData cryptoKeys = await blockchainInfo.importData(mnemonic);
+      AccountData cryptoKeys = await blockchainInfo.importData(testMnemonic);
       switch (blockchainInfo.getDefault()) {
         case 'ZIL':
           expect(
