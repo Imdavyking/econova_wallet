@@ -46,6 +46,8 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     });
     WidgetsBinding.instance.addObserver(this);
     disEnableScreenShot();
+    mnemonicController.text = kDebugMode ? testMnemonic : '';
+    walletNameController.text = kDebugMode ? 'Test Wallet(DO NOT USE)' : '';
   }
 
   @override
@@ -132,9 +134,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                           height: 20,
                         ),
                         TextFormField(
-                          controller: walletNameController
-                            ..text =
-                                kDebugMode ? 'Test Wallet(Do Not Use)' : '',
+                          controller: walletNameController,
                           keyboardType: TextInputType.visiblePassword,
                           decoration: InputDecoration(
                             hintText: localization.name,
@@ -160,8 +160,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                           children: [
                             TextFormField(
                               maxLines: 3,
-                              controller: mnemonicController
-                                ..text = kDebugMode ? testMnemonic : '',
+                              controller: mnemonicController,
                               onChanged: (val) {
                                 final userWords = val.split(' ');
                                 final lastWord =

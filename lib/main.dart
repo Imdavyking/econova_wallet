@@ -120,6 +120,7 @@ late Box pref;
 final phraseAutoComplete = Trie();
 late WalletType walletImportType;
 
+// DO NOT USE (public)
 const testMnemonic =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
 
