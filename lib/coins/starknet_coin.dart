@@ -63,6 +63,9 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  bool get supportPrivateKey => true;
+
+  @override
   Future<bool> needDeploy() async {
     try {
       final address = await getAddress();
