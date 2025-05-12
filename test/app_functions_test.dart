@@ -528,7 +528,7 @@ void main() async {
         case 'STRK':
           expect(
             cryptoKeys.address,
-            '0x192c9c927f372b91f801018995a80de8a1813b546fe26342af1dc4e1451d37d',
+            '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
           );
           break;
         case 'ICP':

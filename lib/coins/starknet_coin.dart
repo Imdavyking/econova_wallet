@@ -421,7 +421,7 @@ List<StarknetCoin> getStarknetBlockchains() {
     blockChains.addAll([
       StarknetCoin(
         blockExplorer:
-            'https://voyager.online/contract/$blockExplorerPlaceholder',
+            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet (Testnet)',
         default_: 'STRK',
@@ -438,7 +438,7 @@ List<StarknetCoin> getStarknetBlockchains() {
       ),
       StarknetCoin(
         blockExplorer:
-            'https://voyager.online/contract/$blockExplorerPlaceholder',
+            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
         api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
@@ -456,8 +456,7 @@ List<StarknetCoin> getStarknetBlockchains() {
   } else {
     blockChains.addAll([
       StarknetCoin(
-        blockExplorer:
-            'https://voyager.online/contract/$blockExplorerPlaceholder',
+        blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',
         default_: 'STRK',
