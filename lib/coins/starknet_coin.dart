@@ -98,7 +98,7 @@ class StarknetCoin extends Coin {
       return false;
     } catch (e) {
       debugPrint('needDeployment error: $e');
-      return false; // Default to false if any error occurs (incase of network issues)
+      return true;
     }
   }
 
