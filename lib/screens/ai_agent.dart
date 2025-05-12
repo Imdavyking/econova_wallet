@@ -1,4 +1,5 @@
 import 'package:cryptowallet/extensions/build_context_extension.dart';
+import 'package:cryptowallet/extensions/chat_message_ext.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
@@ -67,17 +68,9 @@ class _AIAgentState extends State<AIAgent> {
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
-    final userMessage = ChatMessage(
+    final userMessage = textMessage.copyWith(
       user: Constants.user,
       createdAt: DateTime.now(),
-      text: textMessage.text,
-      medias: textMessage.medias,
-      isMarkdown: textMessage.isMarkdown,
-      quickReplies: textMessage.quickReplies,
-      customProperties: textMessage.customProperties,
-      mentions: textMessage.mentions,
-      status: textMessage.status,
-      replyTo: textMessage.replyTo,
     );
 
     _addUserMessage(userMessage);
