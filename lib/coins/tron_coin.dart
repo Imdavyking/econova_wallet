@@ -284,7 +284,7 @@ class TronCoin extends Coin {
       return result.txId;
     }
 
-    print(result);
+    debugPrint(result.toString());
     throw Exception('sending failed');
   }
 
