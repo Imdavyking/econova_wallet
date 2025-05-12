@@ -1,4 +1,3 @@
-import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:cryptowallet/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/interface/keystore.dart';
@@ -14,7 +13,6 @@ import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/coin_pay.dart';
 import 'package:cryptowallet/utils/ethereum_blockies.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/xrp_transaction/xrp_transaction.dart';
 import 'package:hex/hex.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hive_test/hive_test.dart';
