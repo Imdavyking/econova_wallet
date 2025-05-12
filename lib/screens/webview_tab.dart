@@ -342,7 +342,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future<void> _sendNearResult(String message, int methodId) {
@@ -351,7 +353,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _sendCosmosMessageSign(id, List signature) async {
@@ -362,7 +366,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _sendCosmosDirectTxSign(id, List signature) async {
@@ -373,7 +379,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _setCosmosAddress(id, sendingAddress, [String? pubKey]) async {
@@ -386,7 +394,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _setEthereumAddress(id, sendingAddress) async {
@@ -409,7 +419,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         .evaluateJavascript(
             source: "localStorage.setItem('$key','$walletName')")
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _getWeb3Address(String network, String address) {
@@ -430,7 +442,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!
         .evaluateJavascript(source: script)
         .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {debugPrint(error.toString());});
+        .onError((error, stackTrace) {
+      debugPrint(error.toString());
+    });
   }
 
   Future _switchWeb3ChainRequest({
@@ -1357,7 +1371,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             break;
                           }
                       }
-                    
                     } else if (jsData.network == 'ethereum') {
                       int chainId = pref.get(dappChainIdKey);
 
@@ -1468,8 +1481,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               name: null,
                               onConfirm: () async {
                                 try {
-                                  final signedData =
-                                      await credentials.signPersonalMessage(
+                                  final signedData = credentials
+                                      .signPersonalMessageToUint8List(
                                     txDataToUintList(data.data),
                                   );
 
@@ -1516,8 +1529,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                         message: txDataToUintList(data.data),
                                       );
                                     } catch (e) {
-                                      Uint8List signedData =
-                                          await credentials.signPersonalMessage(
+                                      Uint8List signedData = credentials
+                                          .signPersonalMessageToUint8List(
                                         txDataToUintList(data.data),
                                       );
                                       signedDataHex = bytesToHex(

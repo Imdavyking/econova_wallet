@@ -661,7 +661,7 @@ class WcConnectorV2 {
             version: TypedDataVersion.V4,
           );
         } else if (ethereumSignMessage.type == WCSignType.PERSONAL_MESSAGE) {
-          Uint8List signedData = await credentials.signPersonalMessage(
+          Uint8List signedData = credentials.signPersonalMessageToUint8List(
             txDataToUintList(
               ethereumSignMessage.data,
             ),
@@ -676,7 +676,7 @@ class WcConnectorV2 {
               ),
             );
           } catch (e) {
-            Uint8List signedData = await credentials.signPersonalMessage(
+            Uint8List signedData = credentials.signPersonalMessageToUint8List(
               txDataToUintList(
                 ethereumSignMessage.data,
               ),
