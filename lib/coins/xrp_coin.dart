@@ -198,6 +198,10 @@ class XRPCoin extends Coin {
       "Destination": to
     };
 
+    if (memo != null) {
+      xrpJson['DestinationTag'] = memo;
+    }
+
     if (response.address == to) {
       throw Exception(
         'An XRP payment transaction cannot have the same sender and destination',
