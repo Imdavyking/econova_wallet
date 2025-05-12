@@ -6,7 +6,8 @@ import 'package:cryptowallet/screens/select_blockchain.dart';
 import 'package:cryptowallet/screens/add_custom_token.dart';
 import 'package:cryptowallet/screens/token.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
-// import 'package:cryptowallet/utils/wallet_connect_v1/wc_connector_v1.dart';
+import 'package:cryptowallet/utils/wallet_connect_v1/wc_connector_v1.dart';
+import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -22,7 +23,7 @@ import '../service/wallet_service.dart';
 import '../utils/get_blockchain_widget.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
-// import '../utils/wallet_connect_v2/wc_connector_v2.dart';
+
 
 class WalletMainBody extends StatefulWidget {
   const WalletMainBody({Key? key}) : super(key: key);
@@ -77,8 +78,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
         );
       },
     );
-    // WcConnectorV1();
-    // WcConnectorV2();
+    WcConnectorV1();
+    WcConnectorV2();
 
     _intentDataStreamSubscription =
         ReceiveSharingIntent.getTextStream().listen((String value) async {
