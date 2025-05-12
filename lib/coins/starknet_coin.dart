@@ -123,6 +123,43 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  Future<AccountData> fromPrivateKey(String privateKey) async {
+    String saveKey = 'CairoStarknetAccPrivate${walletImportType.name}$api';
+    Map<String, dynamic> privateKeyMap = {};
+
+    if (pref.containsKey(saveKey)) {
+      privateKeyMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
+      if (privateKeyMap.containsKey(privateKey)) {
+        return AccountData.fromJson(privateKeyMap[privateKey]);
+      }
+    }
+    final privateKeyHex =
+        privateKey.startsWith("0x") ? privateKey : "0x$privateKey";
+
+    final privateKeyBytes = Felt.fromHexString(privateKeyHex);
+
+    final signer = Signer(privateKey: privateKeyBytes);
+
+    final constructorCalldata = [signer.publicKey];
+    final address = Contract.computeAddress(
+      classHash: Felt.fromHexString(classHash),
+      calldata: constructorCalldata,
+      salt: signer.publicKey,
+    );
+
+    final keys = AccountData(
+      address: address.toHexString(),
+      privateKey: privateKeyHex,
+    ).toJson();
+
+    privateKeyMap[privateKey] = keys;
+
+    await pref.put(saveKey, jsonEncode(privateKeyMap));
+
+    return AccountData.fromJson(keys);
+  }
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'CairoStarknetAcc${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
