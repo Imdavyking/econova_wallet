@@ -260,7 +260,7 @@ class StarknetCoin extends Coin {
   }) async {
     final needDeployment = await needDeploy();
     if (needDeployment) {
-      throw Exception('Deploy your STRK account first');
+      await deployAccount();
     }
     final provider = await apiProvider();
     final chainId = await getChainId();
