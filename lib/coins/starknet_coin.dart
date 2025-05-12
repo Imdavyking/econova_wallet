@@ -258,6 +258,10 @@ class StarknetCoin extends Coin {
     String to, {
     String? memo,
   }) async {
+    final needDeployment = await needDeploy();
+    if (needDeployment) {
+      throw Exception('Deploy your STRK account first');
+    }
     final provider = await apiProvider();
     final chainId = await getChainId();
     final data = WalletService.getActiveKey(walletImportType)!.data;
