@@ -10,7 +10,6 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 
 const starkDecimals = 18;
-final derivation = OpenzeppelinAccountDerivation();
 
 class StarknetCoin extends Coin {
   String api;
@@ -118,42 +117,9 @@ class StarknetCoin extends Coin {
     return data;
   }
 
-  testdEriveAndDeploy() async {
-    final derivation = OpenzeppelinAccountDerivation();
-    const mnemonic = 'your mnemonic here';
-    final signer = derivation.deriveSigner(mnemonic: mnemonic.split(' '));
-
-    final address = derivation.computeAddress(
-      publicKey: signer.publicKey,
-    );
-
-    final provider = JsonRpcProvider(
-        nodeUri: Uri.parse(
-            'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa'));
-
-
-    final account = Account(
-      signer: signer,
-      provider: provider,
-      accountAddress:address,
-      chainId: StarknetChainId.testNet,
-    );
-    final deployTxHash = await derivation.deploy(account: account);
-    final isAccepted = await waitForAcceptance(
-      transactionHash: deployTxHash.toHexString(),
-      provider: provider,
-    );
-
-    if (!isAccepted) {
-      final receipt = await provider.getTransactionReceipt(deployTxHash);
-      prettyPrintJson(receipt.toJson());
-      throw Exception("error deploying account");
-    }
-  }
-
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'StarknetAccount${walletImportType.name}$api';
+    String saveKey = 'CairoStarknet${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -275,20 +241,31 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
 
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
-    final account = Account(
+    final tx = await Account.deployAccount(
       signer: signer,
       provider: provider,
-      accountAddress: Felt.fromHexString(response.address),
-      chainId: StarknetChainId.testNet,
+      classHash: Felt.fromHexString(classHash),
+      constructorCalldata: [signer.publicKey],
+      max_fee: Felt.fromInt(10000000000000), // 0.00001 ETH
     );
-    final deployTxHash = await derivation.deploy(account: account);
+    final txHash = tx.when(
+      result: (result) {
+        print(
+          'Account is deployed at ${result.contractAddress.toHexString()} (tx: ${result.transactionHash.toHexString()})',
+        );
+        return result.transactionHash;
+      },
+      error: (error) => throw Exception(
+        'Account deploy failed: ${error.code}: ${error.message}',
+      ),
+    );
     final isAccepted = await waitForAcceptance(
-      transactionHash: deployTxHash.toHexString(),
+      transactionHash: txHash.toHexString(),
       provider: provider,
     );
 
     if (!isAccepted) {
-      final receipt = await provider.getTransactionReceipt(deployTxHash);
+      final receipt = await provider.getTransactionReceipt(txHash);
       prettyPrintJson(receipt.toJson());
       throw Exception("error deploying account");
     }
@@ -439,7 +416,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         api:
             "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
         classHash:
-            '0x61dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f',
+            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress:
             '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
         symbol: 'ETH',
@@ -467,7 +444,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         payScheme: 'starknet',
         rampID: '',
         classHash:
-            '0x61dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f',
+            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress:
             '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
         useStarkToken: true,
@@ -488,10 +465,14 @@ class StarknetDeriveArgs {
 }
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
-  final signer = derivation.deriveSigner(mnemonic: config.mnemonic.split(' '));
+  final signer =
+      Signer(privateKey: Felt.fromHexString('0x53555045525f534543524554'));
 
-  final address = derivation.computeAddress(
-    publicKey: signer.publicKey,
+  final constructorCalldata = [signer.publicKey];
+  final address = Contract.computeAddress(
+    classHash: Felt.fromHexString(config.classHash),
+    calldata: constructorCalldata,
+    salt: signer.publicKey,
   );
   return {
     'address': address.toHexString(),
