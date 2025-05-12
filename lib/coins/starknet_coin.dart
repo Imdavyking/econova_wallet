@@ -240,6 +240,11 @@ class StarknetCoin extends Coin {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
 
+    final userBalance = await getBalance(true);
+    if (userBalance < 0.00001) {
+      throw Exception('Not enough balance to deploy account');
+    }
+
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
 
     final tx = await Account.deployAccount(
