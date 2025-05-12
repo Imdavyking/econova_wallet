@@ -5,6 +5,7 @@ import 'package:cryptowallet/crypto_charts/crypto_chart.dart';
 import 'package:cryptowallet/interface/coin.dart';
 import 'package:cryptowallet/interface/ft_explorer.dart';
 import 'package:cryptowallet/providers/token_provider.dart';
+import 'package:cryptowallet/screens/need_deploy.dart';
 import 'package:cryptowallet/screens/receive_token.dart';
 import 'package:cryptowallet/screens/send_token.dart';
 import 'package:cryptowallet/screens/token_contract_info.dart';
@@ -541,6 +542,7 @@ class _TokenState extends State<Token> {
                             ),
                           ),
                         ),
+                        NeedDeploymentWidget(coin: coin),
                         const SizedBox(
                           height: 20,
                         ),
