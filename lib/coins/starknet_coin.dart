@@ -118,6 +118,39 @@ class StarknetCoin extends Coin {
     return data;
   }
 
+  testdEriveAndDeploy() async {
+    final derivation = OpenzeppelinAccountDerivation();
+    const mnemonic = 'your mnemonic here';
+    final signer = derivation.deriveSigner(mnemonic: mnemonic.split(' '));
+
+    final address = derivation.computeAddress(
+      publicKey: signer.publicKey,
+    );
+
+    final provider = JsonRpcProvider(
+        nodeUri: Uri.parse(
+            'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa'));
+
+
+    final account = Account(
+      signer: signer,
+      provider: provider,
+      accountAddress:address,
+      chainId: StarknetChainId.testNet,
+    );
+    final deployTxHash = await derivation.deploy(account: account);
+    final isAccepted = await waitForAcceptance(
+      transactionHash: deployTxHash.toHexString(),
+      provider: provider,
+    );
+
+    if (!isAccepted) {
+      final receipt = await provider.getTransactionReceipt(deployTxHash);
+      prettyPrintJson(receipt.toJson());
+      throw Exception("error deploying account");
+    }
+  }
+
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'StarknetAccount${walletImportType.name}$api';
