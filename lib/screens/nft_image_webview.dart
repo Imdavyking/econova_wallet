@@ -75,7 +75,7 @@ class _NFTImageWebviewState extends State<NFTImageWebview> {
         ],
       ),
       errorWidget: (context, url, error) {
-        return VideoPlayer(
+        return VideoPlayerWidget(
           url: widget.imageUrl,
         );
       },
