@@ -320,7 +320,7 @@ class StarknetCoin extends Coin {
       provider: provider,
       classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
-      max_fee: Felt.fromInt(maxFeeWei), // 0.00001 ETH
+      max_fee: Felt.fromInt(maxFeeWei),
     );
     final txHash = tx.when(
       result: (result) {
