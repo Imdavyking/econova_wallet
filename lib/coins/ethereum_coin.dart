@@ -317,11 +317,11 @@ List<EthereumCoin> getEVMBlockchains() {
         rampID: 'BSC_BNB',
       ),
       EthereumCoin(
-        name: 'Ethereum(Goerli)',
-        rpc: 'https://goerli.infura.io/v3/$infuraApiKey',
+        name: 'Ethereum(Sepolia)',
+        rpc: 'https://sepolia.infura.io/v3/$infuraApiKey',
         chainId: 5,
         blockExplorer:
-            'https://goerli.etherscan.io/tx/$blockExplorerPlaceholder',
+            'https://sepolia.etherscan.io/tx/$blockExplorerPlaceholder',
         symbol: 'ETH',
         default_: 'ETH',
         image: 'assets/ethereum_logo.png',
