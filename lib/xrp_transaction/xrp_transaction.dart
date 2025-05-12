@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names, prefer_const_declarations
 
+import 'package:agent_dart/agent_dart.dart';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:cryptowallet/xrp_transaction/xrp_definitions.dart';
@@ -272,7 +273,8 @@ int? _get_tag_from_buffer(Uint8List buffer) {
     throw Exception("Flag must be zero to indicate no tag");
   }
 
-  if (HEX.decode('0000000000000000') != buffer.sublist(1, 9)) {
+  if (!seqEqual(Uint8List.fromList([0, 0, 0, 0, 0, 0, 0, 0]),
+      Uint8List.fromList(buffer.sublist(1, 9)))) {
     throw Exception("Remaining bytes must be zero");
   }
 

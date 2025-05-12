@@ -1,3 +1,4 @@
+import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:cryptowallet/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/interface/keystore.dart';
@@ -13,6 +14,7 @@ import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/coin_pay.dart';
 import 'package:cryptowallet/utils/ethereum_blockies.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:cryptowallet/xrp_transaction/xrp_transaction.dart';
 import 'package:hex/hex.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hive_test/hive_test.dart';
@@ -44,6 +46,27 @@ void main() async {
   const eip681String =
       'ethereum:ethereum-$busdContractAddress@56/transfer?address=$address&uint256=1000000000000000000';
   const unstoppableAddress = 'brad.crypto';
+
+  test('decode xrp', () {
+    print(seqEqual(Uint8List.fromList([0, 0, 0, 0, 0, 0, 0, 0]),
+        Uint8List.fromList(HEX.decode('0000000000000000'))));
+
+    const tag = 3838927392;
+    final testNet = XRPAddressUtils.classicToXAddress(
+      'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
+      [0x04, 0x93],
+      tag: tag,
+    ); // testnet
+    debugPrint(testNet);
+    print(xaddress_to_classic_address(testNet));
+    final mainnet = XRPAddressUtils.classicToXAddress(
+      'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
+      [0x05, 0x44],
+      tag: tag,
+    ); // mainnet
+    debugPrint(mainnet);
+    print(xaddress_to_classic_address(mainnet));
+  });
 
   test('can encrypt and decrypt in AES', () {
     const word = 'The quick brown fox jumps over the lazy dog';
