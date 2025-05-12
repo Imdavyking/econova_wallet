@@ -1,6 +1,4 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names, prefer_const_declarations
-
-import 'package:agent_dart/agent_dart.dart';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:cryptowallet/xrp_transaction/xrp_definitions.dart';
