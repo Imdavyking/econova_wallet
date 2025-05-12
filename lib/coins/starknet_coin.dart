@@ -92,13 +92,13 @@ class StarknetCoin extends Coin {
       );
 
       if (!isDeployed) {
-        throw Exception("account not deployed");
+        return true;
       }
       await pref.put(saveKey, jsonEncode({'deployed': true}));
       return false;
     } catch (e) {
       debugPrint('needDeployment error: $e');
-      return true;
+      return false; // Default to false if any error occurs (incase of network issues)
     }
   }
 
