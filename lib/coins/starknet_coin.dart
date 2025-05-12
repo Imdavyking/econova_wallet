@@ -146,10 +146,9 @@ class StarknetCoin extends Coin {
 
     final signer = Signer(privateKey: privateKeyBytes);
 
-    final constructorCalldata = [signer.publicKey];
     final address = Contract.computeAddress(
       classHash: Felt.fromHexString(classHash),
-      calldata: constructorCalldata,
+      calldata: [signer.publicKey],
       salt: signer.publicKey,
     );
 
@@ -537,10 +536,9 @@ Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
   final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
   final signer = Signer(privateKey: privateKey);
 
-  final constructorCalldata = [signer.publicKey];
   final address = Contract.computeAddress(
     classHash: Felt.fromHexString(config.classHash),
-    calldata: constructorCalldata,
+    calldata: [signer.publicKey],
     salt: signer.publicKey,
   );
   return {
