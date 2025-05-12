@@ -200,7 +200,7 @@ String ipfsTohttp(String url) {
 
 String localHostToIpAddress(String url) {
   Uri uri = Uri.parse(url);
-  const localhostNames = ['localhost', '127.0.0.1', '::1', '[::1]', '10.0.2.2'];
+  const localhostNames = ['localhost', '127.0.0.1', '[::1]', '10.0.2.2'];
   if (!localhostNames.contains(uri.host)) return url;
   uri = uri.replace(
     host: Platform.isAndroid ? '10.0.2.2' : '127.0.0.1',
@@ -2414,6 +2414,7 @@ signTransaction({
     canDismiss: false,
   );
 }
+
 class _NearUiAmount {
   final BigInt nearAmount;
   final double tokenAmount;
@@ -2820,8 +2821,7 @@ signNearTransaction({
 
                 const SingleChildScrollView(
                   child: Padding(
-                    padding: EdgeInsets.only(
-                        left: 25.0, right: 25, bottom: 25),
+                    padding: EdgeInsets.only(left: 25.0, right: 25, bottom: 25),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
