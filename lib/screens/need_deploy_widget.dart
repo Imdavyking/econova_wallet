@@ -40,6 +40,7 @@ class NeedDeploymentWidget extends StatelessWidget {
                       color: Colors.transparent,
                       width: double.infinity,
                       height: 50,
+                      margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                       child: ElevatedButton(
                         style: ButtonStyle(
                           backgroundColor: WidgetStateProperty.resolveWith(
