@@ -242,7 +242,7 @@ class StarknetCoin extends Coin {
 
     final userBalance = await getBalance(true);
     if (userBalance < 0.00001) {
-      throw Exception('Not enough balance to deploy account');
+      throw Exception('Not enough Starknet ETH balance to deploy account');
     }
 
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
