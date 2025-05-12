@@ -1,16 +1,11 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names, prefer_const_declarations
 
-import 'dart:convert';
-
-import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
-import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:cryptowallet/xrp_transaction/xrp_definitions.dart';
 import 'package:cryptowallet/xrp_transaction/xrp_ordinal.dart';
 import 'package:flutter/services.dart';
 import 'package:crypto/crypto.dart';
-import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:hex/hex.dart';
 import 'package:web3dart/crypto.dart';
 

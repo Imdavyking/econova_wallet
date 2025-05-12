@@ -280,29 +280,35 @@ class XRPCoin extends Coin {
   }
 }
 
-List<Map> getXRPBlockChains() {
-  List<Map> blockChains = [];
+List<XRPCoin> getXRPBlockChains() {
+  List<XRPCoin> blockChains = [];
   if (enableTestNet) {
-    blockChains.add({
-      'name': 'XRP(Testnet)',
-      'symbol': 'XRP',
-      'default': 'XRP',
-      'blockExplorer':
+    blockChains.add(XRPCoin(
+      name: 'XRP(Testnet)',
+      symbol: 'XRP',
+      default_: 'XRP',
+      blockExplorer:
           'https://testnet.xrpl.org/transactions/$blockExplorerPlaceholder',
-      'image': 'assets/ripple.png',
-      'api': 'https://s.altnet.rippletest.net:51234/',
-    });
+      image: 'assets/ripple.png',
+      api: 'https://s.altnet.rippletest.net:51234/',
+      geckoID: 'ripple',
+      rampID: 'ripple',
+      payScheme: 'ripple',
+    ));
   } else {
     blockChains.addAll([
-      {
-        'name': 'XRP',
-        'symbol': 'XRP',
-        'default': 'XRP',
-        'blockExplorer':
+      XRPCoin(
+        name: 'XRP',
+        symbol: 'XRP',
+        default_: 'XRP',
+        blockExplorer:
             'https://livenet.xrpl.org/transactions/$blockExplorerPlaceholder',
-        'image': 'assets/ripple.png',
-        'api': 'https://s1.ripple.com:51234/'
-      }
+        image: 'assets/ripple.png',
+        api: 'https://s1.ripple.com:51234/',
+        geckoID: 'ripple',
+        rampID: 'ripple',
+        payScheme: 'ripple',
+      )
     ]);
   }
   return blockChains;
