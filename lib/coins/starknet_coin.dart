@@ -10,6 +10,11 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 
 const starkDecimals = 18;
+const strkNativeToken =
+    '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+
+const strkEthNativeToken =
+    '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 
 class StarknetCoin extends Coin {
   String api;
@@ -142,6 +147,34 @@ class StarknetCoin extends Coin {
     return AccountData.fromJson(keys);
   }
 
+  Future<double> _getBalance({
+    required String contractAddress,
+    required String address,
+  }) async {
+    final provider = await apiProvider();
+    final providerCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: Felt.fromHexString(contractAddress),
+        entryPointSelector: getSelectorByName('balanceOf'),
+        calldata: [Felt.fromHexString(address)],
+      ),
+      blockId: BlockId.latest,
+    );
+
+    final userBalance = providerCall.when<double>(
+      error: (error) {
+        throw Exception(error);
+      },
+      result: (result) {
+        final strkBalance = Uint256.fromFeltList(result).toBigInt() /
+            BigInt.from(10).pow(decimals());
+        return strkBalance;
+      },
+    );
+
+    return userBalance;
+  }
+
   @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     String address = await getAddress();
@@ -159,25 +192,9 @@ class StarknetCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final provider = await apiProvider();
-      final providerCall = await provider.call(
-        request: FunctionCall(
-          contractAddress: Felt.fromHexString(contractAddress),
-          entryPointSelector: getSelectorByName('balanceOf'),
-          calldata: [Felt.fromHexString(address)],
-        ),
-        blockId: BlockId.latest,
-      );
-
-      final userBalance = providerCall.when<double>(
-        error: (error) {
-          throw Exception(error);
-        },
-        result: (result) {
-          final strkBalance = Uint256.fromFeltList(result).toBigInt() /
-              BigInt.from(10).pow(decimals());
-          return strkBalance;
-        },
+      final userBalance = await _getBalance(
+        contractAddress: contractAddress,
+        address: address,
       );
 
       debugPrint('Balance: $userBalance');
@@ -239,8 +256,12 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
+    final address = response.address;
 
-    final userBalance = await getBalance(true);
+    final userBalance = await _getBalance(
+      contractAddress: contractAddress,
+      address: address,
+    );
     if (userBalance < 0.00001) {
       throw Exception('Not enough Starknet ETH balance to deploy account');
     }
@@ -412,8 +433,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress:
-            '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+        contractAddress: strkNativeToken,
         useStarkToken: true,
       ),
       StarknetCoin(
@@ -422,8 +442,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress:
-            '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+        contractAddress: strkEthNativeToken,
         symbol: 'ETH',
         name: 'Ethereum (STRK)',
         default_: 'ETH',
@@ -449,8 +468,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress:
-            '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+        contractAddress: strkNativeToken,
         useStarkToken: true,
       ),
     ]);
