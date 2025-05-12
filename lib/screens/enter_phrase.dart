@@ -132,7 +132,9 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                           height: 20,
                         ),
                         TextFormField(
-                          controller: walletNameController,
+                          controller: walletNameController
+                            ..text =
+                                kDebugMode ? 'Test Wallet(Do Not Use)' : '',
                           keyboardType: TextInputType.visiblePassword,
                           decoration: InputDecoration(
                             hintText: localization.name,
@@ -158,7 +160,10 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                           children: [
                             TextFormField(
                               maxLines: 3,
-                              controller: mnemonicController,
+                              controller: mnemonicController
+                                ..text = kDebugMode
+                                    ? 'express crane road good warm suggest genre organ cradle tuition strike manual'
+                                    : '',
                               onChanged: (val) {
                                 final userWords = val.split(' ');
                                 final lastWord =
