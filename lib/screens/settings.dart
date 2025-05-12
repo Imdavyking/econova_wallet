@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import 'package:cryptowallet/components/user_details_placeholder.dart';
 import 'package:cryptowallet/education/eip4337.edu.dart';
-import 'package:cryptowallet/screens/ai_agent.dart';
 import 'package:cryptowallet/screens/contact.dart';
 import 'package:cryptowallet/screens/language.dart';
 import 'package:cryptowallet/screens/saved_urls.dart';
@@ -188,53 +187,6 @@ class _SettingsState extends State<Settings>
                                     ),
                                     Text(
                                       localization.accountIdenticon,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => AIAgent(),
-                              ),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color: Color.fromARGB(255, 41, 94, 123),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.microchip,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      'AI',
                                       style: TextStyle(fontSize: 18),
                                     ),
                                   ],
