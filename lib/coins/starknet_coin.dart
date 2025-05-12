@@ -259,7 +259,7 @@ class StarknetCoin extends Coin {
     final address = response.address;
 
     final userBalance = await _getBalance(
-      contractAddress: contractAddress,
+      contractAddress: strkEthNativeToken,
       address: address,
     );
     if (userBalance < 0.00001) {
