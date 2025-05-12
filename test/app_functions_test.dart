@@ -47,27 +47,6 @@ void main() async {
       'ethereum:ethereum-$busdContractAddress@56/transfer?address=$address&uint256=1000000000000000000';
   const unstoppableAddress = 'brad.crypto';
 
-  test('decode xrp', () {
-    print(seqEqual(Uint8List.fromList([0, 0, 0, 0, 0, 0, 0, 0]),
-        Uint8List.fromList(HEX.decode('0000000000000000'))));
-
-    const tag = 3838927392;
-    final testNet = XRPAddressUtils.classicToXAddress(
-      'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
-      [0x04, 0x93],
-      tag: tag,
-    ); // testnet
-    debugPrint(testNet);
-    print(xaddress_to_classic_address(testNet));
-    final mainnet = XRPAddressUtils.classicToXAddress(
-      'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
-      [0x05, 0x44],
-      tag: tag,
-    ); // mainnet
-    debugPrint(mainnet);
-    print(xaddress_to_classic_address(mainnet));
-  });
-
   test('can encrypt and decrypt in AES', () {
     const word = 'The quick brown fox jumps over the lazy dog';
     const password = '74b-54db-41cd-b316-38b3fe';
