@@ -2,6 +2,8 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:starknet/starknet.dart';
+import 'package:starknet_provider/starknet_provider.dart';
 import 'package:cryptowallet/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:cryptowallet/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:cryptowallet/coins/fuse_4337_coin.dart';
@@ -119,11 +121,88 @@ Future<List<Coin>> getAllBlockchains_fun() async {
 late Box pref;
 final phraseAutoComplete = Trie();
 late WalletType walletImportType;
+
+testStarknet() async {
+  final ozClassHash = Felt.fromHexString(
+    '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
+  );
+  final jsonProvider = JsonRpcProvider(
+    nodeUri: Uri.parse('https://starknet-sepolia.public.blastapi.io/rpc/v0_7'),
+  );
+  final chainId = (await jsonProvider.chainId()).when(
+    result: Felt.fromHexString,
+    error: (error) => throw Exception('Failed to retrieve chain id'),
+  );
+
+  const mnemonic =
+      'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
+
+  final privateKey = derivePrivateKey(mnemonic: mnemonic);
+
+  final signer = Signer(privateKey: privateKey);
+
+  final constructorCalldata = [signer.publicKey];
+  final accountAddress = Contract.computeAddress(
+    classHash: ozClassHash,
+    calldata: constructorCalldata,
+    salt: signer.publicKey,
+  );
+
+  print('ACCOUNT WILL BE DEPLOYED AT ADDRESS: ${accountAddress.toHexString()}');
+
+  final isDeployed = (await jsonProvider.getClassHashAt(
+    contractAddress: accountAddress,
+    blockId: BlockId.latest,
+  ))
+      .when(result: (_) => true, error: (_) => false);
+  if (!isDeployed) {
+    print('Account not deployed, deploying...');
+    final tx = await Account.deployAccount(
+      signer: signer,
+      provider: jsonProvider,
+      classHash: ozClassHash,
+      constructorCalldata: constructorCalldata,
+      max_fee: Felt.fromInt(10000000000000), // 0.00001 ETH
+    );
+    final txHash = tx.when(
+      result: (result) {
+        print(
+          'Account is deployed at ${result.contractAddress.toHexString()} (tx: ${result.transactionHash.toHexString()})',
+        );
+        return result.transactionHash;
+      },
+      error: (error) => throw Exception(
+        'Account deploy failed: ${error.code}: ${error.message}',
+      ),
+    );
+    print('Deploy TX HASH: ${txHash.toHexString()}');
+    await waitForAcceptance(
+      transactionHash: txHash.toHexString(),
+      provider: jsonProvider,
+    );
+  }
+  print('Account deployed');
+  final account = Account(
+    accountAddress: accountAddress,
+    signer: signer,
+    provider: jsonProvider,
+    chainId: chainId,
+  );
+  final txHash = await account.send(
+    recipient: Felt.fromHexString('0x44554d4d59'),
+    amount: Uint256(low: Felt.fromInt(10), high: Felt.zero),
+  );
+  print('SEND TX: $txHash');
+  await waitForAcceptance(transactionHash: txHash, provider: jsonProvider);
+}
+// ignore_for_file: avoid_print
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FlutterDownloader.initialize();
   await Hive.initFlutter();
   await dotenv.load();
+  // await testStarknet();
 
   FocusManager.instance.primaryFocus?.unfocus();
   // make app always in portrait mode

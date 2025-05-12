@@ -119,7 +119,7 @@ class StarknetCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'CairoStarknet${walletImportType.name}$api';
+    String saveKey = 'CairoStarknetAcc${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -241,6 +241,7 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
 
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+
     final tx = await Account.deployAccount(
       signer: signer,
       provider: provider,
@@ -250,7 +251,7 @@ class StarknetCoin extends Coin {
     );
     final txHash = tx.when(
       result: (result) {
-        print(
+        debugPrint(
           'Account is deployed at ${result.contractAddress.toHexString()} (tx: ${result.transactionHash.toHexString()})',
         );
         return result.transactionHash;
@@ -405,7 +406,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         payScheme: 'starknet',
         rampID: '',
         classHash:
-            '0x61dac032f228abef9c6626f995015233097ae253a7f72d68552db02f2971b8f',
+            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress:
             '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
         useStarkToken: true,
@@ -413,8 +414,7 @@ List<StarknetCoin> getStarknetBlockchains() {
       StarknetCoin(
         blockExplorer:
             'https://voyager.online/contract/$blockExplorerPlaceholder',
-        api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+        api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress:
@@ -438,8 +438,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         name: 'Starknet',
         default_: 'STRK',
         image: 'assets/starknet.png',
-        api:
-            "https://starknet.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+        api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -465,8 +464,8 @@ class StarknetDeriveArgs {
 }
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
-  final signer =
-      Signer(privateKey: Felt.fromHexString('0x53555045525f534543524554'));
+  final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
+  final signer = Signer(privateKey: privateKey);
 
   final constructorCalldata = [signer.publicKey];
   final address = Contract.computeAddress(
