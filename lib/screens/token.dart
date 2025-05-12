@@ -1,9 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-
-import 'package:cryptowallet/components/loader.dart';
 import 'package:cryptowallet/components/user_balance.dart';
-import 'package:cryptowallet/config/colors.dart';
 import 'package:cryptowallet/crypto_charts/crypto_chart.dart';
 import 'package:cryptowallet/interface/coin.dart';
 import 'package:cryptowallet/interface/ft_explorer.dart';
@@ -49,8 +46,6 @@ class _TokenState extends State<Token> {
   late AutoDisposeFutureProvider infoService;
   late AutoDisposeFutureProvider transactionService;
   late AutoDisposeFutureProvider tokenBalanceService;
-  ValueNotifier<bool> needDeployment = ValueNotifier(false);
-  ValueNotifier<bool> isDeploying = ValueNotifier(false);
   @override
   void initState() {
     super.initState();
@@ -545,99 +540,6 @@ class _TokenState extends State<Token> {
                               ),
                             ),
                           ),
-                        ),
-                        FutureBuilder<bool>(
-                          future: coin.needDeploy(),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
-                              return Container();
-                            }
-                            if (snapshot.data == false) {
-                              return Container();
-                            }
-
-                            needDeployment.value = snapshot.data!;
-
-                            return ValueListenableBuilder<bool>(
-                                valueListenable: isDeploying,
-                                builder: (context, isDeployingAccount, child) {
-                                  return ValueListenableBuilder<bool>(
-                                      valueListenable: needDeployment,
-                                      builder: (context, value, child) {
-                                        if (!needDeployment.value) {
-                                          return Container();
-                                        }
-
-                                        return Container(
-                                          color: Colors.transparent,
-                                          width: double.infinity,
-                                          height: 50,
-                                          child: ElevatedButton(
-                                            style: ButtonStyle(
-                                              backgroundColor:
-                                                  WidgetStateProperty
-                                                      .resolveWith((states) =>
-                                                          appBackgroundblue),
-                                              shape: WidgetStateProperty
-                                                  .resolveWith(
-                                                (states) =>
-                                                    RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                              ),
-                                              textStyle: WidgetStateProperty
-                                                  .resolveWith(
-                                                (states) => const TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                            child: isDeployingAccount
-                                                ? Container(
-                                                    color: Colors.transparent,
-                                                    width: 20,
-                                                    height: 20,
-                                                    child: const Loader(
-                                                        color: black),
-                                                  )
-                                                : Text(
-                                                    localization.deployAccount,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                            onPressed: () async {
-                                              try {
-                                                isDeploying.value = true;
-                                                bool isDeployed =
-                                                    await coin.deployAccount();
-                                                needDeployment.value =
-                                                    !isDeployed;
-                                              } catch (e) {
-                                                print(e);
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    backgroundColor: Colors.red,
-                                                    content: Text(
-                                                      e.toString(),
-                                                      style: const TextStyle(
-                                                          color: Colors.white),
-                                                    ),
-                                                  ),
-                                                );
-                                              } finally {
-                                                isDeploying.value = false;
-                                              }
-                                            },
-                                          ),
-                                        );
-                                      });
-                                });
-                          },
                         ),
                         const SizedBox(
                           height: 20,
