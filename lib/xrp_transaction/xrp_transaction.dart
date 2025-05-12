@@ -279,7 +279,7 @@ int? _get_tag_from_buffer(Uint8List buffer) {
   return null;
 }
 
-bool _is_test_x_address(prefix) {
+bool _is_test_x_address(Uint8List prefix) {
   if (seqEqual(_PREFIX_BYTES_MAIN, prefix)) {
     return false;
   } else if (seqEqual(_PREFIX_BYTES_TEST, prefix)) {
