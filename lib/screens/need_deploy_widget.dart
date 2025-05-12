@@ -76,7 +76,7 @@ class NeedDeploymentWidget extends StatelessWidget {
                             bool isDeployed = await coin.deployAccount();
                             needDeployment.value = !isDeployed;
                           } catch (e) {
-                            print(e);
+                            debugPrint(e.toString());
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 backgroundColor: Colors.red,
