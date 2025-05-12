@@ -91,10 +91,10 @@ class _WalletConnectPreviewV2State extends State<WalletConnectPreviewV2> {
                                 imageUrl: ipfsTohttp(
                                   icons[0],
                                 ),
-                                placeholder: (context, url) => Column(
+                                placeholder: (context, url) => const Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
+                                  children: [
                                     SizedBox(
                                       width: 20,
                                       height: 20,
