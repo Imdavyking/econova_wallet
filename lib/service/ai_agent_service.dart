@@ -31,7 +31,7 @@ class AIAgentService {
 
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QUERY_getBalance',
-        description: 'Tool for checking user STRK(Starknet) balance',
+        description: 'Tool for checking STRK(Starknet) balance for any address',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
