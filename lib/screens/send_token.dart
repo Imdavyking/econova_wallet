@@ -165,7 +165,7 @@ class _SendTokenState extends State<SendToken> {
                       ],
                     ),
                     hintText:
-                        '${localization.receipientAddress} ${localization.receipientAddress} ${localization.or} Domain Name',
+                        '${localization.receipientAddress} ${localization.or} Domain Name',
 
                     focusedBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(10.0)),

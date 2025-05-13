@@ -49,6 +49,9 @@ class XRPCoin extends Coin {
   String getGeckoId() => geckoID;
 
   @override
+  bool requireMemo() => true;
+
+  @override
   String getPayScheme() => payScheme;
   @override
   String getRampID() => rampID;
