@@ -12,6 +12,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 typedef DashChatMessage = dash_chat.ChatMessage;
 typedef DashChatMedia = dash_chat.ChatMedia;
 
+//TODO: also allow user to query about starknet
 class AIAgentService {
   AIAgentService();
 
@@ -101,7 +102,7 @@ class AIAgentService {
               'description': 'The address to check balance',
             },
           },
-          'required': ['query'],
+          'required': ['address'],
         },
         func: (final _GetBalanceInput toolInput) async {
           final address = toolInput.address;
@@ -124,7 +125,7 @@ class AIAgentService {
               'description': 'The amount to transfer',
             },
           },
-          'required': ['query'],
+          'required': ['recipient', 'amount'],
         },
         func: (final _GetTransferInput toolInput) async {
           final recipient = toolInput.recipient;
