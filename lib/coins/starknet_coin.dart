@@ -369,7 +369,7 @@ class StarknetCoin extends Coin {
     final correctLength = address.length >= 65 && address.length <= 66;
 
     if (!isValid) {
-      throw Exception('Invalid $symbol address');
+      throw Exception('Invalid $symbol address: $address');
     }
 
     if (!correctLength) {
