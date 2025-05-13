@@ -15,70 +15,70 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
 
-  static final apiKey = dotenv.env['OPENAI_API_KEY'];
+  // static final apiKey = dotenv.env['OPENAI_API_KEY'];
 
-  static final chatModel = ChatOpenAI(
-    apiKey: apiKey,
-    defaultOptions: const ChatOpenAIOptions(
-      model: "gpt-4o",
-      temperature: 0,
-    ),
-  ).bind(ChatOpenAIOptions(tools: [tool]));
+  // static final chatModel = ChatOpenAI(
+  //   apiKey: apiKey,
+  //   defaultOptions: const ChatOpenAIOptions(
+  //     model: "gpt-4o",
+  //     temperature: 0,
+  //   ),
+  // ).bind(ChatOpenAIOptions(tools: [tool]));
 
-  static final tool = Tool.fromFunction<_SearchInput, String>(
-    name: 'search',
-    description: 'Tool for searching the web.',
-    inputJsonSchema: const {
-      'type': 'object',
-      'properties': {
-        'query': {
-          'type': 'string',
-          'description': 'The query to search for',
-        },
-        'n': {
-          'type': 'number',
-          'description': 'The number of results to return',
-        },
-      },
-      'required': ['query'],
-    },
-    func: (final _SearchInput toolInput) async {
-      final n = toolInput.n;
-      final res = List<String>.generate(n, (final i) => 'Result ${i + 1}');
-      return 'Results:\n${res.join('\n')}';
-    },
-    getInputFromJson: _SearchInput.fromJson,
-  );
+  // static final tool = Tool.fromFunction<_SearchInput, String>(
+  //   name: 'search',
+  //   description: 'Tool for searching the web.',
+  //   inputJsonSchema: const {
+  //     'type': 'object',
+  //     'properties': {
+  //       'query': {
+  //         'type': 'string',
+  //         'description': 'The query to search for',
+  //       },
+  //       'n': {
+  //         'type': 'number',
+  //         'description': 'The number of results to return',
+  //       },
+  //     },
+  //     'required': ['query'],
+  //   },
+  //   func: (final _GetBalanceInput toolInput) async {
+  //     final n = toolInput.address;
+  //     final res = List<String>.generate(n, (final i) => 'Result ${i + 1}');
+  //     return 'Results:\n${res.join('\n')}';
+  //   },
+  //   getInputFromJson: _GetBalanceInput.fromJson,
+  // );
 
-  static final memory = ConversationBufferWindowMemory(
-    aiPrefix: Constants.ai.firstName ?? AIChatMessage.defaultPrefix,
-    humanPrefix: Constants.user.firstName ?? HumanChatMessage.defaultPrefix,
-  );
+  // static final memory = ConversationBufferWindowMemory(
+  //   aiPrefix: Constants.ai.firstName ?? AIChatMessage.defaultPrefix,
+  //   humanPrefix: Constants.user.firstName ?? HumanChatMessage.defaultPrefix,
+  // );
 
-  final aiPrompt = """
-        You are $walletName,
-        a smart wallet that allows users to perform transactions,
-        and query the blockchain using natural language.
+  // final aiPrompt = """
+  //       You are $walletName,
+  //       a smart wallet that allows users to perform transactions,
+  //       and query the blockchain using natural language.
 
-        With your intuitive interface,
-        users can seamlessly interact with the blockchain,
-        making transactions, checking balances,
-        and querying smart contracts—all through simple, conversational commands.
-          Guidelines for responses:
-          - Use **Flutter-specific terminology** and relevant examples wherever
-            possible.
-          - Provide **clear, step-by-step guidance** for technical topics.
-          - Ensure all responses are beautifully formatted in **Markdown**:
-              - Use headers (`#`, `##`) to structure content.
-              - Highlight important terms with **bold** or *italicized* text.
-              - Include inline code (`code`) or code blocks (```language) for
-                code snippets.
-              - Use lists, tables, and blockquotes for clarity and emphasis.
-          - Maintain a friendly, approachable tone.
-      
-          This is the history of the conversation so far:""";
+  //       With your intuitive interface,
+  //       users can seamlessly interact with the blockchain,
+  //       making transactions, checking balances,
+  //       and querying smart contracts—all through simple, conversational commands.
+  //         Guidelines for responses:
+  //         - Use **Flutter-specific terminology** and relevant examples wherever
+  //           possible.
+  //         - Provide **clear, step-by-step guidance** for technical topics.
+  //         - Ensure all responses are beautifully formatted in **Markdown**:
+  //             - Use headers (`#`, `##`) to structure content.
+  //             - Highlight important terms with **bold** or *italicized* text.
+  //             - Include inline code (`code`) or code blocks (```language) for
+  //               code snippets.
+  //             - Use lists, tables, and blockquotes for clarity and emphasis.
+  //         - Maintain a friendly, approachable tone.
 
-  Future<Either<String, DashChatMessage>> sendTextMessageV2(
+  //         This is the history of the conversation so far:""";
+
+  Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
   ) async {
     try {
@@ -90,29 +90,24 @@ class AIAgentService {
         ),
       );
 
-      final tool = Tool.fromFunction<_SearchInput, String>(
+      final tool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'search',
-        description: 'Tool for searching the web.',
+        description: 'Tool for checking user STRK(Starknet) balance',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
-            'query': {
+            'address': {
               'type': 'string',
-              'description': 'The query to search for',
-            },
-            'n': {
-              'type': 'number',
-              'description': 'The number of results to return',
+              'description': 'The address to check balance',
             },
           },
           'required': ['query'],
         },
-        func: (final _SearchInput toolInput) async {
-          final n = toolInput.n;
-          final res = List<String>.generate(n, (final i) => 'Result ${i + 1}');
-          return 'Results:\n${res.join('\n')}';
+        func: (final _GetBalanceInput toolInput) async {
+          final address = toolInput.address;
+          return 'Results:\n$address';
         },
-        getInputFromJson: _SearchInput.fromJson,
+        getInputFromJson: _GetBalanceInput.fromJson,
       );
 
       final tools = [tool];
@@ -158,136 +153,135 @@ class AIAgentService {
     }
   }
 
-  Future<Either<String, DashChatMessage>> sendTextMessage(
-    DashChatMessage chatMessage,
-  ) async {
-    try {
-      final history = await memory.loadMemoryVariables();
+  // Future<Either<String, DashChatMessage>> sendTextMessage(
+  //   DashChatMessage chatMessage,
+  // ) async {
+  //   try {
+  //     final history = await memory.loadMemoryVariables();
 
-      debugPrint("history: $history");
+  //     debugPrint("history: $history");
 
-      var humanMessage = chatMessage.text;
+  //     var humanMessage = chatMessage.text;
 
-      final prompt = PromptValue.chat([
-        ChatMessage.system(
-          "$aiPrompt$history",
-        ),
-        ChatMessage.human(
-          ChatMessageContent.text(humanMessage),
-        ),
-      ]);
+  //     final prompt = PromptValue.chat([
+  //       ChatMessage.system(
+  //         "$aiPrompt$history",
+  //       ),
+  //       ChatMessage.human(
+  //         ChatMessageContent.text(humanMessage),
+  //       ),
+  //     ]);
 
-      final chain = chatModel.pipe(const StringOutputParser());
-      final response = await chain.invoke(prompt);
+  //     final chain = chatModel.pipe(const StringOutputParser());
+  //     final response = await chain.invoke(prompt);
 
-      debugPrint("response: $response");
+  //     debugPrint("response: $response");
 
-      await memory.saveContext(
-        inputValues: {"input": humanMessage},
-        outputValues: {"output": response},
-      );
+  //     await memory.saveContext(
+  //       inputValues: {"input": humanMessage},
+  //       outputValues: {"output": response},
+  //     );
 
-      return Right(
-        DashChatMessage(
-          isMarkdown: true,
-          user: Constants.ai,
-          createdAt: DateTime.now(),
-          text: response,
-        ),
-      );
-    } on Exception catch (error, stackTrace) {
-      debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
+  //     return Right(
+  //       DashChatMessage(
+  //         isMarkdown: true,
+  //         user: Constants.ai,
+  //         createdAt: DateTime.now(),
+  //         text: response,
+  //       ),
+  //     );
+  //   } on Exception catch (error, stackTrace) {
+  //     debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
 
-      if (error is OpenAIClientException) {
-        return Left(error.message);
-      }
+  //     if (error is OpenAIClientException) {
+  //       return Left(error.message);
+  //     }
 
-      return const Left("Something went wrong. Try again Later.");
-    }
-  }
+  //     return const Left("Something went wrong. Try again Later.");
+  //   }
+  // }
 
-  Future<Either<String, DashChatMessage>> sendImageMessage(
-    DashChatMessage chatMessage,
-  ) async {
-    final medias = chatMessage.medias ?? <DashChatMedia>[];
+  // Future<Either<String, DashChatMessage>> sendImageMessage(
+  //   DashChatMessage chatMessage,
+  // ) async {
+  //   final medias = chatMessage.medias ?? <DashChatMedia>[];
 
-    final mediaContents = <ChatMessageContent>[];
+  //   final mediaContents = <ChatMessageContent>[];
 
-    try {
-      if (medias.isNotEmpty) {
-        for (final media in medias) {
-          final url = media.url;
-          final customProperties = media.customProperties;
+  //   try {
+  //     if (medias.isNotEmpty) {
+  //       for (final media in medias) {
+  //         final url = media.url;
+  //         final customProperties = media.customProperties;
 
-          final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
+  //         final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
 
-          final data =
-              isExternal ? url : base64Encode(File(url).readAsBytesSync());
+  //         final data =
+  //             isExternal ? url : base64Encode(File(url).readAsBytesSync());
 
-          mediaContents.add(
-            ChatMessageContent.image(
-              mimeType: customProperties?["mimeType"] ?? "image/jpeg",
-              data: data,
-            ),
-          );
-        }
-      }
+  //         mediaContents.add(
+  //           ChatMessageContent.image(
+  //             mimeType: customProperties?["mimeType"] ?? "image/jpeg",
+  //             data: data,
+  //           ),
+  //         );
+  //       }
+  //     }
 
-      final history = await memory.loadMemoryVariables();
+  //     final history = await memory.loadMemoryVariables();
 
-      var humanMessage = chatMessage.text;
+  //     var humanMessage = chatMessage.text;
 
-      final prompt = PromptValue.chat([
-        ChatMessage.system(
-          "$aiPrompt$history",
-        ),
-        ChatMessage.human(
-          ChatMessageContent.multiModal([
-            ChatMessageContent.text(humanMessage),
-            ...mediaContents,
-          ]),
-        ),
-      ]);
+  //     final prompt = PromptValue.chat([
+  //       ChatMessage.system(
+  //         "$aiPrompt$history",
+  //       ),
+  //       ChatMessage.human(
+  //         ChatMessageContent.multiModal([
+  //           ChatMessageContent.text(humanMessage),
+  //           ...mediaContents,
+  //         ]),
+  //       ),
+  //     ]);
 
-      final chain = chatModel.pipe(const StringOutputParser());
+  //     final chain = chatModel.pipe(const StringOutputParser());
 
-      final response = await chain.invoke(prompt);
+  //     final response = await chain.invoke(prompt);
 
-      debugPrint("response: $response");
+  //     debugPrint("response: $response");
 
-      await memory.saveContext(
-        inputValues: {"input": humanMessage},
-        outputValues: {"output": response},
-      );
+  //     await memory.saveContext(
+  //       inputValues: {"input": humanMessage},
+  //       outputValues: {"output": response},
+  //     );
 
-      return Right(
-        DashChatMessage(
-          isMarkdown: true,
-          user: Constants.ai,
-          createdAt: DateTime.now(),
-          text: response,
-        ),
-      );
-    } on Exception catch (error, stackTrace) {
-      debugPrint("sendImageMessage error: $error, stackTrace: $stackTrace");
+  //     return Right(
+  //       DashChatMessage(
+  //         isMarkdown: true,
+  //         user: Constants.ai,
+  //         createdAt: DateTime.now(),
+  //         text: response,
+  //       ),
+  //     );
+  //   } on Exception catch (error, stackTrace) {
+  //     debugPrint("sendImageMessage error: $error, stackTrace: $stackTrace");
 
-      if (error is OpenAIClientException) {
-        return Left(error.message);
-      }
+  //     if (error is OpenAIClientException) {
+  //       return Left(error.message);
+  //     }
 
-      return const Left("Something went wrong. Try again Later.");
-    }
-  }
+  //     return const Left("Something went wrong. Try again Later.");
+  //   }
+  // }
 }
 
-class _SearchInput {
-  final String query;
-  final int n;
+class _GetBalanceInput {
+  final String address;
 
-  _SearchInput({required this.query, this.n = 3});
+  _GetBalanceInput({required this.address});
 
-  factory _SearchInput.fromJson(Map<String, dynamic> json) => _SearchInput(
-        query: json['query'] as String,
-        n: json['n'] as int? ?? 3,
+  factory _GetBalanceInput.fromJson(Map<String, dynamic> json) =>
+      _GetBalanceInput(
+        address: json['address'] as String,
       );
 }
