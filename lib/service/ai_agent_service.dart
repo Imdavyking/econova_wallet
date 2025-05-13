@@ -40,10 +40,13 @@ class AIAgentService {
               'description': 'The address to check balance',
             },
           },
-          'required': ['address'],
+          'required': [],
         },
         func: (final _GetBalanceInput toolInput) async {
-          final address = toolInput.address;
+          String? address = toolInput.address;
+
+          address ??= await starkNetCoins.first.getAddress();
+
           final result = 'Checking $address balance';
           debugPrint(result);
 
@@ -136,7 +139,7 @@ class AIAgentService {
 }
 
 class _GetBalanceInput {
-  final String address;
+  final String? address;
 
   _GetBalanceInput({required this.address});
 
