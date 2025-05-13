@@ -82,11 +82,7 @@ class AIAgentService {
 
           address ??= await starkNetCoins.first.getAddress();
 
-          try {
-            starkNetCoins.first.validateAddress(address);
-          } catch (e) {
-            return 'Invalid address: $address';
-          }
+          starkNetCoins.first.validateAddress(address);
           final result = 'Checking $address balance';
           debugPrint(result);
 
@@ -129,28 +125,22 @@ class AIAgentService {
         func: (final _GetTransferInput toolInput) async {
           final recipient = toolInput.recipient;
           final amount = toolInput.amount;
-          String? txHash = '';
-          try {
-            starkNetCoins.first.validateAddress(recipient);
-          } catch (e) {
-            return 'Invalid recipient address: $recipient';
-          }
+
+          starkNetCoins.first.validateAddress(recipient);
 
           final message =
               'Sending $recipient $amount Tokens on ${starkNetCoins.first.name}';
           //TODO: find better way to do Human In The Loop (HITL)
           final confirmTx = await authenticateCommand(message);
           if (!confirmTx) {
-            return 'User did not approve the transaction $message';
-          }
-          try {
-            txHash = await starkNetCoins.first.transferToken(
-              amount.toString(),
-              recipient,
+            return throw Exception(
+              'User did not approve the transaction $message',
             );
-          } catch (e) {
-            return e.toString();
           }
+          String? txHash = await starkNetCoins.first.transferToken(
+            amount.toString(),
+            recipient,
+          );
 
           debugPrint(message);
           return '$message with transaction hash $txHash';
