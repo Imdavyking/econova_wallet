@@ -90,8 +90,8 @@ class AIAgentService {
         ),
       );
 
-      final tool = Tool.fromFunction<_GetBalanceInput, String>(
-        name: 'search',
+      final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
+        name: 'QUERY_getBalance',
         description: 'Tool for checking user STRK(Starknet) balance',
         inputJsonSchema: const {
           'type': 'object',
@@ -105,12 +105,35 @@ class AIAgentService {
         },
         func: (final _GetBalanceInput toolInput) async {
           final address = toolInput.address;
-          return 'Results:\n$address';
+          return 'Checking $address balance';
         },
         getInputFromJson: _GetBalanceInput.fromJson,
       );
-
-      final tools = [tool];
+      final transferTool = Tool.fromFunction<_GetTransferInput, String>(
+        name: 'CMD_transferBalance',
+        description: 'Tool for transferring user STRK(Starknet) balance',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'recipient': {
+              'type': 'string',
+              'description': 'The recipient to send token to',
+            },
+            'amount': {
+              'type': 'number',
+              'description': 'The amount to transfer',
+            },
+          },
+          'required': ['query'],
+        },
+        func: (final _GetTransferInput toolInput) async {
+          final recipient = toolInput.recipient;
+          final amount = toolInput.amount;
+          return 'Sending $recipient $amount Tokens';
+        },
+        getInputFromJson: _GetTransferInput.fromJson,
+      );
+      final tools = [balanceTool, transferTool];
 
       final memory = ConversationBufferMemory(returnMessages: true);
       final agent = ToolsAgent.fromLLMAndTools(
@@ -283,5 +306,18 @@ class _GetBalanceInput {
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) =>
       _GetBalanceInput(
         address: json['address'] as String,
+      );
+}
+
+class _GetTransferInput {
+  final String recipient;
+  final double amount;
+
+  _GetTransferInput({required this.recipient, required this.amount});
+
+  factory _GetTransferInput.fromJson(Map<String, dynamic> json) =>
+      _GetTransferInput(
+        recipient: json['address'] as String,
+        amount: json['amount'] as double,
       );
 }
