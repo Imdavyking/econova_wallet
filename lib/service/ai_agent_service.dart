@@ -1,8 +1,12 @@
+import "package:awesome_dialog/awesome_dialog.dart";
 import "package:cryptowallet/coins/starknet_coin.dart";
 import "package:cryptowallet/main.dart";
+import "package:cryptowallet/screens/navigator_service.dart";
 import "package:cryptowallet/utils/app_config.dart";
+import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:flutter/foundation.dart";
+import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
@@ -16,6 +20,37 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
+
+  Future<bool> authenticateCommand(String message) async {
+    final context = NavigationService.navigatorKey.currentContext!;
+
+    bool isApproved = await AwesomeDialog(
+      closeIcon: const Icon(
+        Icons.close,
+      ),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+      context: context,
+      btnOkColor: appBackgroundblue,
+      dialogType: DialogType.info,
+      buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
+      headerAnimationLoop: false,
+      animType: AnimType.bottomSlide,
+      title: message,
+      desc: message,
+      showCloseIcon: true,
+      btnOkOnPress: () {
+        Navigator.pop(context, true);
+      },
+      btnCancelOnPress: () async {
+        final confirmTX = await authenticate(
+          NavigationService.navigatorKey.currentContext!,
+        );
+        Navigator.pop(context, confirmTX);
+      },
+    ).show();
+
+    return isApproved;
+  }
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
@@ -94,17 +129,30 @@ class AIAgentService {
         func: (final _GetTransferInput toolInput) async {
           final recipient = toolInput.recipient;
           final amount = toolInput.amount;
+          String? txHash = '';
           try {
             starkNetCoins.first.validateAddress(recipient);
           } catch (e) {
             return 'Invalid recipient address: $recipient';
           }
 
-          //TODO: add Human in the loop,so user can approve the transaction
+          final message = 'Sending $recipient $amount Tokens';
+          //TODO: find better way to do Human In The Loop (HITL)
+          final confirmTx = await authenticateCommand(message);
+          if (!confirmTx) {
+            return 'User did not approve the transaction $message';
+          }
+          try {
+            txHash = await starkNetCoins.first.transferToken(
+              amount.toString(),
+              recipient,
+            );
+          } catch (e) {
+            return e.toString();
+          }
 
-          final result = 'Sending $recipient $amount Tokens';
-          debugPrint(result);
-          return result;
+          debugPrint(message);
+          return '$message with transaction hash $txHash';
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
@@ -157,10 +205,12 @@ class _GetBalanceInput {
 
   _GetBalanceInput({required this.address});
 
-  factory _GetBalanceInput.fromJson(Map<String, dynamic> json) =>
-      _GetBalanceInput(
-        address: json['address'] as String,
-      );
+  factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
+    debugPrint('getBalanceInput: $json');
+    return _GetBalanceInput(
+      address: json['address'] as String,
+    );
+  }
 }
 
 // 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
@@ -171,6 +221,7 @@ class _GetTransferInput {
   _GetTransferInput({required this.recipient, required this.amount});
 
   factory _GetTransferInput.fromJson(Map<String, dynamic> json) {
+    debugPrint('getTransferInput: $json');
     return _GetTransferInput(
       recipient: json['recipient'] as String,
       amount: json['amount'] as num,

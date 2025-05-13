@@ -728,7 +728,7 @@ showDialogWithMessage({
   ).show();
 }
 
-bool seqEqual(Uint8List a, Uint8List b) {
+bool seqEqual(List<int> a, List<int> b) {
   if (a.length != b.length) {
     return false;
   }

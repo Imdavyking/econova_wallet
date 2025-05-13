@@ -272,8 +272,7 @@ int? _get_tag_from_buffer(Uint8List buffer) {
     throw Exception("Flag must be zero to indicate no tag");
   }
 
-  if (!seqEqual(Uint8List.fromList(List.filled(8, 0)),
-      Uint8List.fromList(buffer.sublist(1, 9)))) {
+  if (!seqEqual(List.filled(8, 0), buffer.sublist(1, 9))) {
     throw Exception("Remaining bytes must be zero");
   }
 
