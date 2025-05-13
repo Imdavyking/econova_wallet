@@ -69,6 +69,21 @@ class AIAgentService {
         ),
       );
 
+      final getAddress = Tool.fromFunction<_GetAddressInput, String>(
+        name: 'QRY_getAddress',
+        description: 'Tool for getting current user addres',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {},
+          'required': [],
+        },
+        func: (final _GetAddressInput toolInput) async {
+          final address = await starkNetCoins.first.getAddress();
+          return 'user address is $address';
+        },
+        getInputFromJson: _GetAddressInput.fromJson,
+      );
+
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QRY_getBalance',
         description: 'Tool for checking STRK(Starknet) balance for any address',
@@ -80,7 +95,7 @@ class AIAgentService {
               'description': 'The address to check balance',
             },
           },
-          'required': [],
+          'required': ['address'],
         },
         func: (final _GetBalanceInput toolInput) async {
           String? address = toolInput.address;
@@ -143,7 +158,7 @@ class AIAgentService {
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
-      final tools = [balanceTool, transferTool];
+      final tools = [getAddress, balanceTool, transferTool];
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
@@ -184,6 +199,15 @@ class AIAgentService {
 
       return const Left("Something went wrong. Try again Later.");
     }
+  }
+}
+
+class _GetAddressInput {
+  _GetAddressInput();
+
+  factory _GetAddressInput.fromJson(Map<String, dynamic> json) {
+    debugPrint('getBalanceInput: $json');
+    return _GetAddressInput();
   }
 }
 
