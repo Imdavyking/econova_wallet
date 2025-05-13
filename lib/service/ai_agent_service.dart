@@ -138,8 +138,7 @@ class AIAgentService {
 
       final executor = AgentExecutor(agent: agent);
 
-      final response = await executor
-          .run('What is 40 raised to the 0.43 power with 3 decimals? ');
+      final response = await executor.run(chatMessage.text);
       return Right(
         DashChatMessage(
           isMarkdown: true,
