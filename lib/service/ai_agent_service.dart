@@ -136,7 +136,8 @@ class AIAgentService {
             return 'Invalid recipient address: $recipient';
           }
 
-          final message = 'Sending $recipient $amount Tokens';
+          final message =
+              'Sending $recipient $amount Tokens on ${starkNetCoins.first.name}';
           //TODO: find better way to do Human In The Loop (HITL)
           final confirmTx = await authenticateCommand(message);
           if (!confirmTx) {
