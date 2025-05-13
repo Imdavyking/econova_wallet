@@ -423,7 +423,6 @@ class XRPDeriveArgs {
 Map<String, String> calculateRippleKey(XRPDeriveArgs config) {
   SeedPhraseRoot seedRoot_ = config.seedRootKey;
   final node = seedRoot_.root.derivePath("m/44'/144'/0'/0/0");
-
   final pubKeyHash = computePublicKeyHash(node.publicKey);
 
   final t = sha256
