@@ -78,6 +78,87 @@ class AIAgentService {
       
           This is the history of the conversation so far:""";
 
+  Future<Either<String, DashChatMessage>> sendTextMessageV2(
+    DashChatMessage chatMessage,
+  ) async {
+    try {
+      final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
+      final llm = ChatOpenAI(
+        apiKey: openaiApiKey,
+        defaultOptions: const ChatOpenAIOptions(
+          temperature: 0,
+        ),
+      );
+
+      final tool = Tool.fromFunction<_SearchInput, String>(
+        name: 'search',
+        description: 'Tool for searching the web.',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'query': {
+              'type': 'string',
+              'description': 'The query to search for',
+            },
+            'n': {
+              'type': 'number',
+              'description': 'The number of results to return',
+            },
+          },
+          'required': ['query'],
+        },
+        func: (final _SearchInput toolInput) async {
+          final n = toolInput.n;
+          final res = List<String>.generate(n, (final i) => 'Result ${i + 1}');
+          return 'Results:\n${res.join('\n')}';
+        },
+        getInputFromJson: _SearchInput.fromJson,
+      );
+
+      final tools = [tool];
+
+      final memory = ConversationBufferMemory(returnMessages: true);
+      final agent = ToolsAgent.fromLLMAndTools(
+        llm: llm,
+        tools: tools,
+        memory: memory,
+        systemChatMessage: const SystemChatMessagePromptTemplate(
+          prompt: PromptTemplate(
+            inputVariables: {},
+            template: """You are $walletName,
+        a smart wallet that allows users to perform transactions,
+        and query the blockchain using natural language.
+        With your intuitive interface,
+        users can seamlessly interact with the blockchain,
+        making transactions, checking balances,
+        and querying smart contracts—all through simple, conversational commands.""",
+          ),
+        ),
+      );
+
+      final executor = AgentExecutor(agent: agent);
+
+      final response = await executor
+          .run('What is 40 raised to the 0.43 power with 3 decimals? ');
+      return Right(
+        DashChatMessage(
+          isMarkdown: true,
+          user: Constants.ai,
+          createdAt: DateTime.now(),
+          text: response,
+        ),
+      );
+    } on Exception catch (error, stackTrace) {
+      debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
+
+      if (error is OpenAIClientException) {
+        return Left(error.message);
+      }
+
+      return const Left("Something went wrong. Try again Later.");
+    }
+  }
+
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
   ) async {
