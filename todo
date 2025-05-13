@@ -19,3 +19,11 @@ Stop using setState
 6. Address protect (prevent user from sending to unsafe addresses)
 
 Ethereum, Tron, VeChain, ICON, and IoTeX: Use version 3 keystore format similar to Ethereum's.
+
+
+what is econova
+
+AI-Powered Trading agents
+Build a DEX integrated with AI-powered trading agents that analyze market data, detect arbitrage opportunities, and execute trades automatically. Users can assign their agents specific strategies, configure risk levels, and allocate funds. The agents dynamically adapt to real-time market conditions, optimizing trading performance.
+
+Build a Venmo-style app where users can send and receive payments in USDC, leveraging Privy wallets to manage stablecoins seamlessly. The app could also use Bridge’s API to allow users to easily convert fiat USD into USDC, enabling on-chain transactions without complex wallet setup or external exchanges.
