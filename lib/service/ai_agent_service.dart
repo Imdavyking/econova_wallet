@@ -102,6 +102,8 @@ class AIAgentService {
             return 'Invalid recipient address: $recipient';
           }
 
+          //TODO: add Human in the loop,so user can approve the transaction
+
           final result = 'Sending $recipient $amount Tokens';
           debugPrint(result);
           return result;
