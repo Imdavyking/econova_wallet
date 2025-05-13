@@ -35,17 +35,17 @@ class AIAgentService {
       buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
       headerAnimationLoop: false,
       animType: AnimType.bottomSlide,
-      title: message,
+      title: 'Confirm Transaction',
       desc: message,
       showCloseIcon: true,
-      btnOkOnPress: () {
-        Navigator.pop(context, true);
-      },
-      btnCancelOnPress: () async {
+      btnOkOnPress: () async {
         final confirmTX = await authenticate(
           NavigationService.navigatorKey.currentContext!,
         );
         Navigator.pop(context, confirmTX);
+      },
+      btnCancelOnPress: () {
+        Navigator.pop(context, false);
       },
     ).show();
 
