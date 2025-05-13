@@ -21,6 +21,7 @@ class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
 
+  ///throws error if user didn't approve transaction
   Future<void> authenticateCommand(String message) async {
     final context = NavigationService.navigatorKey.currentContext!;
 
