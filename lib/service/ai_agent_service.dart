@@ -15,7 +15,7 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 //TODO: also allow user to query about starknet
 class AIAgentService {
   AIAgentService();
-  final memory = ConversationBufferMemory(returnMessages: true);
+  static final memory = ConversationBufferMemory(returnMessages: true);
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,

@@ -24,13 +24,12 @@ class _AIAgentState extends State<AIAgent> {
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android;
   final AIAgentService _chatRepository = AIAgentService();
-  late lang_chain.ConversationBufferMemory memory;
+  lang_chain.ConversationBufferMemory memory = AIAgentService.memory;
 
   late AppLocalizations localization;
   @override
   initState() {
     super.initState();
-    memory = _chatRepository.memory;
     loadHistory();
   }
 
