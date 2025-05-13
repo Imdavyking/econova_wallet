@@ -6,7 +6,7 @@ import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
-import "../utils/ai_agent.dart";
+import "../utils/ai_agent_utils.dart";
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import "package:langchain/langchain.dart" as lang_chain;
 

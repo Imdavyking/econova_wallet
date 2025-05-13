@@ -5,7 +5,7 @@ import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:flutter/foundation.dart";
 import "package:langchain/langchain.dart";
 import "package:langchain_openai/langchain_openai.dart";
-import "../utils/ai_agent.dart";
+import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
