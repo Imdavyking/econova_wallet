@@ -97,15 +97,10 @@ class AIAgentService {
                 contractAddress: strkNativeToken,
                 address: address,
               ),
-              starkNetCoins.first.getUserBalance(
-                contractAddress: strkEthNativeToken,
-                address: address,
-              ),
             ],
           );
 
-          final balanceString =
-              '$address have ${balances[0]} Starknet(STRK) and ${balances[1]} Ethereum(ETH) on starknet';
+          final balanceString = '$address have ${balances[0]} Starknet(STRK)';
           return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
