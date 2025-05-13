@@ -189,7 +189,7 @@ class StarknetCoin extends Coin {
     return AccountData.fromJson(keys);
   }
 
-  Future<double> _getBalance({
+  Future<double> getUserBalance({
     required String contractAddress,
     required String address,
   }) async {
@@ -234,7 +234,7 @@ class StarknetCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final userBalance = await _getBalance(
+      final userBalance = await getUserBalance(
         contractAddress: contractAddress,
         address: address,
       );
@@ -304,7 +304,7 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
     final address = response.address;
 
-    final userBalance = await _getBalance(
+    final userBalance = await getUserBalance(
       contractAddress: strkEthNativeToken,
       address: address,
     );

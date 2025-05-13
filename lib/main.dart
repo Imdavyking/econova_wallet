@@ -86,6 +86,12 @@ List<ERCFungibleCoin> erc20Coins = [
   ...getERC20Coins(),
 ];
 
+List<StarknetCoin> starkNetCoins = [
+  ...getStarknetBlockchains(),
+];
+
+
+
 Future<List<Coin>> getAllBlockchains_fun() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
@@ -111,7 +117,7 @@ Future<List<Coin>> getAllBlockchains_fun() async {
     ...erc20Coins,
     ...getCosmosBlockChains(),
     ...getFilecoinBlockChains(),
-    ...getStarknetBlockchains(),
+    ...starkNetCoins,
     ...getXRPBlockChains(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 

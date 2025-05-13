@@ -23,8 +23,6 @@ import '../service/wallet_service.dart';
 import '../utils/get_blockchain_widget.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
-
-
 class WalletMainBody extends StatefulWidget {
   const WalletMainBody({Key? key}) : super(key: key);
 
@@ -78,8 +76,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
         );
       },
     );
-    WcConnectorV1();
-    WcConnectorV2();
+    // WcConnectorV1();
+    // WcConnectorV2();
 
     _intentDataStreamSubscription =
         ReceiveSharingIntent.getTextStream().listen((String value) async {

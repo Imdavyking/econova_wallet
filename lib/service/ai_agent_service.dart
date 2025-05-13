@@ -1,5 +1,7 @@
 import "dart:convert";
 import "dart:io";
+import "package:cryptowallet/coins/starknet_coin.dart";
+import "package:cryptowallet/main.dart";
 import "package:cryptowallet/utils/app_config.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:flutter/foundation.dart";
@@ -15,6 +17,7 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 //TODO: also allow user to query about starknet
 class AIAgentService {
   AIAgentService();
+  final memory = ConversationBufferMemory(returnMessages: true);
 
   // static final apiKey = dotenv.env['OPENAI_API_KEY'];
 
@@ -106,7 +109,24 @@ class AIAgentService {
         },
         func: (final _GetBalanceInput toolInput) async {
           final address = toolInput.address;
-          return 'Checking $address balance';
+          final result = 'Checking $address balance';
+          debugPrint(result);
+
+          final balances = await Future.wait(
+            [
+              starkNetCoins.first.getUserBalance(
+                contractAddress: strkNativeToken,
+                address: address,
+              ),
+              starkNetCoins.first.getUserBalance(
+                contractAddress: strkEthNativeToken,
+                address: address,
+              ),
+            ],
+          );
+
+          final balanceString = '${balances[0]} STRK, ${balances[1]} ETH';
+          return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
       );
@@ -130,13 +150,14 @@ class AIAgentService {
         func: (final _GetTransferInput toolInput) async {
           final recipient = toolInput.recipient;
           final amount = toolInput.amount;
-          return 'Sending $recipient $amount Tokens';
+          final result = 'Sending $recipient $amount Tokens';
+          debugPrint(result);
+          return result;
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
       final tools = [balanceTool, transferTool];
 
-      final memory = ConversationBufferMemory(returnMessages: true);
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
         tools: tools,
@@ -158,6 +179,7 @@ class AIAgentService {
       final executor = AgentExecutor(agent: agent);
 
       final response = await executor.run(chatMessage.text);
+
       return Right(
         DashChatMessage(
           isMarkdown: true,
@@ -310,15 +332,17 @@ class _GetBalanceInput {
       );
 }
 
+// 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
 class _GetTransferInput {
   final String recipient;
-  final double amount;
+  final num amount;
 
   _GetTransferInput({required this.recipient, required this.amount});
 
-  factory _GetTransferInput.fromJson(Map<String, dynamic> json) =>
-      _GetTransferInput(
-        recipient: json['address'] as String,
-        amount: json['amount'] as double,
-      );
+  factory _GetTransferInput.fromJson(Map<String, dynamic> json) {
+    return _GetTransferInput(
+      recipient: json['recipient'] as String,
+      amount: json['amount'] as num,
+    );
+  }
 }
