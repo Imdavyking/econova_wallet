@@ -19,6 +19,7 @@ const coinGeckoIDs = [
   "wrapped-elrond",
   'harmony',
   'iotex',
+  'xion-2',
   "tron",
   "ethereum",
   "ronin",

@@ -670,7 +670,7 @@ List<CosmosCoin> getCosmosBlockChains() {
         denom: 'uxion',
         grpcPort: 9090,
         pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
-        geckoID: 'xion',
+        geckoID: 'xion-2',
         payScheme: 'xion',
         rampID: '',
       ),
