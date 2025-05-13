@@ -69,7 +69,7 @@ class AIAgentService {
         ),
       );
 
-      final getAddress = Tool.fromFunction<_GetAddressInput, String>(
+      final addressTool = Tool.fromFunction<_GetAddressInput, String>(
         name: 'QRY_getAddress',
         description: 'Tool for getting current user addres',
         inputJsonSchema: const {
@@ -83,7 +83,6 @@ class AIAgentService {
         },
         getInputFromJson: _GetAddressInput.fromJson,
       );
-
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QRY_getBalance',
         description: 'Tool for checking STRK(Starknet) balance for any address',
@@ -158,7 +157,7 @@ class AIAgentService {
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
-      final tools = [getAddress, balanceTool, transferTool];
+      final tools = [addressTool, balanceTool, transferTool];
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
