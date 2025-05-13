@@ -63,7 +63,8 @@ class AIAgentService {
             ],
           );
 
-          final balanceString = '${balances[0]} STRK, ${balances[1]} ETH';
+          final balanceString =
+              '$address have ${balances[0]} Starknet(STRK) and ${balances[1]} Ethereum(ETH) on starknet';
           return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
