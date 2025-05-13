@@ -47,6 +47,11 @@ class AIAgentService {
 
           address ??= await starkNetCoins.first.getAddress();
 
+          try {
+            starkNetCoins.first.validateAddress(address);
+          } catch (e) {
+            return 'Invalid address: $address';
+          }
           final result = 'Checking $address balance';
           debugPrint(result);
 
@@ -89,6 +94,11 @@ class AIAgentService {
         func: (final _GetTransferInput toolInput) async {
           final recipient = toolInput.recipient;
           final amount = toolInput.amount;
+          try {
+            starkNetCoins.first.validateAddress(recipient);
+          } catch (e) {
+            return 'Invalid recipient address: $recipient';
+          }
           final result = 'Sending $recipient $amount Tokens';
           debugPrint(result);
           return result;
