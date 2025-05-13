@@ -2,6 +2,7 @@
 // @TestOn('vm')
 // library; // Uses dart:io
 
+import 'package:cryptowallet/utils/app_config.dart';
 import 'package:langchain/langchain.dart'
     show AgentExecutor, ConversationBufferMemory, ToolsAgent;
 import 'package:langchain_core/prompts.dart';
@@ -50,7 +51,18 @@ void testAiAgent() async {
     llm: llm,
     tools: tools,
     memory: memory,
-    systemChatMessage: SystemChatMessagePromptTemplate.fromTemplate('template'),
+    systemChatMessage: const SystemChatMessagePromptTemplate(
+      prompt: PromptTemplate(
+        inputVariables: {},
+        template: """You are $walletName,
+        a smart wallet that allows users to perform transactions,
+        and query the blockchain using natural language.
+        With your intuitive interface,
+        users can seamlessly interact with the blockchain,
+        making transactions, checking balances,
+        and querying smart contracts—all through simple, conversational commands.""",
+      ),
+    ),
   );
 
   final executor = AgentExecutor(agent: agent);
