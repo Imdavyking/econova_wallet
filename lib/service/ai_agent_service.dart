@@ -1,6 +1,8 @@
 import "package:cryptowallet/coins/starknet_coin.dart";
 import "package:cryptowallet/main.dart";
+import "package:cryptowallet/screens/navigator_service.dart";
 import "package:cryptowallet/utils/app_config.dart";
+import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:flutter/foundation.dart";
 import "package:langchain/langchain.dart";
@@ -30,7 +32,7 @@ class AIAgentService {
       );
 
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
-        name: 'QUERY_getBalance',
+        name: 'QRY_getBalance',
         description: 'Tool for checking STRK(Starknet) balance for any address',
         inputJsonSchema: const {
           'type': 'object',
@@ -99,6 +101,7 @@ class AIAgentService {
           } catch (e) {
             return 'Invalid recipient address: $recipient';
           }
+
           final result = 'Sending $recipient $amount Tokens';
           debugPrint(result);
           return result;
