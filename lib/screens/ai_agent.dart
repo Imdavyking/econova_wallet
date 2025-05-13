@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 import "../utils/ai_agent.dart";
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import "package:langchain/langchain.dart" as langChain;
 
 class AIAgent extends StatefulWidget {
   final String referralAddress;
@@ -23,8 +24,48 @@ class _AIAgentState extends State<AIAgent> {
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android;
   final AIAgentService _chatRepository = AIAgentService();
+  late langChain.ConversationBufferMemory memory;
 
   late AppLocalizations localization;
+  @override
+  initState() {
+    super.initState();
+    memory = _chatRepository.memory;
+    loadHistory();
+  }
+
+  loadHistory() async {
+    final historyKey = memory.memoryKey;
+    final historyMap = await memory
+        .loadMemoryVariables(); // show history in chat messages on startup
+    final histories = historyMap[historyKey] as List;
+    if (histories.isNotEmpty) {
+      for (final history in histories) {
+        if (history.runtimeType == langChain.HumanChatMessage) {
+          messages.add(
+            ChatMessage(
+              user: Constants.user,
+              text: history.content.text,
+              createdAt: DateTime.now(),
+            ),
+          );
+        } else if (history.runtimeType == langChain.AIChatMessage) {
+          messages.add(
+            ChatMessage(
+              user: Constants.ai,
+              text: history.content,
+              createdAt: DateTime.now(),
+            ),
+          );
+        }
+      }
+
+      if (messages.isNotEmpty && mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     localization = AppLocalizations.of(context)!;
