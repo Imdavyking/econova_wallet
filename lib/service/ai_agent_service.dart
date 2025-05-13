@@ -21,7 +21,7 @@ class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
 
-  Future<bool> authenticateCommand(String message) async {
+  Future<void> authenticateCommand(String message) async {
     final context = NavigationService.navigatorKey.currentContext!;
 
     bool isApproved = await AwesomeDialog(
@@ -49,7 +49,11 @@ class AIAgentService {
       },
     ).show();
 
-    return isApproved;
+    if (!isApproved) {
+      throw Exception(
+        'User did not approve the transaction $message',
+      );
+    }
   }
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
@@ -131,12 +135,8 @@ class AIAgentService {
           final message =
               'Sending $recipient $amount Tokens on ${starkNetCoins.first.name}';
           //TODO: find better way to do Human In The Loop (HITL)
-          final confirmTx = await authenticateCommand(message);
-          if (!confirmTx) {
-            return throw Exception(
-              'User did not approve the transaction $message',
-            );
-          }
+          await authenticateCommand(message);
+
           String? txHash = await starkNetCoins.first.transferToken(
             amount.toString(),
             recipient,
