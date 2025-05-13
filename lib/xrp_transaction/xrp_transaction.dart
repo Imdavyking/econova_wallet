@@ -34,13 +34,13 @@ String encodeXrpJson(Map sampleXrpJson) {
   if (isXrp_X_Address(sampleXrpJson['Destination'])) {
     final destinationXDetails =
         xaddress_to_classic_address(sampleXrpJson['Destination']);
-    sampleXrpJson['Destination'] = destinationXDetails['classicAddress'];
-    sampleXrpJson['DestinationTag'] = destinationXDetails['tag'];
+    sampleXrpJson['Destination'] = destinationXDetails.classicAddress;
+    sampleXrpJson['DestinationTag'] = destinationXDetails.tag;
   } else if (isXrp_X_Address(sampleXrpJson['Account'])) {
     final sourceXDetails =
         xaddress_to_classic_address(sampleXrpJson['Account']);
-    sampleXrpJson['Account'] = sourceXDetails['classicAddress'];
-    sampleXrpJson['SourceTag'] = sourceXDetails['tag'];
+    sampleXrpJson['Account'] = sourceXDetails.classicAddress;
+    sampleXrpJson['SourceTag'] = sourceXDetails.tag;
   }
 
   List xrpJson = sampleXrpJson.keys.toList();
@@ -215,7 +215,7 @@ Uint8List _toAmount(int value) {
 final _PREFIX_BYTES_MAIN = Uint8List.fromList([0x05, 0x44]);
 final _PREFIX_BYTES_TEST = Uint8List.fromList([0x04, 0x93]);
 
-Map xaddress_to_classic_address(String X_Address) {
+ClassicAddressWithTag xaddress_to_classic_address(String X_Address) {
   Uint8List decoded = xrpBaseCodec.decode(X_Address);
 
   decoded = decoded.sublist(0, decoded.length - 4);
@@ -226,11 +226,12 @@ Map xaddress_to_classic_address(String X_Address) {
   final tag = _get_tag_from_buffer(decoded.sublist(22));
 
   final classic_address = encode_classic_address(classicAddressByte);
-  return {
-    'classicAddress': classic_address,
-    'is_test_network': isXTestNet,
-    'tag': tag,
-  };
+
+  return ClassicAddressWithTag(
+    classicAddress: classic_address,
+    tag: tag,
+    isXTestNet: isXTestNet,
+  );
 }
 
 final _CLASSIC_ADDRESS_LENGTH = 20;
@@ -286,4 +287,31 @@ bool _is_test_x_address(Uint8List prefix) {
     return true;
   }
   throw Exception("Invalid X-Address: bad prefix");
+}
+
+class ClassicAddressWithTag {
+  String classicAddress;
+  int? tag;
+  bool isXTestNet;
+  ClassicAddressWithTag({
+    required this.classicAddress,
+    required this.tag,
+    required this.isXTestNet,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'classicAddress': classicAddress,
+      'tag': tag,
+      'isXTestNet': isXTestNet,
+    };
+  }
+
+  factory ClassicAddressWithTag.fromJson(Map<dynamic, dynamic> json) {
+    return ClassicAddressWithTag(
+      classicAddress: json['classicAddress'],
+      tag: json['tag'],
+      isXTestNet: json['isXTestNet'],
+    );
+  }
 }
