@@ -34,7 +34,7 @@ class _AIAgentState extends State<AIAgent> {
     loadHistory();
   }
 
-  loadHistory() async {
+  Future<void> loadHistory() async {
     final histories = await memory.chatHistory.getChatMessages();
     if (histories.isNotEmpty) {
       for (final history in histories) {
