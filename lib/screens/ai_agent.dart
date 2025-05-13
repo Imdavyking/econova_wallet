@@ -1,6 +1,7 @@
 import 'package:cryptowallet/extensions/build_context_extension.dart';
 import 'package:cryptowallet/extensions/chat_message_ext.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
+import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -80,7 +81,7 @@ class _AIAgentState extends State<AIAgent> {
         ),
         inputOptions: InputOptions(
           inputDecoration: InputDecoration(
-            hintText: localization.hi,
+            hintText: "${localization.hi}, I am $walletName",
             focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
               borderSide: BorderSide.none,
