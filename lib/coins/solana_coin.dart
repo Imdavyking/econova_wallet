@@ -248,7 +248,7 @@ class SolanaCoin extends Coin {
       address = address.substring(0, address.length - 4);
     }
     final publicKey = await findAccountByName(
-      address, // SNS domain name
+      address,
       environment: SolanaEnvironment.mainnet,
     );
 

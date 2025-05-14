@@ -8,7 +8,9 @@ class NetworkGuard {
 
   NetworkGuard._internal() {
     Connectivity().onConnectivityChanged.listen((result) {
-      _isConnected = result != ConnectivityResult.none;
+      if (result.contains(ConnectivityResult.none)) {
+        _isConnected = false;
+      }
     });
   }
 
