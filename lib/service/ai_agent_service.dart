@@ -10,6 +10,7 @@ import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
+import "package:substrate_metadata/utils/utils.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
 import "./ai_confirm_transaction.dart";
@@ -279,8 +280,11 @@ class AIAgentService {
         With your intuitive interface,
         users can seamlessly interact with the blockchain,
         making transactions, checking balances,
-        don't rely on past history to get the user address,balance or any crypto related information,
+        check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
+        available coins are ${getAllBlockchains.where((Coin value) => value.getSymbol() == value.getDefault()).toList().map((coin) {
+                      return coin.getName();
+                    }).toList().toJson()}
         current coin is ${coin.getName()}.
         """,
           ),
