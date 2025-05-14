@@ -158,7 +158,11 @@ class AIAgentService {
         },
         func: (final _GetAddressInput toolInput) async {
           final address = await starkNetCoins.first.getAddress();
-          starkNetCoins.first.validateAddress(address);
+          try {
+            starkNetCoins.first.validateAddress(address);
+          } catch (e) {
+            return 'Invalid address: $address';
+          }
           return 'user address is $address';
         },
         getInputFromJson: _GetAddressInput.fromJson,
@@ -181,7 +185,11 @@ class AIAgentService {
 
           address ??= await starkNetCoins.first.getAddress();
 
-          starkNetCoins.first.validateAddress(address);
+          try {
+            starkNetCoins.first.validateAddress(address);
+          } catch (e) {
+            return 'Invalid address: $address';
+          }
           final result = 'Checking $address balance';
           debugPrint(result);
 
@@ -220,20 +228,36 @@ class AIAgentService {
           final recipient = toolInput.recipient;
           final amount = toolInput.amount;
 
-          starkNetCoins.first.validateAddress(recipient);
-
           final message =
               'Sending $recipient $amount Tokens on ${starkNetCoins.first.name}';
-          //TODO: find better way to do Human In The Loop (HITL)
-          await authenticateCommand(message);
+          try {
+            starkNetCoins.first.validateAddress(recipient);
+          } catch (e) {
+            return 'Invalid address recipient: $recipient';
+          }
 
-          String? txHash = await starkNetCoins.first.transferToken(
-            amount.toString(),
-            recipient,
+          throw Exception(
+            'User did not approve the transaction $message',
           );
 
-          debugPrint(message);
-          return '$message with transaction hash $txHash';
+          return message;
+
+          // try {
+          //
+          // } catch (e) {
+          //   print('Invalid recipient address: $e');
+          // }
+
+          // //TODO: find better way to do Human In The Loop (HITL)
+          // await authenticateCommand(message);
+
+          // String? txHash = await starkNetCoins.first.transferToken(
+          //   amount.toString(),
+          //   recipient,
+          // );
+
+          // debugPrint(message);
+          // return '$message with transaction hash $txHash';
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
@@ -260,7 +284,6 @@ class AIAgentService {
       final executor = AgentExecutor(agent: agent);
 
       final response = await executor.run(chatMessage.text);
-      print('response: $response');
       await saveHistory();
       return Right(
         DashChatMessage(
