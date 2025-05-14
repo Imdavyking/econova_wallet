@@ -267,6 +267,13 @@ class AIAgentService {
         getInputFromJson: _GetTransferInput.fromJson,
       );
       final tools = [addressTool, balanceTool, transferTool];
+      final availableCoins = getAllBlockchains
+          .where((Coin value) => value.getSymbol() == value.getDefault())
+          .toList()
+          .map((coin) => "${coin.getName()} (${coin.getSymbol()})")
+          .toList()
+          .join(',');
+
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
         tools: tools,
@@ -282,9 +289,7 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        available coins are ${getAllBlockchains.where((Coin value) => value.getSymbol() == value.getDefault()).toList().map((coin) {
-                      return coin.getName();
-                    }).toList().toJson()}
+        available coins are $availableCoins
         current coin is ${coin.getName()}.
         """,
           ),

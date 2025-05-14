@@ -189,9 +189,8 @@ class StarknetCoin extends Coin {
     return AccountData.fromJson(keys);
   }
 
-  Future<double> getUserBalance({
-    required String address,
-  }) async {
+  @override
+  Future<double> getUserBalance({required String address}) async {
     final provider = await apiProvider();
     final providerCall = await provider.call(
       request: FunctionCall(
