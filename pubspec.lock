@@ -202,10 +202,10 @@ packages:
     dependency: "direct main"
     description:
       name: borsh_annotation
-      sha256: "4a226cf8b7a165ecf8020c0c8d366b2728167fd102ef9b9e89d94d86f89ac57b"
+      sha256: dc73a7fdc6fe4505535657daf8ab3cebe382311fae63a0faaf9315ea1bc30bff
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.1+5"
+    version: "0.3.2"
   bs58:
     dependency: transitive
     description:
@@ -433,10 +433,10 @@ packages:
     dependency: transitive
     description:
       name: cryptography
-      sha256: ffd770340e5a48f57e473c42d9036a773c43b396e80b41a2dd164ffaf53f57a4
+      sha256: df156c5109286340817d21fa7b62f9140f17915077127dd70f8bd7a2a0997a35
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.1"
+    version: "2.5.0"
   csslib:
     dependency: transitive
     description:
@@ -2045,10 +2045,10 @@ packages:
     dependency: "direct main"
     description:
       name: solana
-      sha256: e17f23ed43d867638c35f0f0733d80109295c78b43bcc0787da1df5fddd7686f
+      sha256: "98d8780dbd9af7e90ff14a6e762a45d77466450304773610317d1fffdea09701"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.0"
+    version: "0.31.2+1"
   solana_name_service:
     dependency: "direct main"
     description:
@@ -2542,14 +2542,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.3"
-  web_socket_channel:
+  web_socket:
     dependency: transitive
     description:
-      name: web_socket_channel
-      sha256: d88238e5eac9a42bb43ca4e721edba3c08c6354d4a53063afaa568516217621b
+      name: web_socket
+      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.0"
+    version: "1.0.1"
+  web_socket_channel:
+    dependency: "direct overridden"
+    description:
+      name: web_socket_channel
+      sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.3"
   win32:
     dependency: transitive
     description:

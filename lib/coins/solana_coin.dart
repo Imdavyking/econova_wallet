@@ -8,7 +8,7 @@ import 'package:solana/dto.dart' hide AccountData;
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:solana_name_service/solana_name_service.dart';
+// import 'package:solana_name_service/solana_name_service.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -183,7 +183,7 @@ class SolanaCoin extends Coin {
 
     final base = BigInt.from(10);
 
-    return BigInt.from(lamports) / base.pow(decimals());
+    return BigInt.from(lamports.value) / base.pow(decimals());
   }
 
   @override
@@ -245,19 +245,20 @@ class SolanaCoin extends Coin {
 
   @override
   Future<String?> resolveAddress(String address) async {
-    if (address.endsWith('.sol')) {
-      address = address.substring(0, address.length - 4);
-    }
-    final publicKey = await findAccountByName(
-      address, // SNS domain name
-      environment: SolanaEnvironment.mainnet,
-    );
+    return address;
+    // if (address.endsWith('.sol')) {
+    //   address = address.substring(0, address.length - 4);
+    // }
+    // final publicKey = await findAccountByName(
+    //   address, // SNS domain name
+    //   environment: SolanaEnvironment.mainnet,
+    // );
 
-    if (publicKey == null) {
-      return null;
-    }
+    // if (publicKey == null) {
+    //   return null;
+    // }
 
-    return publicKey.toBase58();
+    // return publicKey.toBase58();
   }
 
   solana.SolanaClient getProxy() {
@@ -269,8 +270,9 @@ class SolanaCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    final fees = await getProxy().rpcClient.getFees();
-    return fees.feeCalculator.lamportsPerSignature / pow(10, solDecimals);
+    return 0.000005; // TODO: Implement this method
+    // final fees = await getProxy().rpcClient.getFeeForMessage(message);
+    // return fees.feeCalculator.lamportsPerSignature / pow(10, solDecimals);
   }
 
   @override
