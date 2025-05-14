@@ -63,11 +63,6 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
               text: message.contentAsString,
               createdAt: savedMessage.date,
               isMarkdown: true,
-              replyTo: ChatMessage(
-                user: Constants.user,
-                text: 'hello',
-                createdAt: DateTime.now(),
-              ),
             ),
           );
         }
