@@ -145,6 +145,19 @@ class BitcoinCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    if (symbol == 'BCH') {
+      final addressDetails = await bitbox.Address.details(address);
+      return addressDetails['balance'];
+    } else {
+      final url = '${sochainApi}get_address_balance/$symbol/$address';
+      final response = await get(Uri.parse(url));
+      final data = response.body;
+      return double.parse(jsonDecode(data)['data']['confirmed_balance']);
+    }
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
 
@@ -160,16 +173,7 @@ class BitcoinCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      double balance = 0.0;
-      if (symbol == 'BCH') {
-        final addressDetails = await bitbox.Address.details(address);
-        balance = addressDetails['balance'];
-      } else {
-        final url = '${sochainApi}get_address_balance/$symbol/$address';
-        final response = await get(Uri.parse(url));
-        final data = response.body;
-        balance = double.parse(jsonDecode(data)['data']['confirmed_balance']);
-      }
+      double balance = await getUserBalance(address: address);
 
       await pref.put(key, balance);
 

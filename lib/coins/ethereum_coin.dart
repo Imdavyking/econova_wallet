@@ -196,6 +196,19 @@ class EthereumCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final ethClient = Web3Client(rpc, Client());
+
+    final userAddress = EthereumAddress.fromHex(address);
+
+    final etherAmount = await ethClient.getBalance(userAddress);
+
+    final base = BigInt.from(10);
+    await ethClient.dispose();
+    return etherAmount.getInWei / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     String address = roninAddrToEth(await getAddress());
     final tokenKey = '$rpc$address/balance';
@@ -208,18 +221,9 @@ class EthereumCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final ethClient = Web3Client(rpc, Client());
-
-      final userAddress = EthereumAddress.fromHex(address);
-
-      final etherAmount = await ethClient.getBalance(userAddress);
-
-      final base = BigInt.from(10);
-
-      double ethBalance = etherAmount.getInWei / base.pow(decimals());
-
+      double ethBalance = await getUserBalance(address: address);
       await pref.put(tokenKey, ethBalance);
-      await ethClient.dispose();
+
       return ethBalance;
     } catch (e) {
       return savedBalance;

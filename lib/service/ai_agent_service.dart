@@ -163,9 +163,9 @@ class AIAgentService {
           try {
             coin.validateAddress(address);
           } catch (e) {
-            return 'Invalid address: $address';
+            return 'Invalid ${coin.getName()} address: $address';
           }
-          return 'user address is $address';
+          return 'Your ${coin.getName()} address is $address';
         },
         getInputFromJson: _GetAddressInput.fromJson,
       );
@@ -191,22 +191,14 @@ class AIAgentService {
           try {
             coin.validateAddress(address);
           } catch (e) {
-            return 'Invalid address: $address';
+            return 'Invalid ${coin.getName()} address: $address';
           }
           final result = 'Checking $address balance';
           debugPrint(result);
 
-          final balances = await Future.wait(
-            [
-              //  coin.getUserBalance(
-              //         contractAddress: strkNativeToken,
-              //         address: address,
-              //       ),
-            ],
-          );
+          final coinBal = await coin.getUserBalance(address: address);
 
-          final balanceString =
-              '$address have ${balances[0]} ${coin.getName()}';
+          final balanceString = '$address have $coinBal ${coin.getName()}';
           return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
@@ -241,9 +233,8 @@ class AIAgentService {
             return 'Amount must be greater than zero.';
           }
 
-          final networkName = coin.getName();
           final message =
-              'You are about to send $amount tokens to $recipient on $networkName.';
+              'You are about to send $amount tokens to $recipient on ${coin.getName()}.';
 
           try {
             coin.validateAddress(recipient);
@@ -262,11 +253,11 @@ class AIAgentService {
                 await coin.transferToken(amount.toString(), recipient);
 
             if (txHash == null || txHash.isEmpty) {
-              return 'Transaction failed: no transaction hash returned.';
+              return '${coin.getName()} Transaction failed: no transaction hash returned.';
             }
 
             final successMessage =
-                'Sent $amount tokens to $recipient on $networkName.\nTransaction hash: $txHash';
+                'Sent $amount tokens to $recipient on ${coin.getName()}.\nTransaction hash: $txHash';
             debugPrint(successMessage);
             return successMessage;
           } catch (e) {

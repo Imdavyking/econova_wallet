@@ -129,6 +129,19 @@ class StellarCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    stellar.AccountResponse account = await sdk.accounts.account(address);
+    List balances = account.balances!;
+
+    for (stellar.Balance balance in balances) {
+      if (balance.assetType == stellar.Asset.TYPE_NATIVE) {
+        return double.parse(balance.balance!);
+      }
+    }
+    return 0;
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key =
@@ -145,17 +158,9 @@ class StellarCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      stellar.AccountResponse account = await sdk.accounts.account(address);
-      List balances = account.balances!;
-
-      for (stellar.Balance balance in balances) {
-        if (balance.assetType == stellar.Asset.TYPE_NATIVE) {
-          double balanceInStellar = double.parse(balance.balance!);
-          await pref.put(key, balanceInStellar);
-          return balanceInStellar;
-        }
-      }
-      return 0;
+      double balanceInStellar = await getUserBalance(address: address);
+      await pref.put(key, balanceInStellar);
+      return balanceInStellar;
     } catch (e) {
       return savedBalance;
     }

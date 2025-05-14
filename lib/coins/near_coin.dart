@@ -215,6 +215,36 @@ class NearCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final request = await post(
+      Uri.parse(api),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(
+        {
+          "jsonrpc": "2.0",
+          "id": "dontcare",
+          "method": "query",
+          "params": {
+            "request_type": "view_account",
+            "finality": "final",
+            "account_id": address
+          },
+        },
+      ),
+    );
+
+    if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
+      throw Exception('Request failed');
+    }
+    Map decodedData = jsonDecode(request.body);
+
+    final BigInt balance = BigInt.parse(decodedData['result']['amount']);
+    final base = BigInt.from(10);
+
+    return balance / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'nearAddressBalance$address$api';
@@ -230,32 +260,7 @@ class NearCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final request = await post(
-        Uri.parse(api),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(
-          {
-            "jsonrpc": "2.0",
-            "id": "dontcare",
-            "method": "query",
-            "params": {
-              "request_type": "view_account",
-              "finality": "final",
-              "account_id": address
-            },
-          },
-        ),
-      );
-
-      if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
-        throw Exception('Request failed');
-      }
-      Map decodedData = jsonDecode(request.body);
-
-      final BigInt balance = BigInt.parse(decodedData['result']['amount']);
-      final base = BigInt.from(10);
-
-      final nearBal = balance / base.pow(decimals());
+      final nearBal = await getUserBalance(address: address);
       await pref.put(key, nearBal);
 
       return nearBal;

@@ -149,6 +149,19 @@ class ZilliqaCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    Account acc = Account();
+    acc.address = ZilAddress(ZilAddress.toValidAddress(address));
+    acc.messenger = Zilliqa(network: network).messenger;
+
+    await acc.updateBalance();
+
+    final base = BigInt.from(10).pow(decimals());
+
+    return BigInt.parse(acc.balance!) / base;
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
 
@@ -165,16 +178,7 @@ class ZilliqaCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      Account acc = Account();
-      acc.address = ZilAddress(ZilAddress.toValidAddress(address));
-      acc.messenger = Zilliqa(network: network).messenger;
-
-      await acc.updateBalance();
-
-      final base = BigInt.from(10).pow(decimals());
-
-      final balance = BigInt.parse(acc.balance!) / base;
-
+      final balance = await getUserBalance(address: address);
       await pref.put(key, balance);
 
       return balance;

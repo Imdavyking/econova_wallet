@@ -173,6 +173,30 @@ class FilecoinCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "Filecoin.WalletBalance",
+        "params": [address]
+      }),
+    );
+    final responseBody = response.body;
+    if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
+      throw Exception(responseBody);
+    }
+
+    final base = BigInt.from(10);
+
+    String resBal = jsonDecode(responseBody)['result'];
+
+    return BigInt.parse(resBal) / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'fileCoinAddressBalance$address$baseUrl';
@@ -188,27 +212,7 @@ class FilecoinCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "jsonrpc": "2.0",
-          "id": 1,
-          "method": "Filecoin.WalletBalance",
-          "params": [address]
-        }),
-      );
-      final responseBody = response.body;
-      if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
-        throw Exception(responseBody);
-      }
-
-      final base = BigInt.from(10);
-
-      String resBal = jsonDecode(responseBody)['result'];
-
-      double fileCoinBal = BigInt.parse(resBal) / base.pow(decimals());
-
+      double fileCoinBal = await getUserBalance(address: address);
       await pref.put(key, fileCoinBal);
 
       return fileCoinBal;

@@ -134,6 +134,36 @@ class XRPCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final httpFromWs = Uri.parse(api);
+    final request = await post(
+      httpFromWs,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        "method": "account_info",
+        "params": [
+          {"account": address}
+        ]
+      }),
+    );
+
+    if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
+      throw Exception(request.body);
+    }
+
+    Map accountInfo = json.decode(request.body);
+
+    if (accountInfo['result']['account_data'] == null) {
+      throw Exception('Account not found');
+    }
+
+    final balance = accountInfo['result']['account_data']['Balance'];
+    return double.parse(balance) / pow(10, xrpDecimals);
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'xrpAddressBalance$address$api';
@@ -148,32 +178,7 @@ class XRPCoin extends Coin {
 
     if (skipNetworkRequest) return savedBalance;
     try {
-      final httpFromWs = Uri.parse(api);
-      final request = await post(
-        httpFromWs,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          "method": "account_info",
-          "params": [
-            {"account": address}
-          ]
-        }),
-      );
-
-      if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
-        throw Exception(request.body);
-      }
-
-      Map accountInfo = json.decode(request.body);
-
-      if (accountInfo['result']['account_data'] == null) {
-        throw Exception('Account not found');
-      }
-
-      final balance = accountInfo['result']['account_data']['Balance'];
-      final userBalance = double.parse(balance) / pow(10, xrpDecimals);
+      final userBalance = await getUserBalance(address: address);
       await pref.put(key, userBalance);
 
       return userBalance;

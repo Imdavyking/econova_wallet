@@ -146,6 +146,15 @@ class SuiCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final suiClient = SuiClient(rpc);
+
+    final resp = await suiClient.provider.getBalance(address);
+    final base = BigInt.from(10);
+    return resp.totalBalance / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'suiAddressBalance$address$rpc';
@@ -161,12 +170,7 @@ class SuiCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final suiClient = SuiClient(rpc);
-
-      final resp = await suiClient.provider.getBalance(address);
-      final base = BigInt.from(10);
-      final balance = resp.totalBalance / base.pow(decimals());
-
+      final balance = await getUserBalance(address: address);
       await pref.put(key, balance);
 
       return balance;

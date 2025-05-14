@@ -183,6 +183,19 @@ class MultiversxCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    multiversx.Address addressMul = multiversx.Address.fromBech32(address);
+
+    multiversx.Account userAcct = multiversx.Account.withAddress(addressMul);
+
+    userAcct = await userAcct.synchronize(getProxy());
+
+    final base = BigInt.from(10);
+
+    return userAcct.balance.value / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'multiversxAddressBalance$address$rpc';
@@ -198,16 +211,7 @@ class MultiversxCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      multiversx.Address addressMul = multiversx.Address.fromBech32(address);
-
-      multiversx.Account userAcct = multiversx.Account.withAddress(addressMul);
-
-      userAcct = await userAcct.synchronize(getProxy());
-
-      final base = BigInt.from(10);
-
-      double fraction = userAcct.balance.value / base.pow(decimals());
-
+      double fraction = await getUserBalance(address: address);
       await pref.put(key, fraction);
 
       return fraction;

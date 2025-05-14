@@ -101,6 +101,21 @@ class ICPCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    AgentFactory agent = await AgentFactory.createAgent(
+      canisterId: canisterID,
+      url: api,
+      idl: ledgerIdl,
+      debug: kDebugMode,
+    );
+
+    ICPTs bigIntBalance =
+        await Ledger.getBalance(agent: agent, accountId: address);
+    final base = BigInt.from(10);
+    return bigIntBalance.e8s / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     String address = await getAddress();
 
@@ -117,18 +132,7 @@ class ICPCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      AgentFactory agent = await AgentFactory.createAgent(
-        canisterId: canisterID,
-        url: api,
-        idl: ledgerIdl,
-        debug: kDebugMode,
-      );
-
-      ICPTs bigIntBalance =
-          await Ledger.getBalance(agent: agent, accountId: address);
-      final base = BigInt.from(10);
-      final userBalance = bigIntBalance.e8s / base.pow(decimals());
-
+      final userBalance = await getUserBalance(address: address);
       await pref.put(key, userBalance);
 
       return userBalance;

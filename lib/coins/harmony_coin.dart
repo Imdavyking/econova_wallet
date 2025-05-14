@@ -161,6 +161,19 @@ class HarmonyCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final ethClient = Web3Client(rpc, http.Client());
+
+    final userAddress = EthereumAddress.fromHex(_oneAddrToEth(address));
+
+    final etherAmount = await ethClient.getBalance(userAddress);
+
+    final base = BigInt.from(10);
+
+    return etherAmount.getInWei / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'harmonyAddressBalance$address$rpc';
@@ -176,15 +189,7 @@ class HarmonyCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final ethClient = Web3Client(rpc, http.Client());
-
-      final userAddress = EthereumAddress.fromHex(_oneAddrToEth(address));
-
-      final etherAmount = await ethClient.getBalance(userAddress);
-
-      final base = BigInt.from(10);
-
-      double ethBalance = etherAmount.getInWei / base.pow(decimals());
+      double ethBalance = await getUserBalance(address: address);
 
       await pref.put(key, ethBalance);
 

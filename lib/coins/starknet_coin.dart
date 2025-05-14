@@ -190,7 +190,6 @@ class StarknetCoin extends Coin {
   }
 
   Future<double> getUserBalance({
-    required String contractAddress,
     required String address,
   }) async {
     final provider = await apiProvider();
@@ -234,10 +233,7 @@ class StarknetCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final userBalance = await getUserBalance(
-        contractAddress: contractAddress,
-        address: address,
-      );
+      final userBalance = await getUserBalance(address: address);
 
       await pref.put(key, userBalance);
       return userBalance;
@@ -302,10 +298,7 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
     final address = response.address;
 
-    final userBalance = await getUserBalance(
-      contractAddress: strkEthNativeToken,
-      address: address,
-    );
+    final userBalance = await getUserBalance(address: address);
 
     if (userBalance < maxFeeEth / pow(10, 18)) {
       throw Exception('Need $maxFeeEth STRK ETH to deploy');

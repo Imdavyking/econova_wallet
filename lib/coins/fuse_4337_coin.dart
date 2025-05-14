@@ -400,6 +400,36 @@ class FuseCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final _dio = Dio(
+      BaseOptions(
+        baseUrl: Uri.https(Variables.BASE_URL, '/api').toString(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        queryParameters: {
+          'apiKey': _publicApiKey,
+        },
+      ),
+    );
+
+    final response = await _dio.get(
+      '/v0/balances/assets/$address',
+    );
+
+    final userTokens = BalanceResponse.fromJson(Map.from(response.data));
+
+    for (TokenDetails action in userTokens.result) {
+      if (action.address.toLowerCase() == contractAddress.toLowerCase()) {
+        final base = BigInt.from(10);
+
+        return action.amount / base.pow(decimals());
+      }
+    }
+    return 0;
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     String address = roninAddrToEth(await getAddress());
 
@@ -413,35 +443,10 @@ class FuseCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final _dio = Dio(
-        BaseOptions(
-          baseUrl: Uri.https(Variables.BASE_URL, '/api').toString(),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          queryParameters: {
-            'apiKey': _publicApiKey,
-          },
-        ),
-      );
+      double fuseBalance = await getUserBalance(address: address);
+      await pref.put(tokenKey, fuseBalance);
 
-      final response = await _dio.get(
-        '/v0/balances/assets/$address',
-      );
-
-      final userTokens = BalanceResponse.fromJson(Map.from(response.data));
-
-      for (TokenDetails action in userTokens.result) {
-        if (action.address.toLowerCase() == contractAddress.toLowerCase()) {
-          final base = BigInt.from(10);
-
-          double fuseBalance = action.amount / base.pow(decimals());
-          await pref.put(tokenKey, fuseBalance);
-
-          return fuseBalance;
-        }
-      }
-      return savedBalance;
+      return fuseBalance;
     } catch (e, s) {
       if (kDebugMode) {
         print(e);

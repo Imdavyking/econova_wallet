@@ -172,6 +172,42 @@ class TronCoin extends Coin {
   @override
   Future<bool> get canTransfer async =>
       pref.get(await _canTransferKey, defaultValue: true);
+  @override
+  Future<double> getUserBalance({required String address}) async {
+    final request = await get(
+      Uri.parse('$api/v1/accounts/$address'),
+      headers: {
+        'TRON-PRO-API-KEY': tronGridApiKey,
+        'Content-Type': 'application/json'
+      },
+    );
+
+    if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
+      throw Exception('Request failed');
+    }
+
+    Map<String, dynamic> decodedData = jsonDecode(request.body);
+    final List? result = decodedData['data'];
+
+    if (result == null || result.isEmpty) {
+      await pref.put(await _canTransferKey, true);
+      throw Exception('Account not found');
+    }
+
+    final data = result[0];
+
+    final int? balance = data['balance'];
+    if (balance == null) throw Exception('Account not found');
+
+    final base = BigInt.from(10);
+    final permission =
+        AccountPermissionModel.fromJson(data['owner_permission']);
+    await pref.put(
+      await _canTransferKey,
+      _canTransfer(permission, address),
+    );
+    return BigInt.from(balance) / base.pow(decimals());
+  }
 
   @override
   Future<double> getBalance(bool skipNetworkRequest) async {
@@ -189,42 +225,9 @@ class TronCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final request = await get(
-        Uri.parse('$api/v1/accounts/$address'),
-        headers: {
-          'TRON-PRO-API-KEY': tronGridApiKey,
-          'Content-Type': 'application/json'
-        },
-      );
-
-      if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
-        throw Exception('Request failed');
-      }
-
-      Map<String, dynamic> decodedData = jsonDecode(request.body);
-      final List? result = decodedData['data'];
-
-      if (result == null || result.isEmpty) {
-        await pref.put(await _canTransferKey, true);
-        throw Exception('Account not found');
-      }
-
-      final data = result[0];
-
-      final int? balance = data['balance'];
-      if (balance == null) throw Exception('Account not found');
-
-      final base = BigInt.from(10);
-      double balTron = BigInt.from(balance) / base.pow(decimals());
-      final permission =
-          AccountPermissionModel.fromJson(data['owner_permission']);
+      double balTron = await getUserBalance(address: address);
 
       await pref.put(key, balTron);
-
-      await pref.put(
-        await _canTransferKey,
-        _canTransfer(permission, address),
-      );
 
       return balTron;
     } catch (_) {

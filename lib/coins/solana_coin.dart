@@ -178,6 +178,15 @@ class SolanaCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final lamports = await getProxy().rpcClient.getBalance(address);
+
+    final base = BigInt.from(10);
+
+    return BigInt.from(lamports) / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'solanaAddressBalance$address$rpc';
@@ -193,12 +202,7 @@ class SolanaCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final lamports = await getProxy().rpcClient.getBalance(address);
-
-      final base = BigInt.from(10);
-
-      double balanceInSol = BigInt.from(lamports) / base.pow(decimals());
-
+      double balanceInSol = await getUserBalance(address: address);
       await pref.put(key, balanceInSol);
 
       return balanceInSol;

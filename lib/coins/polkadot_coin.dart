@@ -172,6 +172,51 @@ class PolkadotCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    if (rpcMethods == null) {
+      final result = await _queryRpc('rpc_methods', []);
+      rpcMethods = result!['result']['methods'];
+    }
+    String? getHead =
+        rpcMethods!.firstWhere((element) => element == 'chain_getHead');
+
+    getHead ??=
+        rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
+    final blockHashRes = await _queryRpc(getHead!, []);
+    final String address = await getAddress();
+    final decodedAddr = decodeDOTAddress(address);
+    final storageName = blake2_128_concat(decodedAddr);
+    final storageKey = '$systemAccount${HEX.encode(storageName)}';
+
+    String? getStorageAt = rpcMethods!.firstWhere(
+      (element) => element == 'state_getStorageAt',
+    );
+
+    getStorageAt ??= rpcMethods!.firstWhere(
+      (element) => element == 'state_getStorage',
+    );
+
+    final storageResult = await _queryRpc(
+      getStorageAt!,
+      [
+        storageKey,
+        blockHashRes!['result'],
+      ],
+    );
+    String storageData = storageResult!['result'];
+
+    storageData = storageData.replaceFirst('0x', '');
+
+    final input = Input.fromHex(storageData.substring(32, 32 + 48));
+
+    final BigInt balanceBigInt = U128Codec.codec.decode(input);
+
+    final base = BigInt.from(10);
+
+    return balanceBigInt / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'polkadotAddressBalance$address$api$ss58Prefix';
@@ -187,48 +232,7 @@ class PolkadotCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      if (rpcMethods == null) {
-        final result = await _queryRpc('rpc_methods', []);
-        rpcMethods = result!['result']['methods'];
-      }
-      String? getHead =
-          rpcMethods!.firstWhere((element) => element == 'chain_getHead');
-
-      getHead ??=
-          rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
-      final blockHashRes = await _queryRpc(getHead!, []);
-      final String address = await getAddress();
-      final decodedAddr = decodeDOTAddress(address);
-      final storageName = blake2_128_concat(decodedAddr);
-      final storageKey = '$systemAccount${HEX.encode(storageName)}';
-
-      String? getStorageAt = rpcMethods!.firstWhere(
-        (element) => element == 'state_getStorageAt',
-      );
-
-      getStorageAt ??= rpcMethods!.firstWhere(
-        (element) => element == 'state_getStorage',
-      );
-
-      final storageResult = await _queryRpc(
-        getStorageAt!,
-        [
-          storageKey,
-          blockHashRes!['result'],
-        ],
-      );
-      String storageData = storageResult!['result'];
-
-      storageData = storageData.replaceFirst('0x', '');
-
-      final input = Input.fromHex(storageData.substring(32, 32 + 48));
-
-      final BigInt balanceBigInt = U128Codec.codec.decode(input);
-
-      final base = BigInt.from(10);
-
-      double userBal = balanceBigInt / base.pow(decimals());
-
+      double userBal = await getUserBalance(address: address);
       await pref.put(key, userBal);
       return userBal;
     } catch (_) {

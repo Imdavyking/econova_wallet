@@ -221,6 +221,35 @@ class CosmosCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final response = await get(
+      Uri.parse(
+        '$lcdUrl/cosmos/bank/v1beta1/balances/$address',
+      ),
+    );
+
+    final responseBody = response.body;
+
+    if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
+      throw Exception(responseBody);
+    }
+
+    List balances = jsonDecode(responseBody)['balances'];
+
+    if (balances.isEmpty) {
+      return 0;
+    }
+
+    final String balance = balances
+        .where((element) => element['denom'] == denom)
+        .toList()[0]['amount'];
+
+    final base = BigInt.from(10);
+
+    return BigInt.parse(balance) / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'cosmosAddressBalance$address$lcdUrl';
@@ -235,32 +264,7 @@ class CosmosCoin extends Coin {
 
     if (skipNetworkRequest) return savedBalance;
     try {
-      final response = await get(
-        Uri.parse(
-          '$lcdUrl/cosmos/bank/v1beta1/balances/$address',
-        ),
-      );
-
-      final responseBody = response.body;
-
-      if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
-        throw Exception(responseBody);
-      }
-
-      List balances = jsonDecode(responseBody)['balances'];
-
-      if (balances.isEmpty) {
-        return 0;
-      }
-
-      final String balance = balances
-          .where((element) => element['denom'] == denom)
-          .toList()[0]['amount'];
-
-      final base = BigInt.from(10);
-
-      double cosmosBal = BigInt.parse(balance) / base.pow(decimals());
-
+      double cosmosBal = await getUserBalance(address: address);
       await pref.put(key, cosmosBal);
 
       return cosmosBal;

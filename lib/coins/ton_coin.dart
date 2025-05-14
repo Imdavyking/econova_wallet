@@ -119,6 +119,19 @@ class TonCoin extends Coin {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final details = await importData(data);
+    var wallet = ton.WalletContractV4R2.create(
+      publicKey: HEX.decode(details.publicKey!) as Uint8List,
+    );
+
+    var openedContract = getClient().open(wallet);
+    var balance = await openedContract.getBalance();
+    return balance / BigInt.from(10).pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
@@ -137,14 +150,7 @@ class TonCoin extends Coin {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      var wallet = ton.WalletContractV4R2.create(
-        publicKey: HEX.decode(details.publicKey!) as Uint8List,
-      );
-
-      var openedContract = getClient().open(wallet);
-      var balance = await openedContract.getBalance();
-      double balTon = balance / BigInt.from(10).pow(decimals());
-
+      double balTon = await getUserBalance(address: address);
       await pref.put(key, balTon);
       return balTon;
     } catch (_) {
