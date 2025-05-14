@@ -52,6 +52,7 @@ class _AIAgentState extends State<AIAgent> {
               user: Constants.ai,
               text: history.contentAsString,
               createdAt: DateTime.now(),
+              isMarkdown: true,
             ),
           );
         }
