@@ -46,7 +46,7 @@ class FuseFungibleCoin extends FuseCoin implements FTExplorer {
   int decimals() => mintDecimals;
 
   @override
-  String get badgeImage => getFUSEBlockchains().first.image;
+  String? get badgeImage => getFUSEBlockchains().first.image;
   @override
   String contractExplorer() {
     return getExplorer().replaceFirst(

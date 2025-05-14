@@ -72,7 +72,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   }
 
   @override
-  String get badgeImage => nearChains.first.image;
+  String? get badgeImage => nearChains.first.image;
 
   @override
   int decimals() => mintDecimals;

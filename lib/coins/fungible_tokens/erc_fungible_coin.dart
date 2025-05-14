@@ -171,7 +171,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
   }
 
   @override
-  String get badgeImage => evmFromChainId(chainId)!.image;
+  String? get badgeImage => evmFromChainId(chainId)?.image;
 
   @override
   Future<AccountData> importData(String data) async {

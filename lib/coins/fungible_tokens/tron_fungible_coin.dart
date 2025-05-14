@@ -65,7 +65,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
   }
 
   @override
-  String get badgeImage => tronChains.first.image;
+  String? get badgeImage => tronChains.first.image;
   @override
   String savedTransKey() => '$tokenID$api FTDetails';
 

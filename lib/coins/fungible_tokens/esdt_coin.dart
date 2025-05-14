@@ -139,7 +139,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   }
 
   @override
-  String get badgeImage => multiversXchains.first.image;
+  String? get badgeImage => multiversXchains.first.image;
 
   @override
   Map<String, dynamic> toJson() {

@@ -51,7 +51,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   }
 
   @override
-  String get badgeImage => tonChains.first.image;
+  String? get badgeImage => tonChains.first.image;
   @override
   String savedTransKey() => '$tokenID$api FTDetails';
 
