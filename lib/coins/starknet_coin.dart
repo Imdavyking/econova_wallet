@@ -511,7 +511,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         name: 'Starknet',
         default_: 'STRK',
         image: 'assets/starknet.png',
-        api: "https://starknet.public.blastapi.io/rpc/v0_7",
+        api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
