@@ -1,14 +1,13 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:math';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:solana_name_service/solana_name_service.dart';
+import 'package:solana_name_service/solana_name_service.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -245,20 +244,19 @@ class SolanaCoin extends Coin {
 
   @override
   Future<String?> resolveAddress(String address) async {
-    return address;
-    // if (address.endsWith('.sol')) {
-    //   address = address.substring(0, address.length - 4);
-    // }
-    // final publicKey = await findAccountByName(
-    //   address, // SNS domain name
-    //   environment: SolanaEnvironment.mainnet,
-    // );
+    if (address.endsWith('.sol')) {
+      address = address.substring(0, address.length - 4);
+    }
+    final publicKey = await findAccountByName(
+      address, // SNS domain name
+      environment: SolanaEnvironment.mainnet,
+    );
 
-    // if (publicKey == null) {
-    //   return null;
-    // }
+    if (publicKey == null) {
+      return null;
+    }
 
-    // return publicKey.toBase58();
+    return publicKey.toBase58();
   }
 
   solana.SolanaClient getProxy() {

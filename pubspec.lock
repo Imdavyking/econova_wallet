@@ -2052,10 +2052,9 @@ packages:
   solana_name_service:
     dependency: "direct main"
     description:
-      name: solana_name_service
-      sha256: e3e57f2fe2df4b421caa2b0704ce0de561bbeddae64fa5285a3cb8900189febd
-      url: "https://pub.dev"
-    source: hosted
+      path: solana_name_service
+      relative: true
+    source: path
     version: "0.2.1"
   source_gen:
     dependency: transitive

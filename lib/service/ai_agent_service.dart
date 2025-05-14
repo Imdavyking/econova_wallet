@@ -171,6 +171,39 @@ class AIAgentService {
         },
         getInputFromJson: _GetAddressInput.fromJson,
       );
+      final resolveDomainNameTool =
+          Tool.fromFunction<_GetDomainNameInput, String>(
+        name: 'QRY_resolveDomainName',
+        description: 'Tool for resolving domain name to address',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'domainName': {
+              'type': 'string',
+              'description': 'The domain name to resolve',
+            },
+          },
+          'required': ['domainName'],
+        },
+        func: (final _GetDomainNameInput toolInput) async {
+          String domainName = toolInput.domainName;
+          String? address;
+
+          try {
+            address = await coin.resolveAddress(domainName);
+            if (address == null) {
+              return 'Domain name $domainName not found';
+            }
+            coin.validateAddress(address);
+          } catch (e) {
+            return 'Invalid $currentCoin address: $address';
+          }
+          final result = 'The address for $domainName is $address';
+          return result;
+        },
+        getInputFromJson: _GetDomainNameInput.fromJson,
+      );
+
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QRY_getBalance',
         description: 'Tool for checking $currentCoin balance for any address',
@@ -266,7 +299,12 @@ class AIAgentService {
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
-      final tools = [addressTool, balanceTool, transferTool];
+      final tools = [
+        addressTool,
+        balanceTool,
+        transferTool,
+        resolveDomainNameTool
+      ];
       final otherCoins = getAllBlockchains
           .where((Coin value) =>
               value.getSymbol() == value.getDefault() &&
@@ -325,6 +363,19 @@ class AIAgentService {
 
       return const Left("Something went wrong. Try again Later.");
     }
+  }
+}
+
+class _GetDomainNameInput {
+  final String domainName;
+
+  _GetDomainNameInput({required this.domainName});
+
+  factory _GetDomainNameInput.fromJson(Map<String, dynamic> json) {
+    debugPrint('getDomainNameInput: $json');
+    return _GetDomainNameInput(
+      domainName: json['domainName'] as String,
+    );
   }
 }
 

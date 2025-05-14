@@ -9,6 +9,7 @@ import '../main.dart';
 import '../utils/app_config.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
+import 'package:http/http.dart' as http;
 
 const starkDecimals = 18;
 const strkNativeToken =
@@ -187,6 +188,18 @@ class StarknetCoin extends Coin {
 
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);
+  }
+
+  @override
+  Future<String?> resolveAddress(String address) async {
+    final url = 'https://api.starknet.id/domain_to_addr?domain=$address';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['addr'];
+    } else {
+      throw Exception('Failed to resolve address');
+    }
   }
 
   @override
