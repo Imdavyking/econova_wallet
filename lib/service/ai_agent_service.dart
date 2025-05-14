@@ -2,6 +2,7 @@ import "dart:convert";
 
 import "package:cryptowallet/coins/starknet_coin.dart";
 import "package:cryptowallet/extensions/to_real_json_langchain.dart";
+import "package:cryptowallet/interface/coin.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/screens/navigator_service.dart";
 import "package:cryptowallet/utils/app_config.dart";
@@ -142,6 +143,7 @@ class AIAgentService {
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
+    Coin coin,
   ) async {
     try {
       final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
@@ -152,18 +154,20 @@ class AIAgentService {
         ),
       );
 
+      print(coin);
+
       final addressTool = Tool.fromFunction<_GetAddressInput, String>(
         name: 'QRY_getAddress',
-        description: 'Tool for getting current user addres',
+        description: 'Tool for getting current user address,',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {},
           'required': [],
         },
         func: (final _GetAddressInput toolInput) async {
-          final address = await starkNetCoins.first.getAddress();
+          final address = await coin.getAddress();
           try {
-            starkNetCoins.first.validateAddress(address);
+            coin.validateAddress(address);
           } catch (e) {
             return 'Invalid address: $address';
           }
@@ -173,7 +177,8 @@ class AIAgentService {
       );
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QRY_getBalance',
-        description: 'Tool for checking STRK(Starknet) balance for any address',
+        description:
+            'Tool for checking ${coin.getName()} balance for any address',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -187,10 +192,10 @@ class AIAgentService {
         func: (final _GetBalanceInput toolInput) async {
           String? address = toolInput.address;
 
-          address ??= await starkNetCoins.first.getAddress();
+          address ??= await coin.getAddress();
 
           try {
-            starkNetCoins.first.validateAddress(address);
+            coin.validateAddress(address);
           } catch (e) {
             return 'Invalid address: $address';
           }
@@ -199,14 +204,15 @@ class AIAgentService {
 
           final balances = await Future.wait(
             [
-              starkNetCoins.first.getUserBalance(
-                contractAddress: strkNativeToken,
-                address: address,
-              ),
+              //  coin.getUserBalance(
+              //         contractAddress: strkNativeToken,
+              //         address: address,
+              //       ),
             ],
           );
 
-          final balanceString = '$address have ${balances[0]} Starknet(STRK)';
+          final balanceString =
+              '$address have ${balances[0]} ${coin.getName()}';
           return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
@@ -214,7 +220,7 @@ class AIAgentService {
       final transferTool = Tool.fromFunction<_GetTransferInput, String>(
         name: 'CMD_transferBalance',
         description:
-            'Tool for transferring user STRK(Starknet) balance,always check for user balance before transfer',
+            'Tool for transferring user ${coin.getName()} balance,always check for user balance before transfer',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -241,8 +247,7 @@ class AIAgentService {
             return 'Amount must be greater than zero.';
           }
 
-          final coin = starkNetCoins.first;
-          final networkName = coin.name;
+          final networkName = coin.getName();
           final message =
               'You are about to send $amount tokens to $recipient on $networkName.';
 
@@ -278,12 +283,11 @@ class AIAgentService {
         getInputFromJson: _GetTransferInput.fromJson,
       );
       final tools = [addressTool, balanceTool, transferTool];
-
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
         tools: tools,
         memory: memory,
-        systemChatMessage: const SystemChatMessagePromptTemplate(
+        systemChatMessage: SystemChatMessagePromptTemplate(
           prompt: PromptTemplate(
             inputVariables: {},
             template: """You are $walletName,
@@ -292,7 +296,10 @@ class AIAgentService {
         With your intuitive interface,
         users can seamlessly interact with the blockchain,
         making transactions, checking balances,
-        and querying smart contracts—all through simple, conversational commands.""",
+        don't rely on past history to get the user address,balance or any crypto related information,
+        and querying smart contracts—all through simple, conversational commands.
+        current coin is ${coin.getName()}.
+        """,
           ),
         ),
       );

@@ -1,5 +1,7 @@
 import 'package:cryptowallet/extensions/build_context_extension.dart';
 import 'package:cryptowallet/extensions/chat_message_ext.dart';
+import 'package:cryptowallet/interface/coin.dart';
+import 'package:cryptowallet/main.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
@@ -28,6 +30,7 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   lang_chain.ConversationBufferMemory memory = AIAgentService.memory;
 
   late AppLocalizations localization;
+  Coin selectedCoin = starkNetCoins.first;
   @override
   initState() {
     super.initState();
@@ -84,6 +87,76 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
       appBar: AppBar(
         title: const Text('AI Agent'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: DropdownButton<Coin>(
+              hint: const Text("Select Coin"),
+              value: selectedCoin,
+              icon: const Icon(Icons.arrow_drop_down),
+              selectedItemBuilder: (context) {
+                return getAllBlockchains.map<Widget>((Coin coin) {
+                  String assetImagePath = coin.getImage();
+
+                  return Row(
+                    children: [
+                      Image.asset(
+                        assetImagePath,
+                        width: 24,
+                        height: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        coin.getSymbol(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+              items: getAllBlockchains
+                  .where(
+                      (Coin value) => value.getSymbol() == value.getDefault())
+                  .map<DropdownMenuItem<Coin>>((Coin coin) {
+                String assetImagePath = coin.getImage();
+                bool isSelected = selectedCoin == coin;
+
+                return DropdownMenuItem<Coin>(
+                  enabled: !isSelected,
+                  value: coin,
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        assetImagePath,
+                        width: 24,
+                        height: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        coin.getSymbol(),
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.blue
+                              : Colors
+                                  .black, // Highlight the selected item with blue color
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal, // Make selected item bold
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  selectedCoin = value;
+                });
+              },
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.clear_all),
             onPressed: () async {
@@ -160,7 +233,8 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
 
     _addUserMessage(userMessage);
 
-    final response = await _chatRepository.sendTextMessage(userMessage);
+    final response =
+        await _chatRepository.sendTextMessage(userMessage, selectedCoin);
 
     setState(() {
       typingUsers.remove(Constants.ai);

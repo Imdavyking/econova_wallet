@@ -488,7 +488,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress: strkEthNativeToken,
-        symbol: 'ETH',
+        symbol: 'ETH (STRK)',
         name: 'Ethereum (STRK)',
         default_: 'ETH',
         image: 'assets/ethereum_logo.png',
