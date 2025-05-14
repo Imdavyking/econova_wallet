@@ -212,7 +212,8 @@ class AIAgentService {
       );
       final transferTool = Tool.fromFunction<_GetTransferInput, String>(
         name: 'CMD_transferBalance',
-        description: 'Tool for transferring user STRK(Starknet) balance',
+        description:
+            'Tool for transferring user STRK(Starknet) balance,always check for user balance before transfer',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -228,29 +229,50 @@ class AIAgentService {
           'required': ['recipient', 'amount'],
         },
         func: (final _GetTransferInput toolInput) async {
-          final recipient = toolInput.recipient;
+          final recipient = toolInput.recipient.trim();
           final amount = toolInput.amount;
 
+          if (recipient.isEmpty) {
+            return 'Recipient address is empty.';
+          }
+
+          if (amount <= 0) {
+            return 'Amount must be greater than zero.';
+          }
+
+          final coin = starkNetCoins.first;
+          final networkName = coin.name;
           final message =
-              'Sending $recipient $amount Tokens on ${starkNetCoins.first.name}';
+              'You are about to send $amount tokens to $recipient on $networkName.';
+
           try {
-            starkNetCoins.first.validateAddress(recipient);
+            coin.validateAddress(recipient);
           } catch (e) {
-            return 'Invalid address recipient: $recipient';
+            debugPrint('Address validation failed: $e');
+            return 'Invalid recipient address: $recipient';
           }
 
-          final confirmMessage = await confirmTransaction(message);
-          if (confirmMessage != null) {
-            return confirmMessage;
+          final confirmation = await confirmTransaction(message);
+          if (confirmation != null) {
+            return confirmation; // User cancelled or rejected confirmation
           }
 
-          String? txHash = await starkNetCoins.first.transferToken(
-            amount.toString(),
-            recipient,
-          );
+          try {
+            final txHash =
+                await coin.transferToken(amount.toString(), recipient);
 
-          debugPrint('$message with transaction hash $txHash');
-          return '$message with transaction hash $txHash';
+            if (txHash == null || txHash.isEmpty) {
+              return 'Transaction failed: no transaction hash returned.';
+            }
+
+            final successMessage =
+                'Sent $amount tokens to $recipient on $networkName.\nTransaction hash: $txHash';
+            debugPrint(successMessage);
+            return successMessage;
+          } catch (e) {
+            debugPrint('Transfer failed: $e');
+            return 'An error occurred during the transfer: $e';
+          }
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
