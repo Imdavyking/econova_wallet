@@ -143,7 +143,8 @@ class AIAgentService {
   ) async {
     try {
       final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
-      final currentCoin = "${coin.getName()} (${coin.getSymbol()})";
+      final currentCoin =
+          "${coin.getName().split('(')[0]} (${coin.getSymbol()})";
       final llm = ChatOpenAI(
         apiKey: openaiApiKey,
         defaultOptions: const ChatOpenAIOptions(
@@ -269,7 +270,8 @@ class AIAgentService {
       final availableCoins = getAllBlockchains
           .where((Coin value) => value.getSymbol() == value.getDefault())
           .toList()
-          .map((token) => "${token.getName()} (${token.getSymbol()})")
+          .map((token) =>
+              "${token.getName().split('(')[0]} (${token.getSymbol()})")
           .toList()
           .join(',');
 
@@ -286,7 +288,7 @@ class AIAgentService {
         available coins are $availableCoins.
         """;
 
-      print(prompt);
+      debugPrint(prompt);
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
