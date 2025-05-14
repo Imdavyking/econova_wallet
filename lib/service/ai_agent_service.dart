@@ -10,7 +10,6 @@ import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
-import "package:substrate_metadata/utils/utils.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
 import "./ai_confirm_transaction.dart";
@@ -144,6 +143,7 @@ class AIAgentService {
   ) async {
     try {
       final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
+      final currentCoin = "${coin.getName()} (${coin.getSymbol()})";
       final llm = ChatOpenAI(
         apiKey: openaiApiKey,
         defaultOptions: const ChatOpenAIOptions(
@@ -164,16 +164,15 @@ class AIAgentService {
           try {
             coin.validateAddress(address);
           } catch (e) {
-            return 'Invalid ${coin.getName()} address: $address';
+            return 'Invalid $currentCoin address: $address';
           }
-          return 'Your ${coin.getName()} address is $address';
+          return 'Your $currentCoin address is $address';
         },
         getInputFromJson: _GetAddressInput.fromJson,
       );
       final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
         name: 'QRY_getBalance',
-        description:
-            'Tool for checking ${coin.getName()} balance for any address',
+        description: 'Tool for checking $currentCoin balance for any address',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -190,14 +189,14 @@ class AIAgentService {
           try {
             coin.validateAddress(address);
           } catch (e) {
-            return 'Invalid ${coin.getName()} address: $address';
+            return 'Invalid $currentCoin address: $address';
           }
           final result = 'Checking $address balance';
           debugPrint(result);
 
           final coinBal = await coin.getUserBalance(address: address);
 
-          final balanceString = '$address have $coinBal ${coin.getName()}';
+          final balanceString = '$address have $coinBal $currentCoin';
           return balanceString;
         },
         getInputFromJson: _GetBalanceInput.fromJson,
@@ -205,7 +204,7 @@ class AIAgentService {
       final transferTool = Tool.fromFunction<_GetTransferInput, String>(
         name: 'CMD_transferBalance',
         description:
-            'Tool for transferring user ${coin.getName()} balance,always check for user balance before transfer',
+            'Tool for transferring user $currentCoin balance,always check for user balance before transfer',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -233,7 +232,7 @@ class AIAgentService {
           }
 
           final message =
-              'You are about to send $amount tokens to $recipient on ${coin.getName()}.';
+              'You are about to send $amount tokens to $recipient on $currentCoin.';
 
           try {
             coin.validateAddress(recipient);
@@ -252,11 +251,11 @@ class AIAgentService {
                 await coin.transferToken(amount.toString(), recipient);
 
             if (txHash == null || txHash.isEmpty) {
-              return '${coin.getName()} Transaction failed: no transaction hash returned.';
+              return '$currentCoin Transaction failed: no transaction hash returned.';
             }
 
             final successMessage =
-                'Sent $amount tokens to $recipient on ${coin.getName()}.\nTransaction hash: $txHash';
+                'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash';
             debugPrint(successMessage);
             return successMessage;
           } catch (e) {
@@ -270,9 +269,24 @@ class AIAgentService {
       final availableCoins = getAllBlockchains
           .where((Coin value) => value.getSymbol() == value.getDefault())
           .toList()
-          .map((coin) => "${coin.getName()} (${coin.getSymbol()})")
+          .map((token) => "${token.getName()} (${token.getSymbol()})")
           .toList()
           .join(',');
+
+      final prompt = """You are $walletName,
+        a smart wallet that allows users to perform transactions,
+        and query the blockchain using natural language.
+        With your intuitive interface,
+        users can seamlessly interact with the blockchain,
+        making transactions, checking balances,
+        check the current coin is correct or ask the user to switch to the coin needed,
+        and querying smart contracts—all through simple, conversational commands.
+        ${enableTestNet ? "you are always on Testnet." : ""}
+        current coin is $currentCoin.
+        available coins are $availableCoins.
+        """;
+
+      print(prompt);
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
@@ -281,18 +295,7 @@ class AIAgentService {
         systemChatMessage: SystemChatMessagePromptTemplate(
           prompt: PromptTemplate(
             inputVariables: const {},
-            template: """You are $walletName,
-        a smart wallet that allows users to perform transactions,
-        and query the blockchain using natural language.
-        With your intuitive interface,
-        users can seamlessly interact with the blockchain,
-        making transactions, checking balances,
-        check the current coin is correct or ask the user to switch to the coin needed,
-        and querying smart contracts—all through simple, conversational commands.
-        available coins are $availableCoins.
-        ${enableTestNet ? "you are always on Testnet." : ""}
-        current coin is ${coin.getName()}.
-        """,
+            template: prompt,
           ),
         ),
       );
