@@ -5,7 +5,6 @@ import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/screens/navigator_service.dart";
 import "package:cryptowallet/utils/app_config.dart";
-import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
