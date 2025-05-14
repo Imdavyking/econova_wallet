@@ -1,6 +1,5 @@
 import "dart:convert";
 
-import "package:awesome_dialog/awesome_dialog.dart";
 import "package:cryptowallet/coins/starknet_coin.dart";
 import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/main.dart";
@@ -14,6 +13,7 @@ import "package:langchain/langchain.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
+import "./ai_confirm_transaction.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 typedef DashChatMessage = dash_chat.ChatMessage;
@@ -98,6 +98,25 @@ class AIAgentService {
       }
     }
     return messages;
+  }
+
+  Future<String?> confirmTransaction(String message) async {
+    final isApproved = await Navigator.push(
+      NavigationService.navigatorKey.currentContext!,
+      MaterialPageRoute(
+        builder: (context) => ConfirmTransactionScreen(message: message),
+      ),
+    );
+
+    if (isApproved == null) {
+      return 'Transaction cancelled $message';
+    }
+
+    if (isApproved == false) {
+      return 'Transaction cancelled $message';
+    }
+
+    return null;
   }
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
@@ -200,15 +219,18 @@ class AIAgentService {
             return 'Invalid address recipient: $recipient';
           }
 
-          return message;
-          //TODO: add Human In The Loop to confirm transaction
-          // String? txHash = await starkNetCoins.first.transferToken(
-          //   amount.toString(),
-          //   recipient,
-          // );
+          if (await confirmTransaction(message) != null) {
+            return 'Transaction cancelled $message';
+          }
 
-          // debugPrint(message);
-          // return '$message with transaction hash $txHash';
+          //TODO: add Human In The Loop to confirm transaction
+          String? txHash = await starkNetCoins.first.transferToken(
+            amount.toString(),
+            recipient,
+          );
+
+          debugPrint('$message with transaction hash $txHash');
+          return '$message with transaction hash $txHash';
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
