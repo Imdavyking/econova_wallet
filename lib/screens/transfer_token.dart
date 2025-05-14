@@ -304,7 +304,8 @@ class _TransferTokenState extends State<TransferToken> {
                                   if (Navigator.canPop(context)) {
                                     int count = 0;
                                     Navigator.popUntil(context, (route) {
-                                      return count++ == 3;
+                                      return count++ == 3 &&
+                                          Navigator.canPop(context);
                                     });
                                   }
                                 } catch (e, sk) {
