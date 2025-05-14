@@ -266,7 +266,7 @@ class AIAgentService {
           }
 
           final message =
-              'You are about to send $amount tokens to $recipient on $currentCoin.';
+              'You are about to send $amount ${coin.getSymbol()} to $recipient on $currentCoin.';
 
           try {
             coin.validateAddress(recipient);
