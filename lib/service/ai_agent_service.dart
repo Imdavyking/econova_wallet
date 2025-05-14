@@ -1,6 +1,4 @@
 import "dart:convert";
-
-import "package:cryptowallet/coins/starknet_coin.dart";
 import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/interface/coin.dart";
 import "package:cryptowallet/main.dart";
@@ -19,8 +17,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 typedef DashChatMessage = dash_chat.ChatMessage;
 typedef DashChatMedia = dash_chat.ChatMedia;
-
-//TODO: also allow user to query about starknet
 
 class ChatMessageWithDate {
   final lang_chain.ChatMessage message;
@@ -153,8 +149,6 @@ class AIAgentService {
           temperature: 0,
         ),
       );
-
-      print(coin);
 
       final addressTool = Tool.fromFunction<_GetAddressInput, String>(
         name: 'QRY_getAddress',

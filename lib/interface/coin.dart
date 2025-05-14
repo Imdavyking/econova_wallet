@@ -14,6 +14,18 @@ enum WalletType {
 }
 
 abstract class Coin {
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Coin) return false;
+    final otherCoin = other;
+
+    return otherCoin.getName() == getName() &&
+        otherCoin.decimals() == decimals() &&
+        otherCoin.getExplorer() == getExplorer() &&
+        otherCoin.getDefault() == getDefault();
+  }
+
   void validateAddress(String address);
   Future<String> addressExplorer();
   Map toJson();
@@ -107,6 +119,9 @@ abstract class Coin {
   Future<AccountData> fromPrivateKey(String privateKey) async {
     throw UnimplementedError('private key derivation not implemented');
   }
+
+  @override
+  int get hashCode => super.hashCode + 0;
 }
 
 class AccountData {

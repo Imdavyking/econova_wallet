@@ -93,28 +93,6 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
               hint: const Text("Select Coin"),
               value: selectedCoin,
               icon: const Icon(Icons.arrow_drop_down),
-              selectedItemBuilder: (context) {
-                return getAllBlockchains.map<Widget>((Coin coin) {
-                  String assetImagePath = coin.getImage();
-
-                  return Row(
-                    children: [
-                      Image.asset(
-                        assetImagePath,
-                        width: 24,
-                        height: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        coin.getSymbol(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList();
-              },
               items: getAllBlockchains
                   .where(
                       (Coin value) => value.getSymbol() == value.getDefault())
