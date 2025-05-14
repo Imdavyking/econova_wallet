@@ -65,6 +65,7 @@ dependencies:
     path: ./jazzicon
   sui:
     path: ./sui
+  connectivity_plus: ^6.1.4
   elliptic: ^0.3.8
   blockchain_utils: ^3.0.0
   percent_indicator: ^3.4.0

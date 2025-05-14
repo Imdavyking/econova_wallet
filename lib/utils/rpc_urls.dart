@@ -3,6 +3,7 @@
 import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
+import 'package:cryptowallet/utils/network_guard.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:blockchain_utils/blockchain_utils.dart' hide AES;
 import 'package:cryptowallet/utils/sol_token_info.dart';
@@ -540,7 +541,7 @@ Future<String> getCryptoPrice({
 
     final dataUrl =
         '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=$defaultCurrency&include_24hr_change=true';
-
+    NetworkGuard().throwIfOffline();
     final response =
         await get(Uri.parse(dataUrl)).timeout(networkTimeOutDuration);
 
@@ -582,6 +583,7 @@ Future<double> totalCryptoBalance({
     try {
       final coin = getAllBlockchains[i];
       if (WalletService.removeCoin(coin)) continue;
+       NetworkGuard().throwIfOffline();
       final balance = await coin.getBalance(true);
       final priceDetails = allCryptoPrice[coin.getGeckoId()];
       double price =
@@ -2916,7 +2918,6 @@ class _SolanaSimuRes {
     required this.result,
   });
 }
-
 
 Uint8List txDataToUintList(String txData) {
   return isHexString(txData) ? hexToBytes(txData) : ascii.encode(txData);
