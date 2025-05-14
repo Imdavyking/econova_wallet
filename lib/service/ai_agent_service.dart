@@ -79,6 +79,7 @@ class AIAgentService {
         },
         func: (final _GetAddressInput toolInput) async {
           final address = await starkNetCoins.first.getAddress();
+          starkNetCoins.first.validateAddress(address);
           return 'user address is $address';
         },
         getInputFromJson: _GetAddressInput.fromJson,
