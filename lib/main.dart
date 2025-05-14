@@ -7,7 +7,6 @@ import 'package:cryptowallet/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:cryptowallet/coins/fuse_4337_coin.dart';
 import 'package:cryptowallet/coins/starknet_coin.dart';
 import 'package:cryptowallet/coins/cosmos_coin.dart';
-import 'package:cryptowallet/coins/tezos_coin.dart';
 import 'package:cryptowallet/coins/xrp_coin.dart';
 import 'package:cryptowallet/coins/tron_coin.dart';
 import 'package:cryptowallet/coins/filecoin_coin.dart';
@@ -117,7 +116,6 @@ Future<List<Coin>> getAllBlockchains_fun() async {
     ...getCosmosBlockChains(),
     ...getFilecoinBlockChains(),
     ...starkNetCoins,
-    ...getTezosBlockchains(),
     ...getXRPBlockChains(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
