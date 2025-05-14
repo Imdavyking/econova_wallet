@@ -23,7 +23,7 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
-  static const historyKey = '823b5ac-51f0-8007-bc48-fa9b018';
+  static const historyKey = 'a823b5ac-51f0-8007-bc48-fa9b1829';
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -67,7 +67,8 @@ class AIAgentService {
   }
 
   static Future<void> saveHistory() async {
-    List histories = await memory.chatHistory.getChatMessages();
+    List<lang_chain.ChatMessage> histories =
+        await memory.chatHistory.getChatMessages();
     histories = histories.reversed.toList();
 
     List chatHistoryStore = [];
