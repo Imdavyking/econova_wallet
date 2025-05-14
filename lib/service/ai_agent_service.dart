@@ -9,6 +9,7 @@ import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
+import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
@@ -19,10 +20,19 @@ typedef DashChatMessage = dash_chat.ChatMessage;
 typedef DashChatMedia = dash_chat.ChatMedia;
 
 //TODO: also allow user to query about starknet
+
+class ChatMessageWithDate {
+  final lang_chain.ChatMessage message;
+  final DateTime date;
+
+  ChatMessageWithDate(this.message, this.date);
+}
+
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
-  static const historyKey = 'a823b5ac-51f0-8007-bc48-fa9b182';
+  static const historyKey = '33221-93d0-8007-8a0f-cd31191';
+  static final logger = Logger();
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -68,6 +78,7 @@ class AIAgentService {
   static Future<void> saveHistory() async {
     List<lang_chain.ChatMessage> histories =
         await memory.chatHistory.getChatMessages();
+
     histories = histories.reversed.toList();
 
     List chatHistoryStore = [];
@@ -85,17 +96,31 @@ class AIAgentService {
     await pref.delete(historyKey);
   }
 
-  static Future<List<lang_chain.ChatMessage>> loadSavedMessages() async {
+  static Future<List<ChatMessageWithDate>> loadSavedMessages() async {
     final historyList = pref.get(historyKey);
-    final List<lang_chain.ChatMessage> messages = [];
+    final List<ChatMessageWithDate> messages = [];
+
     if (historyList != null) {
       final List historyStore = jsonDecode(historyList);
-      for (var history in historyStore) {
-        final aiMessage = jsonToLangchainMessage(history);
-        messages.add(aiMessage);
-        await memory.chatHistory.addChatMessage(aiMessage);
+
+      final convertedMessages = historyStore
+          .map(
+            (history) => ChatMessageWithDate(
+              jsonToLangchainMessage(history),
+              DateTime.parse(
+                history['date'],
+              ),
+            ),
+          )
+          .toList();
+
+      messages.addAll(convertedMessages);
+
+      for (ChatMessageWithDate savedMessages in convertedMessages.reversed) {
+        await memory.chatHistory.addChatMessage(savedMessages.message);
       }
     }
+
     return messages;
   }
 

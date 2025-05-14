@@ -35,25 +35,26 @@ class _AIAgentState extends State<AIAgent> {
   }
 
   Future<void> loadHistory() async {
-    final List<lang_chain.ChatMessage> savedMessages =
+    final List<ChatMessageWithDate> savedMessages =
         await AIAgentService.loadSavedMessages();
 
     if (savedMessages.isNotEmpty) {
       for (final savedMessage in savedMessages) {
-        if (savedMessage.runtimeType == lang_chain.HumanChatMessage) {
+        final message = savedMessage.message;
+        if (message.runtimeType == lang_chain.HumanChatMessage) {
           messages.add(
             ChatMessage(
               user: Constants.user,
-              text: savedMessage.contentAsString,
-              createdAt: DateTime.now(),
+              text: message.contentAsString,
+              createdAt: savedMessage.date,
             ),
           );
-        } else if (savedMessage.runtimeType == lang_chain.AIChatMessage) {
+        } else if (message.runtimeType == lang_chain.AIChatMessage) {
           messages.add(
             ChatMessage(
               user: Constants.ai,
-              text: savedMessage.contentAsString,
-              createdAt: DateTime.now(),
+              text: message.contentAsString,
+              createdAt: savedMessage.date,
               isMarkdown: true,
             ),
           );

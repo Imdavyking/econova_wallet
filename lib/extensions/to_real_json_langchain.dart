@@ -1,12 +1,13 @@
 import "package:langchain/langchain.dart" as lang_chain;
 
-extension ListFirstWhere<T> on lang_chain.ChatMessage {
+extension LangChainExt<T> on lang_chain.ChatMessage {
   Map<String, dynamic> jsonStringify() {
     if (runtimeType == lang_chain.SystemChatMessage) {
       final message = this as lang_chain.SystemChatMessage;
       return {
         'type': message.runtimeType.toString(),
         'content': contentAsString,
+        'date': DateTime.now().toIso8601String(),
       };
     } else if (runtimeType == lang_chain.AIChatMessage) {
       final message = this as lang_chain.AIChatMessage;
@@ -14,6 +15,7 @@ extension ListFirstWhere<T> on lang_chain.ChatMessage {
       return {
         'type': message.runtimeType.toString(),
         'content': contentAsString,
+        'date': DateTime.now().toIso8601String(),
         'toolCalls': toolCalls.map((tool) {
           return Map<String, dynamic>.from({
             'id': tool.id,
@@ -28,12 +30,14 @@ extension ListFirstWhere<T> on lang_chain.ChatMessage {
       return {
         'type': message.runtimeType.toString(),
         'content': message.contentAsString,
+        'date': DateTime.now().toIso8601String(),
       };
     } else if (runtimeType == lang_chain.ToolChatMessage) {
       final message = this as lang_chain.ToolChatMessage;
       return {
         'type': message.runtimeType.toString(),
         'content': message.contentAsString,
+        'date': DateTime.now().toIso8601String(),
         'toolCallId': message.toolCallId
       };
     } else if (runtimeType == lang_chain.CustomChatMessage) {
@@ -41,6 +45,7 @@ extension ListFirstWhere<T> on lang_chain.ChatMessage {
       return {
         'type': message.runtimeType.toString(),
         'content': message.contentAsString,
+        'date': DateTime.now().toIso8601String(),
         'role': message.role
       };
     } else {
