@@ -23,7 +23,7 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
-  static const historyKey = '823b5ac-51f0-8007-bc48-fa9b01c8';
+  static const historyKey = '823b5ac-51f0-8007-bc48-fa9b018';
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -31,7 +31,9 @@ class AIAgentService {
       case 'SystemChatMessage':
         return lang_chain.SystemChatMessage(content: json['content']);
       case 'AIChatMessage':
-        List<Map<String, dynamic>> toolCalls = json['toolCalls'];
+        List<Map<String, dynamic>> toolCalls =
+            (json['toolCalls'] as List).cast<Map<String, dynamic>>();
+
         return lang_chain.AIChatMessage(
           content: json['content'],
           toolCalls: toolCalls.map(
@@ -47,7 +49,7 @@ class AIAgentService {
         );
       case 'HumanChatMessage':
         return lang_chain.HumanChatMessage(
-          content: json['content'],
+          content: lang_chain.ChatMessageContent.text(json['content']),
         );
       case 'ToolChatMessage':
         return lang_chain.ToolChatMessage(
@@ -65,7 +67,9 @@ class AIAgentService {
   }
 
   static Future<void> saveHistory() async {
-    final histories = await memory.chatHistory.getChatMessages();
+    List histories = await memory.chatHistory.getChatMessages();
+    histories = histories.reversed.toList();
+
     List chatHistoryStore = [];
     if (histories.isNotEmpty) {
       for (final history in histories) {
@@ -81,13 +85,15 @@ class AIAgentService {
     await pref.delete(historyKey);
   }
 
-  static List<lang_chain.ChatMessage> loadSavedMessages() {
+  static Future<List<lang_chain.ChatMessage>> loadSavedMessages() async {
     final historyList = pref.get(historyKey);
     final List<lang_chain.ChatMessage> messages = [];
     if (historyList != null) {
       final List historyStore = jsonDecode(historyList);
       for (var history in historyStore) {
-        messages.add(jsonToLangchainMessage(history));
+        final aiMessage = jsonToLangchainMessage(history);
+        messages.add(aiMessage);
+        await memory.chatHistory.addChatMessage(aiMessage);
       }
     }
     return messages;
@@ -253,7 +259,7 @@ class AIAgentService {
       final executor = AgentExecutor(agent: agent);
 
       final response = await executor.run(chatMessage.text);
-
+      print('response: $response');
       await saveHistory();
       return Right(
         DashChatMessage(

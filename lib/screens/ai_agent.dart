@@ -1,4 +1,3 @@
-
 import 'package:cryptowallet/extensions/build_context_extension.dart';
 import 'package:cryptowallet/extensions/chat_message_ext.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
@@ -37,7 +36,7 @@ class _AIAgentState extends State<AIAgent> {
 
   Future<void> loadHistory() async {
     final List<lang_chain.ChatMessage> savedMessages =
-        AIAgentService.loadSavedMessages();
+        await AIAgentService.loadSavedMessages();
 
     if (savedMessages.isNotEmpty) {
       for (final savedMessage in savedMessages) {
