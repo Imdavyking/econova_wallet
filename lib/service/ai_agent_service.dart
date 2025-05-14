@@ -267,10 +267,11 @@ class AIAgentService {
         getInputFromJson: _GetTransferInput.fromJson,
       );
       final tools = [addressTool, balanceTool, transferTool];
-      final availableCoins = getAllBlockchains
+      final otherCoins = getAllBlockchains
           .where((Coin value) =>
               value.getSymbol() == value.getDefault() &&
-              value.badgeImage == null)
+              value.badgeImage == null &&
+              value != coin)
           .toList()
           .map((token) =>
               "${token.getName().split('(')[0]} (${token.getSymbol()})")
@@ -285,9 +286,8 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        ${enableTestNet ? "you are always on Testnet." : ""}
         current coin is $currentCoin.
-        available coins are $availableCoins.
+        other coins are $otherCoins.
         """;
 
       debugPrint(prompt);
