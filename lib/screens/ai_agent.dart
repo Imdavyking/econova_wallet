@@ -34,7 +34,6 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   @override
   initState() {
     super.initState();
-    messages = <ChatMessage>[];
     loadHistory();
   }
 
@@ -42,6 +41,7 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   bool get wantKeepAlive => true;
 
   Future<void> loadHistory() async {
+    if (messages.isNotEmpty) return;
     final List<ChatMessageWithDate> savedMessages =
         await AIAgentService.loadSavedMessages();
 
