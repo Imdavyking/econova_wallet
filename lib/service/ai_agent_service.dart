@@ -289,7 +289,8 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        available coins are $availableCoins
+        available coins are $availableCoins.
+        ${enableTestNet ? "you are always on Testnet." : ""}
         current coin is ${coin.getName()}.
         """,
           ),
