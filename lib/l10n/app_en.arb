@@ -1,6 +1,8 @@
 {
   "hi": "Hi",
   "user": "User",
+  "clearHistory": "Clear History",
+  "clearHistoryDescription": "Are you sure you want to clear your AI Chat history?",
   "lockedAppMessage": "The application will be unlocked after",
   "expiredTimeMessage": "The current time has expired",
   "passcodeInfo": "Passcode adds an extra layer of security when using the app.",

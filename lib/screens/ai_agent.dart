@@ -85,14 +85,14 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
         title: const Text('AI Agent'),
         actions: [
           IconButton(
-            icon: Icon(Icons.clear_all),
+            icon: const Icon(Icons.clear_all),
             onPressed: () async {
               final result = await showDialog(
                 context: context,
                 builder: (context) {
                   return AlertDialog(
-                    title: Text('localization.clearHistory'),
-                    content: Text('localization.clearHistoryMessage'),
+                    title: Text(localization.clearHistory),
+                    content: Text(localization.clearHistoryDescription),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(true),

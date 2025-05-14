@@ -1,5 +1,7 @@
 {
   "de": [
+    "clearHistory",
+    "clearHistoryDescription",
     "connectionDetails",
     "failedToStake",
     "failedToUnStake",
@@ -11,6 +13,8 @@
   ],
 
   "fr": [
+    "clearHistory",
+    "clearHistoryDescription",
     "connectionDetails",
     "failedToStake",
     "failedToUnStake",
@@ -22,6 +26,8 @@
   ],
 
   "hi": [
+    "clearHistory",
+    "clearHistoryDescription",
     "connectionDetails",
     "failedToStake",
     "failedToUnStake",
@@ -33,6 +39,8 @@
   ],
 
   "zh": [
+    "clearHistory",
+    "clearHistoryDescription",
     "connectionDetails",
     "failedToStake",
     "failedToUnStake",
