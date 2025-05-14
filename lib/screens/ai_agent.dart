@@ -19,7 +19,7 @@ class AIAgent extends StatefulWidget {
   _AIAgentState createState() => _AIAgentState();
 }
 
-class _AIAgentState extends State<AIAgent> {
+class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   List<ChatMessage> messages = <ChatMessage>[];
   List<ChatUser> typingUsers = [];
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
@@ -31,8 +31,12 @@ class _AIAgentState extends State<AIAgent> {
   @override
   initState() {
     super.initState();
+    messages = <ChatMessage>[];
     loadHistory();
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> loadHistory() async {
     final List<ChatMessageWithDate> savedMessages =
@@ -56,6 +60,11 @@ class _AIAgentState extends State<AIAgent> {
               text: message.contentAsString,
               createdAt: savedMessage.date,
               isMarkdown: true,
+              replyTo: ChatMessage(
+                user: Constants.user,
+                text: 'hello',
+                createdAt: DateTime.now(),
+              ),
             ),
           );
         }
@@ -69,6 +78,7 @@ class _AIAgentState extends State<AIAgent> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     localization = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
