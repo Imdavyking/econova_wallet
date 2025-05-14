@@ -23,7 +23,7 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
-  static const historyKey = 'a823b5ac-51f0-8007-bc48-fa9b1829';
+  static const historyKey = 'a823b5ac-51f0-8007-bc48-fa9b182';
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -98,42 +98,6 @@ class AIAgentService {
       }
     }
     return messages;
-  }
-
-  ///throws error if user didn't approve transaction
-  Future<void> authenticateCommand(String message) async {
-    final context = NavigationService.navigatorKey.currentContext!;
-
-    bool isApproved = await AwesomeDialog(
-      closeIcon: const Icon(
-        Icons.close,
-      ),
-      buttonsTextStyle: const TextStyle(color: Colors.white),
-      context: context,
-      btnOkColor: appBackgroundblue,
-      dialogType: DialogType.info,
-      buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
-      headerAnimationLoop: false,
-      animType: AnimType.bottomSlide,
-      title: 'Confirm Transaction',
-      desc: message,
-      showCloseIcon: true,
-      btnOkOnPress: () async {
-        final confirmTX = await authenticate(
-          NavigationService.navigatorKey.currentContext!,
-        );
-        Navigator.pop(context, confirmTX);
-      },
-      btnCancelOnPress: () {
-        Navigator.pop(context, false);
-      },
-    ).show();
-
-    if (!isApproved) {
-      throw Exception(
-        'User did not approve the transaction $message',
-      );
-    }
   }
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
@@ -236,21 +200,8 @@ class AIAgentService {
             return 'Invalid address recipient: $recipient';
           }
 
-          throw Exception(
-            'User did not approve the transaction $message',
-          );
-
           return message;
-
-          // try {
-          //
-          // } catch (e) {
-          //   print('Invalid recipient address: $e');
-          // }
-
-          // //TODO: find better way to do Human In The Loop (HITL)
-          // await authenticateCommand(message);
-
+          //TODO: add Human In The Loop to confirm transaction
           // String? txHash = await starkNetCoins.first.transferToken(
           //   amount.toString(),
           //   recipient,
