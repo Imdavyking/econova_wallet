@@ -105,9 +105,11 @@ abstract class Coin {
     if (WalletService.isPharseKey()) {
       return fromMnemonic(mnemonic: data);
     } else if (WalletService.isViewKey()) {
-      return AccountData.fromJson({
-        'address': data,
-      });
+      return Future.value(
+        AccountData.fromJson({
+          'address': data,
+        }),
+      );
     } else if (WalletService.isPrivateKey()) {
       return fromPrivateKey(data);
     }

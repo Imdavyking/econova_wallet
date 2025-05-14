@@ -133,10 +133,7 @@ class TonCoin extends Coin {
 
   @override
   Future<double> getBalance(bool skipNetworkRequest) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final details = await importData(data);
-
-    final address = details.address;
+    final address = await getAddress();
     final key = 'tonAddressBalance$address$api';
 
     final storedBalance = pref.get(key);
