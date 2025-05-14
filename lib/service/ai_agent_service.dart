@@ -1,11 +1,14 @@
+import "dart:convert";
+
 import "package:awesome_dialog/awesome_dialog.dart";
 import "package:cryptowallet/coins/starknet_coin.dart";
+import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/screens/navigator_service.dart";
 import "package:cryptowallet/utils/app_config.dart";
 import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
-import "package:flutter/foundation.dart";
+import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:langchain_openai/langchain_openai.dart";
@@ -20,6 +23,71 @@ typedef DashChatMedia = dash_chat.ChatMedia;
 class AIAgentService {
   AIAgentService();
   static final memory = ConversationBufferMemory(returnMessages: true);
+  static const historyKey = '823b5ac-51f0-8007-bc48-fa9b01c8';
+
+  static lang_chain.ChatMessage jsonToLangchainMessage(
+      Map<String, dynamic> json) {
+    switch (json['type']) {
+      case 'SystemChatMessage':
+        return lang_chain.SystemChatMessage(content: json['content']);
+      case 'AIChatMessage':
+        List<Map<String, dynamic>> toolCalls = json['toolCalls'];
+        return lang_chain.AIChatMessage(
+          content: json['content'],
+          toolCalls: toolCalls.map(
+            (tool) {
+              return lang_chain.AIChatMessageToolCall(
+                arguments: tool['arguments'],
+                argumentsRaw: tool['argumentsRaw'],
+                id: tool['id'],
+                name: tool['name'],
+              );
+            },
+          ).toList(),
+        );
+      case 'HumanChatMessage':
+        return lang_chain.HumanChatMessage(
+          content: json['content'],
+        );
+      case 'ToolChatMessage':
+        return lang_chain.ToolChatMessage(
+          content: json['content'],
+          toolCallId: json['toolCallId'],
+        );
+      case 'CustomChatMessage':
+        return lang_chain.CustomChatMessage(
+          content: json['content'],
+          role: json['role'],
+        );
+      default:
+        throw Exception('can not convert to json');
+    }
+  }
+
+  static Future<void> saveHistory() async {
+    final histories = await memory.chatHistory.getChatMessages();
+    List chatHistoryStore = [];
+    if (histories.isNotEmpty) {
+      for (final history in histories) {
+        chatHistoryStore.add(history.jsonStringify());
+      }
+      if (chatHistoryStore.isNotEmpty) {
+        await pref.put(historyKey, jsonEncode(chatHistoryStore));
+      }
+    }
+  }
+
+  static Future<void> loadHistory() async {
+    final historyList = pref.get(historyKey);
+    print(historyList);
+    if (historyList != null) {
+      final List historyStore = jsonDecode(historyList);
+      for (var history in historyStore) {
+        final message = jsonToLangchainMessage(history);
+        await memory.chatHistory.addChatMessage(message);
+      }
+    }
+  }
 
   ///throws error if user didn't approve transaction
   Future<void> authenticateCommand(String message) async {
@@ -182,6 +250,7 @@ class AIAgentService {
 
       final response = await executor.run(chatMessage.text);
 
+      await saveHistory();
       return Right(
         DashChatMessage(
           isMarkdown: true,
