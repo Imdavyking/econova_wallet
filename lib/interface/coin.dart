@@ -106,9 +106,9 @@ abstract class Coin {
       return fromMnemonic(mnemonic: data);
     } else if (WalletService.isViewKey()) {
       return Future.value(
-        AccountData.fromJson({
-          'address': data,
-        }),
+        AccountData(
+          address: data,
+        ),
       );
     } else if (WalletService.isPrivateKey()) {
       return fromPrivateKey(data);
