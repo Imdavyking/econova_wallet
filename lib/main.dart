@@ -11,7 +11,6 @@ import 'package:cryptowallet/coins/xrp_coin.dart';
 import 'package:cryptowallet/coins/tron_coin.dart';
 import 'package:cryptowallet/coins/filecoin_coin.dart';
 import 'package:cryptowallet/coins/polkadot_coin.dart';
-import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/wordlist.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../service/wallet_service.dart';
@@ -90,8 +89,6 @@ List<ERCFungibleCoin> erc20Coins = [
 List<StarknetCoin> starkNetCoins = [
   ...getStarknetBlockchains(),
 ];
-
-
 
 Future<List<Coin>> getAllBlockchains_fun() async {
   List<Coin> blockchains = [
@@ -203,8 +200,6 @@ void main() async {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
-
-  AIAgentService.loadHistory();
 
   runApp(ProviderScope(
     child: MyApp(

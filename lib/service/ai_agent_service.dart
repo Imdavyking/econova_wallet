@@ -77,16 +77,20 @@ class AIAgentService {
     }
   }
 
-  static Future<void> loadHistory() async {
+  static Future<void> clearSavedMessages() async {
+    await pref.delete(historyKey);
+  }
+
+  static List<lang_chain.ChatMessage> loadSavedMessages() {
     final historyList = pref.get(historyKey);
-    print(historyList);
+    final List<lang_chain.ChatMessage> messages = [];
     if (historyList != null) {
       final List historyStore = jsonDecode(historyList);
       for (var history in historyStore) {
-        final message = jsonToLangchainMessage(history);
-        await memory.chatHistory.addChatMessage(message);
+        messages.add(jsonToLangchainMessage(history));
       }
     }
+    return messages;
   }
 
   ///throws error if user didn't approve transaction
