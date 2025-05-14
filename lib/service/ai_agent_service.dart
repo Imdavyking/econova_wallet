@@ -184,9 +184,7 @@ class AIAgentService {
           'required': ['address'],
         },
         func: (final _GetBalanceInput toolInput) async {
-          String? address = toolInput.address;
-
-          address ??= await coin.getAddress();
+          String address = toolInput.address;
 
           try {
             coin.validateAddress(address);
@@ -274,7 +272,7 @@ class AIAgentService {
         memory: memory,
         systemChatMessage: SystemChatMessagePromptTemplate(
           prompt: PromptTemplate(
-            inputVariables: {},
+            inputVariables: const {},
             template: """You are $walletName,
         a smart wallet that allows users to perform transactions,
         and query the blockchain using natural language.
@@ -323,7 +321,7 @@ class _GetAddressInput {
 }
 
 class _GetBalanceInput {
-  final String? address;
+  final String address;
 
   _GetBalanceInput({required this.address});
 
