@@ -239,8 +239,6 @@ class StarknetCoin extends Coin {
         address: address,
       );
 
-      debugPrint('Balance: $userBalance');
-
       await pref.put(key, userBalance);
       return userBalance;
     } catch (e) {

@@ -83,6 +83,39 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Agent'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.clear_all),
+            onPressed: () async {
+              final result = await showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('localization.clearHistory'),
+                    content: Text('localization.clearHistoryMessage'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: Text(localization.ok),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text(localization.back),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (result == true) {
+                await AIAgentService.clearSavedMessages();
+                setState(() {
+                  messages = [];
+                });
+              }
+            },
+          ),
+        ],
       ),
       body: DashChat(
         typingUsers: typingUsers,

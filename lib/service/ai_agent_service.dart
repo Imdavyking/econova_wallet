@@ -94,6 +94,7 @@ class AIAgentService {
 
   static Future<void> clearSavedMessages() async {
     await pref.delete(historyKey);
+    await memory.clear();
   }
 
   static Future<List<ChatMessageWithDate>> loadSavedMessages() async {
