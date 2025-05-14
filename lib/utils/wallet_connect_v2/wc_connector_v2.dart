@@ -316,10 +316,10 @@ class WcConnectorV2 {
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: CachedNetworkImage(
                     imageUrl: ipfsTohttp(metadata.icons.first),
-                    placeholder: (context, url) => Column(
+                    placeholder: (context, url) => const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         SizedBox(
                           width: 20,
                           height: 20,
