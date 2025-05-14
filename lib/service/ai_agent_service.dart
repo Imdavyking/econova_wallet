@@ -244,7 +244,6 @@ class AIAgentService {
             return confirmMessage;
           }
 
-          //TODO: add Human In The Loop to confirm transaction
           String? txHash = await starkNetCoins.first.transferToken(
             amount.toString(),
             recipient,
