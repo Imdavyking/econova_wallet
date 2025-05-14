@@ -132,12 +132,8 @@ class AIAgentService {
       ),
     );
 
-    if (isApproved == null) {
-      return 'Transaction cancelled $message';
-    }
-
-    if (isApproved == false) {
-      return 'Transaction cancelled $message';
+    if (isApproved == null || isApproved == false) {
+      return 'User did not approve $message';
     }
 
     return null;
@@ -243,8 +239,9 @@ class AIAgentService {
             return 'Invalid address recipient: $recipient';
           }
 
-          if (await confirmTransaction(message) != null) {
-            return 'Transaction cancelled $message';
+          final confirmMessage = await confirmTransaction(message);
+          if (confirmMessage != null) {
+            return confirmMessage;
           }
 
           //TODO: add Human In The Loop to confirm transaction
