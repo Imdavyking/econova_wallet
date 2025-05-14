@@ -166,6 +166,14 @@ packages:
       relative: true
     source: path
     version: "2.0.2"
+  blake2b:
+    dependency: transitive
+    description:
+      name: blake2b
+      sha256: "514623351f7c7cacd510e0cad42a28b74936dc546652a2ebe80a0543cf5b651f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   blockchain_utils:
     dependency: "direct main"
     description:
@@ -477,6 +485,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.4"
+  dartez:
+    dependency: "direct main"
+    description:
+      name: dartez
+      sha256: "44946dd5c4baf449b037bc1b228480b8d6c2375c4bb4567a7e7afe961c0b07e6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.3"
   dash_chat_2:
     dependency: "direct main"
     description:
@@ -1956,6 +1972,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  secp256k1:
+    dependency: transitive
+    description:
+      name: secp256k1
+      sha256: "66310c1fce68d0c3cfae61f9f23aba11f459fb8c84a50bdc6520548c62a4828a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   sha3:
     dependency: "direct main"
     description:
@@ -2065,6 +2089,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  sodium:
+    dependency: transitive
+    description:
+      name: sodium
+      sha256: "79fef0408c40c675de45f50e95ed0c7ee3393b7abda0771807691620bb47f5c7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
+  sodium_libs:
+    dependency: transitive
+    description:
+      name: sodium_libs
+      sha256: c7ef44664ec57bb89da9173cf3a672045e92a8297b05a3ab34e07da96eff8238
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0+1"
   solana:
     dependency: "direct main"
     description:
