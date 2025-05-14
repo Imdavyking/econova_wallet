@@ -122,9 +122,7 @@ abstract class Coin {
     throw UnimplementedError('private key derivation not implemented');
   }
 
-  Future<double> getUserBalance({
-    required String address,
-  });
+  Future<double> getUserBalance({required String address});
 
   @override
   int get hashCode => super.hashCode + 0;
