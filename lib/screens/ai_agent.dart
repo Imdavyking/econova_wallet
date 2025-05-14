@@ -89,8 +89,9 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
               value: selectedCoin,
               icon: const Icon(Icons.arrow_drop_down),
               items: getAllBlockchains
-                  .where(
-                      (Coin value) => value.getSymbol() == value.getDefault())
+                  .where((Coin value) =>
+                      value.getSymbol() == value.getDefault() &&
+                      value.badgeImage == null)
                   .map<DropdownMenuItem<Coin>>((Coin coin) {
                 String assetImagePath = coin.getImage();
                 bool isSelected = selectedCoin == coin;

@@ -268,7 +268,9 @@ class AIAgentService {
       );
       final tools = [addressTool, balanceTool, transferTool];
       final availableCoins = getAllBlockchains
-          .where((Coin value) => value.getSymbol() == value.getDefault())
+          .where((Coin value) =>
+              value.getSymbol() == value.getDefault() &&
+              value.badgeImage == null)
           .toList()
           .map((token) =>
               "${token.getName().split('(')[0]} (${token.getSymbol()})")
