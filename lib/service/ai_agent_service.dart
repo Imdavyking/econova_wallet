@@ -3,6 +3,7 @@ import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/interface/coin.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/service/ai_tools.dart";
+import "package:cryptowallet/utils/all_coins.dart";
 import "package:cryptowallet/utils/app_config.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
@@ -139,6 +140,7 @@ class AIAgentService {
 
       final otherCoins = getAllBlockchains
           .where((Coin value) =>
+              coinGeckoIDs.contains(value.getGeckoId()) &&
               value.getSymbol() == value.getDefault() &&
               value.badgeImage == null &&
               value != coin)
