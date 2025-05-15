@@ -85,6 +85,26 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final url = '${rpc}address/$address/esdt/$identifier';
+
+    final request = await get(Uri.parse(url));
+    final responseBody = request.body;
+
+    if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
+      throw Exception(responseBody);
+    }
+
+    EsdtBalanceModel esdtBalanceModel =
+        EsdtBalanceModel.fromJson(json.decode(responseBody));
+    final balance = esdtBalanceModel.data!.tokenData!.balance;
+
+    final base = BigInt.from(10);
+
+    return BigInt.parse(balance) / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'ESDTddressBalance$identifier$rpc$address';
@@ -100,23 +120,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final url = '${rpc}address/$address/esdt/$identifier';
-
-      final request = await get(Uri.parse(url));
-      final responseBody = request.body;
-
-      if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
-        throw Exception(responseBody);
-      }
-
-      EsdtBalanceModel esdtBalanceModel =
-          EsdtBalanceModel.fromJson(json.decode(responseBody));
-      final balance = esdtBalanceModel.data!.tokenData!.balance;
-
-      final base = BigInt.from(10);
-
-      double fraction = BigInt.parse(balance) / base.pow(decimals());
-
+      double fraction = await getUserBalance(address: address);
       await pref.put(key, fraction);
 
       return fraction;

@@ -85,6 +85,36 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   String tokenAddress() => tokenID;
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final details = await importData(data);
+    final ownerWallet = WalletV4.create(
+      workChain: 0,
+      publicKey: HEX.decode(details.publicKey!),
+      bounceableAddress: true,
+    );
+
+    final minter = JettonMinter(
+      owner: ownerWallet,
+      address: TonAddress(
+        tokenID,
+      ),
+    );
+
+    final jettonWalletAddress = await minter.getWalletAddress(
+      rpc: getRpc(),
+      owner: ownerWallet.address,
+    );
+
+    final jettonWallet = JettonWallet.fromAddress(
+      jettonWalletAddress: jettonWalletAddress,
+      owner: ownerWallet,
+    );
+    final balance = await jettonWallet.getBalance(getRpc());
+    return balance / BigInt.from(10).pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
@@ -103,30 +133,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final ownerWallet = WalletV4.create(
-        workChain: 0,
-        publicKey: HEX.decode(details.publicKey!),
-        bounceableAddress: true,
-      );
-
-      final minter = JettonMinter(
-        owner: ownerWallet,
-        address: TonAddress(
-          tokenID,
-        ),
-      );
-
-      final jettonWalletAddress = await minter.getWalletAddress(
-        rpc: getRpc(),
-        owner: ownerWallet.address,
-      );
-
-      final jettonWallet = JettonWallet.fromAddress(
-        jettonWalletAddress: jettonWalletAddress,
-        owner: ownerWallet,
-      );
-      final balance = await jettonWallet.getBalance(getRpc());
-      double balTon = balance / BigInt.from(10).pow(decimals());
+      double balTon = await getUserBalance(address: address);
       await pref.put(key, balTon);
       return balTon;
     } catch (_) {

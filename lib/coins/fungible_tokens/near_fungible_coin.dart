@@ -180,6 +180,34 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final account = await getAccount();
+
+    String method = 'ft_balance_of';
+    String args = json.encode(
+      {
+        'account_id': account.accountId,
+      },
+    );
+
+    Contract contract = Contract(contractID, account);
+
+    var result = await contract.callViewFuntion(method, args);
+
+    if (result['result'] == null) return 0;
+
+    List<int> blRst = List<int>.from(result['result']['result']);
+
+    blRst.removeWhere((int num) => num == asciiQuote || num == asciiDobQuote);
+
+    final toknBal = BigInt.parse(ascii.decode(blRst));
+
+    final base = BigInt.from(10);
+
+    return toknBal / base.pow(decimals());
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'nearAddressBalance$address$api$contractID';
@@ -195,30 +223,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final account = await getAccount();
-
-      String method = 'ft_balance_of';
-      String args = json.encode(
-        {
-          'account_id': account.accountId,
-        },
-      );
-
-      Contract contract = Contract(contractID, account);
-
-      var result = await contract.callViewFuntion(method, args);
-
-      if (result['result'] == null) return savedBalance;
-
-      List<int> blRst = List<int>.from(result['result']['result']);
-
-      blRst.removeWhere((int num) => num == asciiQuote || num == asciiDobQuote);
-
-      final toknBal = BigInt.parse(ascii.decode(blRst));
-
-      final base = BigInt.from(10);
-
-      final tknBal = toknBal / base.pow(decimals());
+      final tknBal = await getUserBalance(address: address);
       await pref.put(key, tknBal);
 
       return tknBal;

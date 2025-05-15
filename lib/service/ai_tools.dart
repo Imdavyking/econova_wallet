@@ -136,11 +136,14 @@ class AItools {
         String walletAddress = toolInput.walletAddress;
         String tokenAddress = toolInput.tokenAddress;
         Coin token = coin;
+
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
           token = getAllBlockchains.firstWhere((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
         }
+
+        debugPrint("${token.getSymbol()} balance check");
 
         try {
           coin.validateAddress(walletAddress);
@@ -151,6 +154,8 @@ class AItools {
         debugPrint(result);
 
         final coinBal = await token.getUserBalance(address: walletAddress);
+
+        print(coinBal);
 
         final balanceString =
             '$walletAddress have $coinBal ${token.getSymbol()}';

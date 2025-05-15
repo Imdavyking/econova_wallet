@@ -258,17 +258,42 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getUserBalance({required String address}) async {
+    final contract = DeployedContract(
+      _contrAbi,
+      EthereumAddress.fromHex(
+        tokenAddress(),
+      ),
+    );
+
     Web3Client client = Web3Client(
       rpc,
       Client(),
     );
 
-    String address = roninAddrToEth(await getAddress());
-
     final sendingAddress = EthereumAddress.fromHex(
       address,
     );
+
+    final balanceFunc = contract.function('balanceOf');
+
+    final balCall = await client.call(
+      contract: contract,
+      function: balanceFunc,
+      params: [sendingAddress],
+    );
+    BigInt balance = balCall.first;
+
+    await client.dispose();
+
+    final base = BigInt.from(10);
+
+    return balance / base.pow(decimals());
+  }
+
+  @override
+  Future<double> getBalance(bool skipNetworkRequest) async {
+    String address = roninAddrToEth(await getAddress());
 
     final balanceKey = '$chainId${tokenAddress()}${address}ercBalance';
     final storedBalance = pref.get(balanceKey);
@@ -282,28 +307,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final contract = DeployedContract(
-        _contrAbi,
-        EthereumAddress.fromHex(
-          tokenAddress(),
-        ),
-      );
-
-      final balanceFunc = contract.function('balanceOf');
-
-      final balCall = await client.call(
-        contract: contract,
-        function: balanceFunc,
-        params: [sendingAddress],
-      );
-      BigInt balance = balCall.first;
-
-      await client.dispose();
-
-      final base = BigInt.from(10);
-
-      double fraction = balance / base.pow(decimals());
-
+      final fraction = getUserBalance(address: address);
       await pref.put(balanceKey, fraction);
 
       return fraction;

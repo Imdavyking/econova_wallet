@@ -108,6 +108,15 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   Widget? getNFTPage() => null;
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    final tokenAmount = await getProxy().getTokenBalance(
+      owner: solana.Ed25519HDPublicKey.fromBase58(address),
+      mint: solana.Ed25519HDPublicKey.fromBase58(mint),
+    );
+    return double.parse(tokenAmount.uiAmountString!);
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     final address = await getAddress();
     final key = 'solanaSplAddressBalance$address$rpc';
@@ -123,12 +132,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     if (skipNetworkRequest) return savedBalance;
 
     try {
-      final tokenAmount = await getProxy().getTokenBalance(
-        owner: solana.Ed25519HDPublicKey.fromBase58(address),
-        mint: solana.Ed25519HDPublicKey.fromBase58(mint),
-      );
-      double balanceInToken = double.parse(tokenAmount.uiAmountString!);
-
+      final balanceInToken = await getUserBalance(address: address);
       await pref.put(key, balanceInToken);
 
       return balanceInToken;
@@ -218,16 +222,16 @@ List<SplTokenCoin> getSplTokens() {
     blockChains.addAll([
       SplTokenCoin(
         name: 'USDC',
-        symbol: 'USDC',     image: 'assets/wusd.png',      mintDecimals: 6,
+        symbol: 'USDC',
+        image: 'assets/wusd.png',
+        mintDecimals: 6,
         geckoID: 'usd-coin',
         default_: 'SOL',
         blockExplorer:
             'https://explorer.solana.com/tx/$blockExplorerPlaceholder',
-   
         rpc: 'https://solana-api.projectserum.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-  
       ),
     ]);
   }

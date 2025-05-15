@@ -1,8 +1,6 @@
-import 'dart:math';
 
 import 'package:cryptowallet/extensions/build_context_extension.dart';
 import 'package:cryptowallet/extensions/chat_message_ext.dart';
-import 'package:cryptowallet/main.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';

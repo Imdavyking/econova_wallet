@@ -183,6 +183,11 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
   }
 
   @override
+  Future<double> getUserBalance({required String address}) async {
+    return getBalance(false);
+  }
+
+  @override
   Future<double> getBalance(bool skipNetworkRequest) async {
     if (type == TRCFTTYPES.v10) {
       return await _getBalanceV10(skipNetworkRequest);
