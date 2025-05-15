@@ -9,6 +9,7 @@ import 'package:cryptowallet/screens/need_deploy_widget.dart';
 import 'package:cryptowallet/screens/receive_token.dart';
 import 'package:cryptowallet/screens/send_token.dart';
 import 'package:cryptowallet/screens/token_contract_info.dart';
+import 'package:cryptowallet/screens/unstake_token.dart';
 import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/format_money.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
@@ -493,6 +494,41 @@ class _TokenState extends State<Token> {
                                               height: 5,
                                             ),
                                             const Text('Stake'),
+                                          ],
+                                        ),
+                                        const SizedBox(
+                                          width: 30,
+                                        ),
+                                        Column(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () async {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (ctx) =>
+                                                        UnStakeToken(
+                                                            tokenData: coin),
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: const BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: appBackgroundblue,
+                                                ),
+                                                child: const Icon(
+                                                  FontAwesomeIcons.piggyBank,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(
+                                              height: 5,
+                                            ),
+                                            const Text('Unstake'),
                                           ],
                                         ),
                                       ],

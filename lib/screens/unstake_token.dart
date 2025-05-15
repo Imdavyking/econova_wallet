@@ -265,7 +265,7 @@ class _UnStakeTokenState extends State<UnStakeToken> {
                           SnackBar(
                             backgroundColor: Colors.green,
                             content: Text(
-                              localization.stake,
+                              localization.unstakeToken,
                               style: const TextStyle(
                                 color: Colors.white,
                               ),

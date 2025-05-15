@@ -1,6 +1,5 @@
 import 'package:cryptowallet/components/loader.dart';
 import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/screens/unstake_token.dart';
 import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/qr_scan_view.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
@@ -290,45 +289,6 @@ class _StakeTokenState extends State<StakeToken> {
                       setState(() {
                         isLoading = false;
                       });
-                    },
-                  ),
-                ),
-                const SizedBox(
-                  height: 30,
-                ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith(
-                        (states) => appBackgroundblue,
-                      ),
-                      shape: WidgetStateProperty.resolveWith(
-                        (states) => RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      textStyle: WidgetStateProperty.resolveWith(
-                        (states) => const TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      localization.unstakeToken,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    onPressed: () async {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (ctx) => UnStakeToken(tokenData: coin),
-                        ),
-                      );
                     },
                   ),
                 ),

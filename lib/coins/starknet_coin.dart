@@ -410,8 +410,6 @@ class StarknetCoin extends Coin {
 
   Felt get delegationPoolAddress => Felt.fromHexString(
       '0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b');
-  Felt get starkAddress => Felt.fromHexString(
-      '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d');
 
   Contract getStakingContract(Account account) {
     return Contract(
@@ -423,7 +421,7 @@ class StarknetCoin extends Coin {
   Contract getStarkContract(Account account) {
     return Contract(
       account: account,
-      address: starkAddress,
+      address: Felt.fromHexString(strkNativeToken),
     );
   }
 
@@ -540,7 +538,8 @@ class StarknetCoin extends Coin {
 
     List<FunctionCall> calls = [];
 
-    if (existingStake != null) {
+    if (existingStake == null) {
+      debugPrint('No existing stake found');
       calls.addAll([
         allowanceCall,
         FunctionCall(
@@ -619,6 +618,26 @@ class StarknetCoin extends Coin {
       pendingRewards: pendingRewards, // BigInt
       pendingUnstake: pendingUnstake, // PendingUnstake?
     );
+  }
+
+  @override
+  Future<double?> getStakedRewards() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final account = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+    final existingStake = await getStakeInfo(account);
+    if (existingStake == null) {
+      return 0;
+    }
+    return existingStake.pendingRewards / BigInt.from(pow(10, decimals()));
   }
 
   @override
