@@ -79,7 +79,7 @@ abstract class Coin {
     return null;
   }
 
-  Future<bool?> claimStakedRewards() async {
+  Future<String?> claimRewards(String amount) async {
     return null;
   }
 

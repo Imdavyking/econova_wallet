@@ -272,7 +272,7 @@ class AItools {
             'description': 'The amount to stake',
           },
         },
-        'required': ['address'],
+        'required': ['amount'],
       },
       func: (final _GetStakeInput toolInput) async {
         String amount = toolInput.amount;
@@ -294,32 +294,6 @@ class AItools {
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
-    );
-
-    final stakeRewardsTool = Tool.fromFunction<_GetStakeRewardsInput, String>(
-      name: 'QRY_getStakeRewards',
-      description:
-          'Tool for getting the users current stake rewards they can claim',
-      inputJsonSchema: const {
-        'type': 'object',
-        'properties': {},
-        'required': [],
-      },
-      func: (final _GetStakeRewardsInput toolInput) async {
-        final errMsg =
-            'Failed to get stake rewards for ${await coin.getAddress()}';
-        try {
-          final stakeRewards = await coin.getStakedRewards();
-          if (stakeRewards == null) {
-            return errMsg;
-          }
-
-          return 'Your staked rewards are $stakeRewards $currentCoin';
-        } catch (e) {
-          return errMsg;
-        }
-      },
-      getInputFromJson: _GetStakeRewardsInput.fromJson,
     );
 
     final unstakeTool = Tool.fromFunction<_GetStakeInput, String>(
@@ -346,12 +320,74 @@ class AItools {
           }
           final txHash = await coin.unstakeToken(amount);
           if (txHash == null) {
-            return 'Failed to get stake $amount $currentCoin';
+            return 'Failed to get unstake $amount $currentCoin';
           }
 
-          return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
+          return 'Unstaked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'Staking failed for $currentCoin $amount $e';
+          return 'UnStaking failed for $currentCoin $amount $e';
+        }
+      },
+      getInputFromJson: _GetStakeInput.fromJson,
+    );
+
+    final stakeRewardsTool = Tool.fromFunction<_GetStakeRewardsInput, String>(
+      name: 'QRY_getStakeRewards',
+      description:
+          'Tool for getting the users current staked rewards they can claim',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {},
+        'required': [],
+      },
+      func: (final _GetStakeRewardsInput toolInput) async {
+        final errMsg =
+            'Failed to get staked rewards for ${await coin.getAddress()}';
+        try {
+          final stakeRewards = await coin.getStakedRewards();
+          if (stakeRewards == null) {
+            return errMsg;
+          }
+
+          return 'Your staked rewards are $stakeRewards $currentCoin';
+        } catch (e) {
+          return errMsg;
+        }
+      },
+      getInputFromJson: _GetStakeRewardsInput.fromJson,
+    );
+
+    final claimRewardsTool = Tool.fromFunction<_GetStakeInput, String>(
+      name: 'CMD_claimRewards',
+      description: 'Tool for claiming staked token',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'amount': {
+            'type': 'string',
+            'description': 'The amount to claims as staking rewards',
+          },
+        },
+        'required': ['amount'],
+      },
+      func: (final _GetStakeInput toolInput) async {
+        String amount = toolInput.amount;
+
+        try {
+          final message =
+              'You are about to claim $amount $currentCoin rewards for staking';
+          final confirmation = await confirmTransaction(message);
+          if (confirmation != null) {
+            return confirmation;
+          }
+          final txHash = await coin.claimRewards(amount);
+          if (txHash == null) {
+            return 'Failed to get claim $amount $currentCoin token rewards';
+          }
+
+          return 'Claimed staked rewards $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
+        } catch (e) {
+          return 'Claim rewards failed for $currentCoin $amount $e';
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
@@ -366,7 +402,7 @@ class AItools {
       swapTool,
       stakeTool,
       unstakeTool,
-      // claimStakedRewards,
+      claimRewardsTool,
       stakeRewardsTool,
     ];
   }
