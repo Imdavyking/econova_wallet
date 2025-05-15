@@ -272,7 +272,7 @@ class AItools {
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
-          return 'Quote price for $tokenIn => $tokenOut $amount is $quote';
+          return 'Quote price for $tokenIn => $tokenOut $amount is ${Quote.fromJson(jsonDecode(quote)).quoteAmount}';
         } catch (e) {
           return 'Failed to get quote for $tokenIn => $tokenOut $amount';
         }
@@ -312,8 +312,17 @@ class AItools {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
 
+          final tokenInSymbol =
+              tokenIn == AIAgentService.defaultCoinTokenAddress
+                  ? coin.getSymbol()
+                  : tokenIn;
+          final tokenOutSymbol =
+              tokenOut == AIAgentService.defaultCoinTokenAddress
+                  ? coin.getSymbol()
+                  : tokenOut;
+
           final message =
-              'You are about to swap $amount $tokenIn for $tokenOut. You will get ${jsonDecode(quote)['buyAmount']}';
+              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${jsonDecode(quote)['buyAmount']}';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
@@ -324,7 +333,9 @@ class AItools {
             return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
           }
           return 'Swapped $tokenIn => $tokenOut $amount $txHash';
-        } catch (e) {
+        } catch (e, stackTrace) {
+          print('Error: $e');
+          print('StackTrace: $stackTrace');
           return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
         }
       },

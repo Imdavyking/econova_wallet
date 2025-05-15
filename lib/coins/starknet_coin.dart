@@ -341,6 +341,38 @@ class StarknetCoin extends Coin {
       ? 'https://sepolia.api.avnu.fi'
       : 'https://starknet.api.avnu.fi';
 
+  Future<List<Quote>> fetchQuotes(QuoteRequest request,
+      {String? baseUrl}) async {
+    if (request.sellAmount == null && request.buyAmount == null) {
+      throw ArgumentError('Sell amount or buy amount is required');
+    }
+
+    final url = Uri.parse('${baseUrl ?? 'https://api.avnu.fi'}/swap/v2/quotes')
+        .replace(queryParameters: request.toQueryParams());
+
+    final response =
+        await http.get(url, headers: {'Accept': 'application/json'});
+
+    if (response.statusCode == 400 || response.statusCode == 500) {
+      final error = jsonDecode(response.body);
+      final message = error['messages']?.first ?? 'Unknown error';
+      throw Exception(message);
+    }
+
+    if (response.statusCode > 400) {
+      throw Exception('${response.statusCode} ${response.reasonPhrase}');
+    }
+
+    final List<dynamic> responseData = jsonDecode(response.body);
+    final unit = pow(10, await getTokenDecimals(request.buyTokenAddress));
+
+    return responseData.map((json) {
+      final buyAmount = BigInt.parse(json['buyAmount'].toString());
+      json['quoteAmount'] = buyAmount / BigInt.from(unit);
+      return Quote.fromJson(json);
+    }).toList();
+  }
+
   @override
   Future<String?> getQuote(
     String tokenIn,
@@ -367,9 +399,10 @@ class StarknetCoin extends Coin {
       baseUrl: swapUrl,
     );
     final quote = quotes[0];
-    final unit = pow(10, await getTokenDecimals(quote.buyTokenAddress));
-    return jsonEncode(
-        {...quote.toJson(), 'buyAmount': quote.buyAmount / BigInt.from(unit)});
+
+    return jsonEncode({
+      ...quote.toJson(),
+    });
   }
 
   Felt get delegationPoolAddress => Felt.fromHexString(
@@ -1001,6 +1034,7 @@ class Quote {
   final double sellAmountInUsd;
   final String buyTokenAddress;
   final BigInt buyAmount;
+  final double quoteAmount;
   final double buyAmountInUsd;
   final BigInt buyAmountWithoutFees;
   final double buyAmountWithoutFeesInUsd;
@@ -1030,6 +1064,7 @@ class Quote {
     required this.sellAmountInUsd,
     required this.buyTokenAddress,
     required this.buyAmount,
+    required this.quoteAmount,
     required this.buyAmountInUsd,
     required this.buyAmountWithoutFees,
     required this.buyAmountWithoutFeesInUsd,
@@ -1061,6 +1096,7 @@ class Quote {
       'sellAmountInUsd': sellAmountInUsd,
       'buyTokenAddress': buyTokenAddress,
       'buyAmount': buyAmount.toString(),
+      'quoteAmount': quoteAmount.toString(),
       'buyAmountInUsd': buyAmountInUsd,
       'buyAmountWithoutFees': buyAmountWithoutFees.toString(),
       'buyAmountWithoutFeesInUsd': buyAmountWithoutFeesInUsd,
@@ -1093,6 +1129,7 @@ class Quote {
       sellAmountInUsd: json['sellAmountInUsd'].toDouble(),
       buyTokenAddress: json['buyTokenAddress'],
       buyAmount: BigInt.parse(json['buyAmount'].toString()),
+      quoteAmount: double.parse(json['quoteAmount'].toString()),
       buyAmountInUsd: json['buyAmountInUsd'].toDouble(),
       buyAmountWithoutFees:
           BigInt.parse(json['buyAmountWithoutFees'].toString()),
@@ -1119,31 +1156,6 @@ class Quote {
       exactTokenTo: json['exactTokenTo'],
     );
   }
-}
-
-Future<List<Quote>> fetchQuotes(QuoteRequest request, {String? baseUrl}) async {
-  if (request.sellAmount == null && request.buyAmount == null) {
-    throw ArgumentError('Sell amount or buy amount is required');
-  }
-
-  final url = Uri.parse('${baseUrl ?? 'https://api.avnu.fi'}/swap/v2/quotes')
-      .replace(queryParameters: request.toQueryParams());
-
-  final response = await http.get(url, headers: {'Accept': 'application/json'});
-
-  if (response.statusCode == 400 || response.statusCode == 500) {
-    final error = jsonDecode(response.body);
-    final message = error['messages']?.first ?? 'Unknown error';
-    throw Exception(message);
-  }
-
-  if (response.statusCode > 400) {
-    throw Exception('${response.statusCode} ${response.reasonPhrase}');
-  }
-
-  final List<dynamic> responseData = jsonDecode(response.body);
-
-  return responseData.map((json) => Quote.fromJson(json)).toList();
 }
 
 class CallData {
