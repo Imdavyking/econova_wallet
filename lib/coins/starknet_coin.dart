@@ -366,8 +366,10 @@ class StarknetCoin extends Coin {
       ),
       baseUrl: swapUrl,
     );
-
-    return jsonEncode(quotes[0].toJson());
+    final quote = quotes[0];
+    final unit = pow(10, await getTokenDecimals(quote.buyTokenAddress));
+    return jsonEncode(
+        {...quote.toJson(), 'buyAmount': quote.buyAmount / BigInt.from(unit)});
   }
 
   Felt get delegationPoolAddress => Felt.fromHexString(

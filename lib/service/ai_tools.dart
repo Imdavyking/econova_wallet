@@ -1,5 +1,6 @@
 import "dart:convert";
 
+import "package:cryptowallet/coins/starknet_coin.dart";
 import 'package:cryptowallet/interface/coin.dart';
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/utils/rpc_urls.dart";
@@ -267,7 +268,7 @@ class AItools {
 
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
-      
+
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
@@ -311,7 +312,7 @@ class AItools {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
           final message =
-              'You are about to swap $amount $tokenIn for $tokenOut. You will get $quote';
+              'You are about to swap $amount $tokenIn for $tokenOut. You will get ${Quote.fromJson(jsonDecode(quote)).buyAmount}';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
