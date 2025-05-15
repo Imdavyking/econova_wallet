@@ -332,6 +332,10 @@ class StarknetCoin extends Coin {
         .toInt();
   }
 
+  String get swapUrl => enableTestNet
+      ? 'https://sepolia.api.avnu.fi'
+      : 'https://starknet.api.avnu.fi';
+
   @override
   Future<String?> getQuote(
     String tokenIn,
@@ -350,12 +354,133 @@ class StarknetCoin extends Coin {
         sellAmount: wei,
         takerAddress: response.address,
       ),
-      baseUrl: enableTestNet
-          ? 'https://sepolia.api.avnu.fi'
-          : 'https://starknet.api.avnu.fi',
+      baseUrl: swapUrl,
     );
 
     return jsonEncode(quotes[0].toJson());
+  }
+
+  Felt get delegationPoolAddress => Felt.fromHexString(
+      '0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b');
+  Felt get starkAddress => Felt.fromHexString(
+      '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d');
+
+  Contract getStakingContract(Account account) {
+    return Contract(
+      account: account,
+      address: delegationPoolAddress,
+    );
+  }
+
+  Contract getStarkContract(Account account) {
+    return Contract(
+      account: account,
+      address: starkAddress,
+    );
+  }
+
+  @override
+  Future<String?> stakeToken(String amount) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final account = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+
+    final strkContract = getStarkContract(account);
+
+    final allowanceCall = FunctionCall(
+      contractAddress: strkContract.address,
+      entryPointSelector: getSelectorByName('approve'),
+      calldata: [delegationPoolAddress, Felt(amount.toBigIntDec(decimals()))],
+    );
+
+    final delegationPoolContract = getStakingContract(account);
+
+    final existingStake = await getStakeInfo(account);
+
+    List<FunctionCall> calls = [];
+
+    if (existingStake != null) {
+      calls.addAll([
+        allowanceCall,
+        FunctionCall(
+          contractAddress: delegationPoolContract.address,
+          entryPointSelector: getSelectorByName('enter_delegation_pool'),
+          calldata: [
+            account.accountAddress,
+            Felt(amount.toBigIntDec(decimals()))
+          ],
+        )
+      ]);
+    } else {
+      calls.addAll([
+        allowanceCall,
+        FunctionCall(
+          contractAddress: delegationPoolContract.address,
+          entryPointSelector: getSelectorByName('add_to_delegation_pool'),
+          calldata: [
+            account.accountAddress,
+            Felt(amount.toBigIntDec(decimals()))
+          ],
+        )
+      ]);
+    }
+
+    final rsult = await account.execute(functionCalls: calls);
+
+    return rsult.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
+  }
+
+  Future<StakeInfo?> getStakeInfo(Account account) async {
+    final delegationPoolContract = getStakingContract(account);
+    final poolData = await delegationPoolContract.call(
+      'get_pool_member_info',
+      [delegationPoolContract.account.accountAddress],
+    );
+
+    final unwrappedRes = PoolMember.fromJson(poolData);
+
+    final rewardAddress = unwrappedRes.rewardAddress;
+    final stake = unwrappedRes.amount.toBigInt();
+    final pendingUnstakeAmount = unwrappedRes.unpoolAmount.toBigInt();
+    final totalStake = stake + pendingUnstakeAmount;
+    final pendingRewards = unwrappedRes.unclaimedRewards.toBigInt();
+    final unwrappedUnpoolTimestamp = unwrappedRes.unpoolTime;
+    DateTime? unlockDate = unwrappedUnpoolTimestamp != Felt.zero
+        ? DateTime.fromMillisecondsSinceEpoch(
+            unwrappedUnpoolTimestamp.toInt() * 1000)
+        : null;
+    PendingUnstake? pendingUnstake;
+
+    if (pendingUnstakeAmount > BigInt.zero && unlockDate != null) {
+      pendingUnstake = PendingUnstake(
+        amount: pendingUnstakeAmount,
+        unlockDate: unlockDate,
+        unlocked: DateTime.now().isAfter(unlockDate),
+      );
+    }
+
+    return StakeInfo(
+      rewardAddress: rewardAddress, // Felt
+      stake: stake, // BigInt
+      totalStake: totalStake, // BigInt
+      pendingRewards: pendingRewards, // BigInt
+      pendingUnstake: pendingUnstake, // PendingUnstake?
+    );
   }
 
   @override
@@ -364,6 +489,7 @@ class StarknetCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    await deployAccount();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final quoteResult = await getQuote(tokenIn, tokenOut, amount);
@@ -373,10 +499,6 @@ class StarknetCoin extends Coin {
     }
 
     final Quote quote = Quote.fromJson(jsonDecode(quoteResult));
-
-    final url = enableTestNet
-        ? 'https://sepolia.api.avnu.fi'
-        : 'https://starknet.api.avnu.fi';
 
     final body = {
       'quoteId': quote.quoteId,
@@ -391,7 +513,7 @@ class StarknetCoin extends Coin {
     };
 
     final apiResponse = await http.post(
-      Uri.parse('$url/swap/v2/build'),
+      Uri.parse('$swapUrl/swap/v2/build'),
       headers: headers,
       body: jsonEncode(body),
     );
@@ -1033,4 +1155,61 @@ class CallData {
       'calldata': calldata,
     };
   }
+}
+
+class PoolMember {
+  final Felt rewardAddress;
+  final Felt amount;
+  final Felt index;
+  final Felt unclaimedRewards;
+  final Felt commission;
+  final Felt unpoolAmount;
+  final Felt unpoolTime;
+  const PoolMember({
+    required this.rewardAddress,
+    required this.amount,
+    required this.index,
+    required this.unclaimedRewards,
+    required this.commission,
+    required this.unpoolAmount,
+    required this.unpoolTime,
+  });
+
+  factory PoolMember.fromJson(List<Felt> poolData) {
+    return PoolMember(
+      rewardAddress: poolData[0],
+      amount: poolData[1],
+      index: poolData[2],
+      unclaimedRewards: poolData[3],
+      commission: poolData[4],
+      unpoolAmount: poolData[5],
+      unpoolTime: poolData[6],
+    );
+  }
+}
+
+class PendingUnstake {
+  final BigInt amount;
+  final DateTime? unlockDate;
+  final bool unlocked;
+  const PendingUnstake({
+    required this.amount,
+    this.unlockDate,
+    required this.unlocked,
+  });
+}
+
+class StakeInfo {
+  final Felt rewardAddress;
+  final BigInt stake;
+  final BigInt totalStake;
+  final BigInt pendingRewards;
+  final PendingUnstake? pendingUnstake;
+  const StakeInfo({
+    required this.rewardAddress,
+    required this.stake,
+    required this.totalStake,
+    required this.pendingRewards,
+    this.pendingUnstake,
+  });
 }
