@@ -1,23 +1,16 @@
-| Category        | Tool Name                   | Type    |
-| --------------- | --------------------------- | ------- |
-| Wallet Info     | `QRY_getAddress`            | Query ✅  |
-| Balance         | `QRY_getBalance`            | Query ✅  |
-| Transfer        | `CMD_transferBalance`       | Command ✅ |
-| Swap            | `CMD_swapTokens`            | Command |
-| History         | `QRY_getTransactionHistory` | Query   |
-| Staking         | `CMD_stakeTokens`           | Command |
-| Pricing         | `QRY_getTokenPrice`         | Query ✅  |
-| Portfolio Value | `QRY_getPortfolioValue`     | Query   |
-| Domain Resolve  | `QRY_resolveDomainName`     | Query  ✅ |
-
-add audio function to wallet.
-----> new prompt send $30 worth of stark to this 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
-
-user can deploy meme coins and add liquidity
-
-user can query about the blockchain docs
+| Category       | Tool Name               | Type      | Status      |
+| -------------- | ----------------------- | --------- | ----------- |
+| Wallet Info    | `QRY_getAddress`        | Query ✅   | Implemented |
+| Balance        | `QRY_getBalance`        | Query ✅   | Implemented |
+| Transfer       | `CMD_transferBalance`   | Command ✅ | Implemented |
+| Pricing        | `QRY_getTokenPrice`     | Query ✅   | Implemented |
+| Domain Resolve | `QRY_resolveDomainName` | Query ✅   | Implemented |
 
 
-dapp browser for starknet -> low priority
-
-tokenize the AI 
+| Category        | Tool Name                   | Type    | Status/Notes                 |
+| --------------- | --------------------------- | ------- | ---------------------------- |
+| Swap            | `CMD_swapTokens`            | Command | Probably not implemented yet |
+| History         | `QRY_getTransactionHistory` | Query   | Not done or unclear          |
+| Staking         | `CMD_stakeTokens`           | Command | Not done                     |
+| Portfolio Value | `QRY_getPortfolioValue`     | Query   | Not done                     |
+| Dapp Browser    | N/A                         | Feature | Low priority                 |
