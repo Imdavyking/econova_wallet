@@ -168,10 +168,12 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
         typingUsers: typingUsers,
         currentUser: Constants.user,
         messageOptions: const MessageOptions(
+          timeTextColor: Colors.white,
+          showTime: true,
           showCurrentUserAvatar: true,
           showOtherUsersAvatar: true,
           containerColor: Color.fromRGBO(127, 76, 222, 0.8),
-          textColor: Colors.black,
+          showOtherUsersName: true,
         ),
         inputOptions: InputOptions(
           inputDecoration: InputDecoration(

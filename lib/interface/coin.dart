@@ -74,6 +74,14 @@ abstract class Coin {
     return null;
   }
 
+  Future<String?> swapTokens(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    return null;
+  }
+
   Widget? getGoalPage() => null;
 
   Widget? getNFTPage() => null;
