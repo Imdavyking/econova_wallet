@@ -131,7 +131,7 @@ class AItools {
             'description': 'The token address',
           },
         },
-        'required': ['address', 'tokenAddress'],
+        'required': ['walletAddress', 'tokenAddress'],
       },
       func: (final _GetBalanceInput toolInput) async {
         String walletAddress = toolInput.walletAddress;
