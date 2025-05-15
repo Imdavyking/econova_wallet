@@ -322,7 +322,7 @@ class AItools {
                   : tokenOut;
 
           final message =
-              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${jsonDecode(quote)['buyAmount']}';
+              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${Quote.fromJson(jsonDecode(quote)).quoteAmount}.';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
@@ -332,10 +332,9 @@ class AItools {
           if (txHash == null) {
             return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
           }
-          return 'Swapped $tokenIn => $tokenOut $amount $txHash';
-        } catch (e, stackTrace) {
-          print('Error: $e');
-          print('StackTrace: $stackTrace');
+
+          return 'Swapped $tokenIn => $tokenOut $amount $txHash ${coin.formatTxHash(txHash)}';
+        } catch (e) {
           return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
         }
       },
