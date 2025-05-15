@@ -580,10 +580,15 @@ class StarknetCoin extends Coin {
 
   Future<StakeInfo?> getStakeInfo(Account account) async {
     final delegationPoolContract = getStakingContract(account);
+
     final poolData = await delegationPoolContract.call(
-      'get_pool_member_info',
-      [delegationPoolContract.account.accountAddress],
+      'get_pool_member_info_v1',
+      [account.accountAddress],
     );
+
+    if (poolData.length == 1) {
+      return null;
+    }
 
     final unwrappedRes = PoolMember.fromJson(poolData);
 

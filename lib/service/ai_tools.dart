@@ -369,7 +369,9 @@ class AItools {
           }
 
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
-        } catch (e) {
+        } catch (e, stck) {
+          print('Staking failed for $currentCoin $amount $e');
+          print(stck);
           return 'Staking failed for $currentCoin $amount $e';
         }
       },
