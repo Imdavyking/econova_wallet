@@ -403,9 +403,7 @@ class StarknetCoin extends Coin {
       final bBuyAmount = b.buyAmount;
       return aBuyAmount > bBuyAmount ? a : b;
     });
-    return jsonEncode({
-      ...quote.toJson(),
-    });
+    return jsonEncode(quote.toJson());
   }
 
   Felt get delegationPoolAddress => Felt.fromHexString(
