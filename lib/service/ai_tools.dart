@@ -377,7 +377,7 @@ class AItools {
     );
 
     final unstakeTool = Tool.fromFunction<_GetStakeInput, String>(
-      name: 'CMD_stakeToken',
+      name: 'CMD_unstakeToken',
       description: 'Tool for unstaking token',
       inputJsonSchema: const {
         'type': 'object',
