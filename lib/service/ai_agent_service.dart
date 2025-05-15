@@ -113,7 +113,7 @@ class AIAgentService {
           .toList();
 
       messages.addAll(convertedMessages);
-
+      await memory.clear();
       for (ChatMessageWithDate savedMessages in convertedMessages.reversed) {
         await memory.chatHistory.addChatMessage(savedMessages.message);
       }
@@ -140,7 +140,7 @@ class AIAgentService {
 
       final otherCoins = getAllBlockchains
           .where((Coin value) =>
-              coinGeckoIDs.contains(value.getGeckoId()) &&
+              // coinGeckoIDs.contains(value.getGeckoId()) &&
               value.getSymbol() == value.getDefault() &&
               value.badgeImage == null &&
               value != coin)
@@ -179,6 +179,7 @@ class AIAgentService {
       final executor = AgentExecutor(agent: agent);
 
       final response = await executor.run(chatMessage.text);
+
       await saveHistory();
       return Right(
         DashChatMessage(
@@ -192,6 +193,7 @@ class AIAgentService {
       debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
 
       if (error is OpenAIClientException) {
+        await loadSavedMessages();
         return Left(error.message);
       }
 
