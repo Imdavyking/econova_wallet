@@ -289,7 +289,7 @@ class AIAgentService {
             }
 
             final successMessage =
-                'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash ${coin.getExplorer().replaceFirst(blockExplorerPlaceholder, txHash)}';
+                'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash ${coin.formatTxHash(txHash)}';
             debugPrint(successMessage);
             return successMessage;
           } catch (e) {
@@ -299,11 +299,203 @@ class AIAgentService {
         },
         getInputFromJson: _GetTransferInput.fromJson,
       );
+
+      final getQuote = Tool.fromFunction<_GetSwapInput, String>(
+        name: 'QRY_getQuote',
+        description: 'Tool for getting price quote of tokens',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'tokenIn': {
+              'type': 'string',
+              'description': 'The address to token to swap from',
+            },
+            'tokenOut': {
+              'type': 'string',
+              'description': 'The address to token to swap to',
+            },
+            'amount': {
+              'type': 'string',
+              'description': 'The amount to swap',
+            },
+          },
+          'required': ['tokenIn', 'tokenOut', 'amount'],
+        },
+        func: (final _GetSwapInput toolInput) async {
+          String tokenIn = toolInput.tokenIn;
+          String tokenOut = toolInput.tokenOut;
+          String amount = toolInput.amount;
+
+          try {
+            final quote = await coin.getQuote(tokenIn, tokenOut, amount);
+            if (quote == null) {
+              return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+            }
+            return 'Quote price for $tokenIn => $tokenOut $amount is $quote';
+          } catch (e) {
+            return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+          }
+        },
+        getInputFromJson: _GetSwapInput.fromJson,
+      );
+
+      final swapTool = Tool.fromFunction<_GetSwapInput, String>(
+        name: 'CMD_swapTokens',
+        description: 'Tool for swapping tokens',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'tokenIn': {
+              'type': 'string',
+              'description': 'The address to token to swap from',
+            },
+            'tokenOut': {
+              'type': 'string',
+              'description': 'The address to token to swap to',
+            },
+            'amount': {
+              'type': 'string',
+              'description': 'The amount to swap',
+            },
+          },
+          'required': ['tokenIn', 'tokenOut', 'amount'],
+        },
+        func: (final _GetSwapInput toolInput) async {
+          String tokenIn = toolInput.tokenIn;
+          String tokenOut = toolInput.tokenOut;
+          String amount = toolInput.amount;
+
+          try {
+            final quote = await coin.getQuote(tokenIn, tokenOut, amount);
+            if (quote == null) {
+              return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+            }
+            final message =
+                'You are about to swap $amount $tokenIn for $tokenOut. You will get $quote';
+            final confirmation = await confirmTransaction(message);
+            if (confirmation != null) {
+              return confirmation;
+            }
+
+            String? txHash = await coin.swapTokens(tokenIn, tokenOut, amount);
+            if (txHash == null) {
+              return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
+            }
+            return 'Swapped $tokenIn => $tokenOut $amount $txHash';
+          } catch (e) {
+            return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
+          }
+        },
+        getInputFromJson: _GetSwapInput.fromJson,
+      );
+
+      final stakeTool = Tool.fromFunction<_GetStakeInput, String>(
+        name: 'CMD_stakeToken',
+        description: 'Tool for staking token',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'amount': {
+              'type': 'string',
+              'description': 'The amount to stake',
+            },
+          },
+          'required': ['address'],
+        },
+        func: (final _GetStakeInput toolInput) async {
+          String amount = toolInput.amount;
+
+          try {
+            final message = 'You are about to stake $amount $currentCoin';
+            final confirmation = await confirmTransaction(message);
+            if (confirmation != null) {
+              return confirmation;
+            }
+            final txHash = await coin.stakeToken(amount);
+            if (txHash == null) {
+              return 'Failed to get stake $amount $currentCoin';
+            }
+
+            return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
+          } catch (e) {
+            return 'Staking failed for $currentCoin $amount $e';
+          }
+        },
+        getInputFromJson: _GetStakeInput.fromJson,
+      );
+
+      final stakeRewardsTool = Tool.fromFunction<_GetStakeRewardsInput, String>(
+        name: 'QRY_getStakeRewards',
+        description:
+            'Tool for getting the users current stake rewards they can claim',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {},
+          'required': [],
+        },
+        func: (final _GetStakeRewardsInput toolInput) async {
+          final errMsg =
+              'Failed to get stake rewards for ${await coin.getAddress()}';
+          try {
+            final stakeRewards = await coin.getStakedRewards();
+            if (stakeRewards == null) {
+              return errMsg;
+            }
+
+            return 'Your staked rewards are $stakeRewards $currentCoin';
+          } catch (e) {
+            return errMsg;
+          }
+        },
+        getInputFromJson: _GetStakeRewardsInput.fromJson,
+      );
+
+      final unstakeTool = Tool.fromFunction<_GetStakeInput, String>(
+        name: 'CMD_stakeToken',
+        description: 'Tool for unstaking token',
+        inputJsonSchema: const {
+          'type': 'object',
+          'properties': {
+            'amount': {
+              'type': 'string',
+              'description': 'The amount to unstake',
+            },
+          },
+          'required': ['amount'],
+        },
+        func: (final _GetStakeInput toolInput) async {
+          String amount = toolInput.amount;
+
+          try {
+            final message = 'You are about to unStake $amount $currentCoin';
+            final confirmation = await confirmTransaction(message);
+            if (confirmation != null) {
+              return confirmation;
+            }
+            final txHash = await coin.unstakeToken(amount);
+            if (txHash == null) {
+              return 'Failed to get stake $amount $currentCoin';
+            }
+
+            return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
+          } catch (e) {
+            return 'Staking failed for $currentCoin $amount $e';
+          }
+        },
+        getInputFromJson: _GetStakeInput.fromJson,
+      );
+
       final tools = [
         addressTool,
         resolveDomainNameTool,
         balanceTool,
         transferTool,
+        getQuote,
+        swapTool,
+        stakeTool,
+        unstakeTool,
+        // claimStakedRewards,
+        stakeRewardsTool,
       ];
       final otherCoins = getAllBlockchains
           .where((Coin value) =>
@@ -394,14 +586,54 @@ class _GetBalanceInput {
   _GetBalanceInput({required this.address});
 
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
-    debugPrint('getBalanceInput: $json');
     return _GetBalanceInput(
       address: json['address'] as String,
     );
   }
 }
 
-// 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
+class _GetStakeRewardsInput {
+  _GetStakeRewardsInput();
+
+  factory _GetStakeRewardsInput.fromJson(Map<String, dynamic> json) {
+    return _GetStakeRewardsInput();
+  }
+}
+
+class _GetStakeInput {
+  final String amount;
+
+  _GetStakeInput({
+    required this.amount,
+  });
+
+  factory _GetStakeInput.fromJson(Map<String, dynamic> json) {
+    return _GetStakeInput(
+      amount: json['amount'] as String,
+    );
+  }
+}
+
+class _GetSwapInput {
+  final String tokenIn;
+  final String tokenOut;
+  final String amount;
+
+  _GetSwapInput({
+    required this.tokenIn,
+    required this.tokenOut,
+    required this.amount,
+  });
+
+  factory _GetSwapInput.fromJson(Map<String, dynamic> json) {
+    return _GetSwapInput(
+      tokenIn: json['tokenIn'] as String,
+      tokenOut: json['tokenOut'] as String,
+      amount: json['amount'] as String,
+    );
+  }
+}
+
 class _GetTransferInput {
   final String recipient;
   final num amount;

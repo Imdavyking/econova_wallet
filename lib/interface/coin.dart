@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:cryptowallet/service/wallet_service.dart';
+import 'package:cryptowallet/utils/app_config.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -70,7 +71,27 @@ abstract class Coin {
     return null;
   }
 
+  String formatTxHash(String txHash) {
+    return getExplorer().replaceFirst(blockExplorerPlaceholder, txHash);
+  }
+
   Future<String?> unstakeToken(String amount) async {
+    return null;
+  }
+
+  Future<bool?> claimStakedRewards() async {
+    return null;
+  }
+
+  Future<double?> getStakedRewards() async {
+    return null;
+  }
+
+  Future<String?> getQuote(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
     return null;
   }
 
