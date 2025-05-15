@@ -1012,7 +1012,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     }
                   },
                 );
-
                 _controller!.addJavaScriptHandler(
                   handlerName: 'NightyHandler',
                   callback: (callback) async {

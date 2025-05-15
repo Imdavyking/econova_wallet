@@ -377,10 +377,12 @@ class _DappState extends State<Dapp> {
                                     if (webViewTabs[currentTabIndex]
                                             .controller !=
                                         null) {
-                                      await webViewTabs[currentTabIndex]
-                                          .controller!
-                                          .clearCache();
-                                      Navigator.pop(context);
+                                      await InAppWebViewController
+                                          .clearAllCache();
+
+                                      if (Navigator.canPop(context)) {
+                                        Navigator.pop(context);
+                                      }
                                     }
                                   },
                                   child: Container(
@@ -544,12 +546,12 @@ class _DappState extends State<Dapp> {
                     showWebViewTabsViewer = false;
                   });
                 },
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8.0),
                   child: SizedBox(
                     height: 50,
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.add),
                         SizedBox(
                           width: 20,

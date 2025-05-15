@@ -125,6 +125,18 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
           showOtherUsersName: true,
         ),
         inputOptions: InputOptions(
+          trailing: [
+            if (isMobiletPlatform)
+              IconButton(
+                icon: const Icon(
+                  Icons.mic,
+                  color: appPrimaryColor,
+                ),
+                onPressed: () {
+                  //TODO: Implement voice input
+                },
+              ),
+          ],
           inputDecoration: InputDecoration(
             hintText: "${localization.hi}, I am $walletName",
             focusedBorder: const OutlineInputBorder(
@@ -158,8 +170,7 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
 
     _addUserMessage(userMessage);
 
-    final response =
-        await _chatRepository.sendTextMessage(userMessage);
+    final response = await _chatRepository.sendTextMessage(userMessage);
 
     setState(() {
       typingUsers.remove(Constants.ai);

@@ -1,14 +1,14 @@
 | Category        | Tool Name                   | Type    |
 | --------------- | --------------------------- | ------- |
-| Wallet Info     | `QRY_getAddress`            | Query   |
-| Balance         | `QRY_getBalance`            | Query   |
-| Transfer        | `CMD_transferBalance`       | Command |
+| Wallet Info     | `QRY_getAddress`            | Query ✅  |
+| Balance         | `QRY_getBalance`            | Query ✅  |
+| Transfer        | `CMD_transferBalance`       | Command ✅ |
 | Swap            | `CMD_swapTokens`            | Command |
 | History         | `QRY_getTransactionHistory` | Query   |
 | Staking         | `CMD_stakeTokens`           | Command |
-| Pricing         | `QRY_getTokenPrice`         | Query   |
+| Pricing         | `QRY_getTokenPrice`         | Query ✅  |
 | Portfolio Value | `QRY_getPortfolioValue`     | Query   |
-| Domain Resolve  | `QRY_resolveDomainName`     | Query   |
+| Domain Resolve  | `QRY_resolveDomainName`     | Query  ✅ |
 
 add audio function to wallet.
 ----> new prompt send $30 worth of stark to this 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
@@ -17,4 +17,7 @@ user can deploy meme coins and add liquidity
 
 user can query about the blockchain docs
 
-econova send $30 to david.sol -> 
+
+dapp browser for starknet -> low priority
+
+tokenize the AI 
