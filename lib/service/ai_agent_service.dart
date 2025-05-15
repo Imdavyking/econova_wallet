@@ -179,7 +179,7 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress $defaultCoinTokenAddress.
+        current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
         other coins are $otherCoins.
         """;

@@ -311,8 +311,9 @@ class AItools {
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
+
           final message =
-              'You are about to swap $amount $tokenIn for $tokenOut. You will get ${Quote.fromJson(jsonDecode(quote)).buyAmount}';
+              'You are about to swap $amount $tokenIn for $tokenOut. You will get ${jsonDecode(quote)['buyAmount']}';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
