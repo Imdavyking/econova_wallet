@@ -289,7 +289,7 @@ class AIAgentService {
             }
 
             final successMessage =
-                'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash';
+                'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash ${coin.getExplorer().replaceFirst(blockExplorerPlaceholder, txHash)}';
             debugPrint(successMessage);
             return successMessage;
           } catch (e) {
