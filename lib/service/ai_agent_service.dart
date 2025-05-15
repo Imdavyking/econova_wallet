@@ -1,6 +1,7 @@
 import "dart:convert";
 import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/interface/coin.dart";
+import "package:cryptowallet/interface/ft_explorer.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/service/ai_tools.dart";
 import "package:cryptowallet/utils/all_coins.dart";
@@ -138,12 +139,20 @@ class AIAgentService {
         ),
       );
 
+      final List<String> listFungibleToken = [];
+
       final otherCoins = getAllBlockchains
-          .where((Coin value) =>
-              coinGeckoIDs.contains(value.getGeckoId()) &&
-              value.getSymbol() == value.getDefault() &&
-              value.badgeImage == null &&
-              value != coin)
+          .where((Coin value) {
+            if (value.tokenAddress() != null) {
+              listFungibleToken.add(
+                  '${value.getName()} (${value.getSymbol()}) on $currentCoin is ${(value as FTExplorer).contractExplorer()}');
+              return false;
+            }
+            return coinGeckoIDs.contains(value.getGeckoId()) &&
+                value.getSymbol() == value.getDefault() &&
+                value.badgeImage == null &&
+                value != coin;
+          })
           .toList()
           .map((token) =>
               "name: ${token.getName().split('(')[0]}, symbol: (${token.getSymbol()}), coinGeckoId: ${token.getGeckoId()}), default_: ${token.getDefault()}")
@@ -159,6 +168,7 @@ class AIAgentService {
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()}.
+        the current coin tokens $listFungibleToken
         other coins are $otherCoins.
         """;
 
