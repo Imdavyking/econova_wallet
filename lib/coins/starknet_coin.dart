@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/screens/stake_token.dart';
+import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -258,6 +259,10 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  String? tokenAddress() =>
+      getStarknetBlockchains().first.name == name ? null : contractAddress;
+
+  @override
   Widget? getStakingPage() {
     return StakeToken(
       tokenData: this,
@@ -342,6 +347,11 @@ class StarknetCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = strkNativeToken;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = strkNativeToken;
+    }
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
 
@@ -489,6 +499,11 @@ class StarknetCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = strkNativeToken;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = strkNativeToken;
+    }
     await deployAccount();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);

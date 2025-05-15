@@ -145,12 +145,17 @@ class AIAgentService {
           .where((Coin value) {
             if (value.tokenAddress() != null &&
                 value.getExplorer() == coin.getExplorer()) {
-              final geckoId = coin.getGeckoId() == ''
-                  ? ''
-                  : 'coinGeckoId: ${coin.getGeckoId()}';
-              listFungibleToken.add(
-                'name: ${value.getName().split('(')[0]}, symbol: (${value.getSymbol()}) $geckoId  on $currentCoin is ${value.tokenAddress()}',
-              );
+              final geckoId = value.getGeckoId().isNotEmpty
+                  ? 'coinGeckoId: ${value.getGeckoId()}'
+                  : '';
+              final tokenDescription =
+                  'name: ${value.getName().split('(')[0].trim()}, '
+                  'symbol: (${value.getSymbol()}) '
+                  'on ${coin.getName().split('(')[0]} is ${value.tokenAddress()} '
+                  '$geckoId';
+
+              listFungibleToken.add(tokenDescription);
+
               return false;
             }
             return coinGeckoIDs.contains(value.getGeckoId()) &&
@@ -159,8 +164,10 @@ class AIAgentService {
                 value != coin;
           })
           .toList()
-          .map((token) =>
-              "name: ${token.getName().split('(')[0]}, symbol: (${token.getSymbol()}), coinGeckoId: ${token.getGeckoId()}), default_: ${token.getDefault()}")
+          .map(
+            (token) =>
+                "name: ${token.getName().split('(')[0]}, symbol: (${token.getSymbol()}), coinGeckoId: ${token.getGeckoId()}), default_: ${token.getDefault()}",
+          )
           .toList()
           .join(',');
 

@@ -155,8 +155,6 @@ class AItools {
 
         final coinBal = await token.getUserBalance(address: walletAddress);
 
-        print(coinBal);
-
         final balanceString =
             '$walletAddress have $coinBal ${token.getSymbol()}';
         return balanceString;
@@ -269,6 +267,7 @@ class AItools {
 
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
+      
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
