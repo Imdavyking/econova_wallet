@@ -328,7 +328,88 @@ class StarknetCoin extends Coin {
           : 'https://starknet.api.avnu.fi',
     );
 
-    return quotes[0].toJson().toString();
+    return jsonEncode(quotes[0].toJson());
+  }
+
+  @override
+  Future<String?> swapTokens(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final quoteResult = await getQuote(tokenIn, tokenOut, amount);
+
+    if (quoteResult == null) {
+      throw Exception('Failed to get quote');
+    }
+
+    final Quote quote = Quote.fromJson(jsonDecode(quoteResult));
+
+    final url = enableTestNet
+        ? 'https://sepolia.api.avnu.fi'
+        : 'https://starknet.api.avnu.fi';
+
+    final body = {
+      'quoteId': quote.quoteId,
+      'takerAddress': response.address,
+      'slippage': 0.01,
+      'includeApprove': true,
+    };
+
+    final headers = {
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    final apiResponse = await http.post(
+      Uri.parse('$url/swap/v2/build'),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    if (apiResponse.statusCode == 200) {
+      final responseBody = jsonDecode(apiResponse.body);
+
+      final calls = responseBody['calls'] as List<dynamic>;
+      final functionCalls = calls.map((call) {
+        final data = CallData.fromJson(call);
+        return FunctionCall(
+          contractAddress: Felt.fromHexString(data.contractAddress),
+          entryPointSelector: getSelectorByName(data.entrypoint),
+          calldata: data.calldata
+              .map(
+                (e) => Felt.fromHexString(e),
+              )
+              .toList(),
+        );
+      }).toList();
+
+      final signer =
+          Signer(privateKey: Felt.fromHexString(response.privateKey!));
+      final provider = await apiProvider();
+      final chainId = await getChainId();
+      final fundingAccount = Account(
+        provider: provider,
+        signer: signer,
+        accountAddress: Felt.fromHexString(response.address),
+        chainId: chainId,
+      );
+
+      final rsult = await fundingAccount.execute(functionCalls: functionCalls);
+
+      return rsult.when(
+        result: (result) {
+          return result.transaction_hash;
+        },
+        error: (error) {
+          throw Exception("Error transfer (${error.code}): ${error.message}");
+        },
+      );
+    } else {
+      throw Exception('Failed to swap tokens');
+    }
   }
 
   @override
@@ -893,40 +974,36 @@ Future<List<Quote>> fetchQuotes(QuoteRequest request, {String? baseUrl}) async {
   if (response.statusCode > 400) {
     throw Exception('${response.statusCode} ${response.reasonPhrase}');
   }
-  // final signatureParts = response.headers['signature']!.split(',');
-  // final signature = Signature(
-  //   BigInt.parse(signatureParts[0].substring(2), radix: 16),
-  //   BigInt.parse(
-  //     signatureParts[1].substring(2),
-  //     radix: 16,
-  //   ),
-  // );
-  // final messageHash = computeHashOnElements(
-  //   [
-  //     starknetKeccak(utf8.encode(response.body)).toBigInt(),
-  //   ],
-  // );
-  // final publicKey = AvnuConfig.instance.publicKey!;
-  // Verify the signature
-  // final isValid = starknetVerify(
-  //   messageHash: messageHash,
-  //   signature: signature,
-  //   publicKey: publicKey,
-  // );
-
-  // if (!isValid) {
-  //   throw Exception('Invalid server signature');
-  // }
 
   final List<dynamic> responseData = jsonDecode(response.body);
 
-  print(responseData);
-
-  // const signature = response.headers.get('signature');
-  // const hashResponse = hash.computeHashOnElements([hash.starknetKeccak(textResponse)]);
-  //     const formattedSig = signature.split(',').map((s) => BigInt(s));
-  //     const signatureType = new ec.starkCurve.Signature(formattedSig[0], formattedSig[1]);
-  //     if (!ec.starkCurve.verify(signatureType, hashResponse, avnuPublicKey))
-  //       throw new Error('Invalid server signature');
   return responseData.map((json) => Quote.fromJson(json)).toList();
+}
+
+class CallData {
+  final String contractAddress;
+  final String entrypoint;
+  final List<String> calldata;
+
+  CallData({
+    required this.contractAddress,
+    required this.entrypoint,
+    required this.calldata,
+  });
+
+  factory CallData.fromJson(Map<String, dynamic> json) {
+    return CallData(
+      contractAddress: json['contractAddress'],
+      entrypoint: json['entrypoint'],
+      calldata: List<String>.from(json['calldata']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'contractAddress': contractAddress,
+      'entrypoint': entrypoint,
+      'calldata': calldata,
+    };
+  }
 }
