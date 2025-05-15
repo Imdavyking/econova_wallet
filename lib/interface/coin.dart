@@ -83,7 +83,7 @@ abstract class Coin {
     return null;
   }
 
-  Future<double?> getStakedRewards() async {
+  Future<double?> getTotalStaked() async {
     return null;
   }
 

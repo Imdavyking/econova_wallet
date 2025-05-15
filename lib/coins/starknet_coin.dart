@@ -621,7 +621,7 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<double?> getStakedRewards() async {
+  Future<double?> getTotalStaked() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));

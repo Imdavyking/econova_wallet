@@ -87,7 +87,7 @@ class _UnStakeTokenState extends State<UnStakeToken> {
                         textAlign: TextAlign.end,
                       ),
                       onPressed: () async {
-                        final stakedTokens = await coin.getStakedRewards();
+                        final stakedTokens = await coin.getTotalStaked();
                         amountContrl.setText(stakedTokens.toString());
                       },
                     ),

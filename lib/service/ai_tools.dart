@@ -426,7 +426,7 @@ class AItools {
         final errMsg =
             'Failed to get staked rewards for ${await coin.getAddress()}';
         try {
-          final stakeRewards = await coin.getStakedRewards();
+          final stakeRewards = await coin.getTotalStaked();
           if (stakeRewards == null) {
             return errMsg;
           }
