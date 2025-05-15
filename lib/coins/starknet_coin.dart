@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:cryptowallet/extensions/big_int_ext.dart';
+import 'package:cryptowallet/screens/stake_token.dart';
 import 'package:cryptowallet/service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -265,6 +267,13 @@ class StarknetCoin extends Coin {
       debugPrint(e.toString());
       return savedBalance;
     }
+  }
+
+  @override
+  Widget? getStakingPage() {
+    return StakeToken(
+      tokenData: this,
+    );
   }
 
   @override
