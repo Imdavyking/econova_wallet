@@ -43,8 +43,9 @@ class ConfirmTransactionScreen extends StatelessWidget {
                   ),
                   onPressed: () async {
                     final auth = await authenticate(
-                        NavigationService.navigatorKey.currentContext!);
-                    Navigator.pop(context, auth);
+                      NavigationService.navigatorKey.currentContext!,
+                    );
+                    if (Navigator.canPop(context)) Navigator.pop(context, auth);
                   },
                   style:
                       ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -61,8 +62,9 @@ class ConfirmTransactionScreen extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.pop(
-                        context, false); // Return false to indicate cancelled
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context, false);
+                    }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 ),
