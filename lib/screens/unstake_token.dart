@@ -254,7 +254,11 @@ class _UnStakeTokenState extends State<UnStakeToken> {
                       }
 
                       try {
-                        await widget.tokenData.unstakeToken(amount);
+                    final txHash=    await widget.tokenData.unstakeToken(amount);
+
+                    if(txHash == null){
+                      throw Exception("Failed unstaking token");
+                    }
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
