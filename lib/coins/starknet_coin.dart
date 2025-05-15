@@ -15,6 +15,18 @@ const starkDecimals = 18;
 const strkNativeToken =
     '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
+// Our API is found at the following endpoints, for Starknet mainnet and sepolia respectively:
+
+// https://starknet-mainnet-api.ekubo.org
+
+// https://starknet-sepolia-api.ekubo.org
+
+// The endpoints for Ethereum mainnet and sepolia are:
+
+// https://eth-mainnet-api.ekubo.org
+
+// https://eth-sepolia-api.ekubo.org
+
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 const maxFeeWei = 10000000000000;
@@ -534,6 +546,8 @@ class StarknetDeriveArgs {
     required this.classHash,
   });
 }
+
+// 0x050d4da9f66589eadaa1d5e31cf73b08ac1a67c8b4dcd88e6fd4fe501c628af2
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
   final privateKey = derivePrivateKey(mnemonic: config.mnemonic);

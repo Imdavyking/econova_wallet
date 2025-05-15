@@ -103,7 +103,7 @@ class _WalletState extends State<Wallet> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              FontAwesomeIcons.cog,
+              FontAwesomeIcons.gear,
               size: 25,
               color: currentIndex_ == (!WalletService.isViewKey() ? 3 : 2)
                   ? Theme.of(context).bottomNavigationBarTheme.selectedItemColor
