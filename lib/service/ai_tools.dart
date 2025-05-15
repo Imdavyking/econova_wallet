@@ -121,19 +121,19 @@ class AItools {
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'address': {
+          'walletAddress': {
             'type': 'string',
-            'description': 'The address to check balance',
+            'description': 'The user wallet address',
           },
           'tokenAddress': {
-            'type': 'tokenAddress',
+            'type': 'string',
             'description': 'The token address',
           },
         },
         'required': ['address', 'tokenAddress'],
       },
       func: (final _GetBalanceInput toolInput) async {
-        String address = toolInput.address;
+        String walletAddress = toolInput.walletAddress;
         String tokenAddress = toolInput.tokenAddress;
         Coin token = coin;
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
@@ -143,16 +143,17 @@ class AItools {
         }
 
         try {
-          coin.validateAddress(address);
+          coin.validateAddress(walletAddress);
         } catch (e) {
-          return 'Invalid $currentCoin address: $address';
+          return 'Invalid $currentCoin address: $walletAddress';
         }
-        final result = 'Checking $address $tokenAddress balance';
+        final result = 'Checking $walletAddress $tokenAddress balance';
         debugPrint(result);
 
-        final coinBal = await token.getUserBalance(address: address);
+        final coinBal = await token.getUserBalance(address: walletAddress);
 
-        final balanceString = '$address have $coinBal ${token.getSymbol()}';
+        final balanceString =
+            '$walletAddress have $coinBal ${token.getSymbol()}';
         return balanceString;
       },
       getInputFromJson: _GetBalanceInput.fromJson,
@@ -173,7 +174,7 @@ class AItools {
             'description': 'The amount to transfer',
           },
           'tokenAddress': {
-            'type': 'tokenAddress',
+            'type': 'string',
             'description': 'The token address',
           },
         },
@@ -546,14 +547,14 @@ class _GetAddressInput {
 }
 
 class _GetBalanceInput {
-  final String address;
+  final String walletAddress;
   final String tokenAddress;
 
-  _GetBalanceInput({required this.address, required this.tokenAddress});
+  _GetBalanceInput({required this.walletAddress, required this.tokenAddress});
 
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
     return _GetBalanceInput(
-      address: json['address'] as String,
+      walletAddress: json['walletAddress'] as String,
       tokenAddress: json['tokenAddress'] as String,
     );
   }
