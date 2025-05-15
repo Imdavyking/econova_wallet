@@ -143,7 +143,7 @@ class AIAgentService {
               value != coin)
           .toList()
           .map((token) =>
-              "${token.getName().split('(')[0]} (${token.getSymbol()})")
+              "${token.getName().split('(')[0]} (${token.getSymbol()}) coinGeckoId: ${token.getGeckoId()})")
           .toList()
           .join(',');
 
@@ -155,7 +155,7 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        current coin is $currentCoin.
+        current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()}.
         other coins are $otherCoins.
         """;
 

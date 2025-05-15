@@ -9,3 +9,8 @@
 | Pricing         | `QRY_getTokenPrice`         | Query   |
 | Portfolio Value | `QRY_getPortfolioValue`     | Query   |
 | Domain Resolve  | `QRY_resolveDomainName`     | Query   |
+
+add audio function to wallet.
+----> new prompt send $30 worth of stark to this 0x021446826596B924989b7c49Ce5ed8392987cEE8272f73aBc9c016dBB09E3A73
+
+econova send $30 to david.sol -> 

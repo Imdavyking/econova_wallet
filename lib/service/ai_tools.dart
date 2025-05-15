@@ -1,4 +1,7 @@
+import "dart:convert";
+
 import 'package:cryptowallet/interface/coin.dart';
+import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:cryptowallet/screens/navigator_service.dart";
@@ -75,6 +78,38 @@ class AItools {
         return result;
       },
       getInputFromJson: _GetDomainNameInput.fromJson,
+    );
+
+    final getTokenPriceTool = Tool.fromFunction<_GetTokenPriceInput, String>(
+      name: 'QRY_getTokenPrice',
+      description: 'Tool for checking $currentCoin price',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'coinGeckoId': {
+            'type': 'string',
+            'description': 'The coinGeckoId to check price',
+          },
+        },
+        'required': ['coinGeckoId'],
+      },
+      func: (final _GetTokenPriceInput toolInput) async {
+        String coinGeckoId = toolInput.coinGeckoId;
+        try {
+          Map allCryptoPrice = jsonDecode(
+            await getCryptoPrice(skipNetworkRequest: true),
+          ) as Map;
+
+          final Map cryptoMarket = allCryptoPrice[coinGeckoId];
+
+          final currPrice = cryptoMarket['usd'] as num;
+          return 'the price for $coinGeckoId is $currPrice';
+        } catch (e) {
+          debugPrint('Error getting token price: $e');
+          return 'Failed to get price for $coinGeckoId';
+        }
+      },
+      getInputFromJson: _GetTokenPriceInput.fromJson,
     );
 
     final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
@@ -174,7 +209,7 @@ class AItools {
 
     final getQuote = Tool.fromFunction<_GetSwapInput, String>(
       name: 'QRY_getQuote',
-      description: 'Tool for getting price quote of tokens',
+      description: 'Tool for getting quote for swapping tokens only',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
@@ -400,6 +435,7 @@ class AItools {
       transferTool,
       getQuote,
       swapTool,
+      getTokenPriceTool,
       stakeTool,
       unstakeTool,
       claimRewardsTool,
@@ -417,6 +453,18 @@ class _GetDomainNameInput {
     debugPrint('getDomainNameInput: $json');
     return _GetDomainNameInput(
       domainName: json['domainName'] as String,
+    );
+  }
+}
+
+class _GetTokenPriceInput {
+  final String coinGeckoId;
+
+  _GetTokenPriceInput({required this.coinGeckoId});
+
+  factory _GetTokenPriceInput.fromJson(Map<String, dynamic> json) {
+    return _GetTokenPriceInput(
+      coinGeckoId: json['coinGeckoId'] as String,
     );
   }
 }
