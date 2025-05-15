@@ -144,8 +144,12 @@ class AIAgentService {
       final otherCoins = getAllBlockchains
           .where((Coin value) {
             if (value.tokenAddress() != null) {
+              final geckoId = coin.getGeckoId() == ''
+                  ? ''
+                  : 'coinGeckoId: ${coin.getGeckoId()}';
               listFungibleToken.add(
-                  '${value.getName()} (${value.getSymbol()}) on $currentCoin is ${(value as FTExplorer).contractExplorer()}');
+                '${value.getName()} (${value.getSymbol()}) $geckoId  on $currentCoin is ${(value as FTExplorer).contractExplorer()}',
+              );
               return false;
             }
             return coinGeckoIDs.contains(value.getGeckoId()) &&
@@ -168,7 +172,7 @@ class AIAgentService {
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()}.
-        the current coin tokens $listFungibleToken
+        the current coin fungible tokens ${listFungibleToken.join(',')}
         other coins are $otherCoins.
         """;
 
