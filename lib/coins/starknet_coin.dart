@@ -308,6 +308,30 @@ class StarknetCoin extends Coin {
     return txHash;
   }
 
+  Future<int> getTokenDecimals(String tokenAddress) async {
+    final provider = await apiProvider();
+
+    final decimalsReq = await provider.call(
+      request: FunctionCall(
+        contractAddress: Felt.fromHexString(tokenAddress),
+        entryPointSelector: getSelectorByName('decimals'),
+        calldata: [],
+      ),
+      blockId: const BlockId.blockTag('latest'),
+    );
+    return decimalsReq
+        .when(
+          error: (error) {
+            throw Exception(error);
+          },
+          result: (result) {
+            return result;
+          },
+        )
+        .first
+        .toInt();
+  }
+
   @override
   Future<String?> getQuote(
     String tokenIn,
@@ -316,11 +340,14 @@ class StarknetCoin extends Coin {
   ) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
+
+    final wei = amount.toBigIntDec(await getTokenDecimals(tokenIn));
+
     final quotes = await fetchQuotes(
       QuoteRequest(
         sellTokenAddress: tokenIn,
         buyTokenAddress: tokenOut,
-        sellAmount: BigInt.parse(amount),
+        sellAmount: wei,
         takerAddress: response.address,
       ),
       baseUrl: enableTestNet
