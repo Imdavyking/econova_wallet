@@ -492,10 +492,7 @@ class StarknetCoin extends Coin {
     final unstakeCall = FunctionCall(
       contractAddress: delegationPoolContract.address,
       entryPointSelector: getSelectorByName('exit_delegation_pool_intent'),
-      calldata: [
-        Felt.fromHexString(response.address),
-        Felt(amount.toBigIntDec(decimals()))
-      ],
+      calldata: [Felt(amount.toBigIntDec(decimals()))],
     );
     final rsult = await account.execute(functionCalls: [unstakeCall]);
     return rsult.when(
