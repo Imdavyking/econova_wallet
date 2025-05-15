@@ -427,6 +427,91 @@ class StarknetCoin extends Coin {
     );
   }
 
+  Future<String> unStakeAction(Account account) async {
+    final delegationPoolContract = getStakingContract(account);
+    final unstakeCall = FunctionCall(
+      contractAddress: delegationPoolContract.address,
+      entryPointSelector: getSelectorByName('exit_delegation_pool_action'),
+      calldata: [delegationPoolContract.account.accountAddress],
+    );
+    final result = await account.execute(functionCalls: [unstakeCall]);
+    return result.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
+  }
+
+  @override
+  Future<String?> claimRewards(String amount) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final account = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+
+    final delegationPoolContract = getStakingContract(account);
+    final claimCall = FunctionCall(
+      contractAddress: delegationPoolContract.address,
+      entryPointSelector: getSelectorByName('claim_rewards'),
+      calldata: [delegationPoolContract.account.accountAddress],
+    );
+    final rsult = await account.execute(functionCalls: [claimCall]);
+    return rsult.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception(
+          "Error claiming rewards (${error.code}): ${error.message}",
+        );
+      },
+    );
+  }
+
+  @override
+  Future<String?> unstakeToken(String amount) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final account = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+
+    final delegationPoolContract = getStakingContract(account);
+    final unstakeCall = FunctionCall(
+      contractAddress: delegationPoolContract.address,
+      entryPointSelector: getSelectorByName('exit_delegation_pool_intent'),
+      calldata: [
+        Felt.fromHexString(response.address),
+        Felt(amount.toBigIntDec(decimals()))
+      ],
+    );
+    final rsult = await account.execute(functionCalls: [unstakeCall]);
+    return rsult.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception("Error unstaking (${error.code}): ${error.message}");
+      },
+    );
+  }
+
   @override
   Future<String?> stakeToken(String amount) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -488,7 +573,7 @@ class StarknetCoin extends Coin {
         return result.transaction_hash;
       },
       error: (error) {
-        throw Exception("Error transfer (${error.code}): ${error.message}");
+        throw Exception("Error staking (${error.code}): ${error.message}");
       },
     );
   }
