@@ -123,12 +123,13 @@ class AIAgentService {
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
-    Coin coin,
   ) async {
     try {
+      final coin = AItools.coin;
+
       final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
       final currentCoin =
-          "${coin.getName().split('(')[0]} (${coin.getSymbol()})";
+          "name: ${coin.getName().split('(')[0]},symbol: (${coin.getSymbol()}),coinGeckoId: ${coin.getGeckoId()}) default_: ${coin.getDefault()}";
       final llm = ChatOpenAI(
         apiKey: openaiApiKey,
         defaultOptions: const ChatOpenAIOptions(
@@ -143,7 +144,7 @@ class AIAgentService {
               value != coin)
           .toList()
           .map((token) =>
-              "${token.getName().split('(')[0]} (${token.getSymbol()}) coinGeckoId: ${token.getGeckoId()})")
+              "name: ${token.getName().split('(')[0]}, symbol: (${token.getSymbol()}), coinGeckoId: ${token.getGeckoId()}), default_: ${token.getDefault()}")
           .toList()
           .join(',');
 
@@ -163,7 +164,7 @@ class AIAgentService {
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
-        tools: AItools(coin: coin).getTools(),
+        tools: AItools().getTools(),
         memory: memory,
         systemChatMessage: SystemChatMessagePromptTemplate(
           prompt: PromptTemplate(

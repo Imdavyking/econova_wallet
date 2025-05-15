@@ -1,6 +1,7 @@
 import "dart:convert";
 
 import 'package:cryptowallet/interface/coin.dart';
+import "package:cryptowallet/main.dart";
 import "package:cryptowallet/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
@@ -8,8 +9,8 @@ import "package:cryptowallet/screens/navigator_service.dart";
 import "./ai_confirm_transaction.dart";
 
 class AItools {
-  final Coin coin;
-  const AItools({required this.coin});
+  static Coin coin = starkNetCoins.first;
+  AItools();
 
   Future<String?> confirmTransaction(String message) async {
     final isApproved = await Navigator.push(
@@ -428,6 +429,44 @@ class AItools {
       getInputFromJson: _GetStakeInput.fromJson,
     );
 
+    final switchCoinTool = Tool.fromFunction<_GetSwitchCoin, String>(
+      name: 'CMD_switchCoin',
+      description: 'Tool for switching to another coin',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'name': {
+            'type': 'string',
+            'description': 'The name of the coin to switch to',
+          },
+          'default': {
+            'type': 'string',
+            'description': 'The default symbol of the coin to switch to',
+          },
+        },
+        'required': ['name', 'default'],
+      },
+      func: (final _GetSwitchCoin toolInput) async {
+        String name = toolInput.name;
+        String default_ = toolInput.default_;
+
+        try {
+          final message = 'You are about to switch to $name ($default_)';
+          final confirmation = await confirmTransaction(message);
+          if (confirmation != null) {
+            return confirmation;
+          }
+          coin = getAllBlockchains
+              .firstWhere((Coin value) => value.getSymbol() == default_);
+
+          return 'Switched to $name $default_';
+        } catch (e) {
+          return 'Switching failed for $currentCoin $name $default_ $e';
+        }
+      },
+      getInputFromJson: _GetSwitchCoin.fromJson,
+    );
+
     return [
       addressTool,
       resolveDomainNameTool,
@@ -437,6 +476,7 @@ class AItools {
       swapTool,
       getTokenPriceTool,
       stakeTool,
+      switchCoinTool,
       unstakeTool,
       claimRewardsTool,
       stakeRewardsTool,
@@ -486,6 +526,21 @@ class _GetBalanceInput {
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
     return _GetBalanceInput(
       address: json['address'] as String,
+    );
+  }
+}
+
+class _GetSwitchCoin {
+  final String name;
+  final String default_;
+
+  _GetSwitchCoin({required this.name, required this.default_});
+
+  factory _GetSwitchCoin.fromJson(Map<String, dynamic> json) {
+    debugPrint('getSwitchCoin: $json');
+    return _GetSwitchCoin(
+      name: json['name'] as String,
+      default_: json['default'] as String,
     );
   }
 }
