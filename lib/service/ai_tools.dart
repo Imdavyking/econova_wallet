@@ -97,6 +97,7 @@ class AItools {
       func: (final _GetTokenPriceInput toolInput) async {
         String coinGeckoId = toolInput.coinGeckoId;
         try {
+          debugPrint('coinGeckoId: $coinGeckoId');
           Map allCryptoPrice = jsonDecode(
             await getCryptoPrice(skipNetworkRequest: true),
           ) as Map;
