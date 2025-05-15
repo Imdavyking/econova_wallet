@@ -17,18 +17,6 @@ const starkDecimals = 18;
 const strkNativeToken =
     '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
-// Our API is found at the following endpoints, for Starknet mainnet and sepolia respectively:
-
-// https://starknet-mainnet-api.ekubo.org
-
-// https://starknet-sepolia-api.ekubo.org
-
-// The endpoints for Ethereum mainnet and sepolia are:
-
-// https://eth-mainnet-api.ekubo.org
-
-// https://eth-sepolia-api.ekubo.org
-
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 const maxFeeWei = 10000000000000;
@@ -321,6 +309,29 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  Future<String?> getQuote(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final quotes = await fetchQuotes(
+      QuoteRequest(
+        sellTokenAddress: tokenIn,
+        buyTokenAddress: tokenOut,
+        sellAmount: BigInt.parse(amount),
+        takerAddress: response.address,
+      ),
+      baseUrl: enableTestNet
+          ? 'https://sepolia.api.avnu.fi'
+          : 'https://starknet.api.avnu.fi',
+    );
+
+    return quotes[0].toJson().toString();
+  }
+
+  @override
   Future<bool> deployAccount() async {
     if (!await needDeploy()) {
       debugPrint('Account already deployed');
@@ -592,4 +603,330 @@ class TxResult {
   }
 
   TxResult(this.contractAddress, this.transactionHash);
+}
+
+class QuoteRequest {
+  final String sellTokenAddress;
+  final String buyTokenAddress;
+  final BigInt? sellAmount;
+  final BigInt? buyAmount;
+  final String? takerAddress;
+  final int? size;
+  final List<String>? excludeSources;
+  final BigInt? integratorFees;
+  final String? integratorFeeRecipient;
+  final String? integratorName;
+
+  QuoteRequest({
+    required this.sellTokenAddress,
+    required this.buyTokenAddress,
+    this.sellAmount,
+    this.buyAmount,
+    this.takerAddress,
+    this.size,
+    this.excludeSources,
+    this.integratorFees,
+    this.integratorFeeRecipient,
+    this.integratorName,
+  });
+
+  Map<String, dynamic> toQueryParams() {
+    final params = {
+      'sellTokenAddress': sellTokenAddress,
+      'buyTokenAddress': buyTokenAddress,
+      if (sellAmount != null)
+        'sellAmount': '0x${sellAmount!.toRadixString(16)}',
+      if (buyAmount != null) 'buyAmount': '0x${buyAmount!.toRadixString(16)}',
+      if (takerAddress != null) 'takerAddress': takerAddress,
+      if (size != null) 'size': size.toString(),
+      if (excludeSources != null) 'excludeSources': excludeSources,
+      if (integratorFees != null)
+        'integratorFees': '0x${integratorFees!.toRadixString(16)}',
+      if (integratorFeeRecipient != null)
+        'integratorFeeRecipient': integratorFeeRecipient,
+      if (integratorName != null) 'integratorName': integratorName,
+    };
+    return params;
+  }
+}
+
+class Gasless {
+  final bool active;
+  final List<GasTokenPrice> gasTokenPrices;
+
+  Gasless({required this.active, required this.gasTokenPrices});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'active': active,
+      'gasTokenPrices': gasTokenPrices.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory Gasless.fromJson(Map<String, dynamic> json) {
+    return Gasless(
+      active: json['active'],
+      gasTokenPrices: (json['gasTokenPrices'] as List)
+          .map((e) => GasTokenPrice.fromJson(e))
+          .toList(),
+    );
+  }
+}
+
+class GasTokenPrice {
+  final String tokenAddress;
+  final double gasFeesInUsd;
+  final BigInt gasFeesInGasToken;
+
+  GasTokenPrice({
+    required this.tokenAddress,
+    required this.gasFeesInUsd,
+    required this.gasFeesInGasToken,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'tokenAddress': tokenAddress,
+      'gasFeesInUsd': gasFeesInUsd,
+      'gasFeesInGasToken': gasFeesInGasToken.toString(),
+    };
+  }
+
+  factory GasTokenPrice.fromJson(Map<String, dynamic> json) {
+    return GasTokenPrice(
+      tokenAddress: json['tokenAddress'],
+      gasFeesInUsd: json['gasFeesInUsd'],
+      gasFeesInGasToken: BigInt.parse(json['gasFeesInGasToken'].toString()),
+    );
+  }
+}
+
+class Route {
+  final String name;
+  final String address;
+  final double percent;
+  final String sellTokenAddress;
+  final String buyTokenAddress;
+  final Map<String, String>? routeInfo;
+  final List<Route> routes;
+
+  Route({
+    required this.name,
+    required this.address,
+    required this.percent,
+    required this.sellTokenAddress,
+    required this.buyTokenAddress,
+    this.routeInfo,
+    required this.routes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'address': address,
+      'percent': percent,
+      'sellTokenAddress': sellTokenAddress,
+      'buyTokenAddress': buyTokenAddress,
+      'routeInfo': routeInfo,
+      'routes': routes.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory Route.fromJson(Map<String, dynamic> json) {
+    return Route(
+      name: json['name'],
+      address: json['address'],
+      percent: json['percent'],
+      sellTokenAddress: json['sellTokenAddress'],
+      buyTokenAddress: json['buyTokenAddress'],
+      routeInfo: json['routeInfo'] != null
+          ? Map<String, String>.from(json['routeInfo'])
+          : null,
+      routes: (json['routes'] as List).map((e) => Route.fromJson(e)).toList(),
+    );
+  }
+}
+
+class Quote {
+  final String quoteId;
+  final String sellTokenAddress;
+  final BigInt sellAmount;
+  final double sellAmountInUsd;
+  final String buyTokenAddress;
+  final BigInt buyAmount;
+  final double buyAmountInUsd;
+  final BigInt buyAmountWithoutFees;
+  final double buyAmountWithoutFeesInUsd;
+  final int? blockNumber;
+  final String chainId;
+  final int? expiry;
+  final List<Route> routes;
+  final BigInt gasFees;
+  final double gasFeesInUsd;
+  final BigInt avnuFees;
+  final double avnuFeesInUsd;
+  final BigInt avnuFeesBps;
+  final BigInt integratorFees;
+  final double integratorFeesInUsd;
+  final BigInt integratorFeesBps;
+  final double priceRatioUsd;
+  final double? sellTokenPriceInUsd;
+  final double? buyTokenPriceInUsd;
+  final String liquiditySource;
+  final Gasless gasless;
+  final bool? exactTokenTo;
+
+  Quote({
+    required this.quoteId,
+    required this.sellTokenAddress,
+    required this.sellAmount,
+    required this.sellAmountInUsd,
+    required this.buyTokenAddress,
+    required this.buyAmount,
+    required this.buyAmountInUsd,
+    required this.buyAmountWithoutFees,
+    required this.buyAmountWithoutFeesInUsd,
+    this.blockNumber,
+    required this.chainId,
+    this.expiry,
+    required this.routes,
+    required this.gasFees,
+    required this.gasFeesInUsd,
+    required this.avnuFees,
+    required this.avnuFeesInUsd,
+    required this.avnuFeesBps,
+    required this.integratorFees,
+    required this.integratorFeesInUsd,
+    required this.integratorFeesBps,
+    required this.priceRatioUsd,
+    this.sellTokenPriceInUsd,
+    this.buyTokenPriceInUsd,
+    required this.liquiditySource,
+    required this.gasless,
+    this.exactTokenTo,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'quoteId': quoteId,
+      'sellTokenAddress': sellTokenAddress,
+      'sellAmount': sellAmount.toString(),
+      'sellAmountInUsd': sellAmountInUsd,
+      'buyTokenAddress': buyTokenAddress,
+      'buyAmount': buyAmount.toString(),
+      'buyAmountInUsd': buyAmountInUsd,
+      'buyAmountWithoutFees': buyAmountWithoutFees.toString(),
+      'buyAmountWithoutFeesInUsd': buyAmountWithoutFeesInUsd,
+      'blockNumber': blockNumber,
+      'chainId': chainId,
+      'expiry': expiry,
+      'routes': routes.map((e) => e.toJson()).toList(),
+      'gasFees': gasFees.toString(),
+      'gasFeesInUsd': gasFeesInUsd,
+      'avnuFees': avnuFees.toString(),
+      'avnuFeesInUsd': avnuFeesInUsd,
+      'avnuFeesBps': avnuFeesBps.toString(),
+      'integratorFees': integratorFees.toString(),
+      'integratorFeesInUsd': integratorFeesInUsd,
+      'integratorFeesBps': integratorFeesBps.toString(),
+      'priceRatioUsd': priceRatioUsd,
+      'sellTokenPriceInUsd': sellTokenPriceInUsd,
+      'buyTokenPriceInUsd': buyTokenPriceInUsd,
+      'liquiditySource': liquiditySource,
+      'gasless': gasless.toJson(),
+      if (exactTokenTo != null) 'exactTokenTo': exactTokenTo,
+    };
+  }
+
+  factory Quote.fromJson(Map<String, dynamic> json) {
+    return Quote(
+      quoteId: json['quoteId'],
+      sellTokenAddress: json['sellTokenAddress'],
+      sellAmount: BigInt.parse(json['sellAmount'].toString()),
+      sellAmountInUsd: json['sellAmountInUsd'].toDouble(),
+      buyTokenAddress: json['buyTokenAddress'],
+      buyAmount: BigInt.parse(json['buyAmount'].toString()),
+      buyAmountInUsd: json['buyAmountInUsd'].toDouble(),
+      buyAmountWithoutFees:
+          BigInt.parse(json['buyAmountWithoutFees'].toString()),
+      buyAmountWithoutFeesInUsd: json['buyAmountWithoutFeesInUsd'].toDouble(),
+      blockNumber: json['blockNumber'].runtimeType == String
+          ? int.parse(json['blockNumber'])
+          : json['blockNumber'],
+      chainId: json['chainId'],
+      expiry: json['expiry'],
+      routes: (json['routes'] as List).map((e) => Route.fromJson(e)).toList(),
+      gasFees: BigInt.parse(json['gasFees'].toString()),
+      gasFeesInUsd: json['gasFeesInUsd'].toDouble(),
+      avnuFees: BigInt.parse(json['avnuFees'].toString()),
+      avnuFeesInUsd: json['avnuFeesInUsd'].toDouble(),
+      avnuFeesBps: BigInt.parse(json['avnuFeesBps'].toString()),
+      integratorFees: BigInt.parse(json['integratorFees'].toString()),
+      integratorFeesInUsd: json['integratorFeesInUsd'].toDouble(),
+      integratorFeesBps: BigInt.parse(json['integratorFeesBps'].toString()),
+      priceRatioUsd: json['priceRatioUsd'].toDouble(),
+      sellTokenPriceInUsd: json['sellTokenPriceInUsd']?.toDouble(),
+      buyTokenPriceInUsd: json['buyTokenPriceInUsd']?.toDouble(),
+      liquiditySource: json['liquiditySource'],
+      gasless: Gasless.fromJson(json['gasless']),
+      exactTokenTo: json['exactTokenTo'],
+    );
+  }
+}
+
+Future<List<Quote>> fetchQuotes(QuoteRequest request, {String? baseUrl}) async {
+  if (request.sellAmount == null && request.buyAmount == null) {
+    throw ArgumentError('Sell amount or buy amount is required');
+  }
+
+  final url = Uri.parse('${baseUrl ?? 'https://api.avnu.fi'}/swap/v2/quotes')
+      .replace(queryParameters: request.toQueryParams());
+
+  final response = await http.get(url, headers: {'Accept': 'application/json'});
+
+  if (response.statusCode == 400 || response.statusCode == 500) {
+    final error = jsonDecode(response.body);
+    final message = error['messages']?.first ?? 'Unknown error';
+    throw Exception(message);
+  }
+
+  if (response.statusCode > 400) {
+    throw Exception('${response.statusCode} ${response.reasonPhrase}');
+  }
+  // final signatureParts = response.headers['signature']!.split(',');
+  // final signature = Signature(
+  //   BigInt.parse(signatureParts[0].substring(2), radix: 16),
+  //   BigInt.parse(
+  //     signatureParts[1].substring(2),
+  //     radix: 16,
+  //   ),
+  // );
+  // final messageHash = computeHashOnElements(
+  //   [
+  //     starknetKeccak(utf8.encode(response.body)).toBigInt(),
+  //   ],
+  // );
+  // final publicKey = AvnuConfig.instance.publicKey!;
+  // Verify the signature
+  // final isValid = starknetVerify(
+  //   messageHash: messageHash,
+  //   signature: signature,
+  //   publicKey: publicKey,
+  // );
+
+  // if (!isValid) {
+  //   throw Exception('Invalid server signature');
+  // }
+
+  final List<dynamic> responseData = jsonDecode(response.body);
+
+  print(responseData);
+
+  // const signature = response.headers.get('signature');
+  // const hashResponse = hash.computeHashOnElements([hash.starknetKeccak(textResponse)]);
+  //     const formattedSig = signature.split(',').map((s) => BigInt(s));
+  //     const signatureType = new ec.starkCurve.Signature(formattedSig[0], formattedSig[1]);
+  //     if (!ec.starkCurve.verify(signatureType, hashResponse, avnuPublicKey))
+  //       throw new Error('Invalid server signature');
+  return responseData.map((json) => Quote.fromJson(json)).toList();
 }

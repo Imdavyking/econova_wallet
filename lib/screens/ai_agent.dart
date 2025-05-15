@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:cryptowallet/extensions/build_context_extension.dart';
 import 'package:cryptowallet/extensions/chat_message_ext.dart';
+import 'package:cryptowallet/main.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/utils/app_config.dart';
 import 'package:cryptowallet/utils/rpc_urls.dart';
@@ -132,9 +135,7 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
                   Icons.mic,
                   color: appPrimaryColor,
                 ),
-                onPressed: () {
-                  //TODO: Implement voice input
-                },
+                onPressed: () {},
               ),
           ],
           inputDecoration: InputDecoration(
@@ -163,6 +164,12 @@ class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
+    starkNetCoins.first.getQuote(
+      '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+      '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+      pow(10, 18).toString(),
+    );
+    return;
     final userMessage = textMessage.copyWith(
       user: Constants.user,
       createdAt: DateTime.now(),
