@@ -238,7 +238,7 @@ class AIAgentService {
       final transferTool = Tool.fromFunction<_GetTransferInput, String>(
         name: 'CMD_transferBalance',
         description:
-            'Tool for transferring user $currentCoin balance,always check for user balance before transfer',
+            'Transfers $currentCoin to a recipient. Always check the user’s balance before transferring.',
         inputJsonSchema: const {
           'type': 'object',
           'properties': {
@@ -301,9 +301,9 @@ class AIAgentService {
       );
       final tools = [
         addressTool,
+        resolveDomainNameTool,
         balanceTool,
         transferTool,
-        resolveDomainNameTool
       ];
       final otherCoins = getAllBlockchains
           .where((Coin value) =>
