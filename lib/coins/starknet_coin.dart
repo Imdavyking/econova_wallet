@@ -398,8 +398,11 @@ class StarknetCoin extends Coin {
       ),
       baseUrl: swapUrl,
     );
-    final quote = quotes[0];
-
+    final quote = quotes.reduce((a, b) {
+      final aBuyAmount = a.buyAmount;
+      final bBuyAmount = b.buyAmount;
+      return aBuyAmount > bBuyAmount ? a : b;
+    });
     return jsonEncode({
       ...quote.toJson(),
     });
