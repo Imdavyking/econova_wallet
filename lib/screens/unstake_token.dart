@@ -87,8 +87,8 @@ class _UnStakeTokenState extends State<UnStakeToken> {
                         textAlign: TextAlign.end,
                       ),
                       onPressed: () async {
-                        final maxTransfer = await coin.getMaxTransfer();
-                        amountContrl.setText(maxTransfer.toString());
+                        final stakedTokens = await coin.getStakedRewards();
+                        amountContrl.setText(stakedTokens.toString());
                       },
                     ),
                     hintText: localization.amount,
@@ -254,11 +254,12 @@ class _UnStakeTokenState extends State<UnStakeToken> {
                       }
 
                       try {
-                    final txHash=    await widget.tokenData.unstakeToken(amount);
+                        final txHash =
+                            await widget.tokenData.unstakeToken(amount);
 
-                    if(txHash == null){
-                      throw Exception("Failed unstaking token");
-                    }
+                        if (txHash == null) {
+                          throw Exception("Failed unstaking token");
+                        }
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
