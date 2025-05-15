@@ -1,7 +1,6 @@
 import "dart:convert";
 import "package:cryptowallet/extensions/to_real_json_langchain.dart";
 import "package:cryptowallet/interface/coin.dart";
-import "package:cryptowallet/interface/ft_explorer.dart";
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/service/ai_tools.dart";
 import "package:cryptowallet/utils/all_coins.dart";
@@ -31,6 +30,7 @@ class AIAgentService {
   static final memory = ConversationBufferMemory(returnMessages: true);
   static const historyKey = '33221-93d0-8007-8a0f-cd31191';
   static final logger = Logger();
+  static const defaultCoinTokenAddress = '0xdefault';
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -148,7 +148,7 @@ class AIAgentService {
                   ? ''
                   : 'coinGeckoId: ${coin.getGeckoId()}';
               listFungibleToken.add(
-                '${value.getName()} (${value.getSymbol()}) $geckoId  on $currentCoin is ${(value as FTExplorer).contractExplorer()}',
+                'name: ${value.getName().split('(')[0]}, symbol: (${value.getSymbol()}) $geckoId  on $currentCoin is ${value.tokenAddress()}',
               );
               return false;
             }
@@ -172,6 +172,7 @@ class AIAgentService {
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()}.
+        tokenAddress for current coin is an $defaultCoinTokenAddress
         the current coin fungible tokens ${listFungibleToken.join(',')}
         other coins are $otherCoins.
         """;

@@ -7,6 +7,7 @@ import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:cryptowallet/screens/navigator_service.dart";
 import "./ai_confirm_transaction.dart";
+import "./ai_agent_service.dart";
 
 class AItools {
   static Coin coin = starkNetCoins.first;
@@ -124,23 +125,34 @@ class AItools {
             'type': 'string',
             'description': 'The address to check balance',
           },
+          'tokenAddress': {
+            'type': 'tokenAddress',
+            'description': 'The token address',
+          },
         },
-        'required': ['address'],
+        'required': ['address', 'tokenAddress'],
       },
       func: (final _GetBalanceInput toolInput) async {
         String address = toolInput.address;
+        String tokenAddress = toolInput.tokenAddress;
+        Coin token = coin;
+        if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
+          token = getAllBlockchains.firstWhere((token) =>
+              token.getExplorer() == coin.getExplorer() &&
+              token.tokenAddress() == tokenAddress);
+        }
 
         try {
           coin.validateAddress(address);
         } catch (e) {
           return 'Invalid $currentCoin address: $address';
         }
-        final result = 'Checking $address balance';
+        final result = 'Checking $address $tokenAddress balance';
         debugPrint(result);
 
-        final coinBal = await coin.getUserBalance(address: address);
+        final coinBal = await token.getUserBalance(address: address);
 
-        final balanceString = '$address have $coinBal $currentCoin';
+        final balanceString = '$address have $coinBal ${token.getSymbol()}';
         return balanceString;
       },
       getInputFromJson: _GetBalanceInput.fromJson,
@@ -160,12 +172,17 @@ class AItools {
             'type': 'number',
             'description': 'The amount to transfer',
           },
+          'tokenAddress': {
+            'type': 'tokenAddress',
+            'description': 'The token address',
+          },
         },
-        'required': ['recipient', 'amount'],
+        'required': ['recipient', 'amount', 'tokenAddress'],
       },
       func: (final _GetTransferInput toolInput) async {
         final recipient = toolInput.recipient.trim();
         final amount = toolInput.amount;
+        final tokenAddress = toolInput.tokenAddress;
 
         if (recipient.isEmpty) {
           return 'Recipient address is empty.';
@@ -175,8 +192,16 @@ class AItools {
           return 'Amount must be greater than zero.';
         }
 
+        Coin token = coin;
+
+        if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
+          token = getAllBlockchains.firstWhere((token) =>
+              token.getExplorer() == coin.getExplorer() &&
+              token.tokenAddress() == tokenAddress);
+        }
+
         final message =
-            'You are about to send $amount ${coin.getSymbol()} to $recipient on $currentCoin.';
+            'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
 
         try {
           coin.validateAddress(recipient);
@@ -191,14 +216,15 @@ class AItools {
         }
 
         try {
-          final txHash = await coin.transferToken(amount.toString(), recipient);
+          final txHash =
+              await token.transferToken(amount.toString(), recipient);
 
           if (txHash == null || txHash.isEmpty) {
-            return '$currentCoin Transaction failed: no transaction hash returned.';
+            return '${token.getSymbol()} Transaction failed: no transaction hash returned.';
           }
 
           final successMessage =
-              'Sent $amount tokens to $recipient on $currentCoin.\nTransaction hash: $txHash ${coin.formatTxHash(txHash)}';
+              'Sent $amount tokens to $recipient on ${token.getSymbol()}.\nTransaction hash: $txHash ${coin.formatTxHash(txHash)}';
           debugPrint(successMessage);
           return successMessage;
         } catch (e) {
@@ -521,12 +547,14 @@ class _GetAddressInput {
 
 class _GetBalanceInput {
   final String address;
+  final String tokenAddress;
 
-  _GetBalanceInput({required this.address});
+  _GetBalanceInput({required this.address, required this.tokenAddress});
 
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
     return _GetBalanceInput(
       address: json['address'] as String,
+      tokenAddress: json['tokenAddress'] as String,
     );
   }
 }
@@ -590,14 +618,20 @@ class _GetSwapInput {
 
 class _GetTransferInput {
   final String recipient;
+  final String tokenAddress;
   final num amount;
 
-  _GetTransferInput({required this.recipient, required this.amount});
+  _GetTransferInput({
+    required this.recipient,
+    required this.amount,
+    required this.tokenAddress,
+  });
 
   factory _GetTransferInput.fromJson(Map<String, dynamic> json) {
     debugPrint('getTransferInput: $json');
     return _GetTransferInput(
       recipient: json['recipient'] as String,
+      tokenAddress: json['tokenAddress'] as String,
       amount: json['amount'] as num,
     );
   }
