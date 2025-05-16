@@ -4,6 +4,7 @@ import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:cryptowallet/screens/stake_token.dart';
 import 'package:cryptowallet/service/ai_agent_service.dart';
 import 'package:cryptowallet/service/wallet_service.dart';
+import 'package:cryptowallet/utils/starknet_call.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -67,6 +68,43 @@ class StarknetCoin extends Coin {
       classHash: json['classHash'],
       contractAddress: json['contractAddress'],
       useStarkToken: json['useStarkToken'],
+    );
+  }
+
+  Future<String?> executeInvokeDapp(List<StarknetCall> calls) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final fundingAccount = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+
+
+    final tx = await fundingAccount.execute(
+      functionCalls: calls
+          .map(
+            (call) => FunctionCall(
+              contractAddress: Felt.fromHexString(call.contractAddress),
+              entryPointSelector: getSelectorByName(call.entryPoint),
+              calldata: call.calldata
+                  .map((data) => Felt(BigInt.parse(data)))
+                  .toList(),
+            ),
+          )
+          .toList(),
+    );
+    return tx.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
     );
   }
 

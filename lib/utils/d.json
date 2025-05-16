@@ -1,15 +1,18 @@
 [
   {
     "type": "request",
-    "requestId": "b92ftfrcx",
+    "requestId": "pqbzdcrf8",
     "args": {
       "type": "wallet_addInvokeTransaction",
       "params": {
         "calls": [
           {
             "contract_address": "0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b",
-            "entry_point": "set_staker_removed",
-            "calldata": []
+            "entry_point": "add_to_delegation_pool",
+            "calldata": [
+              "3200275438715293697649005452269566110429989835020165982698741683867762179947",
+              "1"
+            ]
           }
         ]
       }

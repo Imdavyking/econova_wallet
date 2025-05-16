@@ -4,7 +4,7 @@ import 'dart:isolate';
 import 'package:cryptowallet/coins/near_coin.dart';
 import 'package:hex/hex.dart';
 import 'package:sui/utils/sha.dart';
-
+import "../utils/starknet_call.dart";
 import '../model/near_message_borsh.dart';
 import '../model/near_trx_obj.dart';
 import '../service/wallet_connect_service.dart';
@@ -705,7 +705,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                       'wallet_getPermissions',
                       'wallet_deploymentData',
                       'wallet_addDeclareTransaction',
-                      'wallet_addInvokeTransaction',
                       'wallet_signTypedData',
                       'wallet_supportedSpecs',
                     ];
@@ -730,6 +729,31 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                           await _controller!
                               .evaluateJavascript(source: message);
+                        } else if (requestType ==
+                            'wallet_addInvokeTransaction') {
+                          try {
+                            final params = request['params'];
+                            final List calls = params['calls'];
+                            List<StarknetCall> dapCall = calls
+                                .map((call) => StarknetCall.fromJson(call))
+                                .toList();
+                            final txHash =
+                                await coin.executeInvokeDapp(dapCall);
+                            final t = json.encode({
+                              "origin": origin,
+                              "requestId": requestId,
+                              'chainId': chainId,
+                              "address": coinData.address,
+                              'requestType': requestType,
+                              'txHash': txHash,
+                            });
+                            final message =
+                                'window.starknet.sendResponse("$requestId",$t)';
+                            await _controller!
+                                .evaluateJavascript(source: message);
+                          } catch (e) {
+                            print('error in dapp request: $e');
+                          }
                         } else if (unsupportedResponseTypes
                             .contains(requestType)) {
                           //TODO: throw UnsupportedError

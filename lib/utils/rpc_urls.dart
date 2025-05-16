@@ -862,7 +862,7 @@ Future setupWebViewWalletBridge(
     });
   },
 
-  waitForResponse: (requestId, timeout = 30000) => {
+  waitForResponse: (requestId) => {
     console.log("waiting for response", requestId);
     return new Promise((resolve, reject) => {
       const handler = (event) => {
@@ -871,20 +871,23 @@ Future setupWebViewWalletBridge(
           const requestType = data.requestType;
           const chainId = data.chainId;
           const address = data.address;
+          window.removeEventListener(requestId, handler);
           switch(requestType){
             case 'wallet_requestAccounts':
               starknet.selectedAddress = address;
               starknet.chainId = data.chainId;
               starknet.isConnected = true;
-              window.removeEventListener(requestId, handler);
-              clearTimeout(timeoutId);
               resolve([address]);
               break;
             case 'wallet_requestChainId':
               resolve(chainId);
               break;
             case 'wallet_addInvokeTransaction':
-              // resolve(chainId);
+              const txHash = data.txHash;
+              console.log("txHash", txHash);
+              resolve({
+                transaction_hash: txHash,
+              });
               break;
             default:
               reject(new Error("Invalid request type "+ requestType));
@@ -899,10 +902,6 @@ Future setupWebViewWalletBridge(
       };
 
       window.addEventListener(requestId, handler);
-      const timeoutId = setTimeout(() => {
-        window.removeEventListener(requestId, handler);
-        reject(new Error("Request timed out"));
-      }, timeout);
     });
   },
 
