@@ -172,7 +172,7 @@ class AItools {
     final transferTool = Tool.fromFunction<_GetTransferInput, String>(
       name: 'CMD_transferBalance',
       description:
-          'Transfers $currentCoin to a recipient. Always check the user’s balance before transferring.',
+          'Transfers $currentCoin to a recipient. Always check the user\'s balance before transferring.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
