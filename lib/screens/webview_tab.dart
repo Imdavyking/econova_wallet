@@ -403,7 +403,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       currentChain: currentChain,
       switchChain: switchChain,
       onConfirm: () async {
-        initJs = await returnInitEvm(
+        initJs = await setupWebViewWalletBridge(
           switchChain.chainId,
           switchChain.rpc,
         );
@@ -694,6 +694,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     final requestId =
                         payload['requestId']; // Important for reply
                     final origin = payload['url'];
+                    const chainId = 'SN_SEPOLIA';
 
                     switch (type) {
                       case 'request':
@@ -701,21 +702,18 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                         final requestType = request['type'];
 
                         if (requestType == 'wallet_requestAccounts') {
-                          final response = {
-                            "requestId": requestId,
+                          final t = json.encode({
                             "origin": origin,
-                            'target': "starknet-contentScript",
-                            "response": [coinData.address],
-                          };
+                            "requestId": requestId,
+                            'chainId': chainId,
+                            "address": coinData.address,
+                          });
 
                           final message =
-                              'window.postMessage(JSON.stringify(${jsonEncode(response)}), "*");';
+                              'window.starknet.sendResponse("$requestId",$t)';
 
-                          print(message);
-
-                          await _controller!.evaluateJavascript(
-                            source: message,
-                          );
+                          await _controller!
+                              .evaluateJavascript(source: message);
                         }
                         break;
                       case 'enable':
@@ -1885,6 +1883,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
               onConsoleMessage:
                   (InAppWebViewController controller, ConsoleMessage message) {
                 if (kDebugMode) {
+                  if (message.toString().contains('externalDetectWallets')) {
+                    return;
+                  }
                   print(message.toString());
                 }
               },
@@ -2066,7 +2067,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   switchWeb3_(int chainId, String rpc) async {
-    initJs = await returnInitEvm(chainId, rpc);
+    initJs = await setupWebViewWalletBridge(chainId, rpc);
     await reloadWeb3_();
   }
 

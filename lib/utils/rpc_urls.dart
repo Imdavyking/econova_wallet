@@ -737,7 +737,7 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
-Future returnInitEvm(
+Future setupWebViewWalletBridge(
   int chainId,
   String rpc,
 ) async {
@@ -827,102 +827,126 @@ Future returnInitEvm(
     window.getOfflineSignerOnlyAmino = getDefaultCosmosProvider;
     window.getOfflineSignerAuto = getDefaultCosmosProvider;
 
-      // Helper to wait for Flutter WebView readiness and call handler
-    function callFlutterHandler(payload) {
-      return new Promise((resolve, reject) => {
-        const interval = setInterval(() => {
-          if (isFlutterInAppWebViewReady) {
-            clearInterval(interval);
-            console.log("calling handler with payload", payload);
-            resolve(window.flutter_inappwebview.callHandler("StarknetHandler", JSON.stringify(payload)));
-          }
-        }, 100);
+ window.starknet = {
+  id: "argentX",
+  name: "Argent X",
+  eventName: "starknet-contentScript",
+  icon: "data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjQwIiBoZWlnaHQ9IjM2IiB2aWV3Qm94PSIwIDAgNDAgMzYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0yNC43NTgyIC0zLjk3MzY0ZS0wN0gxNC42MjM4QzE0LjI4NTEgLTMuOTczNjRlLTA3IDE0LjAxMzggMC4yODExNzggMTQuMDA2NCAwLjYzMDY4M0MxMy44MDE3IDEwLjQ1NDkgOC44MjIzNCAxOS43NzkyIDAuMjUxODkzIDI2LjM4MzdDLTAuMDIwMjA0NiAyNi41OTMzIC0wLjA4MjE5NDYgMjYuOTg3MiAwLjExNjczNCAyNy4yNzA5TDYuMDQ2MjMgMzUuNzM0QzYuMjQ3OTYgMzYuMDIyIDYuNjQwOTkgMzYuMDg3IDYuOTE3NjYgMzUuODc1NEMxMi4yNzY1IDMxLjc3MjggMTYuNTg2OSAyNi44MjM2IDE5LjY5MSAyMS4zMzhDMjIuNzk1MSAyNi44MjM2IDI3LjEwNTcgMzEuNzcyOCAzMi40NjQ2IDM1Ljg3NTRDMzIuNzQxIDM2LjA4NyAzMy4xMzQxIDM2LjAyMiAzMy4zMzYxIDM1LjczNEwzOS4yNjU2IDI3LjI3MDlDMzkuNDY0MiAyNi45ODcyIDM5LjQwMjIgMjYuNTkzMyAzOS4xMzA0IDI2LjM4MzdDMzAuNTU5NyAxOS43NzkyIDI1LjU4MDQgMTAuNDU0OSAyNS4zNzU5IDAuNjMwNjgzQzI1LjM2ODUgMC4yODExNzggMjUuMDk2OSAtMy45NzM2NGUtMDcgMjQuNzU4MiAtMy45NzM2NGUtMDdaIiBmaWxsPSIjRkY4NzVCIi8+Cjwvc3ZnPgo=",
+  request: (args) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
 
-        // Optional timeout to avoid waiting forever
-        setTimeout(() => {
-          clearInterval(interval);
-          reject(new Error("Flutter InAppWebView not ready"));
-        }, 30000);
-      });
-    }
+    console.log("requesting", requestId);
 
-    // Helper to listen for response messages filtered by requestId
-    function waitForResponse(requestId, timeout = 30000) {
-      return new Promise((resolve, reject) => {
-        const handler = (event) => {
-          try {
-            console.log("got response", event.data);
-            const data = JSON.parse(event.data);
-            if(data.target !== "starknet-contentScript") return;
-            if (data?.requestId === requestId) {
-              window.removeEventListener("message", handler);
-              clearTimeout(timeoutId);
-              resolve(data.response);
-            }
-          } catch {
-            throw new Error("Invalid message format");
-          }
-        };
-        window.addEventListener("message", handler);
-
-        const timeoutId = setTimeout(() => {
-          window.removeEventListener("message", handler);
-          reject(new Error("Request timed out"));
-        }, timeout);
-      });
-    }
-
-  window.starknet = {
-    id: "argentX",
-    name: "Argent X",
-    icon: "data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjQwIiBoZWlnaHQ9IjM2IiB2aWV3Qm94PSIwIDAgNDAgMzYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0yNC43NTgyIC0zLjk3MzY0ZS0wN0gxNC42MjM4QzE0LjI4NTEgLTMuOTczNjRlLTA3IDE0LjAxMzggMC4yODExNzggMTQuMDA2NCAwLjYzMDY4M0MxMy44MDE3IDEwLjQ1NDkgOC44MjIzNCAxOS43NzkyIDAuMjUxODkzIDI2LjM4MzdDLTAuMDIwMjA0NiAyNi41OTMzIC0wLjA4MjE5NDYgMjYuOTg3MiAwLjExNjczNCAyNy4yNzA5TDYuMDQ2MjMgMzUuNzM0QzYuMjQ3OTYgMzYuMDIyIDYuNjQwOTkgMzYuMDg3IDYuOTE3NjYgMzUuODc1NEMxMi4yNzY1IDMxLjc3MjggMTYuNTg2OSAyNi44MjM2IDE5LjY5MSAyMS4zMzhDMjIuNzk1MSAyNi44MjM2IDI3LjEwNTcgMzEuNzcyOCAzMi40NjQ2IDM1Ljg3NTRDMzIuNzQxIDM2LjA4NyAzMy4xMzQxIDM2LjAyMiAzMy4zMzYxIDM1LjczNEwzOS4yNjU2IDI3LjI3MDlDMzkuNDY0MiAyNi45ODcyIDM5LjQwMjIgMjYuNTkzMyAzOS4xMzA0IDI2LjM4MzdDMzAuNTU5NyAxOS43NzkyIDI1LjU4MDQgMTAuNDU0OSAyNS4zNzU5IDAuNjMwNjgzQzI1LjM2ODUgMC4yODExNzggMjUuMDk2OSAtMy45NzM2NGUtMDcgMjQuNzU4MiAtMy45NzM2NGUtMDdaIiBmaWxsPSIjRkY4NzVCIi8+Cjwvc3ZnPgo=",
-    request: (args) => {
-      const requestId = Math.random().toString(36).substr(2, 9);
-      // Send request to Flutter and wait for response message with requestId
-      return callFlutterHandler({
+    return window.starknet
+      .callFlutterHandler({
         type: "request",
         requestId,
         args,
         url: window.location.origin,
-      }).then(() => waitForResponse(requestId));
-    },
-    enable: async () => {
-    const requestId = Math.random().toString(36).substr(2, 9);
-      return callFlutterHandler({
-        type: "enable",
-        url: window.location.origin,
-      }).then(() => waitForResponse(requestId));
-    },
-
-    isPreauthorized: async () => {
-    const requestId = Math.random().toString(36).substr(2, 9);
-      return callFlutterHandler({
-        type: "isPreauthorized",
-        url: window.location.origin,
-      }).then(() => waitForResponse(requestId));
-    },
-
-    on: (event, handler) => {
-      callFlutterHandler({
-        type: "on",
-        event,
-        url: window.location.origin,
+      })
+      .then(() => {
+        console.log("request sent with requestId", requestId);
+        return window.starknet.waitForResponse(requestId);
       });
+  },
 
-      window._starknetHandlers = window._starknetHandlers || {};
-      window._starknetHandlers[event] = handler;
-    },
+  callFlutterHandler: (payload) => {
+    return new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        if (isFlutterInAppWebViewReady) {
+          resolve();
+          clearInterval(interval);
+          window.flutter_inappwebview.callHandler(
+            "StarknetHandler",
+            JSON.stringify(payload)
+          );
+        }
+      }, 100);
+    });
+  },
 
-    off: (event) => {
-      callFlutterHandler({
-        type: "off",
-        event,
-        url: window.location.origin,
-      });
+  waitForResponse: (requestId, timeout = 30000) => {
+    console.log("waiting for response", requestId);
+    return new Promise((resolve, reject) => {
+      const handler = (event) => {
+        try {
+          const data = event.detail;
+          const address = data.address;
+          const chainId = data.chainId;
 
-      if (window._starknetHandlers) delete window._starknetHandlers[event];
-    },
-  };
+          starknet.selectedAddress = address
+          starknet.chainId = data.chainId
+          console.log(window.starknet.isConnected);
+          starknet.isConnected = true
+          console.log(window.starknet.isConnected);
+          window.removeEventListener(requestId, handler);
+          clearTimeout(timeoutId);
+          resolve([address]);
+        } catch (err) {
+          console.error("Invalid message format", err);
+          reject(new Error(err.toString()));
+        }
+      };
+
+      window.addEventListener(requestId, handler);
+      console.log("added event listener", requestId);
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener(requestId, handler);
+        reject(new Error("Request timed out"));
+      }, timeout);
+    });
+  },
+
+  sendResponse: (requestId, payload) => {
+    console.log("sending payload", payload);
+    const customEvent = new CustomEvent(requestId, {
+      detail: payload,
+    });
+    window.dispatchEvent(customEvent);
+    console.log("sent payload", customEvent);
+  },
+
+  enable: () => {
+    return window.starknet.callFlutterHandler({
+      type: "enable",
+      url: window.location.origin,
+    });
+  },
+
+  isPreauthorized: () => {
+    return window.starknet.callFlutterHandler({
+      type: "isPreauthorized",
+      url: window.location.origin,
+    });
+  },
+
+  on: (event, handler) => {
+    window.starknet.callFlutterHandler({
+      type: "on",
+      event,
+      url: window.location.origin,
+    });
+
+    window._starknetHandlers = window._starknetHandlers || {};
+    window._starknetHandlers[event] = handler;
+  },
+
+  off: (event) => {
+    window.starknet.callFlutterHandler({
+      type: "off",
+      event,
+      url: window.location.origin,
+    });
+
+    if (window._starknetHandlers) {
+      delete window._starknetHandlers[event];
+    }
+  },
+};
+
+
+
+ 
 
     window.starknet_argentX = window.starknet;
 
@@ -965,7 +989,7 @@ Future navigateToDappBrowser(
 
   final coin = evmFromChainId(chainId)!;
 
-  final init = await returnInitEvm(
+  final init = await setupWebViewWalletBridge(
     chainId,
     coin.rpc,
   );

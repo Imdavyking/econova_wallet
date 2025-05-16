@@ -21,6 +21,7 @@ const strkNativeToken =
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 const maxFeeWei = 10000000000000;
+
 final maxFeeEth = maxFeeWei / pow(10, 18);
 
 class StarknetCoin extends Coin {
