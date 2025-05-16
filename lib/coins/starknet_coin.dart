@@ -36,6 +36,7 @@ class StarknetCoin extends Coin {
   String payScheme;
   String classHash;
   String contractAddress;
+  String chainId;
   bool useStarkToken;
 
   StarknetCoin({
@@ -51,6 +52,7 @@ class StarknetCoin extends Coin {
     required this.classHash,
     required this.contractAddress,
     required this.useStarkToken,
+    required this.chainId,
   });
 
   factory StarknetCoin.fromJson(Map<String, dynamic> json) {
@@ -67,6 +69,7 @@ class StarknetCoin extends Coin {
       classHash: json['classHash'],
       contractAddress: json['contractAddress'],
       useStarkToken: json['useStarkToken'],
+      chainId: json['chainId'],
     );
   }
 
@@ -129,6 +132,7 @@ class StarknetCoin extends Coin {
     data['classHash'] = classHash;
     data['contractAddress'] = contractAddress;
     data['useStarkToken'] = useStarkToken;
+    data['chainId'] = chainId;
 
     return data;
   }
@@ -907,6 +911,7 @@ List<StarknetCoin> getStarknetBlockchains() {
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress: strkNativeToken,
         useStarkToken: true,
+        chainId: 'SN_SEPOLIA',
       ),
       StarknetCoin(
         blockExplorer:
@@ -923,11 +928,13 @@ List<StarknetCoin> getStarknetBlockchains() {
         payScheme: 'ethereum',
         rampID: 'ETH_ETH',
         useStarkToken: false,
+        chainId: 'SN_SEPOLIA',
       ),
     ]);
   } else {
     blockChains.addAll([
       StarknetCoin(
+        chainId: 'SN_MAIN',
         blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',

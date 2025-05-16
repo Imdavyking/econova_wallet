@@ -694,7 +694,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     final requestId =
                         payload['requestId']; // Important for reply
                     final origin = payload['url'];
-                    const chainId = 'SN_SEPOLIA';
 
                     switch (type) {
                       case 'request':
@@ -705,7 +704,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           final t = json.encode({
                             "origin": origin,
                             "requestId": requestId,
-                            'chainId': chainId,
+                            'chainId': coin.chainId,
                             "address": coinData.address,
                           });
 
