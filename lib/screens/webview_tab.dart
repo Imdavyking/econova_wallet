@@ -321,17 +321,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return _controller!.evaluateJavascript(source: script);
   }
 
-  Future _setSolanaAddress(id, sendingAddress) async {
-    final setAddress = "trustwallet.solana.setAddress(\"$sendingAddress\");";
-
-    String callback =
-        "trustwallet.solana.sendResponse($id, [\"$sendingAddress\"])";
-
-    await _sendCustomResponse(setAddress);
-
-    await _sendCustomResponse(callback);
-  }
-
   Future<void> _sendNearError(String message, int methodId) {
     String script = "window.nightly.near.sendError($methodId, \"$message\")";
     debugPrint(script);
@@ -345,47 +334,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
   Future<void> _sendNearResult(String message, int methodId) {
     String script = "window.nightly.near.sendResponse($methodId, '$message')";
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _sendCosmosMessageSign(id, List signature) async {
-    final signatureData = jsonEncode(signature);
-    String script = "window.keplr.sendResponse($id, '$signatureData')";
-
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _sendCosmosDirectTxSign(id, List signature) async {
-    final signatureData = jsonEncode(signature);
-    String script = "window.keplr.sendResponse($id, '$signatureData')";
-
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _setCosmosAddress(id, sendingAddress, [String? pubKey]) async {
-    final addressData = jsonEncode(
-      {'address': sendingAddress, 'pubKey': pubKey},
-    );
-    String script = "window.keplr.sendResponse($id, '$addressData')";
-
     debugPrint(script);
     return _controller!
         .evaluateJavascript(source: script)
@@ -758,9 +706,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             "origin": origin,
                             "response": [coinData.address],
                           };
-
-                          debugPrint(
-                              'window.postMessage(${jsonEncode(response)}, "*");');
 
                           await _controller!.evaluateJavascript(
                             source:
