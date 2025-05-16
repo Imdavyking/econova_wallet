@@ -1,6 +1,7 @@
 import "dart:convert";
 
 import "package:cryptowallet/coins/starknet_coin.dart";
+import "package:cryptowallet/extensions/first_or_null.dart";
 import 'package:cryptowallet/interface/coin.dart';
 import "package:cryptowallet/main.dart";
 import "package:cryptowallet/utils/rpc_urls.dart";
@@ -136,12 +137,18 @@ class AItools {
       func: (final _GetBalanceInput toolInput) async {
         String walletAddress = toolInput.walletAddress;
         String tokenAddress = toolInput.tokenAddress;
-        Coin token = coin;
+        Coin? token = coin;
 
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          token = getAllBlockchains.firstWhere((token) =>
+          final foundToken = getAllBlockchains.firstWhereOrNull((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
+
+          if (foundToken != null) {
+            token = foundToken;
+          } else {
+            return 'Token address $tokenAddress not found.';
+          }
         }
 
         debugPrint("${token.getSymbol()} balance check");
@@ -200,9 +207,14 @@ class AItools {
         Coin token = coin;
 
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          token = getAllBlockchains.firstWhere((token) =>
+          final foundToken = getAllBlockchains.firstWhereOrNull((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
+          if (foundToken != null) {
+            token = foundToken;
+          } else {
+            return 'Token address $tokenAddress not found.';
+          }
         }
 
         final message =
@@ -369,9 +381,7 @@ class AItools {
           }
 
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
-        } catch (e, stck) {
-          print('Staking failed for $currentCoin $amount $e');
-          print(stck);
+        } catch (e) {
           return 'Staking failed for $currentCoin $amount $e';
         }
       },
