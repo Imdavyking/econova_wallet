@@ -553,7 +553,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_watchAsset',
       'wallet_deploymentData',
       'wallet_addDeclareTransaction',
-      'wallet_supportedSpecs',
     ];
 
     try {
@@ -630,9 +629,20 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           "requestType": requestType,
           "permissions": ['accounts'],
         };
-
+        await sendResponse(responseData);
+      } else if (requestType == 'wallet_supportedSpecs') {
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+          "specs": ["0.6", "0.7"],
+        };
         await sendResponse(responseData);
       } else if (requestType == 'wallet_signTypedData') {
+        final params = request['params'];
+
         final responseData = {
           "origin": origin,
           "requestId": requestId,

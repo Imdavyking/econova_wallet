@@ -898,6 +898,11 @@ Future setupWebViewWalletBridge(
               console.log("permissions", permissions);
               resolve(permissions);
               break;
+            case 'wallet_supportedSpecs':
+              const specs = data.specs;
+              console.log("specs", specs);
+              resolve(specs);
+              break;
             default:
               reject(new Error("Invalid request type "+ requestType));
               break;

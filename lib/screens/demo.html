@@ -8,7 +8,7 @@
   <body>
     <script>
       //wait for 5 seconds
-      setTimeout(() => {
+      setTimeout(async () => {
         const myTypedData = {
           types: {
             StarkNetDomain: [
@@ -35,7 +35,7 @@
           domain: {
             name: "myDapp",
             version: "1",
-            chainId: '0x1',
+            chainId: "0x534e5f5345504f4c4941",
             message: {
               id: "0x0000004f000f",
               from: "0x2c94f628d125cd0e86eaefea735ba24c262b9a441728f63e5776661829a4066",
@@ -55,10 +55,12 @@
             },
           },
         };
-        //   const resp = await myWallet.request({
-        //     type: "wallet_signTypedData",
-        //     params: myTypedData,
-        //   })
+
+        const res = await window.starknet.request({
+          type: "wallet_signTypedData",
+          params: myTypedData,
+        });
+
         // resp = ["0x490864293786342333657489548354947743460397232672997805795441858116745355019", "0x2855273948349341532300559537680769749551471477465497884530979636925080056604"]
       }, 5000);
     </script>
