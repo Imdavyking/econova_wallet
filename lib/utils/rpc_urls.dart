@@ -835,7 +835,7 @@ Future returnInitEvm(
     function callFlutterHandler(payload) {
       return new Promise((resolve, reject) => {
         const interval = setInterval(() => {
-          if (window.isFlutterInAppWebViewReady) {
+          if (isFlutterInAppWebViewReady) {
             clearInterval(interval);
             console.log("calling handler with payload", payload);
             resolve(window.flutter_inappwebview.callHandler("StarknetHandler", JSON.stringify(payload)));
