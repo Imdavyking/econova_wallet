@@ -736,6 +736,33 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                 );
 
                 _controller!.addJavaScriptHandler(
+                  handlerName: 'StarknetHandler',
+                  callback: (args) {
+                    final payload = jsonDecode(args.first);
+                    final type = payload['type'];
+
+                    switch (type) {
+                      case 'request':
+                        final request = payload['args'];
+                        // Handle Starknet request here
+                        break;
+                      case 'enable':
+                        // Handle enable logic
+                        break;
+                      case 'isPreauthorized':
+                        // Return whether dapp is preauthorized
+                        break;
+                      case 'on':
+                        // Handle subscription to events
+                        break;
+                      case 'off':
+                        // Handle unsubscription
+                        break;
+                    }
+                  },
+                );
+
+                _controller!.addJavaScriptHandler(
                   handlerName: 'Multiversx',
                   callback: (callback) async {
                     Map reponse = json.decode(
