@@ -817,8 +817,6 @@ Future returnInitEvm(
     });
     window.ethereum = trustwallet.ethereum;
     window.keplr = trustwallet.cosmos;
-    window.aptos = trustwallet.aptos;
-    window.solana = trustwallet.solana;
     window.elrondWallet = {'extensionId':"dngmlblcodfobpdpecaadgfbcggfjfnm"};
 
     const getDefaultCosmosProvider = (chainId) => {
@@ -828,8 +826,6 @@ Future returnInitEvm(
     window.getOfflineSigner = getDefaultCosmosProvider;
     window.getOfflineSignerOnlyAmino = getDefaultCosmosProvider;
     window.getOfflineSignerAuto = getDefaultCosmosProvider;
-
-    window.addEventListener("message", function (e) {});
 
       // Helper to wait for Flutter WebView readiness and call handler
     function callFlutterHandler(payload) {
