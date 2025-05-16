@@ -737,14 +737,38 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                 _controller!.addJavaScriptHandler(
                   handlerName: 'StarknetHandler',
-                  callback: (args) {
+                  callback: (args) async {
+                    print(args);
+                    final coin = starkNetCoins.first;
+
+                    final coinData = await coin.importData(data);
                     final payload = jsonDecode(args.first);
+                    print('payload:=== $payload');
                     final type = payload['type'];
+                    final requestId =
+                        payload['requestId']; // Important for reply
+                    final origin = payload['url'];
+                    origin;
 
                     switch (type) {
                       case 'request':
                         final request = payload['args'];
-                        // Handle Starknet request here
+                        final requestType = request['type'];
+
+                        if (requestType == 'wallet_requestAccounts') {
+                          final response = {
+                            "requestId": requestId,
+                            "response": [coinData.address],
+                          };
+
+                          debugPrint(
+                              'window.postMessage(${jsonEncode(response)}, "*");');
+
+                          await _controller!.evaluateJavascript(
+                            source:
+                                'window.postMessage(${jsonEncode(response)}, "*");',
+                          );
+                        }
                         break;
                       case 'enable':
                         // Handle enable logic
