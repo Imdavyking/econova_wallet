@@ -586,6 +586,7 @@ class StarknetCoin extends Coin {
     final rewardAddress = unwrappedRes.rewardAddress;
     final stake = unwrappedRes.amount.toBigInt();
     final pendingUnstakeAmount = unwrappedRes.unpoolAmount.toBigInt();
+
     final totalStake = stake + pendingUnstakeAmount;
     final pendingRewards = unwrappedRes.unclaimedRewards.toBigInt();
     final unwrappedUnpoolTimestamp = unwrappedRes.unpoolTime;
@@ -604,8 +605,6 @@ class StarknetCoin extends Coin {
     }
 
     debugPrint('Pending Unstake: $totalStake');
-
-    print(Uint256(low: Felt(totalStake), high: Felt.zero).toBigInt());
 
     return StakeInfo(
       rewardAddress: rewardAddress, // Felt
