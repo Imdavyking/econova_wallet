@@ -897,10 +897,8 @@ Future setupWebViewWalletBridge(
               reject(new Error("Invalid request type "+ requestType));
               break;
           }
-          
-
         } catch (err) {
-          console.error("Invalid message format", err);
+          console.error("error gotten", err);
           reject(new Error(err.toString()));
         }
       };
