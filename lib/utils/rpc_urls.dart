@@ -835,8 +835,6 @@ Future setupWebViewWalletBridge(
   request: (args) => {
     const requestId = Math.random().toString(36).substr(2, 9);
 
-    console.log("requesting", requestId);
-
     return window.starknet
       .callFlutterHandler({
         type: "request",
@@ -845,7 +843,6 @@ Future setupWebViewWalletBridge(
         url: window.location.origin,
       })
       .then(() => {
-        console.log("request sent with requestId", requestId);
         return window.starknet.waitForResponse(requestId);
       });
   },
@@ -876,9 +873,7 @@ Future setupWebViewWalletBridge(
 
           starknet.selectedAddress = address
           starknet.chainId = data.chainId
-          console.log(window.starknet.isConnected);
           starknet.isConnected = true
-          console.log(window.starknet.isConnected);
           window.removeEventListener(requestId, handler);
           clearTimeout(timeoutId);
           resolve([address]);
@@ -889,7 +884,6 @@ Future setupWebViewWalletBridge(
       };
 
       window.addEventListener(requestId, handler);
-      console.log("added event listener", requestId);
       const timeoutId = setTimeout(() => {
         window.removeEventListener(requestId, handler);
         reject(new Error("Request timed out"));
@@ -898,12 +892,10 @@ Future setupWebViewWalletBridge(
   },
 
   sendResponse: (requestId, payload) => {
-    console.log("sending payload", payload);
     const customEvent = new CustomEvent(requestId, {
       detail: payload,
     });
     window.dispatchEvent(customEvent);
-    console.log("sent payload", customEvent);
   },
 
   enable: () => {
