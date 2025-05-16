@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'package:cryptowallet/coins/near_coin.dart';
 import 'package:cryptowallet/interface/coin.dart';
 import 'package:hex/hex.dart';
+import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
 import "../utils/starknet_call.dart";
 import '../model/near_message_borsh.dart';
@@ -28,8 +29,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
-// import 'package:starknet/src/core/snip/snip12/typed_data/';
-import 'package:starknet/starknet.dart' as starknetC;
+import '../utils/snip12/typed_data.dart';
 import '../coins/ethereum_coin.dart';
 import '../main.dart';
 import '../model/multix_sign_model.dart' hide Transaction;
@@ -644,7 +644,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       } else if (requestType == 'wallet_signTypedData') {
         final params = request['params'];
 
-        final data = JsEthSignTypedDomain.fromJson(
+        final data = SignTypedDomain.fromJson(
           params ?? {},
         );
 
@@ -668,28 +668,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           name: null,
           onConfirm: () async {
             try {
-          
-              // final typedData = TypedData(
-              //   types: {
-              //     "Transfer": [
-              //       SNIP12TypedParameter(name: "to", type: "ContractAddress"),
-              //       SNIP12TypedParameter(name: "amount", type: "u256"),
-              //     ],
-              //   },
-              //   domain: TypedDataDomain(
-              //       name: "MyApp", version: "1", chainId: "SN_GOERLI"),
-              //   primaryType: "Transfer",
-              //   message: {
-              //     "to": "0x1234...",
-              //     "amount": {
-              //       "low": "100",
-              //       "high": "0",
-              //     }
-              //   },
-              // );
+              final typedData = TypedData.fromJson(params);
 
-              // final hash =
-              //     typedData.hash(Felt.fromHexString("0xAccountAddress"));
+              print('Typed Data: $typedData');
+
+              final hash = typedData.hash(Felt.fromHexString(coinData.address));
+
+              debugPrint('Hash: $hash');
+
+              final signature = starknetSign(
+                privateKey: BigInt.parse(coinData.privateKey!),
+                messageHash: hash,
+              );
+
+              print(signature.r);
+              print(signature.s);
 
               // ['708430212362690578481737385168447582349670715079420394525131553001725572698', '1397272340006992913981501630459872567993254742548111796371322808616951954156']
 

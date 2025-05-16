@@ -222,15 +222,15 @@ class JsEcRecoverObject {
   }
 }
 
-class JsEthSignTypedDomain {
+class SignTypedDomain {
   int chainId;
 
-  JsEthSignTypedDomain({
+  SignTypedDomain({
     required this.chainId,
   });
 
-  factory JsEthSignTypedDomain.fromJson(Map<String, dynamic> json) {
-    return JsEthSignTypedDomain(
+  factory SignTypedDomain.fromJson(Map<String, dynamic> json) {
+    return SignTypedDomain(
       chainId: BigInt.parse(json['domain']['chainId']).toInt(),
     );
   }
@@ -246,7 +246,7 @@ class JsEthSignTypedDomain {
 
 class JsEthSignTypedData {
   String raw;
-  JsEthSignTypedDomain domain;
+  SignTypedDomain domain;
 
   JsEthSignTypedData({
     required this.raw,
@@ -256,7 +256,7 @@ class JsEthSignTypedData {
   factory JsEthSignTypedData.fromJson(Map<String, dynamic> json) {
     return JsEthSignTypedData(
       raw: json['raw'],
-      domain: JsEthSignTypedDomain.fromJson(
+      domain: SignTypedDomain.fromJson(
         jsonDecode(json['raw']),
       ),
     );
