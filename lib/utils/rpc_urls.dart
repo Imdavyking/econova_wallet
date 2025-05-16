@@ -893,6 +893,11 @@ Future setupWebViewWalletBridge(
                 transaction_hash: txHash,
               });
               break;
+            case 'wallet_getPermissions':
+              const permissions = data.permissions;
+              console.log("permissions", permissions);
+              resolve(permissions);
+              break;
             default:
               reject(new Error("Invalid request type "+ requestType));
               break;
