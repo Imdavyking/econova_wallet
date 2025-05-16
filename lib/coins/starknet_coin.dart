@@ -264,6 +264,7 @@ class StarknetCoin extends Coin {
 
   @override
   Widget? getStakingPage() {
+    if (getStarknetBlockchains().first.name != name) return null;
     return StakeToken(
       tokenData: this,
     );
