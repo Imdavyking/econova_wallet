@@ -86,7 +86,7 @@ class AItools {
 
     final getTokenPriceTool = Tool.fromFunction<_GetTokenPriceInput, String>(
       name: 'QRY_getTokenPrice',
-      description: 'Tool for checking $currentCoin price',
+      description: 'Tool for checking $currentCoin price in USD',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
@@ -108,7 +108,7 @@ class AItools {
           final Map cryptoMarket = allCryptoPrice[coinGeckoId];
 
           final currPrice = cryptoMarket['usd'] as num;
-          return 'the price for $coinGeckoId is $currPrice';
+          return 'the price for $coinGeckoId is $currPrice USD';
         } catch (e) {
           debugPrint('Error getting token price: $e');
           return 'Failed to get price for $coinGeckoId';
