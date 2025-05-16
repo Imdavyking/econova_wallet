@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'package:cryptowallet/coins/near_coin.dart';
-import 'package:cryptowallet/coins/starknet_coin.dart';
 import 'package:cryptowallet/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:sui/utils/sha.dart';
