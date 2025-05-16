@@ -551,7 +551,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_addStarknetChain',
       'wallet_switchStarknetChain',
       'wallet_watchAsset',
-      'wallet_getPermissions',
       'wallet_deploymentData',
       'wallet_addDeclareTransaction',
       'wallet_signTypedData',
@@ -573,12 +572,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           final existingAddress =
               await _getWeb3Address('starknet', coinData.address);
           if (existingAddress != null) {
-            // Address exists, just send response
             await sendResponse(responseData);
             return;
           }
-
-          // Address doesn't exist, show modal to connect wallet
           await connectWalletModal(
             context: context,
             url: origin,
@@ -623,6 +619,17 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           "address": coinData.address,
           "requestType": requestType,
           "txHash": txHash,
+        };
+
+        await sendResponse(responseData);
+      } else if (requestType == 'wallet_getPermissions') {
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+          "permissions": ['accounts'],
         };
 
         await sendResponse(responseData);
