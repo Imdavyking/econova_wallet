@@ -428,7 +428,7 @@ class StarknetCoin extends Coin {
     final unstakeCall = FunctionCall(
       contractAddress: delegationPoolContract.address,
       entryPointSelector: getSelectorByName('exit_delegation_pool_action'),
-      calldata: [delegationPoolContract.account.accountAddress],
+      calldata: [account.accountAddress],
     );
     final result = await account.execute(functionCalls: [unstakeCall]);
     return result.when(
@@ -459,7 +459,7 @@ class StarknetCoin extends Coin {
     final claimCall = FunctionCall(
       contractAddress: delegationPoolContract.address,
       entryPointSelector: getSelectorByName('claim_rewards'),
-      calldata: [delegationPoolContract.account.accountAddress],
+      calldata: [account.accountAddress],
     );
     final rsult = await account.execute(functionCalls: [claimCall]);
     return rsult.when(
@@ -488,11 +488,12 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
+    final wei = amount.toBigIntDec(decimals());
     final delegationPoolContract = getStakingContract(account);
     final unstakeCall = FunctionCall(
       contractAddress: delegationPoolContract.address,
       entryPointSelector: getSelectorByName('exit_delegation_pool_intent'),
-      calldata: [Felt(amount.toBigIntDec(decimals())), Felt.zero],
+      calldata: [Felt(wei)],
     );
     final rsult = await account.execute(functionCalls: [unstakeCall]);
     return rsult.when(
@@ -572,7 +573,7 @@ class StarknetCoin extends Coin {
     final delegationPoolContract = getStakingContract(account);
 
     final poolData = await delegationPoolContract.call(
-      'get_pool_member_info_v1',
+      'pool_member_info_v1',
       [account.accountAddress],
     );
 
