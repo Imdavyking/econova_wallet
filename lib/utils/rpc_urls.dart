@@ -855,6 +855,7 @@ Future returnInitEvm(
       return new Promise((resolve, reject) => {
         const handler = (event) => {
           try {
+            console.log("got response", event.data);
             const data = JSON.parse(event.data);
             if (data?.requestId === requestId) {
               window.removeEventListener("message", handler);
