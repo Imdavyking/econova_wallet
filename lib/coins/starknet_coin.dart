@@ -891,7 +891,7 @@ List<StarknetCoin> getStarknetBlockchains() {
     blockChains.addAll([
       StarknetCoin(
         blockExplorer:
-            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
+            'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet (Testnet)',
         default_: 'STRK',

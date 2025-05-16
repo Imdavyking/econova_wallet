@@ -143,6 +143,7 @@ class AIAgentService {
 
       final otherCoins = getAllBlockchains
           .where((Coin value) {
+
             if (value.tokenAddress() != null &&
                 value.getExplorer() == coin.getExplorer()) {
               final geckoId = value.getGeckoId().isNotEmpty
