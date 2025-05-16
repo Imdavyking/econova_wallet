@@ -688,24 +688,29 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                   callback: (args) async {
                     final coin = starkNetCoins.first;
 
+                    debugPrint("geting request $args");
+
                     final coinData = await coin.importData(data);
                     final payload = jsonDecode(args.first);
                     final type = payload['type'];
                     final requestId =
                         payload['requestId']; // Important for reply
                     final origin = payload['url'];
+                    final chainId = await coin.getChainId();
 
                     switch (type) {
                       case 'request':
                         final request = payload['args'];
                         final requestType = request['type'];
 
-                        if (requestType == 'wallet_requestAccounts') {
+                        if (requestType == 'wallet_requestAccounts' ||
+                            requestType == 'wallet_requestChainId') {
                           final t = json.encode({
                             "origin": origin,
                             "requestId": requestId,
-                            'chainId': coin.chainId,
+                            'chainId': chainId,
                             "address": coinData.address,
+                            'requestType': requestType,
                           });
 
                           final message =
@@ -713,7 +718,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                           await _controller!
                               .evaluateJavascript(source: message);
-                        }
+                        } else if (true) {}
                         break;
                       case 'enable':
                         // Handle enable logic

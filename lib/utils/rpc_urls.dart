@@ -868,15 +868,27 @@ Future setupWebViewWalletBridge(
       const handler = (event) => {
         try {
           const data = event.detail;
-          const address = data.address;
+          const requestType = data.requestType;
           const chainId = data.chainId;
+          const address = data.address;
+          switch(requestType){
+            case 'wallet_requestAccounts':
+              starknet.selectedAddress = address;
+              starknet.chainId = data.chainId;
+              starknet.isConnected = true;
+              window.removeEventListener(requestId, handler);
+              clearTimeout(timeoutId);
+              resolve([address]);
+              break;
+            case 'wallet_requestChainId':
+              resolve(chainId);
+              break;
+            default:
+              reject(new Error("Invalid request type "+ requestType));
+              break;
+          }
+          
 
-          starknet.selectedAddress = address
-          starknet.chainId = data.chainId
-          starknet.isConnected = true
-          window.removeEventListener(requestId, handler);
-          clearTimeout(timeoutId);
-          resolve([address]);
         } catch (err) {
           console.error("Invalid message format", err);
           reject(new Error(err.toString()));
