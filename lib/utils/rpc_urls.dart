@@ -883,6 +883,9 @@ Future setupWebViewWalletBridge(
             case 'wallet_requestChainId':
               resolve(chainId);
               break;
+            case 'wallet_addInvokeTransaction':
+              // resolve(chainId);
+              break;
             default:
               reject(new Error("Invalid request type "+ requestType));
               break;

@@ -698,6 +698,18 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     final origin = payload['url'];
                     final chainId = await coin.getChainId();
 
+                    final unsupportedResponseTypes = [
+                      'wallet_addStarknetChain',
+                      'wallet_switchStarknetChain',
+                      'wallet_watchAsset',
+                      'wallet_getPermissions',
+                      'wallet_deploymentData',
+                      'wallet_addDeclareTransaction',
+                      'wallet_addInvokeTransaction',
+                      'wallet_signTypedData',
+                      'wallet_supportedSpecs',
+                    ];
+
                     switch (type) {
                       case 'request':
                         final request = payload['args'];
@@ -718,7 +730,23 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                           await _controller!
                               .evaluateJavascript(source: message);
-                        } else if (true) {}
+                        } else if (unsupportedResponseTypes
+                            .contains(requestType)) {
+                          //TODO: throw UnsupportedError
+                        }
+
+                        //wallet_requestAccounts: requestAccountsHandler,
+                        // wallet_requestChainId: requestChainIdHandler,
+
+                        // wallet_addStarknetChain: addStarknetChainHandler,
+                        // wallet_switchStarknetChain: switchStarknetChainHandler,
+                        // wallet_watchAsset: watchAssetHandler,
+                        // wallet_getPermissions: getPermissionsHandler,
+                        // wallet_deploymentData: deploymentDataHandler,
+                        // wallet_addDeclareTransaction: addDeclareTransactionHandler,
+                        // wallet_addInvokeTransaction: addInvokeTransactionHandler,
+                        // wallet_signTypedData: signTypedDataHandler,
+                        // wallet_supportedSpecs: supportedSpecsHandler,
                         break;
                       case 'enable':
                         // Handle enable logic

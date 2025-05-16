@@ -1,0 +1,19 @@
+[
+  {
+    "type": "request",
+    "requestId": "b92ftfrcx",
+    "args": {
+      "type": "wallet_addInvokeTransaction",
+      "params": {
+        "calls": [
+          {
+            "contract_address": "0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b",
+            "entry_point": "set_staker_removed",
+            "calldata": []
+          }
+        ]
+      }
+    },
+    "url": "https://sepolia.voyager.online"
+  }
+]
