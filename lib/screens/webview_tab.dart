@@ -738,17 +738,14 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                 _controller!.addJavaScriptHandler(
                   handlerName: 'StarknetHandler',
                   callback: (args) async {
-                    print(args);
                     final coin = starkNetCoins.first;
 
                     final coinData = await coin.importData(data);
                     final payload = jsonDecode(args.first);
-                    print('payload:=== $payload');
                     final type = payload['type'];
                     final requestId =
                         payload['requestId']; // Important for reply
                     final origin = payload['url'];
-                    origin;
 
                     switch (type) {
                       case 'request':
@@ -758,6 +755,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                         if (requestType == 'wallet_requestAccounts') {
                           final response = {
                             "requestId": requestId,
+                            "origin": origin,
                             "response": [coinData.address],
                           };
 
