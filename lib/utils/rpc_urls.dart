@@ -868,6 +868,10 @@ Future setupWebViewWalletBridge(
       const handler = (event) => {
         try {
           const data = event.detail;
+          if(typeof data.error !== 'undefined'){
+            reject(new Error(data.error));
+            return;
+          }
           const requestType = data.requestType;
           const chainId = data.chainId;
           const address = data.address;

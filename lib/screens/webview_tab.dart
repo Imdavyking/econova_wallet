@@ -716,19 +716,29 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                         if (requestType == 'wallet_requestAccounts' ||
                             requestType == 'wallet_requestChainId') {
-                          final t = json.encode({
-                            "origin": origin,
-                            "requestId": requestId,
-                            'chainId': chainId,
-                            "address": coinData.address,
-                            'requestType': requestType,
-                          });
+                          try {
+                            final t = json.encode({
+                              "origin": origin,
+                              "requestId": requestId,
+                              'chainId': chainId,
+                              "address": coinData.address,
+                              'requestType': requestType,
+                            });
 
-                          final message =
-                              'window.starknet.sendResponse("$requestId",$t)';
+                            final message =
+                                'window.starknet.sendResponse("$requestId",$t)';
 
-                          await _controller!
-                              .evaluateJavascript(source: message);
+                            await _controller!
+                                .evaluateJavascript(source: message);
+                          } catch (e) {
+                            final t = json.encode({
+                              'error': e.toString(),
+                            });
+                            final message =
+                                'window.starknet.sendResponse("$requestId",$t)';
+                            await _controller!
+                                .evaluateJavascript(source: message);
+                          }
                         } else if (requestType ==
                             'wallet_addInvokeTransaction') {
                           try {
@@ -752,7 +762,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             await _controller!
                                 .evaluateJavascript(source: message);
                           } catch (e) {
-                            print('error in dapp request: $e');
+                            final t = json.encode({
+                              'error': e.toString(),
+                            });
+                            final message =
+                                'window.starknet.sendResponse("$requestId",$t)';
+                            await _controller!
+                                .evaluateJavascript(source: message);
                           }
                         } else if (unsupportedResponseTypes
                             .contains(requestType)) {
