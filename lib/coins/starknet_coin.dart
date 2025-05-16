@@ -84,7 +84,6 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
-
     final tx = await fundingAccount.execute(
       functionCalls: calls
           .map(

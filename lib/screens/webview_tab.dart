@@ -553,7 +553,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_watchAsset',
       'wallet_deploymentData',
       'wallet_addDeclareTransaction',
-      'wallet_signTypedData',
       'wallet_supportedSpecs',
     ];
 
@@ -633,6 +632,34 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         };
 
         await sendResponse(responseData);
+      } else if (requestType == 'wallet_signTypedData') {
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+        };
+        await signMessage(
+          context: context,
+          messageType: typedMessageSignKey,
+          data: 'data.raw',
+          networkIcon: null,
+          name: null,
+          onConfirm: () async {
+            try {
+              //TODO: Handle the actual signing of the typed data
+            } catch (e) {
+              await sendError(e.toString().replaceAll('"', '\''));
+            } finally {
+              Navigator.pop(context);
+            }
+          },
+          onReject: () async {
+            await sendError('user rejected signature');
+            Navigator.pop(context);
+          },
+        );
       } else if (badTypes.contains(requestType)) {
         await sendError('Unsupported request type: $requestType');
       } else {
