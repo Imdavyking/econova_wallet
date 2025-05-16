@@ -707,9 +707,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             "response": [coinData.address],
                           };
 
+                          final message =
+                              'window.postMessage(JSON.stringify(${jsonEncode(response)}), "*");';
+
+                          print(message);
+
                           await _controller!.evaluateJavascript(
-                            source:
-                                'window.postMessage(${jsonEncode(response)}, "*");',
+                            source: message,
                           );
                         }
                         break;
