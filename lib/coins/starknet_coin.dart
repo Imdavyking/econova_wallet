@@ -551,7 +551,7 @@ class StarknetCoin extends Coin {
         FunctionCall(
           contractAddress: delegationPoolContract.address,
           entryPointSelector: getSelectorByName('add_to_delegation_pool'),
-          calldata: [account.accountAddress, Felt(wei), Felt.zero],
+          calldata: [account.accountAddress, Felt(wei)],
         )
       ]);
     }
