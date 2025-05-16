@@ -2,6 +2,8 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'package:cryptowallet/coins/near_coin.dart';
+import 'package:cryptowallet/coins/starknet_coin.dart';
+import 'package:cryptowallet/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:sui/utils/sha.dart';
 import "../utils/starknet_call.dart";
@@ -525,6 +527,116 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> handleStarknetRequest({
+    required String requestType,
+    required String origin,
+    required String requestId,
+    required String chainId,
+    required AccountData coinData,
+    required Map<String, dynamic> request,
+  }) async {
+    // Helper to send JSON response back to JS
+    Future<void> sendResponse(Map<String, dynamic> data) async {
+      final responseJson = json.encode(data);
+      final jsMessage =
+          'window.starknet.sendResponse("$requestId", $responseJson)';
+      await _controller!.evaluateJavascript(source: jsMessage);
+    }
+
+    // Helper to send error response
+    Future<void> sendError(String errorMessage) async {
+      await sendResponse({'error': errorMessage});
+    }
+
+    final badTypes = [
+      'wallet_addStarknetChain',
+      'wallet_switchStarknetChain',
+      'wallet_watchAsset',
+      'wallet_getPermissions',
+      'wallet_deploymentData',
+      'wallet_addDeclareTransaction',
+      'wallet_signTypedData',
+      'wallet_supportedSpecs',
+    ];
+
+    try {
+      if (requestType == 'wallet_requestAccounts' ||
+          requestType == 'wallet_requestChainId') {
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+        };
+
+        if (requestType == 'wallet_requestAccounts') {
+          final existingAddress =
+              await _getWeb3Address('starknet', coinData.address);
+          if (existingAddress != null) {
+            // Address exists, just send response
+            await sendResponse(responseData);
+            return;
+          }
+
+          // Address doesn't exist, show modal to connect wallet
+          await connectWalletModal(
+            context: context,
+            url: origin,
+            onConfirm: () async {
+              try {
+                await _controller!.evaluateJavascript(
+                  source:
+                      'window.starknet.sendResponse("$requestId", ${json.encode(responseData)})',
+                );
+                await _saveWeb3Address('starknet', coinData.address);
+              } catch (e) {
+                await sendError(e.toString().replaceAll('"', '\''));
+              } finally {
+                Navigator.pop(context);
+              }
+            },
+            onReject: () async {
+              await sendError('user rejected connection');
+              Navigator.pop(context);
+            },
+          );
+          return;
+        }
+
+        // For wallet_requestChainId just send response
+        await sendResponse(responseData);
+      } else if (requestType == 'wallet_addInvokeTransaction') {
+        final params = request['params'];
+        final List calls = params['calls'] ?? [];
+
+        final List<StarknetCall> dapCalls =
+            calls.map((call) => StarknetCall.fromJson(call)).toList();
+
+        final coin = starkNetCoins.first;
+
+        final txHash = await coin.executeInvokeDapp(dapCalls);
+
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+          "txHash": txHash,
+        };
+
+        await sendResponse(responseData);
+      } else if (badTypes.contains(requestType)) {
+        await sendError('Unsupported request type: $requestType');
+      } else {
+        await sendError('Unknown request type: $requestType');
+      }
+    } catch (e) {
+      await sendError(e.toString().replaceAll('"', '\''));
+    }
+  }
+
   final List<ContentBlocker> contentBlockers = [];
 
   @override
@@ -698,87 +810,19 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     final origin = payload['url'];
                     final chainId = await coin.getChainId();
 
-                    final badTypes = [
-                      'wallet_addStarknetChain',
-                      'wallet_switchStarknetChain',
-                      'wallet_watchAsset',
-                      'wallet_getPermissions',
-                      'wallet_deploymentData',
-                      'wallet_addDeclareTransaction',
-                      'wallet_signTypedData',
-                      'wallet_supportedSpecs',
-                    ];
-
                     switch (type) {
                       case 'request':
                         final request = payload['args'];
                         final requestType = request['type'];
 
-                        if (requestType == 'wallet_requestAccounts' ||
-                            requestType == 'wallet_requestChainId') {
-                          try {
-                            final t = json.encode({
-                              "origin": origin,
-                              "requestId": requestId,
-                              'chainId': chainId,
-                              "address": coinData.address,
-                              'requestType': requestType,
-                            });
-
-                            final message =
-                                'window.starknet.sendResponse("$requestId",$t)';
-
-                            await _controller!
-                                .evaluateJavascript(source: message);
-                          } catch (e) {
-                            final t = json.encode({
-                              'error': e.toString(),
-                            });
-                            final message =
-                                'window.starknet.sendResponse("$requestId",$t)';
-                            await _controller!
-                                .evaluateJavascript(source: message);
-                          }
-                        } else if (requestType ==
-                            'wallet_addInvokeTransaction') {
-                          try {
-                            final params = request['params'];
-                            final List calls = params['calls'];
-                            List<StarknetCall> dapCall = calls
-                                .map((call) => StarknetCall.fromJson(call))
-                                .toList();
-                            final txHash =
-                                await coin.executeInvokeDapp(dapCall);
-                            final t = json.encode({
-                              "origin": origin,
-                              "requestId": requestId,
-                              'chainId': chainId,
-                              "address": coinData.address,
-                              'requestType': requestType,
-                              'txHash': txHash,
-                            });
-                            final message =
-                                'window.starknet.sendResponse("$requestId",$t)';
-                            await _controller!
-                                .evaluateJavascript(source: message);
-                          } catch (e) {
-                            final t = json.encode({
-                              'error': e.toString(),
-                            });
-                            final message =
-                                'window.starknet.sendResponse("$requestId",$t)';
-                            await _controller!
-                                .evaluateJavascript(source: message);
-                          }
-                        } else if (badTypes.contains(requestType)) {
-                          final t = json.encode({
-                            'error': 'Unsupported request type: $requestType',
-                          });
-                          final message =
-                              'window.starknet.sendResponse("$requestId",$t)';
-                          await _controller!
-                              .evaluateJavascript(source: message);
-                        }
+                        await handleStarknetRequest(
+                          requestType: requestType,
+                          origin: origin,
+                          requestId: requestId,
+                          chainId: chainId.toHexString(),
+                          coinData: coinData,
+                          request: request,
+                        );
 
                         break;
                       case 'enable':
