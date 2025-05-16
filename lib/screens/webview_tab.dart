@@ -704,6 +704,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           final response = {
                             "requestId": requestId,
                             "origin": origin,
+                            'target': "starknet-contentScript",
                             "response": [coinData.address],
                           };
 

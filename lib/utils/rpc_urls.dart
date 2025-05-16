@@ -853,6 +853,7 @@ Future returnInitEvm(
           try {
             console.log("got response", event.data);
             const data = JSON.parse(event.data);
+            if(data.target !== "starknet-contentScript") return;
             if (data?.requestId === requestId) {
               window.removeEventListener("message", handler);
               clearTimeout(timeoutId);
