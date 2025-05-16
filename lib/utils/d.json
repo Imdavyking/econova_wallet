@@ -1,22 +1,48 @@
-[
-  {
-    "type": "request",
-    "requestId": "pqbzdcrf8",
-    "args": {
-      "type": "wallet_addInvokeTransaction",
-      "params": {
-        "calls": [
+ {
+      "types": {
+        "StarkNetDomain": [
+          { "name": "name", "type": "felt" },
+          { "name": "version", "type": "felt" },
+          { "name": "chainId", "type": "felt" }
+        ],
+        "Airdrop": [
+          { "name": "address", "type": "felt" },
+          { "name": "amount", "type": "felt" }
+        ],
+        "Validate": [
+          { "name": "id", "type": "felt" },
+          { "name": "from", "type": "felt" },
+          { "name": "amount", "type": "felt" },
+          { "name": "nameGamer", "type": "felt" },
+          { "name": "endDate", "type": "felt" },
+          { "name": "itemsAuthorized", "type": "felt*" },
+          { "name": "chkFunction", "type": "felt" },
+          { "name": "rootList", "type": "Airdrop*" }
+        ]
+      },
+      "primaryType": "Validate",
+      "domain": {
+        "name": "myDapp",
+        "version": "1",
+        "chainId": "0x534e5f5345504f4c4941"
+      },
+      "message": {
+        "id": "0x0000004f000f",
+        "from": "0x2c94f628d125cd0e86eaefea735ba24c262b9a441728f63e5776661829a4066",
+        "amount": "400",
+        "nameGamer": "0x486563746f723236",
+        "endDate": "0x27d32a3033df4277caa9e9396100b7ca8c66a4ef8ea5f6765b91a7c17f0109c",
+        "itemsAuthorized": [
+          "0x27d32a3033df4277caa9e9396100b7ca8c66a4ef8ea5f6765b91a7c17f0109c",
+          "0x27d32a3033df4277caa9e9396100b7ca8c66a4ef8ea5f6765b91a7c17f0109c",
+          "0x27d32a3033df4277caa9e9396100b7ca8c66a4ef8ea5f6765b91a7c17f0109c"
+        ],
+        "chkFunction": "0x636865636b5f617574686f72697a6174696f6e",
+        "rootList": [
           {
-            "contract_address": "0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b",
-            "entry_point": "add_to_delegation_pool",
-            "calldata": [
-              "3200275438715293697649005452269566110429989835020165982698741683867762179947",
-              "1"
-            ]
+            "address": "0x69b49c2cc8b16e80e86bfc5b0614a59aa8c9b601569c7b80dde04d3f3151b79",
+            "amount": "1554785"
           }
         ]
       }
-    },
-    "url": "https://sepolia.voyager.online"
-  }
-]
+    }

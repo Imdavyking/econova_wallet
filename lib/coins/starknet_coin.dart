@@ -83,6 +83,8 @@ class StarknetCoin extends Coin {
       accountAddress: Felt.fromHexString(response.address),
       chainId: chainId,
     );
+    // poseidonHasher.hashMany(values);
+
 
     final tx = await fundingAccount.execute(
       functionCalls: calls
