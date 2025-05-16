@@ -525,6 +525,7 @@ Future<String> getCryptoPrice({
   }
 
   try {
+    NetworkGuard().throwIfOffline();
     String defaultCurrency = pref.get('defaultCurrency') ?? "usd";
 
     if (!MyApp.getCoinGeckoData && savedCryptoPrice != null) {
@@ -535,7 +536,7 @@ Future<String> getCryptoPrice({
 
     final dataUrl =
         '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=$defaultCurrency&include_24hr_change=true';
-    NetworkGuard().throwIfOffline();
+
     final response =
         await get(Uri.parse(dataUrl)).timeout(networkTimeOutDuration);
 
@@ -575,9 +576,9 @@ Future<double> totalCryptoBalance({
 
   for (int i = 0; i < getAllBlockchains.length; i++) {
     try {
+      NetworkGuard().throwIfOffline();
       final coin = getAllBlockchains[i];
       if (WalletService.removeCoin(coin)) continue;
-       NetworkGuard().throwIfOffline();
       final balance = await coin.getBalance(true);
       final priceDetails = allCryptoPrice[coin.getGeckoId()];
       double price =
