@@ -273,6 +273,7 @@ class _StakeTokenState extends State<StakeToken> {
                           ),
                         );
                       } catch (_) {
+                        print(_);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.red,

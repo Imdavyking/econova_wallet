@@ -521,10 +521,12 @@ class StarknetCoin extends Coin {
 
     final strkContract = getStarkContract(account);
 
+    final wei = amount.toBigIntDec(decimals());
+
     final allowanceCall = FunctionCall(
       contractAddress: strkContract.address,
       entryPointSelector: getSelectorByName('approve'),
-      calldata: [delegationPoolAddress, Felt(amount.toBigIntDec(decimals()))],
+      calldata: [delegationPoolAddress, Felt(wei)],
     );
 
     final delegationPoolContract = getStakingContract(account);
@@ -540,10 +542,7 @@ class StarknetCoin extends Coin {
         FunctionCall(
           contractAddress: delegationPoolContract.address,
           entryPointSelector: getSelectorByName('enter_delegation_pool'),
-          calldata: [
-            account.accountAddress,
-            Felt(amount.toBigIntDec(decimals()))
-          ],
+          calldata: [account.accountAddress, Felt(wei)],
         )
       ]);
     } else {
@@ -552,10 +551,7 @@ class StarknetCoin extends Coin {
         FunctionCall(
           contractAddress: delegationPoolContract.address,
           entryPointSelector: getSelectorByName('add_to_delegation_pool'),
-          calldata: [
-            account.accountAddress,
-            Felt(amount.toBigIntDec(decimals()))
-          ],
+          calldata: [account.accountAddress, Felt(wei)],
         )
       ]);
     }
