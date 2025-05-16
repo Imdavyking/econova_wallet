@@ -492,7 +492,7 @@ class StarknetCoin extends Coin {
     final unstakeCall = FunctionCall(
       contractAddress: delegationPoolContract.address,
       entryPointSelector: getSelectorByName('exit_delegation_pool_intent'),
-      calldata: [Felt(amount.toBigIntDec(decimals()))],
+      calldata: [Felt(amount.toBigIntDec(decimals())), Felt.zero],
     );
     final rsult = await account.execute(functionCalls: [unstakeCall]);
     return rsult.when(
@@ -526,7 +526,7 @@ class StarknetCoin extends Coin {
     final allowanceCall = FunctionCall(
       contractAddress: strkContract.address,
       entryPointSelector: getSelectorByName('approve'),
-      calldata: [delegationPoolAddress, Felt(wei)],
+      calldata: [delegationPoolAddress, Felt(wei), Felt.zero],
     );
 
     final delegationPoolContract = getStakingContract(account);
@@ -551,7 +551,7 @@ class StarknetCoin extends Coin {
         FunctionCall(
           contractAddress: delegationPoolContract.address,
           entryPointSelector: getSelectorByName('add_to_delegation_pool'),
-          calldata: [account.accountAddress, Felt(wei)],
+          calldata: [account.accountAddress, Felt(wei), Felt.zero],
         )
       ]);
     }
@@ -602,6 +602,10 @@ class StarknetCoin extends Coin {
       );
     }
 
+    debugPrint('Pending Unstake: $totalStake');
+
+    print(Uint256(low: Felt(totalStake), high: Felt.zero).toBigInt());
+
     return StakeInfo(
       rewardAddress: rewardAddress, // Felt
       stake: stake, // BigInt
@@ -625,10 +629,11 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
     final existingStake = await getStakeInfo(account);
+
     if (existingStake == null) {
       return 0;
     }
-    return existingStake.pendingRewards / BigInt.from(pow(10, decimals()));
+    return existingStake.totalStake / BigInt.from(pow(10, decimals()));
   }
 
   @override
@@ -903,7 +908,7 @@ List<StarknetCoin> getStarknetBlockchains() {
       ),
       StarknetCoin(
         blockExplorer:
-            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
+            'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
         api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
@@ -921,7 +926,7 @@ List<StarknetCoin> getStarknetBlockchains() {
   } else {
     blockChains.addAll([
       StarknetCoin(
-        blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
+        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',
         default_: 'STRK',
