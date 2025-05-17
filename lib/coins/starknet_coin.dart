@@ -770,27 +770,9 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
     final address = response.address;
 
-    final ethOnStrkCall = await provider.call(
-      request: FunctionCall(
-        contractAddress: Felt.fromHexString(strkEthNativeToken),
-        entryPointSelector: getSelectorByName('balanceOf'),
-        calldata: [Felt.fromHexString(address)],
-      ),
-      blockId: BlockId.latest,
-    );
+    final userBalance = await getUserBalance(address: address);
 
-    final ethOnStrkBalance = ethOnStrkCall.when<double>(
-      error: (error) {
-        throw Exception(error);
-      },
-      result: (result) {
-        final strkBalance = Uint256.fromFeltList(result).toBigInt() /
-            BigInt.from(10).pow(decimals());
-        return strkBalance;
-      },
-    );
-
-    if (ethOnStrkBalance < maxFeeEth / pow(10, 18)) {
+    if (userBalance < maxFeeEth / pow(10, 18)) {
       throw Exception('Need $maxFeeEth STRK ETH to deploy');
     }
 
@@ -802,6 +784,7 @@ class StarknetCoin extends Coin {
       classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
       max_fee: Felt.fromInt(maxFeeWei),
+      useSTRKFee: useStarkToken,
     );
     final txHash = tx.when(
       result: (result) {
