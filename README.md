@@ -75,13 +75,29 @@
    - Copy `.env.example` to `.env`
    - Add required API keys, Starknet endpoints, chatbot credentials, etc.
 
-4. Start the app:
+Sure! Here's a polished and clearer version of your instructions:
 
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+---
+
+4. Start the App:
+
+> **Note:** Currently, the app runs only on Android.
+
+Make sure you are using the following Flutter version for compatibility:
+
+```
+Flutter 3.22.3 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision b0850beeb2 (4 weeks ago) • 2024-07-16 21:43:41 -0700
+Engine • revision 235db911ba
+Tools • Dart 3.4.4 • DevTools 2.34.3
+Xcode 15.1
+```
+
+To launch the app, run:
+
+```bash
+flutter run
+```
 
 ---
 
