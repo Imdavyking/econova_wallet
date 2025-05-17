@@ -2,8 +2,8 @@
 
 import 'dart:convert';
 
-import 'package:cryptowallet/service/wallet_service.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';

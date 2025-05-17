@@ -1,4 +1,4 @@
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 
 abstract class Constants {

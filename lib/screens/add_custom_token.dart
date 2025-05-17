@@ -1,6 +1,6 @@
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/screens/select_blockchain.dart';
-import 'package:cryptowallet/screens/wallet.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/screens/select_blockchain.dart';
+import 'package:wallet_app/screens/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

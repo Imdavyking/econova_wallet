@@ -7,7 +7,7 @@ import 'package:solana/dto.dart';
 import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
 import '../../service/wallet_service.dart';
-import 'package:cryptowallet/coins/solana_coin.dart';
+import 'package:wallet_app/coins/solana_coin.dart';
 
 import '../../main.dart';
 import 'package:solana/solana.dart' as solana;

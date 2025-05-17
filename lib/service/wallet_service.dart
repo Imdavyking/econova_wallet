@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/main.dart';
-import 'package:flutter_js/quickjs/ffi.dart';
+import 'package:wallet_app/extensions/first_or_null.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/main.dart';
 
 const _mnemonicListKey = 'mnemonics_List';
 const _currentMnemonicKey = 'mmemomic_mnemonic';

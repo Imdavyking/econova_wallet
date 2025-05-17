@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:cryptowallet/utils/ethereum_blockies.dart';
+import 'package:wallet_app/utils/ethereum_blockies.dart';
 import 'package:flutter/material.dart';
 
 class BlockiePainter extends CustomPainter {

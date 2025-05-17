@@ -1,5 +1,5 @@
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/interface/coin.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/interface/coin.dart';
 
 import '../utils/app_config.dart';
 

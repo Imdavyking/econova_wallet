@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'package:cryptowallet/components/portfolio.dart';
-import 'package:cryptowallet/components/user_balance.dart';
-import 'package:cryptowallet/components/user_details_placeholder.dart';
-import 'package:cryptowallet/screens/select_blockchain.dart';
-import 'package:cryptowallet/screens/add_custom_token.dart';
-import 'package:cryptowallet/screens/token.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/utils/wallet_connect_v1/wc_connector_v1.dart';
+import 'package:wallet_app/components/portfolio.dart';
+import 'package:wallet_app/components/user_balance.dart';
+import 'package:wallet_app/components/user_details_placeholder.dart';
+import 'package:wallet_app/screens/select_blockchain.dart';
+import 'package:wallet_app/screens/add_custom_token.dart';
+import 'package:wallet_app/screens/token.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_v1/wc_connector_v1.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:page_transition/page_transition.dart';
@@ -79,22 +78,22 @@ class _WalletMainBodyState extends State<WalletMainBody>
     // WcConnectorV1();
     // WcConnectorV2();
 
-    _intentDataStreamSubscription =
-        ReceiveSharingIntent.getTextStream().listen((String value) async {
-      await handleAllIntent(value, context);
-    }, onError: (err) {
-      if (kDebugMode) {
-        print("getLinkStream error: $err");
-      }
-    });
+    // _intentDataStreamSubscription =
+    //     ReceiveSharingIntent.getTextStream().listen((String value) async {
+    //   await handleAllIntent(value, context);
+    // }, onError: (err) {
+    //   if (kDebugMode) {
+    //     print("getLinkStream error: $err");
+    //   }
+    // });
 
-    ReceiveSharingIntent.getInitialText().then((String? value) async {
-      await handleAllIntent(value, context);
-    }).catchError((err) {
-      if (kDebugMode) {
-        print("getLinkStream error: $err");
-      }
-    });
+    // ReceiveSharingIntent.getInitialText().then((String? value) async {
+    //   await handleAllIntent(value, context);
+    // }).catchError((err) {
+    //   if (kDebugMode) {
+    //     print("getLinkStream error: $err");
+    //   }
+    // });
   }
 
   void initializeBlockchains() {
@@ -174,10 +173,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
           setState(() {});
         },
         child: UpgradeAlert(
-          upgrader: Upgrader(
-            dialogStyle: UpgradeDialogStyle.cupertino,
-            showReleaseNotes: false,
-          ),
+          upgrader: Upgrader(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -260,12 +256,14 @@ class _WalletMainBodyState extends State<WalletMainBody>
 
                       if (coin == null) return;
 
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (ctx) => Token(coin: coin),
-                        ),
-                      );
+                      if (context.mounted) {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => Token(coin: coin),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),

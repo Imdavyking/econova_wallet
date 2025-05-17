@@ -1,8 +1,8 @@
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/qr_scan_view.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/qr_scan_view.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

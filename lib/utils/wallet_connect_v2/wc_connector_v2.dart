@@ -1,12 +1,12 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/screens/navigator_service.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
-import 'package:cryptowallet/utils/wallet_connect_v2/models/ethereum/wc_ethereum_transaction.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';
 import 'package:wallet_connect_dart_v2/wc_utils/misc/logger/logger.dart';

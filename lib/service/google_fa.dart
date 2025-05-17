@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:otp/otp.dart';
 import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart';
 

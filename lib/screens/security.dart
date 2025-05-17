@@ -1,6 +1,6 @@
-import 'package:cryptowallet/screens/main_screen.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/screens/main_screen.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';

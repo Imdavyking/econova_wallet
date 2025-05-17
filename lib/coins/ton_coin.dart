@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:cryptowallet/extensions/big_int_ext.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
@@ -236,7 +237,7 @@ class TonCoin extends Coin {
     final decodedPublicKey = HEX.decode(details.publicKey!);
 
     final ownerWallet = WalletV4.create(
-      workChain: 0,
+      chain: TonChain.fromWorkchain(0),
       publicKey: decodedPublicKey,
       bounceableAddress: true,
     );
@@ -245,16 +246,21 @@ class TonCoin extends Coin {
 
     final destination = TonAddress(to);
     final transferAmount = amount.toBigIntDec(decimals());
+
     final txHash = await ownerWallet.sendTransfer(
-      messages: [
-        ownerWallet.createMessageInfo(
-          amount: transferAmount,
-          destination: destination,
-          memo: memo,
-          bounce: false,
-        )
-      ],
-      privateKey: privateKey,
+      params: VersionedTransferParams(
+        privateKey: privateKey,
+        messages: [
+          OutActionSendMsg(
+            outMessage: TonHelper.internal(
+              amount: transferAmount,
+              destination: destination,
+              memo: memo,
+              bounce: false,
+            ),
+          )
+        ],
+      ),
       rpc: getRpc(),
     );
 
@@ -368,8 +374,8 @@ List<TonCoin> getTonBlockChains() {
 
 class HTTPProvider implements TonServiceProvider {
   HTTPProvider(
-      {required this.tonApiUrl,
-      required this.tonCenterUrl,
+      {this.tonApiUrl,
+      this.tonCenterUrl,
       this.api = TonApiType.tonApi,
       http.Client? client,
       this.defaultRequestTimeout = const Duration(seconds: 30)})
@@ -381,51 +387,27 @@ class HTTPProvider implements TonServiceProvider {
   final Duration defaultRequestTimeout;
 
   @override
-  Future<String> get(TonRequestInfo params, {Duration? timeout}) async {
-    final String stringUrl =
-        params.url(tonApiUrl: tonApiUrl, tonCenterUrl: tonCenterUrl);
-    final url = Uri.parse(stringUrl);
-
-    final response = await client.get(url, headers: {
-      "Accept": "application/json",
-      "X-API-Key": tonApiKey,
-      ...params.header
-    }).timeout(timeout ?? defaultRequestTimeout);
-    return response.body;
-  }
-
-  @override
-  Future<String> post(TonRequestInfo params, {Duration? timeout}) async {
-    final String stringUrl =
-        params.url(tonApiUrl: tonApiUrl, tonCenterUrl: tonCenterUrl);
-    final url = Uri.parse(stringUrl);
-    http.Response response;
-
-    if (params.requestType == RequestMethod.put) {
-      response = await client
-          .put(url,
-              headers: {
-                "Accept": "application/json",
-                "X-API-Key": tonApiKey,
-                ...params.header
-              },
-              body: params.body)
+  Future<BaseServiceResponse<T>> doRequest<T>(TonRequestDetails params,
+      {Duration? timeout}) async {
+    final Uri uri = params.apiType == TonApiType.tonApi
+        ? params.toUri(tonApiUrl!)
+        : params.toUri(tonCenterUrl!);
+    final Map<String, String> headers = {
+      ...params.headers,
+      if (params.apiType.isTonCenter)
+        "X-API-Key":
+            "d3800f756738ac7b39599914b8a84465960ff869f555c2317664c9a62529baf3",
+    };
+    if (params.type.isPostRequest) {
+      final response = await client
+          .post(uri, headers: headers, body: params.body())
           .timeout(timeout ?? defaultRequestTimeout);
-    } else {
-      response = await client
-          .post(
-            url,
-            headers: {
-              "X-API-Key": tonApiKey,
-              "Accept": "application/json",
-              "Content-Type": "application/json",
-              ...params.header
-            },
-            body: params.body,
-          )
-          .timeout(timeout ?? defaultRequestTimeout);
+      return params.parseResponse(response.bodyBytes, response.statusCode);
     }
-    return response.body;
+    final response = await client
+        .get(uri, headers: headers)
+        .timeout(timeout ?? defaultRequestTimeout);
+    return params.parseResponse(response.bodyBytes, response.statusCode);
   }
 
   @override

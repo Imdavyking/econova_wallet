@@ -1,4 +1,4 @@
-import 'package:cryptowallet/utils/blockie_widget.dart';
+import 'package:wallet_app/utils/blockie_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:jazzicon/jazzicon.dart';

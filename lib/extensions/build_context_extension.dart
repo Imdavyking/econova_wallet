@@ -1,5 +1,5 @@
 import "dart:io";
-import "package:cryptowallet/utils/either.dart";
+import "package:wallet_app/utils/either.dart";
 import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
 

@@ -1,4 +1,4 @@
-import 'package:cryptowallet/main.dart';
+import 'package:wallet_app/main.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/app_config.dart';

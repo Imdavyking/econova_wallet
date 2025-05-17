@@ -1,6 +1,6 @@
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/screens/wallet.dart';
-import 'package:cryptowallet/service/wallet_service.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

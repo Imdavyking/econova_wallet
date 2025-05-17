@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/screens/navigator_service.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/web3dart.dart';
-import 'package:cryptowallet/components/loader.dart';
+import 'package:wallet_app/components/loader.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/crypto.dart';

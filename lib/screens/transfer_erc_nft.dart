@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:cryptowallet/api/notification_api.dart';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/config/colors.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/api/notification_api.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/config/colors.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 import '../coins/nfts/erc_nft_coin.dart';

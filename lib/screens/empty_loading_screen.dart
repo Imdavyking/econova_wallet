@@ -1,4 +1,4 @@
-import 'package:cryptowallet/components/loader.dart';
+import 'package:wallet_app/components/loader.dart';
 import 'package:flutter/material.dart';
 
 class EmptyLoadingScreen extends StatelessWidget {

@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:cryptowallet/main.dart';
+import 'package:wallet_app/main.dart';
 import 'package:flutter/foundation.dart';
 
 import '../coins/fungible_tokens/near_fungible_coin.dart';

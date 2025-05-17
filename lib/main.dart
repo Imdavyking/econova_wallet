@@ -2,27 +2,26 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:cryptowallet/coins/fungible_tokens/erc_fungible_coin.dart';
-import 'package:cryptowallet/coins/fungible_tokens/fuse_4337_ft.dart';
-import 'package:cryptowallet/coins/fuse_4337_coin.dart';
-import 'package:cryptowallet/coins/starknet_coin.dart';
-import 'package:cryptowallet/coins/cosmos_coin.dart';
-import 'package:cryptowallet/coins/xrp_coin.dart';
-import 'package:cryptowallet/coins/tron_coin.dart';
-import 'package:cryptowallet/coins/filecoin_coin.dart';
-import 'package:cryptowallet/coins/polkadot_coin.dart';
-import 'package:cryptowallet/wordlist.dart';
+import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
+import 'package:wallet_app/coins/fuse_4337_coin.dart';
+import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/coins/cosmos_coin.dart';
+import 'package:wallet_app/coins/xrp_coin.dart';
+import 'package:wallet_app/coins/tron_coin.dart';
+import 'package:wallet_app/coins/filecoin_coin.dart';
+import 'package:wallet_app/wordlist.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
-import 'package:cryptowallet/screens/navigator_service.dart';
-import 'package:cryptowallet/screens/open_app_pin_failed.dart';
-import 'package:cryptowallet/screens/security.dart';
-import 'package:cryptowallet/screens/wallet.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/utils/web_notifications.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/screens/open_app_pin_failed.dart';
+import 'package:wallet_app/screens/security.dart';
+import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/web_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,7 +33,6 @@ import 'package:page_transition/page_transition.dart';
 import 'coins/fungible_tokens/esdt_coin.dart';
 import 'coins/fungible_tokens/ton_fungible_coins.dart';
 import 'coins/harmony_coin.dart';
-import 'coins/icp_coin.dart';
 import 'coins/iotex_coin.dart';
 import 'coins/multiversx_coin.dart';
 import 'coins/fungible_tokens/near_fungible_coin.dart';
@@ -106,11 +104,9 @@ Future<List<Coin>> getAllBlockchains_fun() async {
     ...getHarmonyBlockChains(),
     ...getIOTEXBlockChains(),
     ...getStellarBlockChains(),
-    ...getICPBlockchains(),
     ...getSuiBlockChains(),
     ...getRoninBlockchains(),
     ...getFUSEFTBlockchains(),
-    ...getPolkadoBlockChains(),
     ...getSplTokens(),
     ...erc20Coins,
     ...getCosmosBlockChains(),

@@ -3,10 +3,10 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/crypto_charts/chart_price.dart';
-import 'package:cryptowallet/utils/format_money.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/crypto_charts/chart_price.dart';
+import 'package:wallet_app/utils/format_money.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -258,7 +258,7 @@ class _CryptoChartState extends State<CryptoChart> {
                                     ],
                                     domainAxis: charts.NumericAxisSpec(
                                       tickProviderSpec: const charts
-                                              .BasicNumericTickProviderSpec(
+                                          .BasicNumericTickProviderSpec(
                                           desiredTickCount: 10,
                                           zeroBound: false),
                                       renderSpec: const charts.NoneRenderSpec(),

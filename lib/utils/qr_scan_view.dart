@@ -1,6 +1,5 @@
-
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';

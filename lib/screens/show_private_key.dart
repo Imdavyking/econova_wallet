@@ -53,7 +53,7 @@ class ShowPrivateKey extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10)),
                           child: Align(
                             alignment: Alignment.center,
-                            child: QrImage(
+                            child: QrImageView(
                               padding: const EdgeInsets.all(10),
                               data: data,
                               version: QrVersions.auto,

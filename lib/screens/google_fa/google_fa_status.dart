@@ -1,6 +1,6 @@
-import 'package:cryptowallet/screens/google_fa/fa_details.dart';
-import 'package:cryptowallet/service/google_fa.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/screens/google_fa/fa_details.dart';
+import 'package:wallet_app/service/google_fa.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

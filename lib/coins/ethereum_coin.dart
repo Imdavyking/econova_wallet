@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
-import 'package:cryptowallet/screens/view_erc_nfts.dart';
+import 'package:wallet_app/screens/view_erc_nfts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:cryptowallet/components/user_balance.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/components/user_balance.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

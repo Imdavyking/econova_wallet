@@ -1,5 +1,5 @@
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/countdown_timer_controller.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';

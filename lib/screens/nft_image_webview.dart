@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/screens/video_player.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/screens/video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:path/path.dart' as p;

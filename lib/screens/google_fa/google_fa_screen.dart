@@ -1,4 +1,4 @@
-import 'package:cryptowallet/service/google_fa.dart';
+import 'package:wallet_app/service/google_fa.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -67,7 +67,7 @@ class _GoogleFAScreenState extends State<GoogleFAScreen> {
                                 borderRadius: BorderRadius.circular(10)),
                             child: Align(
                               alignment: Alignment.center,
-                              child: QrImage(
+                              child: QrImageView(
                                 padding: const EdgeInsets.all(10),
                                 data: value!.url!,
                                 version: QrVersions.auto,

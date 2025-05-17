@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:flutter_js/quickjs/ffi.dart';
+import 'package:wallet_app/extensions/first_or_null.dart';
+import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 
 import '../main.dart';

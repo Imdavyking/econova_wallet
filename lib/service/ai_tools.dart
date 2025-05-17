@@ -1,13 +1,13 @@
 import "dart:convert";
 
-import "package:cryptowallet/coins/starknet_coin.dart";
-import "package:cryptowallet/extensions/first_or_null.dart";
-import 'package:cryptowallet/interface/coin.dart';
-import "package:cryptowallet/main.dart";
-import "package:cryptowallet/utils/rpc_urls.dart";
+import "package:wallet_app/coins/starknet_coin.dart";
+import "package:wallet_app/extensions/first_or_null.dart";
+import 'package:wallet_app/interface/coin.dart';
+import "package:wallet_app/main.dart";
+import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
-import "package:cryptowallet/screens/navigator_service.dart";
+import "package:wallet_app/screens/navigator_service.dart";
 import "./ai_confirm_transaction.dart";
 import "./ai_agent_service.dart";
 

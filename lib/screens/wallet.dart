@@ -1,9 +1,9 @@
-import 'package:cryptowallet/screens/dapp_ui.dart';
-import 'package:cryptowallet/screens/settings.dart';
-import 'package:cryptowallet/screens/ai_agent.dart';
-import 'package:cryptowallet/screens/wallet_main_body.dart';
-import 'package:cryptowallet/service/wallet_service.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/screens/dapp_ui.dart';
+import 'package:wallet_app/screens/settings.dart';
+import 'package:wallet_app/screens/ai_agent.dart';
+import 'package:wallet_app/screens/wallet_main_body.dart';
+import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

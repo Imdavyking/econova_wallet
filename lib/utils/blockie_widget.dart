@@ -1,10 +1,11 @@
-import 'package:cryptowallet/utils/blockie_painter.dart';
+import 'package:wallet_app/utils/blockie_painter.dart';
 import 'package:flutter/material.dart';
 
 class BlockieWidget extends StatefulWidget {
   final double size;
   final String data;
-  const BlockieWidget({Key? key,required this.size,required this.data}) : super(key: key);
+  const BlockieWidget({Key? key, required this.size, required this.data})
+      : super(key: key);
 
   @override
   State<BlockieWidget> createState() => _BlockieWidgetState();

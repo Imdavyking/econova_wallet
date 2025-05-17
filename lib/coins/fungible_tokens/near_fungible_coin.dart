@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:cryptowallet/coins/near_coin.dart';
+import 'package:wallet_app/coins/near_coin.dart';
 import 'package:flutter/foundation.dart';
 import 'package:near_api_flutter/near_api_flutter.dart';
 

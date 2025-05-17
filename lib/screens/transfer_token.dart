@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/config/colors.dart';
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/config/colors.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 

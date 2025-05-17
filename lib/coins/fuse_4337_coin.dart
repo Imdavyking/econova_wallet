@@ -2,9 +2,9 @@
 
 import 'dart:convert';
 import 'dart:math';
-import 'package:cryptowallet/save_goal/create_goal.dart';
-import 'package:cryptowallet/screens/stake_token.dart';
-import 'package:cryptowallet/utils/abis.dart';
+import 'package:wallet_app/save_goal/create_goal.dart';
+import 'package:wallet_app/screens/stake_token.dart';
+import 'package:wallet_app/utils/abis.dart';
 import 'package:dio/dio.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/material.dart';

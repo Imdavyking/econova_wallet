@@ -2,21 +2,21 @@
 
 import 'dart:convert';
 
-import 'package:cryptowallet/components/user_details_placeholder.dart';
-import 'package:cryptowallet/education/eip4337.edu.dart';
-import 'package:cryptowallet/screens/contact.dart';
-import 'package:cryptowallet/screens/language.dart';
-import 'package:cryptowallet/screens/saved_urls.dart';
-import 'package:cryptowallet/screens/security.dart';
-import 'package:cryptowallet/screens/main_screen.dart';
-import 'package:cryptowallet/screens/recovery_pharse.dart';
-import 'package:cryptowallet/screens/set_currency.dart';
-import 'package:cryptowallet/screens/show_private_key.dart';
-import 'package:cryptowallet/screens/support.dart';
-import 'package:cryptowallet/screens/unlock_with_biometrics.dart';
-import 'package:cryptowallet/screens/all_wallets.dart';
-import 'package:cryptowallet/screens/wallet_connect.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/components/user_details_placeholder.dart';
+import 'package:wallet_app/education/eip4337.edu.dart';
+import 'package:wallet_app/screens/contact.dart';
+import 'package:wallet_app/screens/language.dart';
+import 'package:wallet_app/screens/saved_urls.dart';
+import 'package:wallet_app/screens/security.dart';
+import 'package:wallet_app/screens/main_screen.dart';
+import 'package:wallet_app/screens/recovery_pharse.dart';
+import 'package:wallet_app/screens/set_currency.dart';
+import 'package:wallet_app/screens/show_private_key.dart';
+import 'package:wallet_app/screens/support.dart';
+import 'package:wallet_app/screens/unlock_with_biometrics.dart';
+import 'package:wallet_app/screens/all_wallets.dart';
+import 'package:wallet_app/screens/wallet_connect.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';

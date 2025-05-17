@@ -1,4 +1,4 @@
-import 'package:cryptowallet/components/loader.dart';
+import 'package:wallet_app/components/loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

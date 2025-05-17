@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/screens/wallet_connect_preview_v1.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/screens/wallet_connect_preview_v1.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

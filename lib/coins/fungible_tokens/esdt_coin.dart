@@ -7,7 +7,7 @@ import 'package:hex/hex.dart';
 import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
 import '../../service/wallet_service.dart';
-import 'package:cryptowallet/coins/multiversx_coin.dart';
+import 'package:wallet_app/coins/multiversx_coin.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 

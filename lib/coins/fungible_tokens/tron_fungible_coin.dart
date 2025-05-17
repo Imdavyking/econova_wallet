@@ -3,7 +3,7 @@
 import 'dart:convert';
 
 import 'package:blockchain_utils/blockchain_utils.dart';
-import 'package:cryptowallet/coins/tron_coin.dart';
+import 'package:wallet_app/coins/tron_coin.dart';
 import 'package:http/http.dart';
 import 'package:on_chain/on_chain.dart';
 import '../../extensions/big_int_ext.dart';
@@ -157,21 +157,20 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
     try {
       final address = await getAddress();
       final ownerAddress = TronAddress(address);
-      final rpc = EVMRPC(
+      final rpc = EthereumProvider(
         RPCHttpService("$api/jsonrpc"),
       );
-      final contract = ContractABI.fromJson(trc20Abi, isTron: true);
+      final contract = ContractABI.fromJson(trc20Abi);
       final result = await rpc.request(
-        RPCCall.fromMethod(
+        EthereumRequestCall.fromMethod(
           contractAddress: TronAddress(tokenID).toAddress(false),
           function: contract.functionFromName("balanceOf"),
           params: [ownerAddress],
         ),
       );
 
-      BigInt balance = result[0];
+      BigInt balance = (result as List)[0];
       final base = BigInt.from(10);
-
       double fraction = balance / base.pow(decimals());
       // Convert the balance to a double and return it
       await pref.put(key, fraction);
@@ -204,7 +203,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
 
     final sendAmt = amount.toBigIntDec(decimals());
 
-    final contractAbi = ContractABI.fromJson(trc20Abi, isTron: true);
+    final contractAbi = ContractABI.fromJson(trc20Abi);
     final toAddress = TronAddress(to);
     final binary = contractAbi
         .functionFromName('transfer')
@@ -410,26 +409,20 @@ List<TronFungibleCoin> getTronFungibleCoins() {
   return blockChains;
 }
 
-class RPCHttpService with JSONRPCService {
-  RPCHttpService(
-    this.url, {
-    Client? client,
-    this.defaultTimeOut = const Duration(seconds: 30),
-  }) : client = client ?? Client();
+class RPCHttpService with EthereumServiceProvider {
+  RPCHttpService(this.url,
+      {Client? client, this.defaultTimeOut = const Duration(seconds: 30)})
+      : client = client ?? Client();
 
-  @override
   final String url;
   final Client client;
   final Duration defaultTimeOut;
   @override
-  Future<Map<String, dynamic>> call(ETHRequestDetails params,
-      [Duration? timeout]) async {
+  Future<BaseServiceResponse<T>> doRequest<T>(EthereumRequestDetails params,
+      {Duration? timeout}) async {
     final response = await client
-        .post(Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: params.toRequestBody())
+        .post(params.toUri(url), headers: params.headers, body: params.body())
         .timeout(timeout ?? defaultTimeOut);
-    final data = json.decode(response.body) as Map<String, dynamic>;
-    return data;
+    return params.toResponse(response.bodyBytes, response.statusCode);
   }
 }

@@ -1,4 +1,4 @@
-import 'package:cryptowallet/utils/get_token_image.dart';
+import 'package:wallet_app/utils/get_token_image.dart';
 import 'package:flutter/material.dart';
 
 import '../interface/coin.dart';

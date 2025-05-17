@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';

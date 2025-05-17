@@ -1,5 +1,5 @@
-import 'package:cryptowallet/screens/navigator_service.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 
 class ConfirmTransactionScreen extends StatelessWidget {

@@ -1,8 +1,8 @@
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
-import 'package:cryptowallet/components/loader.dart';
-import 'package:cryptowallet/config/colors.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/config/colors.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class NeedDeploymentWidget extends StatelessWidget {

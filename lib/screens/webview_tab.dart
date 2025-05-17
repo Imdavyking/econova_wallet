@@ -1,8 +1,8 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
-import 'package:cryptowallet/coins/near_coin.dart';
-import 'package:cryptowallet/interface/coin.dart';
+import 'package:wallet_app/coins/near_coin.dart';
+import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
@@ -13,12 +13,12 @@ import '../service/wallet_connect_service.dart';
 import '../service/wallet_service.dart';
 import 'dart:ui';
 import 'package:bs58check/bs58check.dart';
-import 'package:cryptowallet/api/notification_api.dart';
+import 'package:wallet_app/api/notification_api.dart';
 import 'package:pinput/pinput.dart';
-import 'package:cryptowallet/coins/multiversx_coin.dart';
+import 'package:wallet_app/coins/multiversx_coin.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:multiversx_sdk/multiversx.dart' as multiversx;
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -226,8 +226,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   @pragma('vm:entry-point')
-  static void downloadCallback(
-      String id, DownloadTaskStatus status, int progress) {
+  static void downloadCallback(String id, int status, int progress) {
     final SendPort? send =
         IsolateNameServer.lookupPortByName('downloader_send_port');
     send?.send([id, status, progress]);
@@ -2180,7 +2179,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     );
 
     final vibrate = notification.vibrate;
-    final hasVibrator = await Vibration.hasVibrator() ?? false;
+    final hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator && vibrate.isNotEmpty) {
       if (vibrate.length % 2 != 0) {
         vibrate.add(0);

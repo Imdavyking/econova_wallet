@@ -9,15 +9,15 @@ import 'package:elliptic/elliptic.dart';
 import 'package:flutter/foundation.dart';
 // ignore_for_file: constant_identifier_names
 
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:leb128/leb128.dart';
 import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart';
 
 import 'package:cbor/cbor.dart' as cbor;
-import 'package:cryptowallet/utils/addressToBytes.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/utils/addressToBytes.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:web3dart/crypto.dart';
 
 import '../interface/coin.dart';

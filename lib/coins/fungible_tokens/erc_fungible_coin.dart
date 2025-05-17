@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
 import '../../service/wallet_service.dart';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:http/http.dart';
 import 'package:web3dart/web3dart.dart';
 

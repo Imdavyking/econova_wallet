@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bs58check/bs58check.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart' as solana;

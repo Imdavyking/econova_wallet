@@ -1,9 +1,9 @@
 // ignore_for_file: prefer__ructors, prefer_const_constructors
 
-import 'package:cryptowallet/interface/coin.dart';
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/screens/wallet.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';

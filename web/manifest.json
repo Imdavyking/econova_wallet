@@ -1,6 +1,6 @@
 {
-    "name": "cryptowallet",
-    "short_name": "cryptowallet",
+    "name": "wallet_app",
+    "short_name": "wallet_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

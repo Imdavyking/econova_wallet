@@ -3,8 +3,8 @@
 import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
-import 'package:cryptowallet/utils/network_guard.dart';
-import 'package:cryptowallet/utils/starknet_call.dart';
+import 'package:wallet_app/utils/network_guard.dart';
+import 'package:wallet_app/utils/starknet_call.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:blockchain_utils/blockchain_utils.dart' hide AES;
 import 'package:near_api_flutter/near_api_flutter.dart' hide Account;
@@ -25,18 +25,17 @@ import 'package:encrypt/encrypt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/screens/security.dart';
-import 'package:cryptowallet/utils/json_viewer.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/screens/security.dart';
+import 'package:wallet_app/utils/json_viewer.dart';
 import 'package:eth_sig_util/util/utils.dart' hide hexToBytes, bytesToHex;
 import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/utils/slide_up_panel.dart';
+import 'package:wallet_app/utils/slide_up_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart';
@@ -461,34 +460,6 @@ AbiDecodedResult? decodeAbi(String txData) {
       print(e);
     }
     return null;
-  }
-}
-
-Map? decodeAbiOld(String txData) {
-  if (kDebugMode) {
-    print('using javascript abi decoder');
-  }
-  JavascriptRuntime javaScriptRuntime = getJavascriptRuntime();
-
-  try {
-    javaScriptRuntime.evaluate(abiJs);
-    javaScriptRuntime
-        .evaluate('''abiDecoder.addABI(${json.encode(abisJson)})''');
-
-    final decode = javaScriptRuntime
-        .evaluate('JSON.stringify(abiDecoder.decodeMethod("$txData"))');
-
-    if (decode.stringResult == 'undefined') return null;
-    Map result_ = json.decode(decode.stringResult);
-
-    return result_;
-  } catch (e) {
-    if (kDebugMode) {
-      print(e);
-    }
-    return null;
-  } finally {
-    javaScriptRuntime.dispose();
   }
 }
 
@@ -3479,29 +3450,3 @@ Future<String?> downloadFile(String url, [String? filename]) async {
 }
 
 
-
-
-// wallet_addStarknetChain: addStarknetChainHandler,
-//       wallet_switchStarknetChain: switchStarknetChainHandler,
-//       wallet_watchAsset: watchAssetHandler,
-//       wallet_requestAccounts: requestAccountsHandler,
-//       wallet_getPermissions: getPermissionsHandler,
-//       wallet_requestChainId: requestChainIdHandler,
-//       wallet_deploymentData: deploymentDataHandler,
-//       wallet_addDeclareTransaction: addDeclareTransactionHandler,
-//       wallet_addInvokeTransaction: addInvokeTransactionHandler,
-//       wallet_signTypedData: signTypedDataHandler,
-//       wallet_supportedSpecs: supportedSpecsHandler,
-//       wallet_supportedWalletApi: async () => {
-//         // not implemented
-//         throw new Error("Not implemented")
-//       },
-
-//        await window.starknet.request({
-//           type: "wallet_switchStarknetChain",
-//           params: {
-//             chainId: `SN_${
-//               network == "mainnet" ? "MAIN" : network.toUpperCase()
-//             }`,
-//           },
-//         });

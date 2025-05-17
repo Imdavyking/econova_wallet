@@ -3,9 +3,9 @@
 import 'dart:typed_data';
 
 import 'package:base32/base32.dart';
-import 'package:cryptowallet/extensions/big_int_ext.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import './blake2bhash.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 Uint8List _getCID(Uint8List message) {
   final hash = Uint8List.fromList(blake2bHash(message, digestSize: 32));

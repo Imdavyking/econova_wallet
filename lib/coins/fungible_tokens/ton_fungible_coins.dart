@@ -1,6 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'package:cryptowallet/extensions/big_int_ext.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:hex/hex.dart';
 import 'package:ton_dart/ton_dart.dart';
 import '../../interface/ft_explorer.dart';
@@ -88,8 +88,9 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   Future<double> getUserBalance({required String address}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
+
     final ownerWallet = WalletV4.create(
-      workChain: 0,
+      chain: TonChain.fromWorkchain(0),
       publicKey: HEX.decode(details.publicKey!),
       bounceableAddress: true,
     );
@@ -106,10 +107,12 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       owner: ownerWallet.address,
     );
 
-    final jettonWallet = JettonWallet.fromAddress(
-      jettonWalletAddress: jettonWalletAddress,
+    final jettonWallet = await JettonWallet.fromAddress(
+      address: jettonWalletAddress,
       owner: ownerWallet,
+      rpc: getRpc(),
     );
+
     final balance = await jettonWallet.getBalance(getRpc());
     return balance / BigInt.from(10).pow(decimals());
   }
@@ -149,7 +152,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       HEX.decode(tonDetails.privateKey!),
     );
     final ownerWallet = WalletV4.create(
-      workChain: 0,
+      chain: TonChain.fromWorkchain(0),
       publicKey: HEX.decode(tonDetails.publicKey!),
       bounceableAddress: true,
     );
@@ -157,10 +160,14 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     /// Create JettonMinter with owner and content
     final minter = JettonMinter.create(
       owner: ownerWallet,
-      metadata: JettonOnChainMetadata.snakeFormat(
-        name: "PRIME",
-        symbol: "PRM",
-        decimals: 9,
+      state: MinterWalletState(
+        owner: ownerWallet.address,
+        chain: TonChain.testnet,
+        metadata: JettonOnChainMetadata.snakeFormat(
+          name: walletName,
+          symbol: walletAbbr,
+          decimals: 9,
+        ),
       ),
     );
 
@@ -177,15 +184,20 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     final jettonAmountForMint = BigInt.parse("1${"0" * 15}");
 
     /// Mint tokens
-    await minter.mint(
-      privateKey: privateKey,
+
+    await minter.sendOperation(
+      signerParams: VersionedTransferParams(privateKey: privateKey),
       rpc: getRpc(),
-      jettonAmout: jettonAmountForMint,
-      forwardTonAmount: forwardAmount,
-      totalTonAmount: totalAmount,
       amount: amount + totalAmount,
-      to: addressToMint,
-      bounce: false,
+      operation: JettonMinterMint(
+        totalTonAmount: totalAmount,
+        to: addressToMint,
+        transfer: JettonMinterInternalTransfer(
+          jettonAmount: jettonAmountForMint,
+          forwardTonAmount: forwardAmount,
+        ),
+        jettonAmount: jettonAmountForMint,
+      ),
     );
   }
 
@@ -198,7 +210,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final tonDetails = await importData(data);
     final ownerWallet = WalletV4.create(
-      workChain: 0,
+      chain: TonChain.fromWorkchain(0),
       publicKey: HEX.decode(tonDetails.publicKey!),
       bounceableAddress: true,
     );
@@ -215,9 +227,10 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       owner: ownerWallet.address,
     );
 
-    final jettonWallet = JettonWallet.fromAddress(
-      jettonWalletAddress: jettonWalletAddress,
+    final jettonWallet = await JettonWallet.fromAddress(
+      address: jettonWalletAddress,
       owner: ownerWallet,
+      rpc: getRpc(),
     );
 
     final forwardTonAmount = TonHelper.toNano("0.1");
@@ -226,18 +239,27 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     final privateKey = TonPrivateKey.fromBytes(
       HEX.decode(tonDetails.privateKey!),
     );
-    final tx = await jettonWallet.transfer(
-      privateKey: privateKey,
+
+    final tx = await jettonWallet.sendOperation(
+      signerParams: VersionedTransferParams(privateKey: privateKey),
       rpc: getRpc(),
-      destination: TonAddress(to),
-      forwardTonAmount: forwardTonAmount,
-      jettonAmount: transferAmount,
       amount: feeAmount + forwardTonAmount,
-      bounce: false,
-      forwardPayload:
-          memo == null ? null : TransactioUtils.buildMessageBody(memo),
+      operation: JettonWalletTransfer(
+        amount: transferAmount,
+        destination: TonAddress(to),
+        forwardTonAmount: forwardTonAmount,
+        forwardPayload: memo == null ? null : buildMessageBody(memo),
+      ),
     );
+
     return tx;
+  }
+
+  Cell buildMessageBody(String? memo) {
+    if (memo != null) {
+      return beginCell().storeUint(0, 32).storeStringTail(memo).endCell();
+    }
+    return Cell.empty;
   }
 
   @override

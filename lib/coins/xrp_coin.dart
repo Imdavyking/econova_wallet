@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:base_x/base_x.dart';
-import 'package:cryptowallet/extensions/big_int_ext.dart';
-import 'package:cryptowallet/service/wallet_service.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hash/hash.dart';
 import 'package:hex/hex.dart';

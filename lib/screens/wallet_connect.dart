@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cryptowallet/screens/wallet_connect_preview_v1.dart';
-import 'package:cryptowallet/screens/wallet_connect_preview_v2.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-// import 'package:cryptowallet/utils/wallet_connect_v1/wc_connector.dart';
+import 'package:wallet_app/screens/wallet_connect_preview_v1.dart';
+import 'package:wallet_app/screens/wallet_connect_preview_v2.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+// import 'package:wallet_app/utils/wallet_connect_v1/wc_connector.dart';
 import 'package:flutter/material.dart' hide Listener;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';

@@ -1,10 +1,10 @@
 // ignore_for_file: constant_identifier_names
 
-import 'package:cryptowallet/coins/fuse_4337_coin.dart';
+import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:flutter/material.dart';
 
 import '../../interface/ft_explorer.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/utils/app_config.dart';
 
 class FuseFungibleCoin extends FuseCoin implements FTExplorer {
   int mintDecimals;

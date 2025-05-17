@@ -1,5 +1,5 @@
-import 'package:cryptowallet/screens/add_contact.dart';
-import 'package:cryptowallet/screens/select_blockchain.dart';
+import 'package:wallet_app/screens/add_contact.dart';
+import 'package:wallet_app/screens/select_blockchain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

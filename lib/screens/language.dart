@@ -1,6 +1,5 @@
-
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/utils/language_locale.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/utils/language_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 

@@ -1,11 +1,11 @@
 import 'dart:math';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/eip/eip681.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/coin_pay.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/eip/eip681.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/coin_pay.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -159,7 +159,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                 borderRadius: BorderRadius.circular(10)),
                             child: Align(
                               alignment: Alignment.center,
-                              child: QrImage(
+                              child: QrImageView(
                                 padding: const EdgeInsets.all(10),
                                 data: _.requestUrl ?? userAddress,
                                 version: QrVersions.auto,

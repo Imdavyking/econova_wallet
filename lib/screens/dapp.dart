@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
-import 'package:cryptowallet/screens/custom_image.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/screens/custom_image.dart';
 // ignore: unused_import
-import 'package:cryptowallet/screens/main_screen.dart';
-import 'package:cryptowallet/screens/saved_urls.dart';
-import 'package:cryptowallet/screens/select_blockchain.dart';
-import 'package:cryptowallet/screens/webview_tab.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/slide_up_panel.dart';
+import 'package:wallet_app/screens/main_screen.dart';
+import 'package:wallet_app/screens/saved_urls.dart';
+import 'package:wallet_app/screens/select_blockchain.dart';
+import 'package:wallet_app/screens/webview_tab.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/slide_up_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

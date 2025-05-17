@@ -3,7 +3,7 @@
 import 'package:hex/hex.dart';
 
 import '../../service/wallet_service.dart';
-import 'package:cryptowallet/coins/multiversx_coin.dart';
+import 'package:wallet_app/coins/multiversx_coin.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../main.dart';

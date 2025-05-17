@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../service/wallet_service.dart';
-import 'package:cryptowallet/coins/ethereum_coin.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:http/http.dart';
 import 'package:web3dart/web3dart.dart';
 

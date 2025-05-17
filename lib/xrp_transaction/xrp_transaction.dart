@@ -1,8 +1,8 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names, prefer_const_declarations
-import 'package:cryptowallet/extensions/big_int_ext.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/xrp_transaction/xrp_definitions.dart';
-import 'package:cryptowallet/xrp_transaction/xrp_ordinal.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/xrp_transaction/xrp_definitions.dart';
+import 'package:wallet_app/xrp_transaction/xrp_ordinal.dart';
 import 'package:flutter/services.dart';
 import 'package:crypto/crypto.dart';
 import 'package:hex/hex.dart';

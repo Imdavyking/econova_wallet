@@ -1,5 +1,5 @@
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/service/wallet_service.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter/material.dart';
 
 import '../interface/coin.dart';

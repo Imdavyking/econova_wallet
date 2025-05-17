@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:cryptowallet/main.dart';
-import 'package:cryptowallet/screens/nft_image_webview.dart';
-import 'package:cryptowallet/utils/app_config.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
-import 'package:cryptowallet/utils/send_erc_nft.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/screens/nft_image_webview.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/send_erc_nft.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../coins/nfts/erc_nft_coin.dart';

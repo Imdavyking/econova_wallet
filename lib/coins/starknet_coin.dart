@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:cryptowallet/extensions/big_int_ext.dart';
-import 'package:cryptowallet/screens/stake_token.dart';
-import 'package:cryptowallet/service/ai_agent_service.dart';
-import 'package:cryptowallet/service/wallet_service.dart';
-import 'package:cryptowallet/utils/starknet_call.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/screens/stake_token.dart';
+import 'package:wallet_app/service/ai_agent_service.dart';
+import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/utils/starknet_call.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

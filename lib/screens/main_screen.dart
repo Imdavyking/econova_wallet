@@ -1,9 +1,9 @@
-import 'package:cryptowallet/screens/enter_phrase.dart';
-import 'package:cryptowallet/screens/recovery_pharse.dart';
-import 'package:cryptowallet/screens/select_blockchain.dart';
-import 'package:cryptowallet/screens/view_only_wallet.dart';
-import 'package:cryptowallet/screens/enter_private_key.dart';
-import 'package:cryptowallet/utils/app_config.dart';
+import 'package:wallet_app/screens/enter_phrase.dart';
+import 'package:wallet_app/screens/recovery_pharse.dart';
+import 'package:wallet_app/screens/select_blockchain.dart';
+import 'package:wallet_app/screens/view_only_wallet.dart';
+import 'package:wallet_app/screens/enter_private_key.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

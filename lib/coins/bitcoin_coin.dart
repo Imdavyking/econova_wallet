@@ -15,8 +15,8 @@ import 'package:http/http.dart' as http;
 import 'package:bitbox/bitbox.dart' as bitbox;
 
 import 'package:http/http.dart';
-import 'package:cryptowallet/utils/pos_networks.dart';
-import 'package:cryptowallet/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/pos_networks.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:http/http.dart' as http;
 
 import '../interface/coin.dart';

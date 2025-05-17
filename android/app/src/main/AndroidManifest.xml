@@ -20,6 +20,8 @@
         android:name="android.hardware.fingerprint"
         android:required="false" />
 
+   
+
 
    <application
         android:requestLegacyExternalStorage="true"
