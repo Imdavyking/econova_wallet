@@ -7,9 +7,11 @@ const walletAbbr = 'ECA';
 const walletName = 'Econova';
 const walletURL = "https://econova.vercel.app";
 const walletIconURL = "$walletURL/img/logo.png";
-const walletDexProviderUrl = 'https://app.ashswap.io/swap/';
+const walletDexProviderUrl =
+    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
 
-const stakeDexProviderUrl = 'https://app.ashswap.io/pool/';
+const stakeDexProviderUrl =
+    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
 const fiatDexProviderUrl = 'https://paxful.com/';
 // const browserUrl = 'http://10.0.2.2:5500/lib/screens/demo.html';
 const browserUrl =
