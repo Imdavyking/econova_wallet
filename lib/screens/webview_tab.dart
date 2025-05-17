@@ -653,13 +653,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           return;
         }
 
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-        };
         await signMessage(
           context: context,
           messageType: typedMessageSignKey,
@@ -669,7 +662,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           onConfirm: () async {
             try {
               final typedData = TypedData.fromJson(params);
-
               print('Typed Data: $typedData');
 
               final hash = typedData.hash(Felt.fromHexString(coinData.address));
@@ -681,8 +673,15 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                 messageHash: hash,
               );
 
-              print(signature.r);
-              print(signature.s);
+              final responseData = {
+                "origin": origin,
+                "requestId": requestId,
+                "chainId": chainId,
+                "address": coinData.address,
+                "requestType": requestType,
+              };
+
+              await sendResponse(responseData);
 
               // ['708430212362690578481737385168447582349670715079420394525131553001725572698', '1397272340006992913981501630459872567993254742548111796371322808616951954156']
 

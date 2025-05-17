@@ -5,7 +5,7 @@
 
 import 'dart:convert';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
+import 'package:logger/logger.dart';
 import 'package:starknet/starknet.dart';
 import 'encode.dart';
 import 'merkle_tree.dart';
@@ -239,6 +239,7 @@ void _assertRange(
 BigInt getMessageHash(TypedData typedData, BigInt account) {
   final config = revisionConfiguration[typedData.revision]!;
 
+  final logger = Logger();
   final message = <BigInt>[
     MESSAGE_PREFIX_VALUE,
     typedData.domain.encodedHash(),
@@ -255,7 +256,23 @@ BigInt getMessageHash(TypedData typedData, BigInt account) {
     ),
   ];
 
+  logger.i(
+    'Message: ${message.map((m) => Felt(m).toHexString()).toList()}',
+  );
+
+  //  [0x537461726b4e6574204d657373616765, 0x70218c9ecba113c0ee6d6cfa4c93bb7dcc39de7c158829073b2d2ffec96c4a0, 0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1, 0x5ae640c486d1918486d21c4487de650447266134fc81142bfdf866c04350f9a]
+// 0x5ae640c486d1918486d21c4487de650447266134fc81142bfdf866c04350f9a
+//0x7b77f67b49109ba59a1aa5153e5a03d71ba6e9eb1cf8fe93dc4fa22d95e5878
+  print("try hash : ${computeHashOnElements(message)}");
   return config.hashMethod(message);
+}
+
+BigInt computeHashOnElements(List<BigInt> elements) {
+  final extended = [...elements, BigInt.from(elements.length)];
+  return extended.fold<BigInt>(
+    BigInt.zero,
+    (acc, el) => pedersenHash(acc, el),
+  );
 }
 
 // Gets the hash of a struct
@@ -276,6 +293,7 @@ String _getStructHash(
   return config.hashMethod(bigIntValues).toRadixString(16);
 }
 
+// Report issue to github
 // Encodes data for signing
 List<List<dynamic>> _encodeData<T extends TypedData>(
   Map<String, List<SNIP12TypedParameter>> types,
@@ -289,11 +307,9 @@ List<List<dynamic>> _encodeData<T extends TypedData>(
     throw Exception('Type $type not found in types definition');
   }
 
-  // Initialize with type hash
   final returnTypes = ['felt'];
   final values = [_getTypeHash(types, type, revision)];
 
-  // Process each field in the type
   for (final field in targetType) {
     final value = data[field.name];
     if (value == null && field.type != 'enum') {
@@ -301,7 +317,7 @@ List<List<dynamic>> _encodeData<T extends TypedData>(
     }
 
     final ctx = _Context(parent: type, key: field.name);
-    final values = _encodeValue(
+    final encoded = _encodeValue(
       types,
       field.type,
       value,
@@ -309,8 +325,8 @@ List<List<dynamic>> _encodeData<T extends TypedData>(
       revision,
     );
 
-    final fieldType = values[0];
-    final encodedValue = values[1];
+    final fieldType = encoded[0];
+    final encodedValue = encoded[1];
 
     returnTypes.add(fieldType);
     values.add(encodedValue);

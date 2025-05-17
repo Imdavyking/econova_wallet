@@ -14,3 +14,6 @@
 | Staking         | `CMD_stakeTokens`           | Command | Not done                     |
 | Portfolio Value | `QRY_getPortfolioValue`     | Query   | Not done                     |
 | Dapp Browser    | N/A                         | Feature | Low priority                 |
+
+
+tell starknet.dart team about `List<List<dynamic>> _encodeData<T extends TypedData>` bug i fix,it was not taking new array element before
