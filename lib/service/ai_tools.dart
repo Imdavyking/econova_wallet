@@ -523,6 +523,62 @@ class AItools {
       getInputFromJson: _GetSwitchCoin.fromJson,
     );
 
+    final deployMeme = Tool.fromFunction<_GetDeployMemeInput, String>(
+      name: 'CMD_deployMeme',
+      description: 'Tool for deploying a meme token',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'name': {
+            'type': 'string',
+            'description': 'The name of the meme token',
+          },
+          'symbol': {
+            'type': 'string',
+            'description': 'The symbol of the meme token',
+          },
+          'initialSupply': {
+            'type': 'string',
+            'description': 'The initial supply of the meme token',
+          },
+        },
+        'required': [
+          'name',
+          'symbol',
+          'initialSupply',
+        ],
+      },
+      func: (final _GetDeployMemeInput toolInput) async {
+        String name = toolInput.name;
+        String symbol = toolInput.symbol;
+        String initialSupply = toolInput.initialSupply;
+
+        try {
+          final message =
+              'You are about to deploy a meme token with name $name, symbol $symbol, and initial supply $initialSupply';
+          final confirmation = await confirmTransaction(message);
+          if (confirmation != null) {
+            return confirmation;
+          }
+          final memeData = await coin.deployMemeCoin(
+            name: name,
+            symbol: symbol,
+            initialSupply: initialSupply,
+          );
+          if (memeData.txHash == null) {
+            return 'Failed to deploy meme token';
+          }
+
+          final tokenAddress = memeData.tokenAddress;
+
+          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.txHash} ${coin.formatTxHash(memeData.txHash!)}. Token address: $tokenAddress';
+        } catch (e) {
+          return 'Failed to deploy meme token: $e';
+        }
+      },
+      getInputFromJson: _GetDeployMemeInput.fromJson,
+    );
+
     return [
       addressTool,
       resolveDomainNameTool,
@@ -536,6 +592,7 @@ class AItools {
       unstakeTool,
       claimRewardsTool,
       stakeRewardsTool,
+      deployMeme,
     ];
   }
 }
@@ -662,6 +719,26 @@ class _GetTransferInput {
       recipient: json['recipient'] as String,
       tokenAddress: json['tokenAddress'] as String,
       amount: json['amount'] as num,
+    );
+  }
+}
+
+class _GetDeployMemeInput {
+  final String name;
+  final String symbol;
+  final String initialSupply;
+
+  _GetDeployMemeInput({
+    required this.name,
+    required this.symbol,
+    required this.initialSupply,
+  });
+
+  factory _GetDeployMemeInput.fromJson(Map<String, dynamic> json) {
+    return _GetDeployMemeInput(
+      name: json['name'] as String,
+      symbol: json['symbol'] as String,
+      initialSupply: json['initialSupply'] as String,
     );
   }
 }

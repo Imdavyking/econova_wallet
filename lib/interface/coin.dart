@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
@@ -129,6 +130,17 @@ abstract class Coin {
   String? tokenAddress() => null;
 
   String? get badgeImage => null;
+
+  Future<DeployMeme> deployMemeCoin({
+    required String name,
+    required String symbol,
+    required String initialSupply,
+  }) async {
+    return const DeployMeme(
+      txHash: null,
+      tokenAddress: null,
+    );
+  }
 
   Future<AccountData> importData(String data) async {
     if (WalletService.isPharseKey()) {
