@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 
 class ConfirmTransactionScreen extends StatelessWidget {
   final String message;
-  const ConfirmTransactionScreen({Key? key, required this.message})
-      : super(key: key);
+  const ConfirmTransactionScreen({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +44,9 @@ class ConfirmTransactionScreen extends StatelessWidget {
                     final auth = await authenticate(
                       NavigationService.navigatorKey.currentContext!,
                     );
-                    if (Navigator.canPop(context)) Navigator.pop(context, auth);
+                    if (context.mounted && Navigator.canPop(context)) {
+                      Navigator.pop(context, auth);
+                    }
                   },
                   style:
                       ElevatedButton.styleFrom(backgroundColor: Colors.green),
