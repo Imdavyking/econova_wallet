@@ -5,8 +5,7 @@ import 'dart:math';
 import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
-import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar
-    hide Row;
+import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
 
 import '../interface/coin.dart';
 import '../main.dart';
