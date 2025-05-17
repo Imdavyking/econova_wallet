@@ -1203,6 +1203,7 @@ connectWalletModal({
   required Function onConfirm,
   required Function()? onReject,
 }) async {
+  if (!context.mounted) return;
   final localization = AppLocalizations.of(context)!;
   ValueNotifier<bool> isSigning = ValueNotifier(false);
   await slideUpPanel(
@@ -3448,5 +3449,3 @@ Future<String?> downloadFile(String url, [String? filename]) async {
   }
   return null;
 }
-
-

@@ -415,7 +415,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           jsData.id ?? 0,
         );
 
-        Navigator.pop(context);
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
       },
       onReject: () async {
         if (haveNotExecuted) {
@@ -573,6 +575,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
             await sendResponse(responseData);
             return;
           }
+          if (!mounted) return;
           await connectWalletModal(
             context: context,
             url: origin,
@@ -586,12 +589,16 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
               } catch (e) {
                 await sendError(e.toString().replaceAll('"', '\''));
               } finally {
-                Navigator.pop(context);
+                if (mounted && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
               }
             },
             onReject: () async {
               await sendError('user rejected connection');
-              Navigator.pop(context);
+              if (mounted && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             },
           );
           return;
@@ -632,12 +639,16 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
             } catch (e) {
               await sendError(e.toString().replaceAll('"', '\''));
             } finally {
-              Navigator.pop(context);
+              if (mounted && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
           onReject: () async {
             await sendError('user rejected transaction');
-            Navigator.pop(context);
+            if (mounted && Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
           },
           title: 'Sign Transaction',
         );
@@ -706,12 +717,16 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
             } catch (e) {
               await sendError(e.toString().replaceAll('"', '\''));
             } finally {
-              Navigator.pop(context);
+              if (mounted && Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
           onReject: () async {
             await sendError('user rejected signature');
-            Navigator.pop(context);
+            if (mounted && Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
           },
         );
       } else if (badTypes.contains(requestType)) {
@@ -961,51 +976,55 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                         {
                           String message = reponse['data']['message'];
 
-                          await signMessage(
-                            context: context,
-                            messageType: '',
-                            data: message,
-                            networkIcon: null,
-                            name: null,
-                            onReject: () async {
-                              Navigator.pop(context);
-                            },
-                            onConfirm: () async {
-                              try {
-                                Uint8List serialized =
-                                    MultiversxCoin.serializeForSigning(
-                                  message,
-                                );
-                                multiversx.UserSigner signer =
-                                    keys.signer as multiversx.UserSigner;
-                                final signature =
-                                    await compute(MultiversxCoin.signMessage, {
-                                  'signer': signer.secretKey,
-                                  'message': serialized,
-                                });
-
-                                var t = json.encode(
-                                  {
-                                    "target": "erdw-contentScript",
-                                    "type": "",
-                                    "data": {
-                                      "message": message,
-                                      "signature": bytesToHex(signature),
-                                    }
-                                  },
-                                );
-
-                                await _controller!.evaluateJavascript(
-                                  source:
-                                      "window.postMessage($t, window.origin)",
-                                );
-                              } catch (_) {
-                              } finally {
+                          if (context.mounted) {
+                            await signMessage(
+                              context: context,
+                              messageType: '',
+                              data: message,
+                              networkIcon: null,
+                              name: null,
+                              onReject: () async {
                                 Navigator.pop(context);
-                              }
-                            },
-                          );
+                              },
+                              onConfirm: () async {
+                                try {
+                                  Uint8List serialized =
+                                      MultiversxCoin.serializeForSigning(
+                                    message,
+                                  );
+                                  multiversx.UserSigner signer =
+                                      keys.signer as multiversx.UserSigner;
+                                  final signature = await compute(
+                                      MultiversxCoin.signMessage, {
+                                    'signer': signer.secretKey,
+                                    'message': serialized,
+                                  });
 
+                                  var t = json.encode(
+                                    {
+                                      "target": "erdw-contentScript",
+                                      "type": "",
+                                      "data": {
+                                        "message": message,
+                                        "signature": bytesToHex(signature),
+                                      }
+                                    },
+                                  );
+
+                                  await _controller!.evaluateJavascript(
+                                    source:
+                                        "window.postMessage($t, window.origin)",
+                                  );
+                                } catch (_) {
+                                } finally {
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                              },
+                            );
+                          }
                           break;
                         }
                       case "signTransactions":
@@ -1025,105 +1044,115 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               data = txDataToUintList(e.data!);
                             }
 
-                            await signMultiversXTransaction(
-                              gasPrice: '${e.gasPrice}',
-                              to: e.receiver,
-                              from: jsData.from,
-                              txData: e.data ?? '',
-                              value_: e.value,
-                              networkIcon: null,
-                              context: context,
-                              gasLimit: '${e.gasLimit}',
-                              symbol: 'EGLD',
-                              chainId: e.chainId,
-                              name: '',
-                              onConfirm: () async {
-                                try {
-                                  await keys.synchronize(coin.getProxy());
+                            if (context.mounted) {
+                              await signMultiversXTransaction(
+                                gasPrice: '${e.gasPrice}',
+                                to: e.receiver,
+                                from: jsData.from,
+                                txData: e.data ?? '',
+                                value_: e.value,
+                                networkIcon: null,
+                                context: context,
+                                gasLimit: '${e.gasLimit}',
+                                symbol: 'EGLD',
+                                chainId: e.chainId,
+                                name: '',
+                                onConfirm: () async {
+                                  try {
+                                    await keys.synchronize(coin.getProxy());
 
-                                  final networkConfig = await coin
-                                      .getProxy()
-                                      .getNetworkConfiguration();
+                                    final networkConfig = await coin
+                                        .getProxy()
+                                        .getNetworkConfiguration();
 
-                                  int nonce =
-                                      e.nonce ?? keys.account.nonce.value;
+                                    int nonce =
+                                        e.nonce ?? keys.account.nonce.value;
 
-                                  int gasPrice = e.gasPrice ??
-                                      networkConfig.minGasPrice.value;
+                                    int gasPrice = e.gasPrice ??
+                                        networkConfig.minGasPrice.value;
 
-                                  int gasLimit = e.gasLimit ??
-                                      networkConfig.minGasLimit.value;
+                                    int gasLimit = e.gasLimit ??
+                                        networkConfig.minGasLimit.value;
 
-                                  int transVersion = e.version ??
-                                      networkConfig.minTransactionVersion.value;
+                                    int transVersion = e.version ??
+                                        networkConfig
+                                            .minTransactionVersion.value;
 
-                                  String balance = e.value ?? '0';
+                                    String balance = e.value ?? '0';
 
-                                  final trans = multiversx.Transaction(
-                                    nonce: multiversx.Nonce(nonce),
-                                    chainId: multiversx.ChainId(e.chainId),
-                                    sender: multiversx.Address.fromBech32(
-                                      jsData.from,
-                                    ),
-                                    receiver: multiversx.Address.fromBech32(
-                                      e.receiver,
-                                    ),
-                                    gasPrice: multiversx.GasPrice(gasPrice),
-                                    gasLimit: multiversx.GasLimit(gasLimit),
-                                    transactionVersion:
-                                        multiversx.TransactionVersion(
-                                      transVersion,
-                                    ),
-                                    balance: multiversx.Balance(
-                                      BigInt.parse(balance),
-                                    ),
-                                    data: multiversx.TransactionPayload(data),
+                                    final trans = multiversx.Transaction(
+                                      nonce: multiversx.Nonce(nonce),
+                                      chainId: multiversx.ChainId(e.chainId),
+                                      sender: multiversx.Address.fromBech32(
+                                        jsData.from,
+                                      ),
+                                      receiver: multiversx.Address.fromBech32(
+                                        e.receiver,
+                                      ),
+                                      gasPrice: multiversx.GasPrice(gasPrice),
+                                      gasLimit: multiversx.GasLimit(gasLimit),
+                                      transactionVersion:
+                                          multiversx.TransactionVersion(
+                                        transVersion,
+                                      ),
+                                      balance: multiversx.Balance(
+                                        BigInt.parse(balance),
+                                      ),
+                                      data: multiversx.TransactionPayload(data),
+                                    );
+
+                                    var signTrans = await compute(
+                                        MultiversxCoin.signTransaction, {
+                                      'signer': keys.signer,
+                                      'transaction': trans,
+                                    });
+
+                                    multiversx.Transaction txHash = signTrans;
+                                    allTrans[i].signature =
+                                        txHash.signature.hex;
+
+                                    var t = json.encode({
+                                      'target': "erdw-contentScript",
+                                      'type': '',
+                                      'data': allTrans.toList(),
+                                    });
+
+                                    await _controller!.evaluateJavascript(
+                                      source:
+                                          "window.postMessage($t, window.origin)",
+                                    );
+                                  } catch (e, sk) {
+                                    if (kDebugMode) {
+                                      print(e);
+                                      print(sk);
+                                    }
+                                  } finally {
+                                    if (context.mounted &&
+                                        Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                onReject: () async {
+                                  var t = json.encode(
+                                    {
+                                      "target": "erdw-contentScript",
+                                      "type": "",
+                                      "data": {"name": "CanceledError"}
+                                    },
                                   );
-
-                                  var signTrans = await compute(
-                                      MultiversxCoin.signTransaction, {
-                                    'signer': keys.signer,
-                                    'transaction': trans,
-                                  });
-
-                                  multiversx.Transaction txHash = signTrans;
-                                  allTrans[i].signature = txHash.signature.hex;
-
-                                  var t = json.encode({
-                                    'target': "erdw-contentScript",
-                                    'type': '',
-                                    'data': allTrans.toList(),
-                                  });
-
                                   await _controller!.evaluateJavascript(
                                     source:
                                         "window.postMessage($t, window.origin)",
                                   );
-                                } catch (e, sk) {
-                                  if (kDebugMode) {
-                                    print(e);
-                                    print(sk);
-                                  }
-                                } finally {
-                                  Navigator.pop(context);
-                                }
-                              },
-                              onReject: () async {
-                                var t = json.encode(
-                                  {
-                                    "target": "erdw-contentScript",
-                                    "type": "",
-                                    "data": {"name": "CanceledError"}
-                                  },
-                                );
-                                await _controller!.evaluateJavascript(
-                                  source:
-                                      "window.postMessage($t, window.origin)",
-                                );
 
-                                Navigator.pop(context);
-                              },
-                            );
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              );
+                            }
                           }
 
                           break;
@@ -1131,74 +1160,83 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                       case "connect":
                         {
-                          await connectWalletModal(
-                            context: context,
-                            url: reponse['url'],
-                            authToken: reponse['data'],
-                            onConfirm: () async {
-                              try {
-                                final String authToken = reponse['data'];
-                                List<int> signature = [];
+                          if (context.mounted) {
+                            await connectWalletModal(
+                              context: context,
+                              url: reponse['url'],
+                              authToken: reponse['data'],
+                              onConfirm: () async {
+                                try {
+                                  final String authToken = reponse['data'];
+                                  List<int> signature = [];
 
-                                final hasToken = authToken.trim() != '';
+                                  final hasToken = authToken.trim() != '';
 
-                                if (hasToken) {
-                                  String message =
-                                      '${multiversxRes.address}$authToken{}';
+                                  if (hasToken) {
+                                    String message =
+                                        '${multiversxRes.address}$authToken{}';
 
-                                  Uint8List serialized =
-                                      MultiversxCoin.serializeForSigning(
-                                          message);
+                                    Uint8List serialized =
+                                        MultiversxCoin.serializeForSigning(
+                                            message);
 
-                                  multiversx.UserSigner signer =
-                                      keys.signer as multiversx.UserSigner;
+                                    multiversx.UserSigner signer =
+                                        keys.signer as multiversx.UserSigner;
 
-                                  signature = await compute(
-                                      MultiversxCoin.signMessage, {
-                                    'signer': signer.secretKey,
-                                    'message': serialized,
-                                  });
+                                    signature = await compute(
+                                        MultiversxCoin.signMessage, {
+                                      'signer': signer.secretKey,
+                                      'message': serialized,
+                                    });
+                                  }
+
+                                  final data = {
+                                    'address': multiversxRes.address,
+                                    'name': 'Main',
+                                  };
+
+                                  if (hasToken) {
+                                    data['signature'] = bytesToHex(signature);
+                                  }
+                                  var t = json.encode(
+                                    {
+                                      'target': "erdw-contentScript",
+                                      'type': 'connectResponse',
+                                      'data': data
+                                    },
+                                  );
+
+                                  await _controller!.evaluateJavascript(
+                                    source:
+                                        "window.postMessage($t, window.origin)",
+                                  );
+                                } catch (_) {
+                                } finally {
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
                                 }
-
-                                final data = {
-                                  'address': multiversxRes.address,
-                                  'name': 'Main',
-                                };
-
-                                if (hasToken) {
-                                  data['signature'] = bytesToHex(signature);
-                                }
+                              },
+                              onReject: () async {
                                 var t = json.encode(
                                   {
-                                    'target': "erdw-contentScript",
-                                    'type': 'connectResponse',
-                                    'data': data
+                                    "target": "erdw-contentScript",
+                                    "type": "connectResponse",
+                                    "data": {"name": "CanceledError"}
                                   },
                                 );
-
                                 await _controller!.evaluateJavascript(
                                   source:
                                       "window.postMessage($t, window.origin)",
                                 );
-                              } catch (_) {
-                              } finally {
-                                Navigator.pop(context);
-                              }
-                            },
-                            onReject: () async {
-                              var t = json.encode(
-                                {
-                                  "target": "erdw-contentScript",
-                                  "type": "connectResponse",
-                                  "data": {"name": "CanceledError"}
-                                },
-                              );
-                              await _controller!.evaluateJavascript(
-                                source: "window.postMessage($t, window.origin)",
-                              );
-                              Navigator.pop(context);
-                            },
-                          );
+                                if (context.mounted &&
+                                    Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                            );
+                          }
 
                           break;
                         }
@@ -1224,45 +1262,50 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                         {
                           final trxObj = NearDappTrx.fromJson(jsData.object!);
 
-                          await signNearTransaction(
-                            from: sendingAddress,
-                            txData: trxObj,
-                            networkIcon: null,
-                            context: context,
-                            coin: coin,
-                            symbol: coin.symbol,
-                            name: '',
-                            onConfirm: () async {
-                              try {
-                                final nearTrx = await coin.signDappTrx(trxObj);
+                          if (context.mounted) {
+                            await signNearTransaction(
+                              from: sendingAddress,
+                              txData: trxObj,
+                              networkIcon: null,
+                              context: context,
+                              coin: coin,
+                              symbol: coin.symbol,
+                              name: '',
+                              onConfirm: () async {
+                                try {
+                                  final nearTrx =
+                                      await coin.signDappTrx(trxObj);
 
-                                final sigData = jsonEncode({
-                                  'signature': nearTrx.signature,
-                                });
+                                  final sigData = jsonEncode({
+                                    'signature': nearTrx.signature,
+                                  });
 
-                                await _sendNearResult(sigData, jsData.id!);
-                              } catch (e, sk) {
-                                final error =
-                                    e.toString().replaceAll('"', '\'');
+                                  await _sendNearResult(sigData, jsData.id!);
+                                } catch (e, sk) {
+                                  final error =
+                                      e.toString().replaceAll('"', '\'');
 
-                                _sendNearError(error, jsData.id ?? 0);
-                                if (kDebugMode) {
-                                  print(e);
-                                  print(sk);
+                                  _sendNearError(error, jsData.id ?? 0);
+                                  if (kDebugMode) {
+                                    print(e);
+                                    print(sk);
+                                  }
+                                } finally {
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
                                 }
-                              } finally {
+                              },
+                              onReject: () async {
+                                _sendNearError(
+                                  'user rejected msg',
+                                  jsData.id ?? 0,
+                                );
                                 Navigator.pop(context);
-                              }
-                            },
-                            onReject: () async {
-                              _sendNearError(
-                                'user rejected msg',
-                                jsData.id ?? 0,
-                              );
-                              Navigator.pop(context);
-                            },
-                          );
-
+                              },
+                            );
+                          }
                           break;
                         }
                       case "signMessage":
@@ -1271,53 +1314,58 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             jsData.object ?? {},
                           );
 
-                          await signMessage(
-                            context: context,
-                            messageType: '',
-                            data: data.message,
-                            networkIcon: null,
-                            name: null,
-                            onReject: () async {
-                              _sendNearError(
-                                'user rejected msg',
-                                jsData.id ?? 0,
-                              );
-                              Navigator.pop(context);
-                            },
-                            onConfirm: () async {
-                              try {
-                                final params = NearMessageBorsh(
-                                  message: data.message,
-                                  recipient: data.recipient,
-                                  nonce: data.nonce.data,
-                                  callbackUrl: data.callbackUrl,
+                          if (context.mounted) {
+                            await signMessage(
+                              context: context,
+                              messageType: '',
+                              data: data.message,
+                              networkIcon: null,
+                              name: null,
+                              onReject: () async {
+                                _sendNearError(
+                                  'user rejected msg',
+                                  jsData.id ?? 0,
                                 );
-
-                                final msg = await coin
-                                    .signMessage(sha256(params.serialize()));
-
-                                final signedMsg = jsonEncode(
-                                  {
-                                    'accountId': sendingAddress,
-                                    'publicKey': base58.encode(
-                                      HEX.decode(sendingAddress) as Uint8List,
-                                    ),
-                                    'signature': base64.encode(msg),
-                                    'state': data.state,
-                                  },
-                                );
-
-                                await _sendNearResult(signedMsg, jsData.id!);
-                              } catch (e) {
-                                final error =
-                                    e.toString().replaceAll('"', '\'');
-
-                                _sendNearError(error, jsData.id ?? 0);
-                              } finally {
                                 Navigator.pop(context);
-                              }
-                            },
-                          );
+                              },
+                              onConfirm: () async {
+                                try {
+                                  final params = NearMessageBorsh(
+                                    message: data.message,
+                                    recipient: data.recipient,
+                                    nonce: data.nonce.data,
+                                    callbackUrl: data.callbackUrl,
+                                  );
+
+                                  final msg = await coin
+                                      .signMessage(sha256(params.serialize()));
+
+                                  final signedMsg = jsonEncode(
+                                    {
+                                      'accountId': sendingAddress,
+                                      'publicKey': base58.encode(
+                                        HEX.decode(sendingAddress) as Uint8List,
+                                      ),
+                                      'signature': base64.encode(msg),
+                                      'state': data.state,
+                                    },
+                                  );
+
+                                  await _sendNearResult(signedMsg, jsData.id!);
+                                } catch (e) {
+                                  final error =
+                                      e.toString().replaceAll('"', '\'');
+
+                                  _sendNearError(error, jsData.id ?? 0);
+                                } finally {
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                              },
+                            );
+                          }
 
                           break;
                         }
@@ -1341,35 +1389,40 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                             return;
                           }
-                          await connectWalletModal(
-                            context: context,
-                            url: jsData.url,
-                            onConfirm: () async {
-                              try {
-                                await _sendNearResult(addressData, jsData.id!);
+                          if (context.mounted) {
+                            await connectWalletModal(
+                              context: context,
+                              url: jsData.url,
+                              onConfirm: () async {
+                                try {
+                                  await _sendNearResult(
+                                      addressData, jsData.id!);
 
-                                await _saveWeb3Address(
-                                  'near',
-                                  sendingAddress,
+                                  await _saveWeb3Address(
+                                    'near',
+                                    sendingAddress,
+                                  );
+                                } catch (e) {
+                                  final error =
+                                      e.toString().replaceAll('"', '\'');
+
+                                  _sendNearError(error, jsData.id ?? 0);
+                                } finally {
+                                  if (context.mounted &&
+                                      Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                              },
+                              onReject: () async {
+                                _sendNearError(
+                                  'user rejected connection',
+                                  jsData.id ?? 0,
                                 );
-                              } catch (e) {
-                                final error =
-                                    e.toString().replaceAll('"', '\'');
-
-                                _sendNearError(error, jsData.id ?? 0);
-                              } finally {
                                 Navigator.pop(context);
-                              }
-                            },
-                            onReject: () async {
-                              _sendNearError(
-                                'user rejected connection',
-                                jsData.id ?? 0,
-                              );
-                              Navigator.pop(context);
-                            },
-                          );
-
+                              },
+                            );
+                          }
                           break;
                         }
                     }
@@ -1397,84 +1450,91 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           {
                             final data = JsTransactionObject.fromJson(
                                 jsData.object ?? {});
-                            await signEVMTransaction(
-                              gasPriceInWei_: null,
-                              to: data.to,
-                              from: sendingAddress,
-                              txData: data.data,
-                              valueInWei_: data.value,
-                              gasInWei_: null,
-                              networkIcon: null,
-                              context: context,
-                              symbol: coin.symbol,
-                              name: '',
-                              onConfirm: () async {
-                                try {
-                                  final client = Web3Client(
-                                    coin.rpc,
-                                    Client(),
-                                  );
 
-                                  final signedTransaction =
-                                      await client.signTransaction(
-                                    credentials,
-                                    Transaction(
-                                      to: data.to != null
-                                          ? EthereumAddress.fromHex(data.to!)
-                                          : null,
-                                      value: data.value != null
-                                          ? EtherAmount.inWei(
-                                              BigInt.parse(data.value!),
-                                            )
-                                          : null,
-                                      nonce: data.nonce != null
-                                          ? int.parse(data.nonce!)
-                                          : null,
-                                      data: data.data == null
-                                          ? null
-                                          : txDataToUintList(data.data!),
-                                      gasPrice: data.gasPrice != null
-                                          ? EtherAmount.inWei(
-                                              BigInt.parse(
-                                                data.gasPrice!,
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    chainId: chainId,
-                                  );
+                            if (context.mounted) {
+                              await signEVMTransaction(
+                                gasPriceInWei_: null,
+                                to: data.to,
+                                from: sendingAddress,
+                                txData: data.data,
+                                valueInWei_: data.value,
+                                gasInWei_: null,
+                                networkIcon: null,
+                                context: context,
+                                symbol: coin.symbol,
+                                name: '',
+                                onConfirm: () async {
+                                  try {
+                                    final client = Web3Client(
+                                      coin.rpc,
+                                      Client(),
+                                    );
 
-                                  final response = await client
-                                      .sendRawTransaction(signedTransaction);
+                                    final signedTransaction =
+                                        await client.signTransaction(
+                                      credentials,
+                                      Transaction(
+                                        to: data.to != null
+                                            ? EthereumAddress.fromHex(data.to!)
+                                            : null,
+                                        value: data.value != null
+                                            ? EtherAmount.inWei(
+                                                BigInt.parse(data.value!),
+                                              )
+                                            : null,
+                                        nonce: data.nonce != null
+                                            ? int.parse(data.nonce!)
+                                            : null,
+                                        data: data.data == null
+                                            ? null
+                                            : txDataToUintList(data.data!),
+                                        gasPrice: data.gasPrice != null
+                                            ? EtherAmount.inWei(
+                                                BigInt.parse(
+                                                  data.gasPrice!,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      chainId: chainId,
+                                    );
 
-                                  _sendResult(
+                                    final response = await client
+                                        .sendRawTransaction(signedTransaction);
+
+                                    _sendResult(
+                                      "ethereum",
+                                      response,
+                                      jsData.id ?? 0,
+                                    );
+                                  } catch (e, sk) {
+                                    if (kDebugMode) {
+                                      print(sk);
+                                    }
+
+                                    final error =
+                                        e.toString().replaceAll('"', '\'');
+                                    _sendError(
+                                        "ethereum", error, jsData.id ?? 0);
+                                  } finally {
+                                    if (context.mounted &&
+                                        Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                onReject: () async {
+                                  _sendError(
                                     "ethereum",
-                                    response,
+                                    'user rejected transaction',
                                     jsData.id ?? 0,
                                   );
-                                } catch (e, sk) {
-                                  if (kDebugMode) {
-                                    print(sk);
-                                  }
-
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-                                  _sendError("ethereum", error, jsData.id ?? 0);
-                                } finally {
                                   Navigator.pop(context);
-                                }
-                              },
-                              onReject: () async {
-                                _sendError(
-                                  "ethereum",
-                                  'user rejected transaction',
-                                  jsData.id ?? 0,
-                                );
-                                Navigator.pop(context);
-                              },
-                              title: 'Sign Transaction',
-                              chainId: chainId,
-                            );
+                                },
+                                title: 'Sign Transaction',
+                                chainId: chainId,
+                              );
+                            }
 
                             break;
                           }
@@ -1483,38 +1543,48 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             final data =
                                 JsDataModel.fromJson(jsData.object ?? {});
 
-                            await signMessage(
-                              context: context,
-                              messageType: personalSignKey,
-                              data: data.data,
-                              networkIcon: null,
-                              name: null,
-                              onConfirm: () async {
-                                try {
-                                  final signedData = credentials
-                                      .signPersonalMessageToUint8List(
-                                    txDataToUintList(data.data),
-                                  );
+                            if (context.mounted) {
+                              await signMessage(
+                                context: context,
+                                messageType: personalSignKey,
+                                data: data.data,
+                                networkIcon: null,
+                                name: null,
+                                onConfirm: () async {
+                                  try {
+                                    final signedData = credentials
+                                        .signPersonalMessageToUint8List(
+                                      txDataToUintList(data.data),
+                                    );
 
-                                  _sendResult(
-                                    "ethereum",
-                                    bytesToHex(signedData, include0x: true),
-                                    jsData.id ?? 0,
-                                  );
-                                } catch (e) {
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-                                  _sendError("ethereum", error, jsData.id ?? 0);
-                                } finally {
-                                  Navigator.pop(context);
-                                }
-                              },
-                              onReject: () {
-                                _sendError("ethereum",
-                                    'user rejected signature', jsData.id ?? 0);
-                                Navigator.pop(context);
-                              },
-                            );
+                                    _sendResult(
+                                      "ethereum",
+                                      bytesToHex(signedData, include0x: true),
+                                      jsData.id ?? 0,
+                                    );
+                                  } catch (e) {
+                                    final error =
+                                        e.toString().replaceAll('"', '\'');
+                                    _sendError(
+                                        "ethereum", error, jsData.id ?? 0);
+                                  } finally {
+                                    if (Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                onReject: () {
+                                  _sendError(
+                                      "ethereum",
+                                      'user rejected signature',
+                                      jsData.id ?? 0);
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              );
+                            }
+
                             break;
                           }
                         case "signMessage":
@@ -1524,49 +1594,50 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                   JsDataModel.fromJson(jsData.object ?? {});
 
                               String signedDataHex;
-
-                              await signMessage(
-                                context: context,
-                                messageType: normalSignKey,
-                                data: data.data,
-                                networkIcon: null,
-                                name: null,
-                                onConfirm: () async {
-                                  try {
+                              if (context.mounted) {
+                                await signMessage(
+                                  context: context,
+                                  messageType: normalSignKey,
+                                  data: data.data,
+                                  networkIcon: null,
+                                  name: null,
+                                  onConfirm: () async {
                                     try {
-                                      signedDataHex = EthSigUtil.signMessage(
-                                        privateKey: privateKey,
-                                        message: txDataToUintList(data.data),
-                                      );
+                                      try {
+                                        signedDataHex = EthSigUtil.signMessage(
+                                          privateKey: privateKey,
+                                          message: txDataToUintList(data.data),
+                                        );
+                                      } catch (e) {
+                                        Uint8List signedData = credentials
+                                            .signPersonalMessageToUint8List(
+                                          txDataToUintList(data.data),
+                                        );
+                                        signedDataHex = bytesToHex(
+                                          signedData,
+                                          include0x: true,
+                                        );
+                                      }
+                                      _sendResult("ethereum", signedDataHex,
+                                          jsData.id ?? 0);
                                     } catch (e) {
-                                      Uint8List signedData = credentials
-                                          .signPersonalMessageToUint8List(
-                                        txDataToUintList(data.data),
-                                      );
-                                      signedDataHex = bytesToHex(
-                                        signedData,
-                                        include0x: true,
-                                      );
+                                      final error =
+                                          e.toString().replaceAll('"', '\'');
+                                      _sendError(
+                                          "ethereum", error, jsData.id ?? 0);
+                                    } finally {
+                                      Navigator.pop(context);
                                     }
-                                    _sendResult("ethereum", signedDataHex,
-                                        jsData.id ?? 0);
-                                  } catch (e) {
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
+                                  },
+                                  onReject: () {
                                     _sendError(
-                                        "ethereum", error, jsData.id ?? 0);
-                                  } finally {
+                                        "ethereum",
+                                        'user rejected signature',
+                                        jsData.id ?? 0);
                                     Navigator.pop(context);
-                                  }
-                                },
-                                onReject: () {
-                                  _sendError(
-                                      "ethereum",
-                                      'user rejected signature',
-                                      jsData.id ?? 0);
-                                  Navigator.pop(context);
-                                },
-                              );
+                                  },
+                                );
+                              }
                             } catch (e) {
                               final error = e.toString().replaceAll('"', '\'');
                               _sendError("ethereum", error, jsData.id ?? 0);
@@ -1590,39 +1661,44 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               return;
                             }
 
-                            await signMessage(
-                              context: context,
-                              messageType: typedMessageSignKey,
-                              data: data.raw,
-                              networkIcon: null,
-                              name: null,
-                              onConfirm: () async {
-                                try {
-                                  String signedDataHex =
-                                      EthSigUtil.signTypedData(
-                                    privateKey: privateKey,
-                                    jsonData: data.raw,
-                                    version: TypedDataVersion.V4,
-                                  );
-                                  _sendResult(
-                                    "ethereum",
-                                    signedDataHex,
-                                    jsData.id ?? 0,
-                                  );
-                                } catch (e) {
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-                                  _sendError("ethereum", error, jsData.id ?? 0);
-                                } finally {
+                            if (context.mounted) {
+                              await signMessage(
+                                context: context,
+                                messageType: typedMessageSignKey,
+                                data: data.raw,
+                                networkIcon: null,
+                                name: null,
+                                onConfirm: () async {
+                                  try {
+                                    String signedDataHex =
+                                        EthSigUtil.signTypedData(
+                                      privateKey: privateKey,
+                                      jsonData: data.raw,
+                                      version: TypedDataVersion.V4,
+                                    );
+                                    _sendResult(
+                                      "ethereum",
+                                      signedDataHex,
+                                      jsData.id ?? 0,
+                                    );
+                                  } catch (e) {
+                                    final error =
+                                        e.toString().replaceAll('"', '\'');
+                                    _sendError(
+                                        "ethereum", error, jsData.id ?? 0);
+                                  } finally {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                onReject: () {
+                                  _sendError(
+                                      "ethereum",
+                                      'user rejected signature',
+                                      jsData.id ?? 0);
                                   Navigator.pop(context);
-                                }
-                              },
-                              onReject: () {
-                                _sendError("ethereum",
-                                    'user rejected signature', jsData.id ?? 0);
-                                Navigator.pop(context);
-                              },
-                            );
+                                },
+                              );
+                            }
 
                             break;
                           }
@@ -1661,37 +1737,43 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               );
                               return;
                             }
-                            await connectWalletModal(
-                                context: context,
-                                url: jsData.url,
-                                onConfirm: () async {
-                                  try {
-                                    await _setEthereumAddress(
-                                      jsData.id,
-                                      sendingAddress,
-                                    );
 
-                                    await _saveWeb3Address(
-                                      'ethereum',
-                                      sendingAddress,
-                                    );
-                                  } catch (e) {
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
+                            if (context.mounted) {
+                              await connectWalletModal(
+                                  context: context,
+                                  url: jsData.url,
+                                  onConfirm: () async {
+                                    try {
+                                      await _setEthereumAddress(
+                                        jsData.id,
+                                        sendingAddress,
+                                      );
+
+                                      await _saveWeb3Address(
+                                        'ethereum',
+                                        sendingAddress,
+                                      );
+                                    } catch (e) {
+                                      final error =
+                                          e.toString().replaceAll('"', '\'');
+                                      _sendError(
+                                          "ethereum", error, jsData.id ?? 0);
+                                    } finally {
+                                      if (context.mounted &&
+                                          Navigator.canPop(context)) {
+                                        Navigator.pop(context);
+                                      }
+                                    }
+                                  },
+                                  onReject: () async {
                                     _sendError(
-                                        "ethereum", error, jsData.id ?? 0);
-                                  } finally {
+                                      "ethereum",
+                                      'user rejected connection',
+                                      jsData.id ?? 0,
+                                    );
                                     Navigator.pop(context);
-                                  }
-                                },
-                                onReject: () async {
-                                  _sendError(
-                                    "ethereum",
-                                    'user rejected connection',
-                                    jsData.id ?? 0,
-                                  );
-                                  Navigator.pop(context);
-                                });
+                                  });
+                            }
 
                             break;
                           }
@@ -1844,84 +1926,93 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                 };
                                 addBlockChain.addAll(details);
 
-                                await addEthereumChain(
-                                  context: context,
-                                  jsonObj: json.encode(
-                                    Map.from({
-                                      'name': data.chainName,
-                                    })
-                                      ..addAll(switchJson)
-                                      ..remove('image')
-                                      ..remove('coinType'),
-                                  ),
-                                  onConfirm: () async {
-                                    try {
-                                      const id = 83;
-                                      final response = await post(
-                                        Uri.parse(
-                                          switchChain!.rpc,
-                                        ),
-                                        body: json.encode(
-                                          {
-                                            "jsonrpc": "2.0",
-                                            "method": "eth_chainId",
-                                            "params": [],
-                                            "id": id
+                                if (context.mounted) {
+                                  await addEthereumChain(
+                                    context: context,
+                                    jsonObj: json.encode(
+                                      Map.from({
+                                        'name': data.chainName,
+                                      })
+                                        ..addAll(switchJson)
+                                        ..remove('image')
+                                        ..remove('coinType'),
+                                    ),
+                                    onConfirm: () async {
+                                      try {
+                                        const id = 83;
+                                        final response = await post(
+                                          Uri.parse(
+                                            switchChain!.rpc,
+                                          ),
+                                          body: json.encode(
+                                            {
+                                              "jsonrpc": "2.0",
+                                              "method": "eth_chainId",
+                                              "params": [],
+                                              "id": id
+                                            },
+                                          ),
+                                          headers: {
+                                            "Content-Type": "application/json"
                                           },
-                                        ),
-                                        headers: {
-                                          "Content-Type": "application/json"
-                                        },
-                                      );
-                                      String responseBody = response.body;
-                                      if (response.statusCode ~/ 100 == 4 ||
-                                          response.statusCode ~/ 100 == 5) {
-                                        if (kDebugMode) {
-                                          print(responseBody);
-                                        }
-                                        throw Exception(responseBody);
-                                      }
-
-                                      final jsonResponse =
-                                          json.decode(responseBody);
-
-                                      final chainIdResponse =
-                                          BigInt.parse(jsonResponse['result'])
-                                              .toInt();
-
-                                      if (jsonResponse['id'] != id) {
-                                        throw Exception('invalid id returned');
-                                      } else if (chainIdResponse !=
-                                          switchChainId) {
-                                        throw Exception(
-                                          'chain Id different with eth_chainId',
                                         );
+                                        String responseBody = response.body;
+                                        if (response.statusCode ~/ 100 == 4 ||
+                                            response.statusCode ~/ 100 == 5) {
+                                          if (kDebugMode) {
+                                            print(responseBody);
+                                          }
+                                          throw Exception(responseBody);
+                                        }
+
+                                        final jsonResponse =
+                                            json.decode(responseBody);
+
+                                        final chainIdResponse =
+                                            BigInt.parse(jsonResponse['result'])
+                                                .toInt();
+
+                                        if (jsonResponse['id'] != id) {
+                                          throw Exception(
+                                              'invalid id returned');
+                                        } else if (chainIdResponse !=
+                                            switchChainId) {
+                                          throw Exception(
+                                            'chain Id different with eth_chainId',
+                                          );
+                                        }
+
+                                        await pref.put(
+                                          newEVMChainKey,
+                                          jsonEncode(addBlockChain),
+                                        );
+
+                                        getAllBlockchains.add(switchChain);
+
+                                        if (context.mounted &&
+                                            Navigator.canPop(context)) {
+                                          Navigator.pop(context);
+                                        }
+                                      } catch (e) {
+                                        final error =
+                                            e.toString().replaceAll('"', '\'');
+                                        _sendError(
+                                            "ethereum", error, jsData.id ?? 0);
+
+                                        if (context.mounted &&
+                                            Navigator.canPop(context)) {
+                                          Navigator.pop(context);
+                                        }
                                       }
+                                    },
+                                    onReject: () async {
+                                      _sendError("ethereum", 'canceled',
+                                          jsData.id ?? 0);
 
-                                      await pref.put(
-                                        newEVMChainKey,
-                                        jsonEncode(addBlockChain),
-                                      );
-
-                                      getAllBlockchains.add(switchChain);
-
-                                      switchNetwork = true;
                                       Navigator.pop(context);
-                                    } catch (e) {
-                                      final error =
-                                          e.toString().replaceAll('"', '\'');
-                                      _sendError(
-                                          "ethereum", error, jsData.id ?? 0);
-                                      Navigator.pop(context);
-                                    }
-                                  },
-                                  onReject: () async {
-                                    _sendError(
-                                        "ethereum", 'canceled', jsData.id ?? 0);
-
-                                    Navigator.pop(context);
-                                  },
-                                );
+                                    },
+                                  );
+                                }
                               }
                               if (switchNetwork) {
                                 final initString =
@@ -2123,7 +2214,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         return savedPermission;
       }
     }
-
+    if (!context.mounted) return WebNotificationPermission.DEFAULT;
+    if (!mounted) return WebNotificationPermission.DEFAULT;
     final permission = await showDialog<WebNotificationPermission>(
           context: context,
           builder: (context) {
