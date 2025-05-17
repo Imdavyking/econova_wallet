@@ -57,7 +57,6 @@ late String currencyJsonSearch;
 late String provider;
 late String nightly;
 late String webNotifer;
-late String abiJs;
 List<EthereumCoin> evmChains = [
   ...getEVMBlockchains(),
 ];
@@ -182,8 +181,6 @@ void main() async {
   webNotifer = await rootBundle.loadString('js/web_notification.js');
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
   currencyJsonSearch = await rootBundle.loadString('json/currencies.json');
-
-  abiJs = await rootBundle.loadString('js/abi-decoder.js');
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
