@@ -130,11 +130,11 @@ class StellarCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     stellar.AccountResponse account = await sdk.accounts.account(address);
-    List balances = account.balances!;
+    List balances = account.balances;
 
     for (stellar.Balance balance in balances) {
       if (balance.assetType == stellar.Asset.TYPE_NATIVE) {
-        return double.parse(balance.balance!);
+        return double.parse(balance.balance);
       }
     }
     return 0;
@@ -247,7 +247,7 @@ class StellarCoin extends Coin {
       stellar.Transaction transaction =
           stellar.TransactionBuilder(sender).addOperation(operation).build();
 
-      return transaction.fee! / pow(10, stellarDecimals);
+      return transaction.fee / pow(10, stellarDecimals);
     } catch (e, stackTrace) {
       if (kDebugMode) {
         print(stackTrace);
