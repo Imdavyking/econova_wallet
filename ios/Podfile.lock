@@ -7,10 +7,8 @@ PODS:
   - AppAuth/Core (1.7.5)
   - AppAuth/ExternalUserAgent (1.7.5):
     - AppAuth/Core
-  - cached_video_player (0.0.2):
+  - connectivity_plus (0.0.1):
     - Flutter
-    - KTVHTTPCache (~> 2.0.0)
-  - CocoaAsyncSocket (7.6.5)
   - device_info_plus (0.0.1):
     - Flutter
   - Flutter (1.0.0)
@@ -28,8 +26,6 @@ PODS:
   - flutter_local_notifications (0.0.1):
     - Flutter
   - flutter_secure_storage (6.0.0):
-    - Flutter
-  - flutter_sodium (0.0.1):
     - Flutter
   - FMDB (2.7.5):
     - FMDB/standard (= 2.7.5)
@@ -49,10 +45,6 @@ PODS:
     - Flutter
   - image_picker_ios (0.0.1):
     - Flutter
-  - KTVCocoaHTTPServer (1.0.0):
-    - CocoaAsyncSocket
-  - KTVHTTPCache (2.0.1):
-    - KTVCocoaHTTPServer
   - libphonenumber (0.0.1):
     - Flutter
     - libPhoneNumber-iOS
@@ -89,6 +81,8 @@ PODS:
     - FlutterMacOS
   - smart_auth (0.0.1):
     - Flutter
+  - sodium_libs (2.1.0):
+    - Flutter
   - sqflite (0.0.2):
     - Flutter
     - FMDB (>= 2.7.5)
@@ -96,10 +90,13 @@ PODS:
     - Flutter
   - vibration (1.7.5):
     - Flutter
+  - video_player_avfoundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
 
 DEPENDENCIES:
   - agent_dart (from `.symlinks/plugins/agent_dart/ios`)
-  - cached_video_player (from `.symlinks/plugins/cached_video_player/ios`)
+  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_downloader (from `.symlinks/plugins/flutter_downloader/ios`)
@@ -107,7 +104,6 @@ DEPENDENCIES:
   - flutter_js (from `.symlinks/plugins/flutter_js/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
-  - flutter_sodium (from `.symlinks/plugins/flutter_sodium/ios`)
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/ios`)
   - icloud_storage (from `.symlinks/plugins/icloud_storage/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
@@ -125,20 +121,19 @@ DEPENDENCIES:
   - share (from `.symlinks/plugins/share/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - smart_auth (from `.symlinks/plugins/smart_auth/ios`)
+  - sodium_libs (from `.symlinks/plugins/sodium_libs/ios`)
   - sqflite (from `.symlinks/plugins/sqflite/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - vibration (from `.symlinks/plugins/vibration/ios`)
+  - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/darwin`)
 
 SPEC REPOS:
   trunk:
     - AppAuth
-    - CocoaAsyncSocket
     - FMDB
     - GoogleSignIn
     - GTMAppAuth
     - GTMSessionFetcher
-    - KTVCocoaHTTPServer
-    - KTVHTTPCache
     - libPhoneNumber-iOS
     - MTBBarcodeScanner
     - OrderedSet
@@ -146,8 +141,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   agent_dart:
     :path: ".symlinks/plugins/agent_dart/ios"
-  cached_video_player:
-    :path: ".symlinks/plugins/cached_video_player/ios"
+  connectivity_plus:
+    :path: ".symlinks/plugins/connectivity_plus/ios"
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
@@ -162,8 +157,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
-  flutter_sodium:
-    :path: ".symlinks/plugins/flutter_sodium/ios"
   google_sign_in_ios:
     :path: ".symlinks/plugins/google_sign_in_ios/ios"
   icloud_storage:
@@ -198,56 +191,58 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   smart_auth:
     :path: ".symlinks/plugins/smart_auth/ios"
+  sodium_libs:
+    :path: ".symlinks/plugins/sodium_libs/ios"
   sqflite:
     :path: ".symlinks/plugins/sqflite/ios"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
   vibration:
     :path: ".symlinks/plugins/vibration/ios"
+  video_player_avfoundation:
+    :path: ".symlinks/plugins/video_player_avfoundation/darwin"
 
 SPEC CHECKSUMS:
-  agent_dart: 802bad37233df867d8e7113ae941f682e04f4328
+  agent_dart: 8f3c96d983b37b8c06c1df2b36f98951da4c5a8c
   AppAuth: 501c04eda8a8d11f179dbe8637b7a91bb7e5d2fa
-  cached_video_player: 9f225ed1c46bda0fe287b8288742329d441e2cc5
-  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
-  device_info_plus: e5c5da33f982a436e103237c0c85f9031142abed
+  connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
+  device_info_plus: d668d0dcad87727e865495c472b911b15d7ee26a
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_downloader: b7301ae057deadd4b1650dc7c05375f10ff12c39
-  flutter_inappwebview_ios: 97215cf7d4677db55df76782dbd2930c5e1c1ea0
-  flutter_js: 95929d4e146e8ceb1c8e1889d8c2065c5d840076
-  flutter_local_notifications: 0c0b1ae97e741e1521e4c1629a459d04b9aec743
-  flutter_secure_storage: 23fc622d89d073675f2eaa109381aefbcf5a49be
-  flutter_sodium: c84426b4de738514b5b66cfdeb8a06634e72fe0b
+  flutter_downloader: 78da0da1084e709cbfd3b723c7ea349c71681f09
+  flutter_inappwebview_ios: 25b61a1b550d1068e4ddaf490fc1d03c2ce6828d
+  flutter_js: 867813c1830e1d9b2c5d547cdb6f61801e2f2145
+  flutter_local_notifications: ef18f0537538fcd18e9106b3ddc91cc10b4e579a
+  flutter_secure_storage: 2c2ff13db9e0a5647389bff88b0ecac56e3f3418
   FMDB: 2ce00b547f966261cd18927a3ddb07cb6f3db82a
-  google_sign_in_ios: 8115e3fbe097e6509beb819ed602d47369d9011f
+  google_sign_in_ios: 8c4b89589e876fc9fcf22035d6208077008f6c03
   GoogleSignIn: d4281ab6cf21542b1cfaff85c191f230b399d2db
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  icloud_storage: d9ac7a33ced81df08ba7ea1bf3099cc0ee58f60a
-  image_picker_ios: b786a5dcf033a8336a657191401bfdf12017dabb
-  KTVCocoaHTTPServer: df8d7b861e603ff8037e9b2138aca2563a6b768d
-  KTVHTTPCache: 588c3eb16f6bd1e6fde1e230dabfb7bd4e490a4d
-  libphonenumber: bd14d5abfc5939ab0b0767234e2d8e2593af258e
+  icloud_storage: e55639f0c0d7cb2b0ba9c0b3d5968ccca9cd9aa2
+  image_picker_ios: 05df248afc810dcc125e2174c441a9a379ec65c2
+  libphonenumber: ba0492b04d444bdcaef260a276a2b614b13b1034
   libPhoneNumber-iOS: 0a32a9525cf8744fe02c5206eb30d571e38f7d75
-  libphonenumber_plugin: 7cf755ad1656145935d6c208173a476bd3f12898
-  local_auth: 1740f55d7af0a2e2a8684ce225fe79d8931e808c
+  libphonenumber_plugin: d437a71e638d3995dd74b15062642675b8c460c7
+  local_auth: 2efda21bf69f7ccf40eccf3ed860081e57e92ac9
   MTBBarcodeScanner: f453b33c4b7dfe545d8c6484ed744d55671788cb
   OrderedSet: aaeb196f7fef5a9edf55d89760da9176ad40b93c
-  package_info_plus: 6c92f08e1f853dc01228d6f553146438dafcd14e
-  path_provider_ios: 14f3d2fd28c4fdb42f44e0f751d12861c43cee02
-  permission_handler_apple: 44366e37eaf29454a1e7b1b7d736c2cceaeb17ce
-  qr_code_scanner: bb67d64904c3b9658ada8c402e8b4d406d5d796e
-  receive_sharing_intent: c0d87310754e74c0f9542947e7cbdf3a0335a3b1
-  rive_common: cbbac3192af00d7341f19dae2f26298e9e37d99e
-  scan: aea35bb4aa59ccc8839c576a18cd57c7d492cc86
-  screenshot_callback: b173e7f4bd8d2ef14a9a5e5a77c0ac6a47578608
-  share: 0b2c3e82132f5888bccca3351c504d0003b3b410
-  shared_preferences_foundation: 986fc17f3d3251412d18b0265f9c64113a8c2472
-  smart_auth: 4bedbc118723912d0e45a07e8ab34039c19e04f2
-  sqflite: 6d358c025f5b867b29ed92fc697fd34924e11904
-  url_launcher_ios: 839c58cdb4279282219f5e248c3321761ff3c4de
-  vibration: 7d883d141656a1c1a6d8d238616b2042a51a1241
+  package_info_plus: ae4a63389b62b5be8544b36bfc5b069617938813
+  path_provider_ios: 025d0bdaa9f9ab016700ac1e07ff63415cf638e9
+  permission_handler_apple: 08f8206adee3b28ea33966c224b7228eabaaf6a9
+  qr_code_scanner: d77f94ecc9abf96d9b9b8fc04ef13f611e5a147a
+  receive_sharing_intent: bbbab6c22538c99fa709fa50c34cfe9c90c5cf03
+  rive_common: 007aa316d587becf7c23da8cce6ff3d4b0be8ac7
+  scan: 28e4f67b9b0d63ccd5c649acc3d6aaf94c0a7a81
+  screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
+  share: a34936589f3090d59481bcdc5c30cc9dd47c75f6
+  shared_preferences_foundation: 9febbcd5d8b5587372cd230ce67c9dde54338f6b
+  smart_auth: 33668081c5f646af84f10492a067d25fdcd16951
+  sodium_libs: 99c8fa5b5aed8ee81960a1320a42d6ebf533773f
+  sqflite: 954affaf2567c73cda074440299a625e3b2cbf8a
+  url_launcher_ios: 2d16952b3a69ce3f0b2c7b12d38ba18ff5177fc0
+  vibration: 8e2f50fc35bb736f9eecb7dd9f7047fbb6a6e888
+  video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b
 
 PODFILE CHECKSUM: a6eebfa128b253764edba7caef7791f2ec41a272
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2
