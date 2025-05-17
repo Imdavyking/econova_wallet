@@ -21,9 +21,6 @@ const strkNativeToken =
 
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
-const maxFeeWei = 10000000000000;
-
-final maxFeeEth = maxFeeWei / pow(10, 18);
 
 class StarknetCoin extends Coin {
   String api;
@@ -768,13 +765,6 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final address = response.address;
-
-    final userBalance = await getUserBalance(address: address);
-
-    if (userBalance < maxFeeEth / pow(10, 18)) {
-      throw Exception('Need $maxFeeEth STRK ETH to deploy');
-    }
 
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
 
@@ -783,7 +773,6 @@ class StarknetCoin extends Coin {
       provider: provider,
       classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
-      max_fee: Felt.fromInt(maxFeeWei),
       useSTRKFee: useStarkToken,
     );
     final txHash = tx.when(
