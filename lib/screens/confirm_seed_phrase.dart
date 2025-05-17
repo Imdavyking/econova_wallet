@@ -343,6 +343,7 @@ class _ConfirmmnemonicState extends State<Confirmmnemonic> {
                                 null,
                               );
 
+                              if (!context.mounted) return;
                               await Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(builder: (ctx) => Wallet()),
