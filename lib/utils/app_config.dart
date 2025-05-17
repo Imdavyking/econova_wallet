@@ -22,9 +22,8 @@ const oneInceApiKey = 'cc7YbgSI5NA9t5KGLa00uNdklhGFxJhi';
 const unlockAI = false;
 
 // dapp links
-const blogUrl = "https://multiversx.com/blog";
-const vrUrl = 'https://multiversx.com/blog/elrond-vr-metaverse-bloktopia/';
-const marketPlaceUrl = 'https://xoxno.com/';
+const blogUrl = "https://www.starknet.io/blog/";
+const marketPlaceUrl = 'https://unframed.co/';
 
 // social media links
 const telegramLink = '';

@@ -235,62 +235,6 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
                       onTap: () async {
                         await navigateToDappBrowser(
                           context,
-                          vrUrl,
-                        );
-                      },
-                      child: Container(
-                        decoration:
-                            const BoxDecoration(color: Colors.transparent),
-                        clipBehavior: Clip.hardEdge,
-                        width: double.infinity,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              SvgPicture.asset('assets/vr-dapp.svg'),
-                              const SizedBox(
-                                width: 20,
-                              ),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        localization.virtualReality,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      SvgPicture.asset('assets/new_dapp.svg'),
-                                    ],
-                                  ),
-                                  Text(
-                                    localization.virtualRealityDescription,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Divider(),
-                    GestureDetector(
-                      onTap: () async {
-                        await navigateToDappBrowser(
-                          context,
                           blogUrl,
                         );
                       },
