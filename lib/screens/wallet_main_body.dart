@@ -75,8 +75,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
         );
       },
     );
-    // WcConnectorV1();
-    // WcConnectorV2();
+    WcConnectorV1();
+    WcConnectorV2();
 
     // _intentDataStreamSubscription =
     //     ReceiveSharingIntent.getTextStream().listen((String value) async {
