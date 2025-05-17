@@ -330,17 +330,19 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                       );
 
                                       if (!mnemonicValid) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            backgroundColor: Colors.red,
-                                            content: Text(
-                                              localization.invalidmnemonic,
-                                              style: const TextStyle(
-                                                  color: Colors.white),
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              backgroundColor: Colors.red,
+                                              content: Text(
+                                                localization.invalidmnemonic,
+                                                style: const TextStyle(
+                                                    color: Colors.white),
+                                              ),
                                             ),
-                                          ),
-                                        );
+                                          );
+                                        }
                                         setState(() {
                                           isLoading = false;
                                         });
@@ -359,18 +361,20 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                       for (WalletParams? phrases
                                           in mnemonicsList) {
                                         if (phrases == phraseData) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              backgroundColor: Colors.red,
-                                              content: Text(
-                                                localization
-                                                    .mnemonicAlreadyImported,
-                                                style: const TextStyle(
-                                                    color: Colors.white),
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                backgroundColor: Colors.red,
+                                                content: Text(
+                                                  localization
+                                                      .mnemonicAlreadyImported,
+                                                  style: const TextStyle(
+                                                      color: Colors.white),
+                                                ),
                                               ),
-                                            ),
-                                          );
+                                            );
+                                          }
                                           setState(() {
                                             isLoading = false;
                                           });
@@ -413,17 +417,19 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                         print(e);
                                         print(sk);
                                       }
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.red,
-                                          content: Text(
-                                            localization.errorTryAgain,
-                                            style: const TextStyle(
-                                                color: Colors.white),
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.red,
+                                            content: Text(
+                                              localization.errorTryAgain,
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
                                           ),
-                                        ),
-                                      );
+                                        );
+                                      }
 
                                       setState(() {
                                         isLoading = false;
