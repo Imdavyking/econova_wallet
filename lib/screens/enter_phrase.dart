@@ -395,13 +395,16 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                         cryptoWallName,
                                       );
 
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (ctx) => const Wallet(),
-                                        ),
-                                        (r) => false,
-                                      );
+                                      if (context.mounted) {
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (ctx) => const Wallet(),
+                                          ),
+                                          (r) => false,
+                                        );
+                                      }
+
                                       setState(() {
                                         isLoading = false;
                                       });
