@@ -410,7 +410,7 @@ String decryptText(String encrypted, String password) {
   return encrypter.decrypt(Encrypted.fromBase64(encrypted), iv: iv);
 }
 
-Future<void> initializeAllPrivateKeys(String mnemonic) async {
+Future<void> importAllKeys(String mnemonic) async {
   await Future.wait(
     getAllBlockchains.map(
       (blockchain) => blockchain.importData(mnemonic),

@@ -388,8 +388,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                         phraseData,
                                       );
 
-                                      await initializeAllPrivateKeys(
-                                          phraseData.data);
+                                      await importAllKeys(phraseData.data);
 
                                       await pref.put(
                                         currentUserWalletNameKey,

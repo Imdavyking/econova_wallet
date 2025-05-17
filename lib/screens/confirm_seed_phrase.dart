@@ -336,7 +336,7 @@ class _ConfirmmnemonicState extends State<Confirmmnemonic> {
                                 phraseData,
                               );
 
-                              await initializeAllPrivateKeys(phraseData.data);
+                              await importAllKeys(phraseData.data);
 
                               await pref.put(
                                 currentUserWalletNameKey,

@@ -89,6 +89,7 @@ class _AllWalletsState extends State<AllWallets> {
                     },
                     child: GestureDetector(
                       onTap: () async {
+                        print('getting wallet: $currentPhrase');
                         if (currentPhrase == seedParams &&
                             WalletService.getType() ==
                                 WalletType.secretPhrase) {
@@ -102,10 +103,14 @@ class _AllWalletsState extends State<AllWallets> {
 
                         currentPhrase = data as SeedPhraseParams;
 
+                        print('currentPhrase: $currentPhrase');
+
                         seedPhraseRoot = await compute(
                           seedFromMnemonic,
                           seedParams.data,
                         );
+
+                        print('gtt: $seedPhraseRoot');
 
                         await WalletService.setActiveKey(
                           WalletType.secretPhrase,
