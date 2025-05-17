@@ -9,9 +9,7 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/wallet_connect_v1/wc_connector_v1.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter/material.dart';
-
 import 'package:page_transition/page_transition.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:upgrader/upgrader.dart';
 import '../api/notification_api.dart';
 import '../interface/coin.dart';
@@ -42,7 +40,6 @@ class _WalletMainBodyState extends State<WalletMainBody>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-  late StreamSubscription _intentDataStreamSubscription;
   late StreamSubscription<dynamic> _streamSubscription;
   List<ValueNotifier<double?>> cryptoNotifiers = [];
 
@@ -51,7 +48,6 @@ class _WalletMainBodyState extends State<WalletMainBody>
 
   @override
   void dispose() {
-    _intentDataStreamSubscription.cancel();
     for (Timer cryptoTimer in cryptoBalancesTimer) {
       cryptoTimer.cancel();
     }
@@ -69,6 +65,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
     _streamSubscription =
         EventBusService.instance.on<CryptoNotificationEvent>().listen(
       (event) async {
+        debugPrint('Notification: ${event.title} - ${event.body}');
         await NotificationApi.showNotification(
           title: event.title,
           body: event.body,
@@ -77,23 +74,6 @@ class _WalletMainBodyState extends State<WalletMainBody>
     );
     WcConnectorV1();
     WcConnectorV2();
-
-    // _intentDataStreamSubscription =
-    //     ReceiveSharingIntent.getTextStream().listen((String value) async {
-    //   await handleAllIntent(value, context);
-    // }, onError: (err) {
-    //   if (kDebugMode) {
-    //     print("getLinkStream error: $err");
-    //   }
-    // });
-
-    // ReceiveSharingIntent.getInitialText().then((String? value) async {
-    //   await handleAllIntent(value, context);
-    // }).catchError((err) {
-    //   if (kDebugMode) {
-    //     print("getLinkStream error: $err");
-    //   }
-    // });
   }
 
   void initializeBlockchains() {
