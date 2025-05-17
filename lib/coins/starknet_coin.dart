@@ -85,7 +85,6 @@ class StarknetCoin extends Coin {
     );
     // poseidonHasher.hashMany(values);
 
-
     final tx = await fundingAccount.execute(
       functionCalls: calls
           .map(
@@ -771,9 +770,27 @@ class StarknetCoin extends Coin {
     final response = await importData(data);
     final address = response.address;
 
-    final userBalance = await getUserBalance(address: address);
+    final ethOnStrkCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: Felt.fromHexString(strkEthNativeToken),
+        entryPointSelector: getSelectorByName('balanceOf'),
+        calldata: [Felt.fromHexString(address)],
+      ),
+      blockId: BlockId.latest,
+    );
 
-    if (userBalance < maxFeeEth / pow(10, 18)) {
+    final ethOnStrkBalance = ethOnStrkCall.when<double>(
+      error: (error) {
+        throw Exception(error);
+      },
+      result: (result) {
+        final strkBalance = Uint256.fromFeltList(result).toBigInt() /
+            BigInt.from(10).pow(decimals());
+        return strkBalance;
+      },
+    );
+
+    if (ethOnStrkBalance < maxFeeEth / pow(10, 18)) {
       throw Exception('Need $maxFeeEth STRK ETH to deploy');
     }
 
