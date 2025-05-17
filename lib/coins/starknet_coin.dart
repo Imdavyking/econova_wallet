@@ -1404,3 +1404,50 @@ class StakeInfo {
     this.pendingUnstake,
   });
 }
+
+
+
+// MEM COIN DEPLOYMENT
+
+//   public getDeployCalldata(data: DeployData) {
+//     const salt = stark.randomAddress()
+
+//     const constructorCalldata = CallData.compile([
+//       data.owner,
+//       data.name,
+//       data.symbol,
+//       uint256.bnToUint256(BigInt(data.initialSupply) * BigInt(decimalsScale(DECIMALS))),
+//       salt,
+//     ])
+
+//     const tokenAddress = hash.calculateContractAddressFromHash(
+//       salt,
+//       TOKEN_CLASS_HASH[this.config.chainId],
+//       constructorCalldata.slice(0, -1),
+//       FACTORY_ADDRESSES[this.config.chainId],
+//     )
+
+
+
+
+//     const calls = [
+//       {
+//         contractAddress: FACTORY_ADDRESSES[this.config.chainId],
+//         entrypoint: Entrypoint.CREATE_MEMECOIN,
+//         calldata: constructorCalldata,
+//       },
+//     ]
+
+//     return { tokenAddress, calls }
+//   }
+
+
+//     export const TOKEN_CLASS_HASH = {
+//   [constants.StarknetChainId.SN_GOERLI]: '0x05ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac',
+//   [constants.StarknetChainId.SN_MAIN]: '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
+// }
+
+// export const FACTORY_ADDRESSES = {
+//   [constants.StarknetChainId.SN_GOERLI]: '0x076c3112e95994507c44c72b8dfb7f8d568a370d2f7c2d918ed9f55327671385',
+//   [constants.StarknetChainId.SN_MAIN]: '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
+// }
