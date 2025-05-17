@@ -116,6 +116,8 @@ class _AllWalletsState extends State<AllWallets> {
                           seedParams.name,
                         );
 
+                        if (!mounted) return;
+
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (ctx) => const Wallet()),
