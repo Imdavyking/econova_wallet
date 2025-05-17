@@ -168,9 +168,9 @@ final darkTheme = ThemeData(
   inputDecorationTheme: const InputDecorationTheme(
     fillColor: Color.fromARGB(255, 47, 47, 47),
     filled: true,
-    iconColor: Colors.white,
-    suffixIconColor: Colors.white,
-    prefixIconColor: Colors.white,
+    iconColor: Colors.grey,
+    suffixIconColor: Colors.grey,
+    prefixIconColor: Colors.grey,
     hintStyle: TextStyle(color: Colors.grey),
     labelStyle: TextStyle(color: Colors.grey),
     helperStyle: TextStyle(color: Colors.grey),
