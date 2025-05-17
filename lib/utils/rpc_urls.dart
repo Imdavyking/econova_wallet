@@ -4,6 +4,7 @@ import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
 import 'package:cryptowallet/utils/network_guard.dart';
+import 'package:cryptowallet/utils/starknet_call.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:blockchain_utils/blockchain_utils.dart' hide AES;
 import 'package:near_api_flutter/near_api_flutter.dart' hide Account;
@@ -903,6 +904,11 @@ Future setupWebViewWalletBridge(
               console.log("specs", specs);
               resolve(specs);
               break;
+            case 'wallet_signTypedData':
+              const signature = data.signature;
+              console.log("signature", signature);
+              resolve(signature);
+              break;
             default:
               reject(new Error("Invalid request type "+ requestType));
               break;
@@ -1145,7 +1151,7 @@ switchEthereumChain({
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.background,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 backgroundImage: AssetImage(
                   currentChain!.getImage(),
                 ),
@@ -1154,7 +1160,7 @@ switchEthereumChain({
                 Icons.arrow_right_alt_outlined,
               ),
               CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.background,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 backgroundImage: AssetImage(
                   switchChain!.getImage(),
                 ),
@@ -1958,7 +1964,7 @@ signMultiversXTransaction({
   );
 }
 
-signTransaction({
+signEVMTransaction({
   required Function()? onReject,
   String? gasPriceInWei_,
   required BuildContext context,
@@ -2537,6 +2543,289 @@ signTransaction({
                             Text(
                               txData,
                               style: const TextStyle(fontSize: 16.0),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+    canDismiss: false,
+  );
+}
+
+signStarkNetTransaction({
+  required Function()? onReject,
+  required BuildContext context,
+  required Function onConfirm,
+  required String from,
+  required List<StarknetCall> dapCalls,
+  String? networkIcon,
+  String? name,
+  String? symbol,
+  String? title,
+}) async {
+  final localization = AppLocalizations.of(context)!;
+
+  String info = localization.info;
+
+  ValueNotifier<bool> isSigning = ValueNotifier(false);
+
+  slideUpPanel(
+    context,
+    DefaultTabController(
+      length: 3,
+      child: Column(
+        children: <Widget>[
+          Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: null,
+                    icon: Icon(
+                      Icons.close,
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+                Text(
+                  localization.signTransaction,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20.0,
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: () {
+                      if (Navigator.canPop(context)) {
+                        onReject!();
+                      }
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(
+            height: 50,
+            child: TabBar(
+              tabs: [
+                Tab(
+                  icon: Text(
+                    "Details",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: orangTxt,
+                    ),
+                  ),
+                ),
+                Tab(
+                    icon: Text(
+                  "Data",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: orangTxt),
+                )),
+                Tab(
+                  icon: Text(
+                    "Hex",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: orangTxt),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // create widgets for each tab bar here
+          Expanded(
+            child: TabBarView(
+              children: [
+                // first tab bar view widget
+                FutureBuilder(future: () async {
+                  return true;
+                }(), builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          localization.couldNotFetchData,
+                          style: const TextStyle(fontSize: 16.0),
+                        )
+                      ],
+                    );
+                  }
+                  if (!snapshot.hasData) {
+                    return const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Loader(),
+                      ],
+                    );
+                  }
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 25.0, right: 25, bottom: 25),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (networkIcon != null)
+                            Container(
+                              height: 50.0,
+                              width: 50.0,
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: CachedNetworkImage(
+                                imageUrl: ipfsTohttp(networkIcon),
+                                placeholder: (context, url) => const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: Loader(
+                                        color: appPrimaryColor,
+                                      ),
+                                    )
+                                  ],
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(
+                                  Icons.error,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          if (name != null)
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 16.0,
+                              ),
+                            ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SingleChildScrollView(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 25.0, vertical: 10),
+                                child: StarknetCallList(dapCalls: dapCalls),
+                              ),
+                            ),
+                          ),
+                          ValueListenableBuilder<bool>(
+                              valueListenable: isSigning,
+                              builder: (_, isSigning_, __) {
+                                if (isSigning_) {
+                                  return const Row(
+                                    children: [
+                                      Loader(),
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextButton(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                          backgroundColor: appBackgroundblue,
+                                        ),
+                                        onPressed: () async {
+                                          if (await authenticate(context)) {
+                                            isSigning.value = true;
+                                            try {
+                                              await onConfirm();
+                                            } catch (_) {}
+                                            isSigning.value = false;
+                                          } else {
+                                            onReject!();
+                                          }
+                                        },
+                                        child: Text(
+                                          localization.confirm,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16.0),
+                                    Expanded(
+                                      child: TextButton(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.black,
+                                          backgroundColor: appBackgroundblue,
+                                        ),
+                                        onPressed: onReject,
+                                        child: Text(
+                                          localization.reject,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+
+                // second tab bar viiew widget
+
+                Container(),
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                        left: 25.0, right: 25, bottom: 25),
+                    child: Theme(
+                      data: Theme.of(context)
+                          .copyWith(dividerColor: Colors.transparent),
+                      child: const Padding(
+                        padding: EdgeInsets.only(bottom: 8.0),
+                        child: ExpansionTile(
+                          initiallyExpanded: true,
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            "Hex",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.0,
+                            ),
+                          ),
+                          children: [
+                            Text(
+                              ' txData',
+                              style: TextStyle(fontSize: 16.0),
                             ),
                           ],
                         ),

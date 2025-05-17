@@ -362,7 +362,7 @@ class WcConnectorV1 {
   }) async {
     List icons = wcClient.remotePeerMeta!.icons;
 
-    await signTransaction(
+    await signEVMTransaction(
       gasPriceInWei_: ethereumTransaction.gasPrice,
       to: ethereumTransaction.to,
       from: ethereumTransaction.from,

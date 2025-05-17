@@ -609,18 +609,39 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
         final coin = starkNetCoins.first;
 
-        final txHash = await coin.executeInvokeDapp(dapCalls);
+        await signStarkNetTransaction(
+          from: coinData.address,
+          networkIcon: null,
+          context: context,
+          symbol: coin.symbol,
+          dapCalls: dapCalls,
+          name: '',
+          onConfirm: () async {
+            try {
+              final txHash = await coin.executeInvokeDapp(dapCalls);
 
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-          "txHash": txHash,
-        };
+              final responseData = {
+                "origin": origin,
+                "requestId": requestId,
+                "chainId": chainId,
+                "address": coinData.address,
+                "requestType": requestType,
+                "txHash": txHash,
+              };
 
-        await sendResponse(responseData);
+              await sendResponse(responseData);
+            } catch (e) {
+              await sendError(e.toString().replaceAll('"', '\''));
+            } finally {
+              Navigator.pop(context);
+            }
+          },
+          onReject: () async {
+            await sendError('user rejected transaction');
+            Navigator.pop(context);
+          },
+          title: 'Sign Transaction',
+        );
       } else if (requestType == 'wallet_getPermissions') {
         final responseData = {
           "origin": origin,
@@ -662,11 +683,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           onConfirm: () async {
             try {
               final typedData = TypedData.fromJson(params);
-              print('Typed Data: $typedData');
 
               final hash = typedData.hash(Felt.fromHexString(coinData.address));
-
-              debugPrint('Hash: $hash');
 
               final signature = starknetSign(
                 privateKey: BigInt.parse(coinData.privateKey!),
@@ -679,16 +697,14 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                 "chainId": chainId,
                 "address": coinData.address,
                 "requestType": requestType,
+                "signature": [
+                  signature.r.toString(),
+                  signature.s.toString(),
+                ],
               };
 
               await sendResponse(responseData);
-
-              // ['708430212362690578481737385168447582349670715079420394525131553001725572698', '1397272340006992913981501630459872567993254742548111796371322808616951954156']
-
-              // print('Signed Data: $signedDataHex');
-              //TODO: Handle the actual signing of the typed data
             } catch (e) {
-              print('Error signing typed data: $e');
               await sendError(e.toString().replaceAll('"', '\''));
             } finally {
               Navigator.pop(context);
@@ -1382,7 +1398,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           {
                             final data = JsTransactionObject.fromJson(
                                 jsData.object ?? {});
-                            await signTransaction(
+                            await signEVMTransaction(
                               gasPriceInWei_: null,
                               to: data.to,
                               from: sendingAddress,
