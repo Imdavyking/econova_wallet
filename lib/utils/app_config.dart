@@ -171,6 +171,9 @@ final darkTheme = ThemeData(
     iconColor: Colors.white,
     suffixIconColor: Colors.white,
     prefixIconColor: Colors.white,
+    hintStyle: TextStyle(color: Colors.grey),
+    labelStyle: TextStyle(color: Colors.white),
+    helperStyle: TextStyle(color: Colors.white),
   ),
   appBarTheme: const AppBarTheme(
     color: Color.fromARGB(255, 47, 47, 47),

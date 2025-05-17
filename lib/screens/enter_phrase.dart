@@ -17,7 +17,7 @@ import '../model/seed_phrase_root.dart';
 import '../utils/qr_scan_view.dart';
 
 class EnterPhrase extends StatefulWidget {
-  const EnterPhrase({Key? key}) : super(key: key);
+  const EnterPhrase({super.key});
   @override
   State<EnterPhrase> createState() => _EnterPhraseState();
 }
