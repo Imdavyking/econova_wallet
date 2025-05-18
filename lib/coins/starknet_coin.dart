@@ -96,7 +96,8 @@ class StarknetCoin extends Coin {
     return 0;
   }
 
-  Future<DeclareTransactionResponseResult?> addDeclareDapp(AddDeclareTransactionParameters params) async {
+  Future<DeclareTransactionResponseResult?> addDeclareDapp(
+      AddDeclareTransactionParameters params) async {
     // Retrieve active wallet key and import related data
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final importedData = await importData(walletData);
@@ -1142,6 +1143,8 @@ class StarknetCoin extends Coin {
     );
   }
 
+  Future<void> launchOnEkubo(LaunchParameters params) async {}
+
   Felt computeAddressWithDeployer({
     required Felt classHash,
     required List<Felt> calldata,
@@ -1779,4 +1782,53 @@ class AddDeclareTransactionParameters {
   String toJsonString() {
     return jsonEncode(toJson());
   }
+}
+
+class LaunchParameters {
+  final Account starknetAccount;
+  final String memecoinAddress;
+  final String startingMarketCap;
+  final String holdLimit;
+  final String fees;
+  final int antiBotPeriodInSecs;
+  final int? liquidityLockPeriod;
+  final String currencyAddress;
+  final List<TeamAllocation> teamAllocations;
+
+  LaunchParameters({
+    required this.starknetAccount,
+    required this.memecoinAddress,
+    required this.startingMarketCap,
+    required this.holdLimit,
+    required this.fees,
+    required this.antiBotPeriodInSecs,
+    this.liquidityLockPeriod,
+    required this.currencyAddress,
+    required this.teamAllocations,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'starknetAccount': starknetAccount.accountAddress.toHexString(),
+        'memecoinAddress': memecoinAddress,
+        'startingMarketCap': startingMarketCap,
+        'holdLimit': holdLimit,
+        'fees': fees,
+        'antiBotPeriodInSecs': antiBotPeriodInSecs,
+        if (liquidityLockPeriod != null)
+          'liquidityLockPeriod': liquidityLockPeriod,
+        'currencyAddress': currencyAddress,
+        'teamAllocations': teamAllocations.map((t) => t.toJson()).toList(),
+      };
+}
+
+class TeamAllocation {
+  final String address;
+  final String amount;
+
+  TeamAllocation({required this.address, required this.amount});
+
+  Map<String, dynamic> toJson() => {
+        'address': address,
+        'amount': amount,
+      };
 }
