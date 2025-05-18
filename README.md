@@ -8,43 +8,70 @@
 
 ## 🚀 Features
 
-- 📬 **Multi-Network Wallet & Balance Display**
+- 📬 **Multi-Network Wallet & Balance Display**  
   View and manage your wallet across supported blockchains.
 
-- 💸 **Token Transfers & Swaps**
+- 💸 **Token Transfers & Swaps**  
   Send, receive, and swap tokens easily—via a traditional UI or natural language commands.
 
-- 📈 **Portfolio Overview**
+- 📈 **Portfolio Overview**  
   Track your total holdings across all assets and networks in real-time.
 
-- 📜 **Transaction History**
+- 📜 **Transaction History**  
   Review past transactions on Starknet and other supported chains.
 
-- ⛓️ **Staking**
+- ⛓️ **Staking**  
   Stake your tokens and earn rewards through integrated staking protocols.
 
-- 🌐 **Domain Name Resolution**
+- 🌐 **Domain Name Resolution**  
   Enjoy readable wallet names for improved usability and fewer errors.
 
-- 🐸 **Meme Coin Deployment**
+- 🐸 **Meme Coin Deployment**  
   Deploy your own meme token on Starknet in minutes—no coding required.
 
-- 💧 **Liquidity Management**
+- 💧 **Liquidity Management**  
   Add or remove liquidity and manage DeFi pools effortlessly.
 
-- 📚 **Blockchain Documentation Search**
+- 📚 **Blockchain Documentation Search**  
   Instantly search Starknet documentation and developer references from within the app.
 
-- 🧭 **Dapp Browser**
-  Access and interact with dApps directly.
+- 🧭 **Dapp Browser**  
+  Access and interact with dApps directly.  
   **Supports:** Starknet, EVM chains (e.g. Ethereum, BNB Chain), Solana, NEAR, and MultiversX.
 
-- 🤖 **AI Chatbot Assistant**
-  Use natural language to transact:
+- 🤖 **AI Chatbot Assistant**  
+  Use natural language to transact:  
   _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, and more.
 
-- 🧩 **All Chains. One Wallet.**
+- 🧩 **All Chains. One Wallet.**  
   No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
+
+---
+
+## 🌐 Supported Blockchains
+
+Econova Wallet brings **true multichain magic** to your fingertips. No more hopping between wallets—**all your assets, all your tokens, all your chains, in one place.**
+
+Here's what you get out of the box:
+- 🌀 **Starknet** – Native L2 support with zero-knowledge security and blazing performance
+- 🔥 **EVM Chains** – Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base, and more (~15 major EVM networks)
+- ⚡ **Solana** – Speed meets scalability (includes SPL token support)
+- 🌍 **MultiversX (Elrond)** – For the next-gen scalable blockchain experience
+- 📡 **TON** – Fully integrated support for the Telegram-native blockchain
+- 🪙 **TRON** – Send, receive, and track TRC tokens with ease
+- 🌉 **NEAR** – Seamless support for NEAR and its ecosystem of fungible tokens
+- 💧 **Cosmos** – Dive into the IBC universe with support for multiple Cosmos chains
+- 🪐 **Polkadot & Kusama** – Connect to the DOT & KSM parachain ecosystem
+- ✨ **Sui & Aptos** – Move-based L1 chains with modern architecture
+- 🌕 **Harmony, IOTEX, Zilliqa, Stellar, Filecoin** – Extended layer of support for niche and innovative chains
+- 🔗 **Ronin** – Perfect for Web3 gamers and Axie Infinity fans
+- 🔋 **FUSE** – Native support for FUSE tokens and smart wallet tools
+- 💼 **XRP (Ledger-based)** – Connect to the Ripple ecosystem
+- 📊 **ESDT, FUSEFT, EVM tokens, SPL tokens, ERC20s, TRC20s, NEP-141s** – All major token standards supported
+
+> 💡 **Over 30+ blockchain networks and token ecosystems. One wallet. No compromise.**
+
+Econova Wallet is built to grow with the ecosystem—supporting new chains as they emerge and keeping your crypto experience unified, elegant, and powerful.
 
 ---
 
@@ -143,3 +170,5 @@ We welcome contributions from developers, designers, and crypto enthusiasts!
 - Found a bug? [Open an issue](#)
 - Have a suggestion or feature request? Submit a PR
 - Want to help us prioritize features like **voice control**, **multi-chain support**, or **AI improvements**? Share your feedback!
+
+---
