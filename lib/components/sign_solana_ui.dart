@@ -15,6 +15,7 @@ import 'package:wallet_app/model/solana_web3_res.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+// ignore: implementation_imports
 import 'package:solana/src/encoder/instruction.dart' as encoder;
 
 class SolanaSimuRes {
