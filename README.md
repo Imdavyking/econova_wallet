@@ -1,7 +1,6 @@
-
 # 🌿 Econova Wallet
 
-**Econova Wallet** is a secure, user-friendly, and AI-powered cryptocurrency wallet tailored for the **Starknet** ecosystem—and beyond. It enables seamless interactions with crypto assets, staking, liquidity pools, and decentralized applications, **all in one place**.
+**Econova Wallet** is a secure, user-friendly, and AI-powered cryptocurrency wallet tailored for the **Starknet** ecosystem—and beyond. It empowers users to manage crypto assets, stake tokens, interact with liquidity pools, and explore decentralized applications **all in one place**.
 
 > ⚠️ **Note:** Voice command features are currently under development and not yet functional.
 
@@ -9,42 +8,43 @@
 
 ## 🚀 Features
 
-- 📬 **Wallet Address & Balance Display**  
-  View and manage your wallet across multiple networks.
+- 📬 **Multi-Network Wallet & Balance Display**
+  View and manage your wallet across supported blockchains.
 
-- 💸 **Token Transfers & Swaps**  
-  Send, receive, and swap tokens easily—using traditional UI or natural language.
+- 💸 **Token Transfers & Swaps**
+  Send, receive, and swap tokens easily—via a traditional UI or natural language commands.
 
-- 📈 **Portfolio Value Overview**  
-  Monitor the total value of your holdings across all supported assets.
+- 📈 **Portfolio Overview**
+  Track your total holdings across all assets and networks in real-time.
 
-- 📜 **Transaction History**  
-  Keep track of your activity on Starknet and other supported chains.
+- 📜 **Transaction History**
+  Review past transactions on Starknet and other supported chains.
 
-- ⛓️ **Staking Capabilities**  
-  Stake tokens and earn rewards from supported protocols.
+- ⛓️ **Staking**
+  Stake your tokens and earn rewards through integrated staking protocols.
 
-- 🌐 **Domain Name Resolution**  
-  Readable wallet names for a smoother user experience.
+- 🌐 **Domain Name Resolution**
+  Enjoy readable wallet names for improved usability and fewer errors.
 
-- 🐸 **Meme Coin Deployment**  
-  Launch your own meme token on Starknet in minutes.
+- 🐸 **Meme Coin Deployment**
+  Deploy your own meme token on Starknet in minutes—no coding required.
 
-- 💧 **Liquidity Management**  
-  Add/remove liquidity and manage pools with ease.
+- 💧 **Liquidity Management**
+  Add or remove liquidity and manage DeFi pools effortlessly.
 
-- 📚 **Blockchain Documentation Query**  
-  Instantly search Starknet docs and developer references.
+- 📚 **Blockchain Documentation Search**
+  Instantly search Starknet documentation and developer references from within the app.
 
-- 🧭 **Dapp Browser**  
-  Explore and use decentralized apps natively within the wallet.
+- 🧭 **Dapp Browser**
+  Access and interact with dApps directly.
+  **Supports:** Starknet, EVM chains (e.g. Ethereum, BNB Chain), Solana, NEAR, and MultiversX.
 
-- 🤖 **AI Chatbot Assistant**  
-  Talk to your wallet. Use natural language to transact:  
-  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, etc.
+- 🤖 **AI Chatbot Assistant**
+  Use natural language to transact:
+  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, and more.
 
-- 🧩 **All Chains. One Wallet.**  
-  **No need to use multiple wallets like Trust Wallet for Solana or Argent X for Starknet.** Econova supports multi-chain interaction so you can **transact with any token from a single, unified wallet**.
+- 🧩 **All Chains. One Wallet.**
+  No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
 
 ---
 
@@ -61,7 +61,7 @@
    ```bash
    git clone https://github.com/Imdavyking/econova_wallet
    cd econova_wallet
-```
+   ```
 
 2. Install dependencies:
 
@@ -69,14 +69,14 @@
    flutter pub get
    ```
 
-3. Configure environment:
+3. Configure your environment:
 
-   * Copy `.env.example` to `.env`
-   * Add required API keys, Starknet endpoints, chatbot credentials, etc.
+   - Copy `.env.example` to `.env`
+   - Add your API keys, Starknet endpoints, chatbot credentials, and other required configs.
 
-4. Start the App:
+4. Launch the App:
 
-   Make sure you are using the following Flutter version for compatibility:
+   Ensure you're using the correct Flutter version:
 
    ```
    Flutter 3.24.1 • channel stable • https://github.com/flutter/flutter.git
@@ -85,7 +85,7 @@
    Tools • Dart 3.5.1 • DevTools 2.37.2
    ```
 
-   To launch the app, run:
+   Run the app:
 
    ```bash
    flutter run
@@ -95,34 +95,36 @@
 
 ## 📈 Market Opportunity
 
-The rise of Layer 2s like Starknet, combined with the demand for user-friendly crypto experiences, makes **Econova Wallet** a strategic product with strong market potential:
+The combination of Layer 2 growth, multi-chain fragmentation, and increasing demand for simpler crypto tools makes **Econova Wallet** a high-potential product.
 
 ### 💰 Wallet Market
 
-* **Crypto wallet market** expected to grow from \~\$8.4B (2022) to **\$48.2B by 2030**
-* **Drivers**: DeFi, NFTs, Web3 gaming, increasing global adoption
+- The global **crypto wallet market** is expected to grow from **\$8.4B (2022)** to **\$48.2B by 2030**
+- Driven by: DeFi, NFTs, Web3 gaming, and mainstream crypto adoption
 
 ### 🌐 Starknet Ecosystem
 
-* Starknet is among the most anticipated ZK-rollup Layer 2s
-* Lack of a mainstream, consumer-facing wallet creates first-mover advantage
+- Starknet is one of the most promising ZK-rollup Layer 2s
+- Lack of user-friendly wallets creates a **first-mover advantage**
 
 ### 🤖 AI Integration
 
-* AI-powered wallets are still rare—Econova fills that gap with chatbot + NLP support
-* Helps onboard non-technical users via natural language interface
+- Econova’s AI-powered wallet assistant fills a gap in the market
+- Natural language UX helps onboard non-technical users
 
 ### 🔗 Multi-Chain Simplification
 
-* Most users juggle multiple wallets (e.g., MetaMask, Phantom, Argent X)
-* Econova’s **“All chains. One wallet.”** vision solves this fragmentation
+- Most users juggle multiple wallets (MetaMask, Phantom, etc.)
+- Econova's “**All chains. One wallet.**” philosophy solves this problem
 
-### 🌱 Sustainability Branding
+### 🌱 Eco-Friendly Branding
 
-* The *Econova* brand resonates with eco-conscious users
-* Aligns with low-energy, zero-knowledge infrastructure (Starknet)
+- The _Econova_ name appeals to sustainability-minded users
+- Aligns with Starknet's low-energy, zero-knowledge architecture
 
 ---
+
+### 📊 Opportunity Breakdown
 
 | Segment                 | Opportunity Size                           |
 | ----------------------- | ------------------------------------------ |
@@ -138,7 +140,6 @@ The rise of Layer 2s like Starknet, combined with the demand for user-friendly c
 
 We welcome contributions from developers, designers, and crypto enthusiasts!
 
-* Found a bug? [Open an issue](#)
-* Want to improve or suggest a feature? Submit a PR
-* Share your feedback—it helps us prioritize features like **voice control**, **multi-chain integration**, and **AI tools**
-
+- Found a bug? [Open an issue](#)
+- Have a suggestion or feature request? Submit a PR
+- Want to help us prioritize features like **voice control**, **multi-chain support**, or **AI improvements**? Share your feedback!
