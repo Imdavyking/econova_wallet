@@ -8,6 +8,7 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
+import 'package:wallet_app/utils/slide_up_panel.dart';
 import "../utils/starknet_call.dart";
 import '../model/near_message_borsh.dart';
 import '../model/near_trx_obj.dart';
@@ -38,8 +39,7 @@ import '../model/multix_sign_model.dart' hide Transaction;
 import '../utils/app_config.dart';
 import '../utils/json_model_callback.dart';
 import '../utils/web_notifications.dart';
-// SOLANA
-import 'package:wallet_app/model/solana_web3_res.dart' hide _Instruction;
+import 'package:wallet_app/model/solana_web3_res.dart';
 import 'package:solana/solana.dart' hide signTransaction;
 import 'package:wallet_app/coins/solana_coin.dart';
 import 'package:solana/solana.dart' as solana;
@@ -1604,56 +1604,72 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               solanaWeb3Res.feePayer,
                             );
 
+                            final simulationResult = await dappSimulateTrx(
+                              solanaWeb3Res,
+                              solanaKeyPair,
+                              coin,
+                              coin.getSymbol(),
+                              solDecimals,
+                            );
+                            ValueNotifier<bool> isSigning =
+                                ValueNotifier<bool>(false);
                             if (context.mounted) {
-                              await signSolanaTransaction(
-                                to: '',
-                                from: from.toBase58(),
-                                txData: data.raw,
-                                networkIcon: null,
-                                context: context,
-                                symbol: 'SOL',
-                                solanaWeb3Res: solanaWeb3Res,
-                                solanaKeyPair: solanaKeyPair,
-                                name: '',
-                                coin: coin,
-                                onConfirm: () async {
-                                  try {
-                                    if (solanaWeb3Res.feePayer !=
-                                        sendingAddress) {
-                                      throw Exception('Invalid fee payer');
-                                    }
+                              await slideUpPanel(
+                                context,
+                                DefaultTabController(
+                                  length: 2,
+                                  child: buildSignTransactionUI(
+                                    isSigning: isSigning,
+                                    simulationResult: simulationResult,
+                                    from: from.toBase58(),
+                                    txData: data.raw,
+                                    networkIcon: null,
+                                    context: context,
+                                    symbol: 'SOL',
+                                    name: '',
+                                    onConfirm: () async {
+                                      try {
+                                        if (solanaWeb3Res.feePayer !=
+                                            sendingAddress) {
+                                          throw Exception('Invalid fee payer');
+                                        }
 
-                                    final signature = await solanaKeyPair.sign(
-                                      base58.decode(data.raw),
-                                    );
+                                        final signature =
+                                            await solanaKeyPair.sign(
+                                          base58.decode(data.raw),
+                                        );
 
-                                    _sendResult(
-                                      "solana",
-                                      signature.toBase58(),
-                                      jsData.id ?? 0,
-                                    );
-                                  } catch (e, sk) {
-                                    if (kDebugMode) {
-                                      print(sk);
-                                    }
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
-                                    _sendError("solana", error, jsData.id ?? 0);
-                                  } finally {
-                                    if (context.mounted &&
-                                        Navigator.canPop(context)) {
+                                        _sendResult(
+                                          "solana",
+                                          signature.toBase58(),
+                                          jsData.id ?? 0,
+                                        );
+                                      } catch (e, sk) {
+                                        if (kDebugMode) {
+                                          print(sk);
+                                        }
+                                        final error =
+                                            e.toString().replaceAll('"', '\'');
+                                        _sendError(
+                                            "solana", error, jsData.id ?? 0);
+                                      } finally {
+                                        if (context.mounted &&
+                                            Navigator.canPop(context)) {
+                                          Navigator.pop(context);
+                                        }
+                                      }
+                                    },
+                                    onReject: () async {
+                                      _sendError(
+                                        "solana",
+                                        'user rejected transaction',
+                                        jsData.id ?? 0,
+                                      );
                                       Navigator.pop(context);
-                                    }
-                                  }
-                                },
-                                onReject: () async {
-                                  _sendError(
-                                    "solana",
-                                    'user rejected transaction',
-                                    jsData.id ?? 0,
-                                  );
-                                  Navigator.pop(context);
-                                },
+                                    },
+                                  ),
+                                ),
+                                canDismiss: false,
                               );
                             }
 

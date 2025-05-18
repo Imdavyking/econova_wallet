@@ -99,12 +99,11 @@ Future<SolanaSimuRes> dappSimulateTrx(
           commitment: solana.Commitment.processed,
         );
 
-    final tx = await solanaKeyPair.signMessage(
-      recentBlockhash: blockHash,
-      message: solana.Message(instructions: instructionsList),
-    );
-
     try {
+      final tx = await solanaKeyPair.signMessage(
+        recentBlockhash: blockHash,
+        message: solana.Message(instructions: instructionsList),
+      );
       final simResult = await coin.getProxy().rpcClient.simulateTransaction(
             tx.encode(),
             commitment: solana.Commitment.processed,
