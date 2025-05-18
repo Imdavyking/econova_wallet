@@ -97,63 +97,70 @@ class StarknetCoin extends Coin {
   }
 
   Future<String?> addDeclareDapp(AddDeclareTransactionParameters params) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    // Retrieve active wallet key and import related data
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+    final importedData = await importData(walletData);
+
+    // Initialize signer and provider
+    final signer =
+        Signer(privateKey: Felt.fromHexString(importedData.privateKey!));
     final provider = await apiProvider();
     final chainId = await getChainId();
+
+    // Create the funding account instance
     final fundingAccount = Account(
       provider: provider,
       signer: signer,
-      accountAddress: Felt.fromHexString(response.address),
+      accountAddress: Felt.fromHexString(importedData.address),
       chainId: chainId,
     );
+
     final compilerVersion = params.contractClass.contractClassVersion;
     final compiledClassHash = BigInt.parse(params.compiledClassHash);
-    final entryPointsByTypes = params.contractClass.entryPointsByType;
+    final entryPoints = params.contractClass.entryPointsByType;
 
     late DeclareTransactionResponse declareTrxResponse;
 
+    // Determine which contract type to use based on compiler version
     if (compareVersions(compilerVersion, '1.1.0') >= 0) {
-      //FIXME: not working
+      // New CASMCompiledContract
       declareTrxResponse = await fundingAccount.declare(
         compiledContract: CASMCompiledContract(
-          bytecode: [],
+          bytecode:
+              params.contractClass.sierraProgram.map(BigInt.parse).toList(),
           entryPointsByType: CASMEntryPointsByType(
-            constructor: entryPointsByTypes.constructor.map(
-              (e) {
-                return CASMEntryPoint(
-                  selector: e.selector,
-                  offset: e.functionIdx,
-                  builtins: [],
-                );
-              },
-            ).toList(),
-            external: entryPointsByTypes.external.map(
-              (e) {
-                return CASMEntryPoint(
-                  selector: e.selector,
-                  offset: e.functionIdx,
-                  builtins: [],
-                );
-              },
-            ).toList(),
-            l1Handler: entryPointsByTypes.l1Handler.map(
-              (e) {
-                return CASMEntryPoint(
-                  selector: e.selector,
-                  offset: e.functionIdx,
-                  builtins: [],
-                );
-              },
-            ).toList(),
+            constructor: entryPoints.constructor
+                .map(
+                  (e) => CASMEntryPoint(
+                      selector: e.selector,
+                      offset: e.functionIdx,
+                      builtins: []),
+                )
+                .toList(),
+            external: entryPoints.external
+                .map(
+                  (e) => CASMEntryPoint(
+                      selector: e.selector,
+                      offset: e.functionIdx,
+                      builtins: []),
+                )
+                .toList(),
+            l1Handler: entryPoints.l1Handler
+                .map(
+                  (e) => CASMEntryPoint(
+                      selector: e.selector,
+                      offset: e.functionIdx,
+                      builtins: []),
+                )
+                .toList(),
           ),
           compilerVersion: compilerVersion,
-          bytecodeSegmentLengths: [],
+          bytecodeSegmentLengths: [], // Provide if available; otherwise, empty
         ),
         compiledClassHash: compiledClassHash,
       );
     } else {
+      // Deprecated contract format
       declareTrxResponse = await fundingAccount.declare(
         compiledContract: DeprecatedCompiledContract(
           program: {
@@ -166,44 +173,42 @@ class StarknetCoin extends Coin {
                   ab as Map<String, dynamic>))
               .toList(),
           entryPointsByType: DeprecatedCairoEntryPointsByType(
-            constructor:
-                params.contractClass.entryPointsByType.constructor.map((e) {
-              return DeprecatedCairoEntryPoint(
-                selector: e.selector,
-                offset: e.functionIdx.toString(),
-              );
-            }).toList(),
-            external: params.contractClass.entryPointsByType.external.map((e) {
-              return DeprecatedCairoEntryPoint(
-                selector: e.selector,
-                offset: e.functionIdx.toString(),
-              );
-            }).toList(),
-            l1Handler:
-                params.contractClass.entryPointsByType.l1Handler.map((e) {
-              return DeprecatedCairoEntryPoint(
-                selector: e.selector,
-                offset: e.functionIdx.toString(),
-              );
-            }).toList(),
+            constructor: entryPoints.constructor
+                .map(
+                  (e) => DeprecatedCairoEntryPoint(
+                      selector: e.selector, offset: e.functionIdx.toString()),
+                )
+                .toList(),
+            external: entryPoints.external
+                .map(
+                  (e) => DeprecatedCairoEntryPoint(
+                      selector: e.selector, offset: e.functionIdx.toString()),
+                )
+                .toList(),
+            l1Handler: entryPoints.l1Handler
+                .map(
+                  (e) => DeprecatedCairoEntryPoint(
+                      selector: e.selector, offset: e.functionIdx.toString()),
+                )
+                .toList(),
           ),
         ),
         compiledClassHash: compiledClassHash,
       );
     }
 
+    // Handle the response and extract transaction hash or throw an error
     final txHash = declareTrxResponse.when(
       result: (result) {
         debugPrint(
-          'Account is deployed (tx: ${result.transactionHash.toHexString()})',
-        );
+            'Account is deployed (tx: ${result.transactionHash.toHexString()})');
         return result.transactionHash;
       },
       error: (error) => throw Exception(
-        'Account deploy failed: ${error.code}: ${error.message}',
-      ),
+          'Account deploy failed: ${error.code}: ${error.message}'),
     );
 
+    // Wait for transaction acceptance on-chain
     final isAccepted = await waitForAcceptance(
       transactionHash: txHash.toHexString(),
       provider: provider,
