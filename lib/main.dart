@@ -127,7 +127,7 @@ const testMnemonic =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await FlutterDownloader.initialize();
+  await FlutterDownloader.initialize();
   await Hive.initFlutter();
   await dotenv.load();
   FocusManager.instance.primaryFocus?.unfocus();
