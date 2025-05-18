@@ -417,7 +417,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
                         return;
                       }
 
-                      getAllBlockchains.add(ethToken);
+                      supportedChains.add(ethToken);
 
                       Navigator.pushAndRemoveUntil(
                         context,

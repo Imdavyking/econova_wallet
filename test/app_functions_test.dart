@@ -28,7 +28,7 @@ void main() async {
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
-    getAllBlockchains = await getAllBlockchains_fun();
+    supportedChains = await fetchSupportedChains();
   });
 
   tearDown(() async {
@@ -267,8 +267,8 @@ void main() async {
 
   test('validate addresses', () {
     const invalidAddress = 'bc1qzmy4dtruaf';
-    for (int i = 0; i < getAllBlockchains.length; i++) {
-      Coin blockchainInfo = getAllBlockchains[i];
+    for (int i = 0; i < supportedChains.length; i++) {
+      Coin blockchainInfo = supportedChains[i];
       switch (blockchainInfo.getDefault()) {
         case 'EGLD':
           blockchainInfo.validateAddress(
@@ -457,18 +457,18 @@ void main() async {
   });
 
   test('all blockchain have important fields', () async {
-    for (int i = 0; i < getAllBlockchains.length; i++) {
-      expect(getAllBlockchains[i].getName(), isNotNull);
-      expect(getAllBlockchains[i].getSymbol(), isNotNull);
-      expect(getAllBlockchains[i].getDefault(), isNotNull);
-      expect(getAllBlockchains[i].getExplorer(), isNotNull);
-      expect(getAllBlockchains[i].getImage(), isNotNull);
+    for (int i = 0; i < supportedChains.length; i++) {
+      expect(supportedChains[i].getName(), isNotNull);
+      expect(supportedChains[i].getSymbol(), isNotNull);
+      expect(supportedChains[i].getDefault(), isNotNull);
+      expect(supportedChains[i].getExplorer(), isNotNull);
+      expect(supportedChains[i].getImage(), isNotNull);
     }
   });
 
   test('check if gecko id is in array of ids', () async {
-    for (int i = 0; i < getAllBlockchains.length; i++) {
-      final geckoId = getAllBlockchains[i].getGeckoId();
+    for (int i = 0; i < supportedChains.length; i++) {
+      final geckoId = supportedChains[i].getGeckoId();
       if (geckoId != '') {
         expect(true, coinGeckoIDs.contains(geckoId));
       }
@@ -514,8 +514,8 @@ void main() async {
     walletImportType = WalletType.secretPhrase;
     seedPhraseRoot = await compute(seedFromMnemonic, testMnemonic);
 
-    for (int i = 0; i < getAllBlockchains.length; i++) {
-      Coin blockchainInfo = getAllBlockchains[i];
+    for (int i = 0; i < supportedChains.length; i++) {
+      Coin blockchainInfo = supportedChains[i];
       AccountData cryptoKeys = await blockchainInfo.importData(testMnemonic);
       switch (blockchainInfo.getDefault()) {
         case 'ZIL':

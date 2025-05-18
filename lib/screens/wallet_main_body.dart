@@ -79,8 +79,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
   void initializeBlockchains() {
     blockChainsArray = <Widget>[];
 
-    for (int i = 0; i < getAllBlockchains.length; i++) {
-      final coin = getAllBlockchains[i];
+    for (int i = 0; i < supportedChains.length; i++) {
+      final coin = supportedChains[i];
       if (WalletService.removeCoin(coin)) continue;
 
       final notifier = ValueNotifier<double?>(null);

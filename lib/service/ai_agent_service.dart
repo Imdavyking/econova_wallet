@@ -141,7 +141,7 @@ class AIAgentService {
 
       final List<String> listFungibleToken = [];
 
-      final otherCoins = getAllBlockchains
+      final otherCoins = supportedChains
           .where((Coin value) {
             if (value.tokenAddress() != null &&
                 value.getExplorer() == coin.getExplorer()) {

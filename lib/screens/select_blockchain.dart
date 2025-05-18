@@ -27,7 +27,7 @@ class _SelectBlockchainState extends State<SelectBlockchain> {
   void initState() {
     super.initState();
 
-    savedCoins = widget.evmOnly ? evmChains : getAllBlockchains;
+    savedCoins = widget.evmOnly ? evmChains : supportedChains;
 
     blockchains.value = savedCoins;
   }

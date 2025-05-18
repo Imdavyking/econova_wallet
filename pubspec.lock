@@ -2075,7 +2075,7 @@ packages:
     source: hosted
     version: "0.1.2+1"
   starknet_provider:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: starknet_provider
       sha256: "74213a24a032e5ab599ff0cb35c6eaa4e1ee3e5ff4eece080e6f5884bc280923"

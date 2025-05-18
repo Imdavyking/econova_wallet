@@ -140,7 +140,7 @@ class AItools {
         Coin? token = coin;
 
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          final foundToken = getAllBlockchains.firstWhereOrNull((token) =>
+          final foundToken = supportedChains.firstWhereOrNull((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
 
@@ -207,7 +207,7 @@ class AItools {
         Coin token = coin;
 
         if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          final foundToken = getAllBlockchains.firstWhereOrNull((token) =>
+          final foundToken = supportedChains.firstWhereOrNull((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
           if (foundToken != null) {
@@ -512,7 +512,7 @@ class AItools {
           if (confirmation != null) {
             return confirmation;
           }
-          coin = getAllBlockchains
+          coin = supportedChains
               .firstWhere((Coin value) => value.getSymbol() == default_);
 
           return 'Switched to $name $default_';

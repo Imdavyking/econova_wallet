@@ -171,7 +171,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                                   return;
                                 }
                                 final predictions =
-                                    phraseAutoComplete.autoComplete(
+                                    mnemonicSuggester.autoComplete(
                                   prefix: lastWord,
                                   limit: 15,
                                 );

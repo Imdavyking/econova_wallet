@@ -2229,7 +2229,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                           jsonEncode(addBlockChain),
                                         );
 
-                                        getAllBlockchains.add(switchChain);
+                                        supportedChains.add(switchChain);
 
                                         if (context.mounted &&
                                             Navigator.canPop(context)) {

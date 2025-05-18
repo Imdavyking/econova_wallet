@@ -105,7 +105,7 @@ class ContactParams {
 
   factory ContactParams.fromJson(Map<String, dynamic> json) {
     Map jsonCoin = json['coin'];
-    Coin coin = getAllBlockchains.firstWhere((element) {
+    Coin coin = supportedChains.firstWhere((element) {
       final sameName = element.getName() == jsonCoin['name'];
       final sameDefault = element.getDefault() == jsonCoin['default'];
       return sameName && sameDefault;

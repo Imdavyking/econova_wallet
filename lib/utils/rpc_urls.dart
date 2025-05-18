@@ -411,7 +411,7 @@ String decryptText(String encrypted, String password) {
 
 Future<void> importAllKeys(String mnemonic) async {
   await Future.wait(
-    getAllBlockchains.map(
+    supportedChains.map(
       (blockchain) => blockchain.importData(mnemonic),
     ),
   );
@@ -546,10 +546,10 @@ Future<double> totalCryptoBalance({
 }) async {
   double totalBalance = 0.0;
 
-  for (int i = 0; i < getAllBlockchains.length; i++) {
+  for (int i = 0; i < supportedChains.length; i++) {
     try {
       NetworkGuard().throwIfOffline();
-      final coin = getAllBlockchains[i];
+      final coin = supportedChains[i];
       if (WalletService.removeCoin(coin)) continue;
       final balance = await coin.getBalance(true);
       final priceDetails = allCryptoPrice[coin.getGeckoId()];

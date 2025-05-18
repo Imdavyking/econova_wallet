@@ -51,7 +51,7 @@ import '../coins/solana_coin.dart';
 import '../coins/stellar_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-List<Coin> getAllBlockchains = [];
+List<Coin> supportedChains = [];
 
 late String currencyJson;
 late String currencyJsonSearch;
@@ -87,7 +87,7 @@ List<StarknetCoin> starkNetCoins = [
   ...getStarknetBlockchains(),
 ];
 
-Future<List<Coin>> getAllBlockchains_fun() async {
+Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
     ...getTonFungibleCoins(),
@@ -119,7 +119,7 @@ Future<List<Coin>> getAllBlockchains_fun() async {
 }
 
 late Box pref;
-final phraseAutoComplete = Trie();
+final mnemonicSuggester = Trie();
 late WalletType walletImportType;
 
 // DO NOT USE (public)
@@ -184,9 +184,9 @@ void main() async {
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
   }
-  getAllBlockchains = await getAllBlockchains_fun();
+  supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
-    phraseAutoComplete.insert(wordList[i]);
+    mnemonicSuggester.insert(wordList[i]);
   }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
