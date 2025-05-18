@@ -847,7 +847,6 @@ Future setupWebViewWalletBridge(
           const requestType = data.requestType;
           const chainId = data.chainId;
           const address = data.address;
-          window.removeEventListener(requestId, handler);
           switch(requestType){
             case 'wallet_requestAccounts':
               starknet.selectedAddress = address;
@@ -896,6 +895,8 @@ Future setupWebViewWalletBridge(
         } catch (err) {
           console.error("error gotten", err);
           reject(new Error(err.toString()));
+        } finally {
+          window.removeEventListener(requestId, handler);
         }
       };
 
