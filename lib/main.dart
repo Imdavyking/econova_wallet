@@ -77,7 +77,6 @@ List<TronCoin> tronChains = [
 List<TonCoin> tonChains = [
   ...getTonBlockChains(),
 ];
-// ---- FT ----
 
 List<ERCFungibleCoin> erc20Coins = [
   ...getERC20Coins(),
