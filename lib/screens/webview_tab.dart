@@ -619,7 +619,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           "address": coinData.address,
           "requestType": requestType,
           "txHash": txHash,
-          'classHash': ''
+          'classHash': '' //TODO: add class hash
         };
         await sendResponse(responseData);
       } else if (requestType == 'wallet_addInvokeTransaction') {
