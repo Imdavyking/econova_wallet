@@ -638,7 +638,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         // For wallet_requestChainId just send response
         await sendResponse(responseData);
       } else if (requestType == 'wallet_addDeclareTransaction') {
-        final params = request['params'];
+        // final params = request['params'];
       } else if (requestType == 'wallet_addInvokeTransaction') {
         final params = request['params'];
         final List calls = params['calls'] ?? [];
