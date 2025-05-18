@@ -947,12 +947,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                         );
 
                         break;
-                      case 'enable':
-                        // Handle enable logic
-                        break;
-                      case 'isPreauthorized':
-                        // Return whether dapp is preauthorized
-                        break;
                       case 'on':
                         // Handle subscription to events
                         break;

@@ -920,12 +920,8 @@ Future setupWebViewWalletBridge(
   },
 
   isPreauthorized: () => {
-    return window.starknet.callFlutterHandler({
-      type: "isPreauthorized",
-      url: window.location.origin,
-    });
+    return false;
   },
-
   on: (event, handler) => {
     window.starknet.callFlutterHandler({
       type: "on",
