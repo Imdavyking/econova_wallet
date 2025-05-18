@@ -126,18 +126,22 @@ const testMnemonic =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
 
 void main() async {
+  print("Starting App");
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterDownloader.initialize();
+  print("3 App");
+  // await FlutterDownloader.initialize();
+  print("4 App");
   await Hive.initFlutter();
+  print("5 App");
   await dotenv.load();
-
+  print("we here App");
   FocusManager.instance.primaryFocus?.unfocus();
   // make app always in portrait mode
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
+  print("error here App");
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();
@@ -152,6 +156,8 @@ void main() async {
       ),
     );
   };
+
+  print("secure here App");
   const _secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
 
   const FlutterSecureStorage secureStorage = FlutterSecureStorage();
@@ -167,13 +173,13 @@ void main() async {
   }
 
   final result = await secureStorage.read(key: _secureEncryptionKey);
-
+  print("encrypt1 here App");
   var encryptionKey = base64Url.decode(result!);
   pref = await Hive.openBox(
     secureStorageKey,
     encryptionCipher: HiveAesCipher(encryptionKey),
   );
-
+  print("encrypt2 here App");
   walletImportType = WalletService.getType();
 
   provider = await rootBundle.loadString('js/trust.min.js');
@@ -181,19 +187,21 @@ void main() async {
   webNotifer = await rootBundle.loadString('js/web_notification.js');
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
   currencyJsonSearch = await rootBundle.loadString('json/currencies.json');
+  print("load json here App");
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
   }
   getAllBlockchains = await getAllBlockchains_fun();
-
+  print("load blockchains here App");
   for (int i = 0; i < wordList.length; i++) {
     phraseAutoComplete.insert(wordList[i]);
   }
+  print("load autocomplete here App");
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
-
+  print("load target here App");
   runApp(ProviderScope(
     child: MyApp(
       userDarkMode: pref.get(darkModekey, defaultValue: true),

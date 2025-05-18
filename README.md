@@ -78,9 +78,6 @@ Sure! Here's a polished and clearer version of your instructions:
 ---
 
 4. Start the App:
-
-> **Note:** Currently, the app runs only on Android.
-
 Make sure you are using the following Flutter version for compatibility:
 
 ```
