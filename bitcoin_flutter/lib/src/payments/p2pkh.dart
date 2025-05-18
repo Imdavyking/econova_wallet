@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'package:meta/meta.dart';
 import 'package:bip32/src/utils/ecurve.dart' show isPoint;
 import 'package:bs58check/bs58check.dart' as bs58check;
 

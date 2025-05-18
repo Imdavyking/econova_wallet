@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:charts_common/common.dart' as common
     show
         BehaviorPosition,
@@ -46,7 +48,8 @@ class SeriesLegend<D> extends ChartBehavior<D> {
       common.OutsideJustification.startDrawArea;
   static const defaultInsideJustification = common.InsideJustification.topStart;
 
-  final desiredGestures = new Set<GestureType>();
+  @override
+  final desiredGestures = <GestureType>{};
 
   final common.SelectionModelType? selectionModelType;
 
@@ -87,7 +90,7 @@ class SeriesLegend<D> extends ChartBehavior<D> {
   /// Styles for legend entry label text.
   final common.TextStyleSpec? entryTextStyle;
 
-  static const defaultCellPadding = const EdgeInsets.all(8.0);
+  static const defaultCellPadding = EdgeInsets.all(8.0);
 
   final List<String>? defaultHiddenSeries;
 
@@ -158,14 +161,14 @@ class SeriesLegend<D> extends ChartBehavior<D> {
         position == common.BehaviorPosition.bottom ||
         position == common.BehaviorPosition.inside);
     final layoutBuilder = horizontalFirst
-        ? new TabularLegendLayout.horizontalFirst(
+        ? TabularLegendLayout.horizontalFirst(
             desiredMaxColumns: desiredMaxColumns, cellPadding: cellPadding)
-        : new TabularLegendLayout.verticalFirst(
+        : TabularLegendLayout.verticalFirst(
             desiredMaxRows: desiredMaxRows, cellPadding: cellPadding);
 
-    return new SeriesLegend._internal(
+    return SeriesLegend._internal(
         contentBuilder:
-            new TabularLegendContentBuilder(legendLayout: layoutBuilder),
+            TabularLegendContentBuilder(legendLayout: layoutBuilder),
         selectionModelType: common.SelectionModelType.info,
         position: position,
         outsideJustification: outsideJustification,
@@ -226,7 +229,7 @@ class SeriesLegend<D> extends ChartBehavior<D> {
     outsideJustification ??= defaultOutsideJustification;
     insideJustification ??= defaultInsideJustification;
 
-    return new SeriesLegend._internal(
+    return SeriesLegend._internal(
       contentBuilder: contentBuilder,
       selectionModelType: common.SelectionModelType.info,
       position: position,
@@ -258,7 +261,7 @@ class SeriesLegend<D> extends ChartBehavior<D> {
 
   @override
   common.SeriesLegend<D> createCommonBehavior() =>
-      new _FlutterSeriesLegend<D>(this);
+      _FlutterSeriesLegend<D>(this);
 
   @override
   void updateCommonBehavior(common.ChartBehavior commonBehavior) {
@@ -278,7 +281,7 @@ class SeriesLegend<D> extends ChartBehavior<D> {
         position == o.position &&
         outsideJustification == o.outsideJustification &&
         insideJustification == o.insideJustification &&
-        new ListEquality().equals(defaultHiddenSeries, o.defaultHiddenSeries) &&
+        ListEquality().equals(defaultHiddenSeries, o.defaultHiddenSeries) &&
         showMeasures == o.showMeasures &&
         legendDefaultMeasure == o.legendDefaultMeasure &&
         measureFormatter == o.measureFormatter &&
@@ -337,8 +340,7 @@ class _FlutterSeriesLegend<D> extends common.SeriesLegend<D>
 
   @override
   Widget build(BuildContext context) {
-    final hasSelection = legendState.legendEntries != null &&
-        legendState.legendEntries.any((entry) => entry.isSelected);
+    final hasSelection = legendState.legendEntries.any((entry) => entry.isSelected);
 
     // Show measures if [showMeasures] is true and there is a selection or if
     // showing measures when there is no selection.

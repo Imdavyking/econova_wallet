@@ -25,7 +25,8 @@ import '../chart_behavior.dart'
 
 @immutable
 class InitialHintBehavior<D> extends ChartBehavior<D> {
-  final desiredGestures = new Set<GestureType>();
+  @override
+  final desiredGestures = <GestureType>{};
 
   final Duration? hintDuration;
   final double? maxHintTranslate;
@@ -36,7 +37,7 @@ class InitialHintBehavior<D> extends ChartBehavior<D> {
 
   @override
   common.InitialHintBehavior<D> createCommonBehavior() {
-    final behavior = new FlutterInitialHintBehavior<D>();
+    final behavior = FlutterInitialHintBehavior<D>();
 
     if (hintDuration != null) {
       behavior.hintDuration = hintDuration!;
@@ -59,10 +60,12 @@ class InitialHintBehavior<D> extends ChartBehavior<D> {
   @override
   String get role => 'InitialHint';
 
+  @override
   bool operator ==(Object other) {
     return other is InitialHintBehavior && other.hintDuration == hintDuration;
   }
 
+  @override
   int get hashCode {
     return hintDuration.hashCode;
   }
@@ -76,8 +79,8 @@ class FlutterInitialHintBehavior<D> extends common.InitialHintBehavior<D>
 
   BaseChartState? _chartState;
 
+  @override
   set chartState(BaseChartState chartState) {
-    assert(chartState != null);
 
     _chartState = chartState;
 

@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names
+
 import 'package:sui/types/objects.dart';
 
 const SUI_FRAMEWORK_ADDRESS = '0x2';
@@ -65,6 +67,7 @@ class Coin {
     if (data.dataResponse != null) {
       return data.dataResponse?.data?.content?.type ?? '';
     }
+    return null;
   }
 }
 
