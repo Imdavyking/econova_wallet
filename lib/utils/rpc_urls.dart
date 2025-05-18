@@ -745,7 +745,7 @@ Future setupWebViewWalletBridge(
     
     trustwallet.ethereum = new trustwallet.Provider(config);
     trustwallet.cosmos = new trustwallet.CosmosProvider(config);
-    // trustwallet.solana = new trustwallet.SolanaProvider(config);
+    trustwallet.solana = new trustwallet.SolanaProvider(config);
 
     // trustwallet.aptos = new trustwallet.AptosProvider(config);
     trustwallet.postMessage = (json) => {
