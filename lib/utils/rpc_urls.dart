@@ -875,11 +875,11 @@ Future setupWebViewWalletBridge(
               resolve(specs);
               break;
             case 'wallet_addDeclareTransaction':
-              const txHash = data.txHash;
+              const declareTx = data.txHash;
               const classHash = data.classHash;
-              console.log("txHash", txHash);
+              console.log("declareTx", declareTx);
               resolve({
-                transaction_hash: txHash,
+                transaction_hash: declareTx,
                 class_hash: classHash,
               });
               break;
