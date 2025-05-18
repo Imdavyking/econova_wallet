@@ -875,6 +875,15 @@ Future setupWebViewWalletBridge(
               console.log("specs", specs);
               resolve(specs);
               break;
+            case 'wallet_addDeclareTransaction':
+              const txHash = data.txHash;
+              const classHash = data.classHash;
+              console.log("txHash", txHash);
+              resolve({
+                transaction_hash: txHash,
+                class_hash: classHash,
+              });
+              break;
             case 'wallet_signTypedData':
               const signature = data.signature;
               console.log("signature", signature);

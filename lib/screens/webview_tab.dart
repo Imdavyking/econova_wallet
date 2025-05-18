@@ -558,54 +558,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_addDeclareTransaction',
     ];
 
-//     export interface AddDeclareTransactionParameters {
-//     contract_class: CONTRACT_CLASS;
-//     compiled_class_hash: FELT;
-//     class_hash?: FELT;
-// }
-
-// _$CASMCompiledContractImpl _$$CASMCompiledContractImplFromJson(
-//         Map<String, dynamic> json) =>
-//     _$CASMCompiledContractImpl(
-//       bytecode: (json['bytecode'] as List<dynamic>)
-//           .map((e) => BigInt.parse(e as String))
-//           .toList(), // sierra_program
-//       entryPointsByType: CASMEntryPointsByType.fromJson(
-//           json['entry_points_by_type'] as Map<String, dynamic>), // entry_points_by_type
-//       compilerVersion: json['compiler_version'] as String, // contract_class_version
-//       bytecodeSegmentLengths:
-//           (json['bytecode_segment_lengths'] as List<dynamic>)
-//               .map((e) => (e as num).toInt())
-//               .toList(), // what is this?
-//     );
-
-// export type CONTRACT_CLASS = {
-//     sierra_program: FELT[];
-//     contract_class_version: string;
-//     entry_points_by_type: {
-//         CONSTRUCTOR: SIERRA_ENTRY_POINT[];
-//         EXTERNAL: SIERRA_ENTRY_POINT[];
-//         L1_HANDLER: SIERRA_ENTRY_POINT[];
-//     };
-//     abi: string;
-// };
-
-// export type SIERRA_ENTRY_POINT = {
-//     selector: FELT;
-//     function_idx: number;
-// };
-
-// required ICompiledContract compiledContract,
-//   BigInt? compiledClassHash,
-//   CASMCompiledContract? casmCompiledContract,
-
-    // fundingAccount.declare(
-    //     compiledContract: compilerVersion >= 1.1.0
-    //         ? CASMCompiledContract.fromJson(contract_class)
-    //         : DeprecatedCompiledContract.fromJson(contract_class),
-    //     compiledClassHash: compiled_class_hash,
-    //   );
-
     try {
       if (requestType == 'wallet_requestAccounts' ||
           requestType == 'wallet_requestChainId') {
@@ -658,7 +610,18 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       } else if (requestType == 'wallet_addDeclareTransaction') {
         final params = request['params'];
         final coin = starkNetCoins.first;
-        final txHash = await coin.addDeclareDapp(AddDeclareTransactionParameters.fromJson(params));
+        final txHash = await coin
+            .addDeclareDapp(AddDeclareTransactionParameters.fromJson(params));
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "address": coinData.address,
+          "requestType": requestType,
+          "txHash": txHash,
+          'classHash': ''
+        };
+        await sendResponse(responseData);
       } else if (requestType == 'wallet_addInvokeTransaction') {
         final params = request['params'];
         final List calls = params['calls'] ?? [];
