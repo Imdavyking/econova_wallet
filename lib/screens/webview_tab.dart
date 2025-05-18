@@ -557,6 +557,37 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_addDeclareTransaction',
     ];
 
+//     export interface AddDeclareTransactionParameters {
+//     contract_class: CONTRACT_CLASS;
+//     compiled_class_hash: FELT;
+//     class_hash?: FELT;
+// }
+
+// required ICompiledContract compiledContract,
+//   BigInt? compiledClassHash,
+//   CASMCompiledContract? casmCompiledContract,
+
+
+    // fundingAccount.declare(
+    //     compiledContract: compilerVersion >= 1.1.0
+    //         ? CASMCompiledContract.fromJson(contract_class)
+    //         : DeprecatedCompiledContract.fromJson(contract_class),
+    //     compiledClassHash: compiled_class_hash,
+    //   );
+
+// export type CONTRACT_CLASS = {
+//     sierra_program: FELT[];
+//     contract_class_version: string;
+//     entry_points_by_type: {
+//         CONSTRUCTOR: SIERRA_ENTRY_POINT[];
+//         EXTERNAL: SIERRA_ENTRY_POINT[];
+//         L1_HANDLER: SIERRA_ENTRY_POINT[];
+//     };
+//     abi: string;
+// };
+
+
+
     try {
       if (requestType == 'wallet_requestAccounts' ||
           requestType == 'wallet_requestChainId') {
@@ -606,6 +637,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
         // For wallet_requestChainId just send response
         await sendResponse(responseData);
+      } else if (requestType == 'wallet_addDeclareTransaction') {
+        final params = request['params'];
       } else if (requestType == 'wallet_addInvokeTransaction') {
         final params = request['params'];
         final List calls = params['calls'] ?? [];

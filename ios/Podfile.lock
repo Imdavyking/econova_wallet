@@ -34,8 +34,6 @@ PODS:
   - qr_code_scanner (0.2.0):
     - Flutter
     - MTBBarcodeScanner
-  - receive_sharing_intent (1.8.1):
-    - Flutter
   - rive_common (0.0.1):
     - Flutter
   - scan (0.0.1):
@@ -74,7 +72,6 @@ DEPENDENCIES:
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - qr_code_scanner (from `.symlinks/plugins/qr_code_scanner/ios`)
-  - receive_sharing_intent (from `.symlinks/plugins/receive_sharing_intent/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
   - scan (from `.symlinks/plugins/scan/ios`)
   - screenshot_callback (from `.symlinks/plugins/screenshot_callback/ios`)
@@ -118,8 +115,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   qr_code_scanner:
     :path: ".symlinks/plugins/qr_code_scanner/ios"
-  receive_sharing_intent:
-    :path: ".symlinks/plugins/receive_sharing_intent/ios"
   rive_common:
     :path: ".symlinks/plugins/rive_common/ios"
   scan:
@@ -157,7 +152,6 @@ SPEC CHECKSUMS:
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 3787117e48f80715ff04a3830ca039283d6a4f29
   qr_code_scanner: d77f94ecc9abf96d9b9b8fc04ef13f611e5a147a
-  receive_sharing_intent: 222384f00ffe7e952bbfabaa9e3967cb87e5fe00
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
   scan: 28e4f67b9b0d63ccd5c649acc3d6aaf94c0a7a81
   screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
