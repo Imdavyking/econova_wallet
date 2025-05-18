@@ -22,15 +22,6 @@ const strkNativeToken =
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 
-final tokenClassHash = {
-  Felt.fromString('SN_MAIN').toHexString():
-      '0x05ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac'
-};
-final factoryAddresses = {
-  Felt.fromString('SN_MAIN').toHexString():
-      '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc'
-};
-
 class StarknetCoin extends Coin {
   String api;
   String blockExplorer;
@@ -44,6 +35,9 @@ class StarknetCoin extends Coin {
   String classHash;
   String contractAddress;
   bool useStarkToken;
+  String multiCallAddress;
+  String factoryAddress;
+  String tokenClassHash;
 
   StarknetCoin({
     required this.blockExplorer,
@@ -58,6 +52,9 @@ class StarknetCoin extends Coin {
     required this.classHash,
     required this.contractAddress,
     required this.useStarkToken,
+    required this.multiCallAddress,
+    required this.factoryAddress,
+    required this.tokenClassHash,
   });
 
   factory StarknetCoin.fromJson(Map<String, dynamic> json) {
@@ -74,6 +71,9 @@ class StarknetCoin extends Coin {
       classHash: json['classHash'],
       contractAddress: json['contractAddress'],
       useStarkToken: json['useStarkToken'],
+      multiCallAddress: json['multiCallAddress'],
+      factoryAddress: json['factoryAddress'],
+      tokenClassHash: json['tokenClassHash'],
     );
   }
 
@@ -1089,10 +1089,10 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final chainId = await getChainId();
     final chainIdHex = chainId.toHexString();
-    if (!tokenClassHash.containsKey(chainIdHex)) {
+    if (tokenClassHash.isEmpty) {
       return const DeployMeme(tokenAddress: null, txHash: null);
     }
-    if (!factoryAddresses.containsKey(chainIdHex)) {
+    if (factoryAddress.isEmpty) {
       return const DeployMeme(tokenAddress: null, txHash: null);
     }
     final fundingAccount = Account(
@@ -1113,18 +1113,14 @@ class StarknetCoin extends Coin {
     ];
 
     final tokenAddress = computeAddressWithDeployer(
-      classHash: Felt.fromHexString(tokenClassHash[chainIdHex]!),
+      classHash: Felt.fromHexString(tokenClassHash),
       calldata: constructorCalldata,
       salt: salt,
-      deployerAddress: Felt.fromHexString(
-        factoryAddresses[chainIdHex]!,
-      ),
+      deployerAddress: Felt.fromHexString(factoryAddress),
     );
 
     final dployTx = FunctionCall(
-      contractAddress: Felt.fromHexString(
-        factoryAddresses[chainIdHex]!,
-      ),
+      contractAddress: Felt.fromHexString(factoryAddress),
       entryPointSelector: getSelectorByName('create_memecoin'),
       calldata: constructorCalldata,
     );
@@ -1143,7 +1139,226 @@ class StarknetCoin extends Coin {
     );
   }
 
-  Future<void> launchOnEkubo(LaunchParameters params) async {}
+  Future<void> launchOnEkubo(LaunchParameters params) async {
+    // const memecoin = await getMemecoin(factory, parameters.memecoinAddress);
+  }
+
+  getMemecoin(String memecoinAddress) async {
+    validateAddress(memecoinAddress);
+  }
+
+  getBaseMemecoin(String memecoinAddress) async {
+    final result = await multiCallContract([
+      FunctionCall(
+        contractAddress: Felt.fromHexString(factoryAddress),
+        entryPointSelector: getSelectorByName('is_memecoin'),
+        calldata: [
+          Felt.fromHexString(memecoinAddress),
+        ],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoinAddress),
+        entryPointSelector: getSelectorByName('name'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoinAddress),
+        entryPointSelector: getSelectorByName('symbol'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoinAddress),
+        entryPointSelector: getSelectorByName('owner'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoinAddress),
+        entryPointSelector: getSelectorByName('total_supply'),
+        calldata: [],
+      ),
+    ]);
+    final [[isMemecoin], [name], [symbol], [owner], totalSupply] = result;
+    if (isMemecoin == Felt.zero) return null;
+  }
+
+// async getMemecoin(address) { // factory
+//     const [baseMemecoin, launchData] = await Promise.all([
+//       this.getBaseMemecoin(address),
+//       this.getMemecoinLaunchData(address)
+//     ]);
+//     if (!baseMemecoin) return void 0;
+//     return { ...baseMemecoin, ...launchData };
+//   }
+
+//  async getBaseMemecoin(address) {
+//     const result = await multiCallContract(this.config.provider, this.config.chainId, [
+//       {
+//         contractAddress: FACTORY_ADDRESSES[this.config.chainId],
+//         entrypoint: "is_memecoin" /* IS_MEMECOIN */,
+//         calldata: [address]
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "name" /* NAME */
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "symbol" /* SYMBOL */
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "owner" /* OWNER */
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "total_supply" /* TOTAL_SUPPLY */
+//       }
+//     ]);
+//     const [[isMemecoin], [name], [symbol], [owner], totalSupply] = result;
+//     if (!+isMemecoin) return void 0;
+//     return {
+//       address,
+//       name: import_starknet5.shortString.decodeShortString(name),
+//       symbol: import_starknet5.shortString.decodeShortString(symbol),
+//       owner: (0, import_starknet5.getChecksumAddress)(owner),
+//       decimals: DECIMALS,
+//       totalSupply: import_starknet5.uint256.uint256ToBN({ low: totalSupply[0], high: totalSupply[1] }).toString()
+//     };
+//   }
+//   //
+//   // GET LAUNCH
+//   //
+//   async getMemecoinLaunchData(address) {
+//     const result = await multiCallContract(this.config.provider, this.config.chainId, [
+//       {
+//         contractAddress: address,
+//         entrypoint: "get_team_allocation" /* GET_TEAM_ALLOCATION */
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "launched_at_block_number" /* LAUNCHED_AT_BLOCK_NUMBER */
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "is_launched" /* IS_LAUNCHED */
+//       },
+//       {
+//         contractAddress: FACTORY_ADDRESSES[this.config.chainId],
+//         entrypoint: "locked_liquidity" /* LOCKED_LIQUIDITY */,
+//         calldata: [address]
+//       },
+//       {
+//         contractAddress: address,
+//         entrypoint: "launched_with_liquidity_parameters" /* LAUNCHED_WITH_LIQUIDITY_PARAMETERS */
+//       }
+//     ]);
+//     const [
+//       teamAllocation,
+//       [launchBlockNumber],
+//       [launched],
+//       [dontHaveLiq, lockManager, liqTypeIndex, ekuboId],
+//       launchParams
+//     ] = result;
+//     const liquidityType = Object.values(LiquidityType)[+liqTypeIndex];
+//     const isLaunched = !!+launched && !+dontHaveLiq && !+launchParams[0] && liquidityType;
+//     if (!isLaunched) {
+//       return {
+//         isLaunched: false
+//       };
+//     }
+//     let liquidity;
+//     switch (liquidityType) {
+//       case "STARKDEFI_ERC20" /* STARKDEFI_ERC20 */:
+//       case "JEDISWAP_ERC20" /* JEDISWAP_ERC20 */: {
+//         const baseLiquidity = {
+//           type: liquidityType,
+//           lockManager,
+//           lockPosition: launchParams[5],
+//           quoteToken: (0, import_starknet5.getChecksumAddress)(launchParams[2]),
+//           quoteAmount: import_starknet5.uint256.uint256ToBN({ low: launchParams[3], high: launchParams[4] }).toString()
+//         };
+//         liquidity = {
+//           ...baseLiquidity,
+//           ...await this.getJediswapLiquidityLockPosition(baseLiquidity)
+//         };
+//         break;
+//       }
+//       case "EKUBO_NFT" /* EKUBO_NFT */: {
+//         const baseLiquidity = {
+//           type: liquidityType,
+//           lockManager,
+//           ekuboId,
+//           quoteToken: (0, import_starknet5.getChecksumAddress)(launchParams[7]),
+//           startingTick: +launchParams[4] * (+launchParams[5] ? -1 : 1)
+//           // mag * sign
+//         };
+//         liquidity = {
+//           ...baseLiquidity,
+//           ...await this.getEkuboLiquidityLockPosition(baseLiquidity)
+//         };
+//       }
+//     }
+//     return {
+//       isLaunched: true,
+//       quoteToken: QUOTE_TOKENS[this.config.chainId][liquidity.quoteToken],
+//       launch: {
+//         teamAllocation: import_starknet5.uint256.uint256ToBN({ low: teamAllocation[0], high: teamAllocation[1] }).toString(),
+//         blockNumber: Number(launchBlockNumber)
+//       },
+//       liquidity
+//     };
+//   }
+
+  Future<List<List<Felt>>> multiCallContract(List<FunctionCall> calls) async {
+    final provider = await apiProvider();
+    Call providerCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: Felt.fromHexString(multiCallAddress),
+        entryPointSelector: getSelectorByName('aggregate'),
+        calldata: functionCallsToCalldata(functionCalls: calls),
+      ),
+      blockId: BlockId.latest,
+    );
+    List<Felt> rawResult = providerCall.when(
+      error: (error) {
+        throw Exception(error);
+      },
+      result: (result) {
+        return result;
+      },
+    );
+    List<Felt> raw = rawResult.sublist(2);
+    List<List<Felt>> result = [];
+    int idx = 0;
+    for (int i = 0; i < raw.length; i += idx + 1) {
+      idx = int.parse(raw[i].toHexString(), radix: 16);
+      result.add(raw.sublist(i + 1, i + 1 + idx));
+    }
+    return result;
+  }
+
+// async function multiCallContract(provider, chainId, calls) {
+//   const calldata = calls.map((call) => {
+//     return import_starknet3.CallData.compile({
+//       to: call.contractAddress,
+//       selector: import_starknet3.hash.getSelector(call.entrypoint),
+//       calldata: call.calldata ?? []
+//     });
+//   });
+//   const rawResult = await provider.callContract({
+//     contractAddress: MULTICALL_ADDRESSES[chainId],
+//     entrypoint: "aggregate" /* AGGREGATE */,
+//     calldata: [calldata.length, ...calldata.flat()]
+//   });
+//   const raw = rawResult.slice(2);
+//   const result = [];
+//   let idx = 0;
+//   for (let i = 0; i < raw.length; i += idx + 1) {
+//     idx = parseInt(raw[i], 16);
+//     result.push(raw.slice(i + 1, i + 1 + idx));
+//   }
+//   return result;
+// }
 
   Felt computeAddressWithDeployer({
     required Felt classHash,
@@ -1153,7 +1368,6 @@ class StarknetCoin extends Coin {
   }) {
     final elements = <BigInt>[];
     elements.add(Felt.fromString('STARKNET_CONTRACT_ADDRESS').toBigInt());
-    // caller address is always zero
     elements.add(deployerAddress.toBigInt());
     elements.add(salt.toBigInt());
     elements.add(classHash.toBigInt());
@@ -1179,6 +1393,8 @@ List<StarknetCoin> getStarknetBlockchains() {
   if (enableTestNet) {
     blockChains.addAll([
       StarknetCoin(
+        multiCallAddress:
+            '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
         blockExplorer:
             'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
@@ -1194,8 +1410,12 @@ List<StarknetCoin> getStarknetBlockchains() {
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress: strkNativeToken,
         useStarkToken: true,
+        tokenClassHash: '',
+        factoryAddress: '',
       ),
       StarknetCoin(
+        multiCallAddress:
+            '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
         blockExplorer:
             'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
         api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
@@ -1210,11 +1430,15 @@ List<StarknetCoin> getStarknetBlockchains() {
         payScheme: 'ethereum',
         rampID: 'ETH_ETH',
         useStarkToken: false,
+        tokenClassHash: '',
+        factoryAddress: '',
       ),
     ]);
   } else {
     blockChains.addAll([
       StarknetCoin(
+        multiCallAddress:
+            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
         blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',
@@ -1228,6 +1452,10 @@ List<StarknetCoin> getStarknetBlockchains() {
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         contractAddress: strkNativeToken,
         useStarkToken: true,
+        tokenClassHash:
+            '0x05ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac',
+        factoryAddress:
+            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
       ),
     ]);
   }
