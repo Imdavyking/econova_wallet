@@ -96,7 +96,7 @@ class StarknetCoin extends Coin {
     return 0;
   }
 
-  Future<String?> addDeclareDapp(AddDeclareTransactionParameters params) async {
+  Future<DeclareTransactionResponseResult?> addDeclareDapp(AddDeclareTransactionParameters params) async {
     // Retrieve active wallet key and import related data
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final importedData = await importData(walletData);
@@ -198,11 +198,11 @@ class StarknetCoin extends Coin {
     }
 
     // Handle the response and extract transaction hash or throw an error
-    final txHash = declareTrxResponse.when(
+    final declareResult = declareTrxResponse.when(
       result: (result) {
         debugPrint(
             'Account is deployed (tx: ${result.transactionHash.toHexString()})');
-        return result.transactionHash;
+        return result;
       },
       error: (error) => throw Exception(
           'Account deploy failed: ${error.code}: ${error.message}'),
@@ -210,11 +210,11 @@ class StarknetCoin extends Coin {
 
     // Wait for transaction acceptance on-chain
     final isAccepted = await waitForAcceptance(
-      transactionHash: txHash.toHexString(),
+      transactionHash: declareResult.transactionHash.toHexString(),
       provider: provider,
     );
 
-    return isAccepted ? txHash.toHexString() : null;
+    return isAccepted ? declareResult : null;
   }
 
   Future<String?> executeInvokeDapp(List<StarknetCall> calls) async {

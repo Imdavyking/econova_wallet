@@ -610,16 +610,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       } else if (requestType == 'wallet_addDeclareTransaction') {
         final params = request['params'];
         final coin = starkNetCoins.first;
-        final txHash = await coin
+        final declareResult = await coin
             .addDeclareDapp(AddDeclareTransactionParameters.fromJson(params));
+
+        if (declareResult == null) {
+          await sendError('Failed to declare contract');
+          return;
+        }
         final responseData = {
           "origin": origin,
           "requestId": requestId,
           "chainId": chainId,
           "address": coinData.address,
           "requestType": requestType,
-          "txHash": txHash,
-          'classHash': '' //TODO: add class hash
+          "txHash": declareResult.transactionHash.toHexString(),
+          "classHash": declareResult.classHash.toHexString(),
         };
         await sendResponse(responseData);
       } else if (requestType == 'wallet_addInvokeTransaction') {
