@@ -77,6 +77,141 @@ class StarknetCoin extends Coin {
     );
   }
 
+  int compareVersions(String v1, String v2) {
+    List<int> parseVersion(String version) =>
+        version.split('.').map(int.parse).toList();
+
+    final parts1 = parseVersion(v1);
+    final parts2 = parseVersion(v2);
+
+    final maxLength =
+        parts1.length > parts2.length ? parts1.length : parts2.length;
+
+    for (int i = 0; i < maxLength; i++) {
+      final p1 = i < parts1.length ? parts1[i] : 0;
+      final p2 = i < parts2.length ? parts2[i] : 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  Future<String?> addDeclareDapp(AddDeclareTransactionParameters params) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final fundingAccount = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+    final compilerVersion = params.contractClass.contractClassVersion;
+    final compiledClassHash = BigInt.parse(params.compiledClassHash);
+    final entryPointsByTypes = params.contractClass.entryPointsByType;
+
+    late DeclareTransactionResponse declareTrxResponse;
+
+    if (compareVersions(compilerVersion, '1.1.0') >= 0) {
+      //FIXME: not working
+      declareTrxResponse = await fundingAccount.declare(
+        compiledContract: CASMCompiledContract(
+          bytecode: [],
+          entryPointsByType: CASMEntryPointsByType(
+            constructor: entryPointsByTypes.constructor.map(
+              (e) {
+                return CASMEntryPoint(
+                  selector: e.selector,
+                  offset: e.functionIdx,
+                  builtins: [],
+                );
+              },
+            ).toList(),
+            external: entryPointsByTypes.external.map(
+              (e) {
+                return CASMEntryPoint(
+                  selector: e.selector,
+                  offset: e.functionIdx,
+                  builtins: [],
+                );
+              },
+            ).toList(),
+            l1Handler: entryPointsByTypes.l1Handler.map(
+              (e) {
+                return CASMEntryPoint(
+                  selector: e.selector,
+                  offset: e.functionIdx,
+                  builtins: [],
+                );
+              },
+            ).toList(),
+          ),
+          compilerVersion: compilerVersion,
+          bytecodeSegmentLengths: [],
+        ),
+        compiledClassHash: compiledClassHash,
+      );
+    } else {
+      declareTrxResponse = await fundingAccount.declare(
+        compiledContract: DeprecatedCompiledContract(
+          program: {
+            'sierra_program': params.contractClass.sierraProgram
+                .map((e) => e.toString())
+                .toList(),
+          },
+          abi: params.contractClass.abi
+              .map((ab) => DeprecatedContractAbiEntry.fromJson(
+                  ab as Map<String, dynamic>))
+              .toList(),
+          entryPointsByType: DeprecatedCairoEntryPointsByType(
+            constructor:
+                params.contractClass.entryPointsByType.constructor.map((e) {
+              return DeprecatedCairoEntryPoint(
+                selector: e.selector,
+                offset: e.functionIdx.toString(),
+              );
+            }).toList(),
+            external: params.contractClass.entryPointsByType.external.map((e) {
+              return DeprecatedCairoEntryPoint(
+                selector: e.selector,
+                offset: e.functionIdx.toString(),
+              );
+            }).toList(),
+            l1Handler:
+                params.contractClass.entryPointsByType.l1Handler.map((e) {
+              return DeprecatedCairoEntryPoint(
+                selector: e.selector,
+                offset: e.functionIdx.toString(),
+              );
+            }).toList(),
+          ),
+        ),
+        compiledClassHash: compiledClassHash,
+      );
+    }
+
+    final txHash = declareTrxResponse.when(
+      result: (result) {
+        debugPrint(
+          'Account is deployed (tx: ${result.transactionHash.toHexString()})',
+        );
+        return result.transactionHash;
+      },
+      error: (error) => throw Exception(
+        'Account deploy failed: ${error.code}: ${error.message}',
+      ),
+    );
+
+    final isAccepted = await waitForAcceptance(
+      transactionHash: txHash.toHexString(),
+      provider: provider,
+    );
+
+    return isAccepted ? txHash.toHexString() : null;
+  }
+
   Future<String?> executeInvokeDapp(List<StarknetCall> calls) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
@@ -89,7 +224,6 @@ class StarknetCoin extends Coin {
       accountAddress: Felt.fromHexString(response.address),
       chainId: chainId,
     );
-    // poseidonHasher.hashMany(values);
 
     final tx = await fundingAccount.execute(
       functionCalls: calls
@@ -1505,4 +1639,139 @@ class DeployMeme {
     required this.txHash,
     required this.tokenAddress,
   });
+}
+
+class SierraEntryPoint {
+  final Felt selector;
+  final int functionIdx;
+
+  SierraEntryPoint({
+    required this.selector,
+    required this.functionIdx,
+  });
+
+  factory SierraEntryPoint.fromJson(Map<String, dynamic> json) {
+    return SierraEntryPoint(
+      selector: Felt.fromHexString(json['selector']),
+      functionIdx: json['function_idx'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'selector': selector,
+      'function_idx': functionIdx,
+    };
+  }
+}
+
+class EntryPointsByType {
+  final List<SierraEntryPoint> constructor;
+  final List<SierraEntryPoint> external;
+  final List<SierraEntryPoint> l1Handler;
+
+  EntryPointsByType({
+    required this.constructor,
+    required this.external,
+    required this.l1Handler,
+  });
+
+  factory EntryPointsByType.fromJson(Map<String, dynamic> json) {
+    return EntryPointsByType(
+      constructor: (json['CONSTRUCTOR'] as List)
+          .map((e) => SierraEntryPoint.fromJson(e))
+          .toList(),
+      external: (json['EXTERNAL'] as List)
+          .map((e) => SierraEntryPoint.fromJson(e))
+          .toList(),
+      l1Handler: (json['L1_HANDLER'] as List)
+          .map((e) => SierraEntryPoint.fromJson(e))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'CONSTRUCTOR': constructor.map((e) => e.toJson()).toList(),
+      'EXTERNAL': external.map((e) => e.toJson()).toList(),
+      'L1_HANDLER': l1Handler.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+class ContractClass {
+  final List<String> sierraProgram;
+  final String contractClassVersion;
+  final EntryPointsByType entryPointsByType;
+  final List<dynamic> abi;
+
+  ContractClass({
+    required this.sierraProgram,
+    required this.contractClassVersion,
+    required this.entryPointsByType,
+    required this.abi,
+  });
+
+  factory ContractClass.fromJson(Map<String, dynamic> json) {
+    return ContractClass(
+      sierraProgram: List<String>.from(json['sierra_program']),
+      contractClassVersion: json['contract_class_version'] as String,
+      entryPointsByType:
+          EntryPointsByType.fromJson(json['entry_points_by_type']),
+      abi: json['abi'] is String
+          ? jsonDecode(json['abi']) as List<dynamic>
+          : json['abi'] as List<dynamic>,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'sierra_program': sierraProgram,
+      'contract_class_version': contractClassVersion,
+      'entry_points_by_type': entryPointsByType.toJson(),
+      'abi': abi,
+    };
+  }
+}
+
+class AddDeclareTransactionParameters {
+  final ContractClass contractClass;
+  final String compiledClassHash;
+  final String? classHash;
+
+  AddDeclareTransactionParameters({
+    required this.contractClass,
+    required this.compiledClassHash,
+    this.classHash,
+  });
+
+  factory AddDeclareTransactionParameters.fromJson(Map<String, dynamic> json) {
+    return AddDeclareTransactionParameters(
+      contractClass: ContractClass.fromJson(json['contract_class']),
+      compiledClassHash: json['compiled_class_hash'] as String,
+      classHash: json['class_hash'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    Map<String, Object> map = {
+      'contract_class': contractClass.toJson(),
+      'compiled_class_hash': compiledClassHash,
+    };
+    if (classHash != null) {
+      map['class_hash'] = classHash as Object;
+    }
+    return map;
+  }
+
+  // Utility to parse from JSON-encoded string
+  static AddDeclareTransactionParameters fromJsonString(String jsonString) {
+    final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
+    return AddDeclareTransactionParameters.fromJson(jsonMap);
+  }
+
+  // Utility to convert object to JSON-encoded string
+  String toJsonString() {
+    return jsonEncode(toJson());
+  }
 }

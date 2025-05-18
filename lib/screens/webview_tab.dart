@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'package:wallet_app/coins/near_coin.dart';
+import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
@@ -563,17 +564,20 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 //     class_hash?: FELT;
 // }
 
-// required ICompiledContract compiledContract,
-//   BigInt? compiledClassHash,
-//   CASMCompiledContract? casmCompiledContract,
-
-
-    // fundingAccount.declare(
-    //     compiledContract: compilerVersion >= 1.1.0
-    //         ? CASMCompiledContract.fromJson(contract_class)
-    //         : DeprecatedCompiledContract.fromJson(contract_class),
-    //     compiledClassHash: compiled_class_hash,
-    //   );
+// _$CASMCompiledContractImpl _$$CASMCompiledContractImplFromJson(
+//         Map<String, dynamic> json) =>
+//     _$CASMCompiledContractImpl(
+//       bytecode: (json['bytecode'] as List<dynamic>)
+//           .map((e) => BigInt.parse(e as String))
+//           .toList(), // sierra_program
+//       entryPointsByType: CASMEntryPointsByType.fromJson(
+//           json['entry_points_by_type'] as Map<String, dynamic>), // entry_points_by_type
+//       compilerVersion: json['compiler_version'] as String, // contract_class_version
+//       bytecodeSegmentLengths:
+//           (json['bytecode_segment_lengths'] as List<dynamic>)
+//               .map((e) => (e as num).toInt())
+//               .toList(), // what is this?
+//     );
 
 // export type CONTRACT_CLASS = {
 //     sierra_program: FELT[];
@@ -586,7 +590,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 //     abi: string;
 // };
 
+// export type SIERRA_ENTRY_POINT = {
+//     selector: FELT;
+//     function_idx: number;
+// };
 
+// required ICompiledContract compiledContract,
+//   BigInt? compiledClassHash,
+//   CASMCompiledContract? casmCompiledContract,
+
+    // fundingAccount.declare(
+    //     compiledContract: compilerVersion >= 1.1.0
+    //         ? CASMCompiledContract.fromJson(contract_class)
+    //         : DeprecatedCompiledContract.fromJson(contract_class),
+    //     compiledClassHash: compiled_class_hash,
+    //   );
 
     try {
       if (requestType == 'wallet_requestAccounts' ||
@@ -638,7 +656,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         // For wallet_requestChainId just send response
         await sendResponse(responseData);
       } else if (requestType == 'wallet_addDeclareTransaction') {
-        // final params = request['params'];
+        final params = request['params'];
+        final coin = starkNetCoins.first;
+        final txHash = await coin.addDeclareDapp(AddDeclareTransactionParameters.fromJson(params));
       } else if (requestType == 'wallet_addInvokeTransaction') {
         final params = request['params'];
         final List calls = params['calls'] ?? [];
