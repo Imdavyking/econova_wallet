@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:isolate';
 import 'package:wallet_app/coins/near_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/components/sign_solana_ui.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
@@ -37,6 +38,11 @@ import '../model/multix_sign_model.dart' hide Transaction;
 import '../utils/app_config.dart';
 import '../utils/json_model_callback.dart';
 import '../utils/web_notifications.dart';
+// SOLANA
+import 'package:wallet_app/model/solana_web3_res.dart' hide _Instruction;
+import 'package:solana/solana.dart' hide signTransaction;
+import 'package:wallet_app/coins/solana_coin.dart';
+import 'package:solana/solana.dart' as solana;
 
 class WebViewTab extends StatefulWidget {
   final String? url;
@@ -350,6 +356,17 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
     String callback =
         "window.ethereum.sendResponse($id, [\"$sendingAddress\"])";
+
+    await _sendCustomResponse(setAddress);
+
+    await _sendCustomResponse(callback);
+  }
+
+  Future _setSolanaAddress(id, sendingAddress) async {
+    final setAddress = "trustwallet.solana.setAddress(\"$sendingAddress\");";
+
+    String callback =
+        "trustwallet.solana.sendResponse($id, [\"$sendingAddress\"])";
 
     await _sendCustomResponse(setAddress);
 
@@ -1448,7 +1465,202 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                     final jsData =
                         JsCallbackModel.fromJson(json.decode(callback[0]));
 
-                    if (jsData.network == 'ethereum') {
+                    if (jsData.network == 'solana') {
+                      final coin = getSolanaBlockChains().first;
+
+                      final accountDetail = await coin.importData(data);
+
+                      final privateKeyBytes =
+                          HEX.decode(accountDetail.privateKey!);
+
+                      final solanaKeyPair =
+                          await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+                        privateKey: privateKeyBytes,
+                      );
+
+                      final sendingAddress = accountDetail.address;
+
+                      switch (jsData.name) {
+                        case "requestAccounts":
+                          {
+                            final request = await _getWeb3Address(
+                              'solana',
+                              sendingAddress,
+                            );
+
+                            if (request != null) {
+                              await _setSolanaAddress(
+                                jsData.id,
+                                sendingAddress,
+                              );
+                              return;
+                            }
+
+                            if (context.mounted) {
+                              await connectWalletModal(
+                                context: context,
+                                url: jsData.url,
+                                onConfirm: () async {
+                                  try {
+                                    await _setSolanaAddress(
+                                      jsData.id,
+                                      sendingAddress,
+                                    );
+
+                                    await _saveWeb3Address(
+                                      'solana',
+                                      sendingAddress,
+                                    );
+                                  } catch (e) {
+                                    final error =
+                                        e.toString().replaceAll('"', '\'');
+                                    _sendError("solana", error, jsData.id ?? 0);
+                                  } finally {
+                                    if (context.mounted &&
+                                        Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                onReject: () async {
+                                  _sendError(
+                                    "solana",
+                                    'user rejected connection',
+                                    jsData.id ?? 0,
+                                  );
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }
+
+                            break;
+                          }
+                        case "signMessage":
+                          {
+                            try {
+                              final data = JsSolanaMessageObject.fromJson(
+                                jsData.object ?? {},
+                              );
+                              if (context.mounted) {
+                                await signMessage(
+                                  context: context,
+                                  messageType: personalSignKey,
+                                  data: data.data,
+                                  networkIcon: null,
+                                  name: null,
+                                  onConfirm: () async {
+                                    try {
+                                      final signature =
+                                          await solanaKeyPair.sign(
+                                        txDataToUintList(data.data),
+                                      );
+
+                                      _sendResult(
+                                        "solana",
+                                        base58.encode(
+                                          signature.bytes as Uint8List,
+                                        ),
+                                        jsData.id ?? 0,
+                                      );
+                                    } catch (e) {
+                                      final error =
+                                          e.toString().replaceAll('"', '\'');
+                                      _sendError(
+                                          "solana", error, jsData.id ?? 0);
+                                    } finally {
+                                      if (context.mounted &&
+                                          Navigator.canPop(context)) {
+                                        Navigator.pop(context);
+                                      }
+                                    }
+                                  },
+                                  onReject: () {
+                                    _sendError(
+                                        "solana",
+                                        'user rejected signature',
+                                        jsData.id ?? 0);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              }
+                            } catch (e) {
+                              final error = e.toString().replaceAll('"', '\'');
+                              _sendError("solana", error, jsData.id ?? 0);
+                            }
+                            break;
+                          }
+                        case "signRawTransaction":
+                          {
+                            final data = JsSolanaTransactionObject.fromJson(
+                              jsData.object ?? {},
+                            );
+
+                            final SolanaWeb3Res solanaWeb3Res =
+                                SolanaWeb3Res.fromJson(
+                              json.decode(data.data),
+                            );
+
+                            final from = solana.Ed25519HDPublicKey.fromBase58(
+                              solanaWeb3Res.feePayer,
+                            );
+
+                            if (context.mounted) {
+                              await signSolanaTransaction(
+                                to: '',
+                                from: from.toBase58(),
+                                txData: data.raw,
+                                networkIcon: null,
+                                context: context,
+                                symbol: 'SOL',
+                                solanaWeb3Res: solanaWeb3Res,
+                                solanaKeyPair: solanaKeyPair,
+                                name: '',
+                                coin: coin,
+                                onConfirm: () async {
+                                  try {
+                                    if (solanaWeb3Res.feePayer !=
+                                        sendingAddress) {
+                                      throw Exception('Invalid fee payer');
+                                    }
+
+                                    final signature = await solanaKeyPair.sign(
+                                      base58.decode(data.raw),
+                                    );
+
+                                    _sendResult(
+                                      "solana",
+                                      signature.toBase58(),
+                                      jsData.id ?? 0,
+                                    );
+                                  } catch (e, sk) {
+                                    if (kDebugMode) {
+                                      print(sk);
+                                    }
+                                    final error =
+                                        e.toString().replaceAll('"', '\'');
+                                    _sendError("solana", error, jsData.id ?? 0);
+                                  } finally {
+                                    if (context.mounted &&
+                                        Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                onReject: () async {
+                                  _sendError(
+                                    "solana",
+                                    'user rejected transaction',
+                                    jsData.id ?? 0,
+                                  );
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }
+
+                            break;
+                          }
+                      }
+                    } else if (jsData.network == 'ethereum') {
                       int chainId = pref.get(dappChainIdKey);
 
                       final coin = evmFromChainId(chainId)!;

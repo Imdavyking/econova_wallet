@@ -1,7 +1,7 @@
 class SolanaWeb3Res {
   List<dynamic>? signatures;
   String feePayer;
-  List<Instruction>? instructions;
+  List<SolanaInstructionData>? instructions;
   String recentBlockhash;
 
   SolanaWeb3Res({
@@ -18,8 +18,8 @@ class SolanaWeb3Res {
         feePayer: json["feePayer"],
         instructions: json["instructions"] == null
             ? []
-            : List<Instruction>.from(
-                json["instructions"].map((x) => Instruction.fromJson(x))),
+            : List<SolanaInstructionData>.from(json["instructions"]
+                .map((x) => SolanaInstructionData.fromJson(x))),
         recentBlockhash: json["recentBlockhash"],
       );
 
@@ -35,28 +35,31 @@ class SolanaWeb3Res {
       };
 }
 
-class Instruction {
-  List<Key>? keys;
+class SolanaInstructionData {
+  List<SolanaInstructDataKey>? keys;
   String programId;
   Data? data;
 
-  Instruction({
+  SolanaInstructionData({
     this.keys,
     required this.programId,
     this.data,
   });
 
-  factory Instruction.fromJson(Map<String, dynamic> json) => Instruction(
+  factory SolanaInstructionData.fromJson(Map<String, dynamic> json) =>
+      SolanaInstructionData(
         keys: json["keys"] == null
             ? []
-            : List<Key>.from(json["keys"].map((x) => Key.fromJson(x))),
+            : List<SolanaInstructDataKey>.from(
+                json["keys"].map((x) => SolanaInstructDataKey.fromJson(x))),
         programId: json["programId"],
         data: json["data"] == null ? null : Data.fromJson(json["data"]),
       );
 
   Map<String, dynamic> toJson() => {
-        "keys":
-            keys == null ? [] : List<dynamic>.from(keys!.map((x) => x.toJson())),
+        "keys": keys == null
+            ? []
+            : List<dynamic>.from(keys!.map((x) => x.toJson())),
         "programId": programId,
         "data": data?.toJson(),
       };
@@ -78,18 +81,19 @@ class Data {
       };
 }
 
-class Key {
+class SolanaInstructDataKey {
   String pubkey;
   bool isSigner;
   bool isWritable;
 
-  Key({
+  SolanaInstructDataKey({
     required this.pubkey,
     required this.isSigner,
     required this.isWritable,
   });
 
-  factory Key.fromJson(Map<String, dynamic> json) => Key(
+  factory SolanaInstructDataKey.fromJson(Map<String, dynamic> json) =>
+      SolanaInstructDataKey(
         pubkey: json["pubkey"],
         isSigner: json["isSigner"],
         isWritable: json["isWritable"],

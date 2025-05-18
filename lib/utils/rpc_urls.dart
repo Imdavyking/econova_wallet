@@ -790,6 +790,7 @@ Future setupWebViewWalletBridge(
     window.ethereum = trustwallet.ethereum;
     window.keplr = trustwallet.cosmos;
     window.elrondWallet = {'extensionId':"dngmlblcodfobpdpecaadgfbcggfjfnm"};
+    window.solana = trustwallet.solana;
 
     const getDefaultCosmosProvider = (chainId) => {
       return trustwallet.cosmos.getOfflineSigner(chainId);
