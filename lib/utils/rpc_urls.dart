@@ -911,9 +911,11 @@ Future setupWebViewWalletBridge(
   },
 
   enable: () => {
-    return window.starknet.callFlutterHandler({
-      type: "enable",
-      url: window.location.origin,
+    console.warn(
+      "Warning: `enable()` is deprecated and may be removed in future versions. Please use `request({ type: 'wallet_requestAccounts' })` directly."
+    );
+    return window.starknet.request({
+      type: "wallet_requestAccounts", 
     });
   },
 

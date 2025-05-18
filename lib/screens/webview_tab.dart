@@ -555,7 +555,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_switchStarknetChain',
       'wallet_watchAsset',
       'wallet_deploymentData',
-      'wallet_addDeclareTransaction',
     ];
 
     try {
