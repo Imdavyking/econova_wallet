@@ -28,6 +28,10 @@ abstract class Coin {
         otherCoin.getDefault() == getDefault();
   }
 
+  String normalizeAmountString(String amountString) {
+    return amountString.replaceAll(',', '');
+  }
+
   void validateAddress(String address);
   Future<String> addressExplorer();
   Map toJson();
@@ -137,7 +141,7 @@ abstract class Coin {
     required String initialSupply,
   }) async {
     return const DeployMeme(
-      txHash: null,
+      liquidityTx: null,
       tokenAddress: null,
     );
   }

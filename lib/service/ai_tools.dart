@@ -565,13 +565,13 @@ class AItools {
             symbol: symbol,
             initialSupply: initialSupply,
           );
-          if (memeData.txHash == null) {
+          if (memeData.liquidityTx == null) {
             return 'Failed to deploy meme token';
           }
 
           final tokenAddress = memeData.tokenAddress;
 
-          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.txHash} ${coin.formatTxHash(memeData.txHash!)}. Token address: $tokenAddress';
+          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress';
         } catch (e) {
           return 'Failed to deploy meme token: $e';
         }

@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:fraction/fraction.dart';
+import 'package:wallet_app/coins/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/screens/stake_token.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/utils/snip12/shortstring.dart';
 import 'package:wallet_app/utils/starknet_call.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -14,6 +17,7 @@ import '../utils/app_config.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
+import '../extensions/fraction_ext.dart';
 
 const starkDecimals = 18;
 const strkNativeToken =
@@ -21,6 +25,11 @@ const strkNativeToken =
 
 const strkEthNativeToken =
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+double ekuboTickSize = 1.000001;
+int ekuboTickSpacing = 5982;
+const ekuboMaxPrice = "0x100000000000000000000000000000000";
+const ekuboFeesMultiplicator = ekuboMaxPrice;
+int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toInt());
 
 class StarknetCoin extends Coin {
   String api;
@@ -1088,12 +1097,12 @@ class StarknetCoin extends Coin {
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
     final provider = await apiProvider();
     final chainId = await getChainId();
-    final chainIdHex = chainId.toHexString();
-    if (tokenClassHash.isEmpty) {
-      return const DeployMeme(tokenAddress: null, txHash: null);
-    }
-    if (factoryAddress.isEmpty) {
-      return const DeployMeme(tokenAddress: null, txHash: null);
+    if (tokenClassHash.isEmpty || factoryAddress.isEmpty) {
+      return const DeployMeme(
+        tokenAddress: null,
+        liquidityTx: null,
+        deployTokenTx: null,
+      );
     }
     final fundingAccount = Account(
       provider: provider,
@@ -1126,28 +1135,211 @@ class StarknetCoin extends Coin {
     );
 
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
-    return tx.when(
+    final deployTokenTx = tx.when(
       result: (result) {
-        return DeployMeme(
-          txHash: result.transaction_hash,
-          tokenAddress: tokenAddress.toHexString(),
-        );
+        return result.transaction_hash;
       },
       error: (error) {
         throw Exception("Error transfer (${error.code}): ${error.message}");
       },
     );
+
+    final liquidityTx = await launchOnEkubo(
+      LaunchParameters(
+        starknetAccount: fundingAccount,
+        memecoinAddress: tokenAddress.toHexString(),
+        startingMarketCap: 5000,
+        holdLimit: 2,
+        fees: 3,
+        antiBotPeriodInSecs: 3600,
+        currencyAddress: currencyAddress,
+        teamAllocations: [
+          TeamAllocation(
+            address: fundingAccount.accountAddress.toHexString(),
+            amount: BigInt.from(100000 * pow(10, decimals())),
+          )
+        ],
+      ),
+    );
+    return DeployMeme(
+      liquidityTx: liquidityTx,
+      deployTokenTx: deployTokenTx,
+      tokenAddress: tokenAddress.toHexString(),
+    );
   }
 
-  Future<void> launchOnEkubo(LaunchParameters params) async {
-    // const memecoin = await getMemecoin(factory, parameters.memecoinAddress);
+  Future<String?> launchOnEkubo(
+    LaunchParameters params,
+  ) async {
+    final memecoin = await getMemecoin(params.memecoinAddress);
+    if (memecoin == null) {
+      throw Exception('Invalid memecoin address');
+    }
+    final chainId = await getChainId();
+    final chainIdHex = chainId.toHexString();
+    final quoteToken =
+        StarknetHelper.quoteTokens[chainIdHex]?[params.currencyAddress];
+    if (quoteToken == null) {
+      throw Exception('Invalid quote token address');
+    }
+    final data = EkuboLaunchData(
+      quoteToken: quoteToken,
+      startingMarketCap: params.startingMarketCap,
+      antiBotPeriod: params.antiBotPeriodInSecs,
+      holdLimit: params.holdLimit,
+      teamAllocations: params.teamAllocations,
+      fees: params.fees,
+      amm: 'Ekubo',
+    );
+    List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
+    final res = await params.starknetAccount.execute(functionCalls: calls);
+    final txHash = res.when(
+      result: (result) {
+        debugPrint(
+          '(tx: ${result.transaction_hash})',
+        );
+        return result.transaction_hash;
+      },
+      error: (error) => throw Exception(
+        'Account deploy failed: ${error.code}: ${error.message}',
+      ),
+    );
+    return txHash;
   }
 
-  getMemecoin(String memecoinAddress) async {
+  Future<List<FunctionCall>> getEkuboLaunchCalldata(
+    (TokenMetadata, MemeLaunchData?)? memecoin,
+    EkuboLaunchData data,
+  ) async {
+    Fraction quoteTokenPrice = await getPairPrice(data.quoteToken!.usdcPair);
+    Fraction teamAllocationFraction = data.teamAllocations.fold(
+      Fraction(0),
+      (Fraction acc, element) => acc + Fraction(element.amount.toInt()),
+    );
+    int totalSupply = memecoin!.$1.totalSupply.toBigInt().toInt();
+    int scale = decimalsScale(decimals());
+
+    Fraction teamAllocationPercentage = Fraction(
+      teamAllocationFraction.quotient,
+      (Fraction(totalSupply, scale)).quotient,
+    );
+    Fraction teamAllocationQuoteAmount = Fraction(data.startingMarketCap)
+        .divide(quoteTokenPrice)
+        .multiply(teamAllocationPercentage.multiply(Fraction(data.fees + 1)));
+
+    final uin256TeamAllocationQuoteAmount = teamAllocationQuoteAmount
+        .multiply(Fraction(decimalsScale(data.quoteToken!.decimals)))
+        .quotient;
+
+    final initialPrice = Fraction(data.startingMarketCap)
+        .divide(quoteTokenPrice)
+        .multiply(Fraction(decimalsScale(decimals())))
+        .divide(Fraction(memecoin.$1.totalSupply.toBigInt().toInt()))
+        .toFixed(12);
+
+    final startingTickMag = getStartingTick(initialPrice);
+
+    I129StartingTickParameters i129StartingTick = I129StartingTickParameters(
+      mag: startingTickMag.abs(),
+      sign: startingTickMag < 0,
+    );
+
+    final fees = Fraction(data.fees)
+        .multiply(Fraction(BigInt.parse(ekuboFeesMultiplicator).toInt()))
+        .quotient;
+
+    final initialHolders = data.teamAllocations
+        .map((allocation) => Felt.fromHexString(allocation.address))
+        .toList();
+
+    final initialHoldersAmounts = data.teamAllocations
+        .map((allocation) => Felt.fromInt(allocation.amount.toInt()))
+        .toList();
+
+    final transferCalldata = FunctionCall(
+      calldata: [
+        Felt.fromHexString(factoryAddress),
+        Felt.fromInt(uin256TeamAllocationQuoteAmount),
+      ],
+      contractAddress: Felt.fromHexString(data.quoteToken!.address),
+      entryPointSelector: getSelectorByName('transfer'),
+    );
+
+    final launchCalldata = FunctionCall(
+      calldata: [
+        Felt.fromHexString(memecoin.$1.address),
+        Felt.fromInt(data.antiBotPeriod),
+        Felt.fromInt(data.holdLimit * 100),
+        Felt.fromHexString(data.quoteToken!.address),
+        Felt.fromCallData(initialHolders),
+        Felt.fromCallData(initialHoldersAmounts),
+        Felt.fromInt(fees),
+        Felt.fromInt(ekuboTickSpacing),
+        Felt.fromInt(i129StartingTick.sign ? 1 : 0),
+        Felt.fromInt(ekuboBound),
+      ],
+      contractAddress: Felt.fromHexString(factoryAddress),
+      entryPointSelector: getSelectorByName('launch_on_ekubo'),
+    );
+
+    return [
+      transferCalldata,
+      launchCalldata,
+    ];
+  }
+
+  Future<Fraction> getPairPrice(UsdcPair? pair) async {
+    final provider = await apiProvider();
+    if (pair == null) {
+      return Fraction(1, 1);
+    }
+    final reserveCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: Felt.fromHexString(pair.address),
+        entryPointSelector: getSelectorByName('get_reserves'),
+        calldata: [],
+      ),
+      blockId: BlockId.latest,
+    );
+    final result = reserveCall.when(
+      result: (result) {
+        return result;
+      },
+      error: (error) {
+        throw Exception(error);
+      },
+    );
+
+    final [reserve0Low, reserve0High, reserve1Low, reserve1High] = result;
+    final numerator = Uint256(low: reserve1Low, high: reserve1High).toBigInt();
+    final denominator =
+        Uint256(low: reserve0Low, high: reserve0High).toBigInt();
+
+    var pairPrice = Fraction(numerator.toInt()) / Fraction(denominator.toInt());
+
+    if (pair.reversed) {
+      pairPrice = pairPrice.inverse();
+    }
+    pairPrice = pairPrice * Fraction(decimalsScale(12).toInt());
+
+    return pairPrice;
+  }
+
+  int decimalsScale(int decimals) {
+    return BigInt.from(10).pow(decimals).toInt();
+  }
+
+  Future<(TokenMetadata, MemeLaunchData?)?> getMemecoin(
+    String memecoinAddress,
+  ) async {
     validateAddress(memecoinAddress);
+    final baseMemecoin = await getBaseMemecoin(memecoinAddress);
+    if (baseMemecoin == null) return null;
+    final launchData = await getMemecoinLaunchData(memecoinAddress);
+    return (baseMemecoin, launchData);
   }
 
-  getBaseMemecoin(String memecoinAddress) async {
+  Future<TokenMetadata?> getBaseMemecoin(String memecoinAddress) async {
     final result = await multiCallContract([
       FunctionCall(
         contractAddress: Felt.fromHexString(factoryAddress),
@@ -1179,135 +1371,197 @@ class StarknetCoin extends Coin {
     ]);
     final [[isMemecoin], [name], [symbol], [owner], totalSupply] = result;
     if (isMemecoin == Felt.zero) return null;
+
+    return TokenMetadata(
+      address: memecoinAddress,
+      name: decodeShortString(name.toHexString()), // String
+      symbol: decodeShortString(symbol.toHexString()),
+      owner: owner.toHexString(),
+      decimals: 18,
+      totalSupply: Uint256(low: totalSupply[0], high: totalSupply[1]),
+    );
   }
 
-// async getMemecoin(address) { // factory
-//     const [baseMemecoin, launchData] = await Promise.all([
-//       this.getBaseMemecoin(address),
-//       this.getMemecoinLaunchData(address)
-//     ]);
-//     if (!baseMemecoin) return void 0;
-//     return { ...baseMemecoin, ...launchData };
-//   }
+  Future<MemeLaunchData?> getMemecoinLaunchData(String memecoin) async {
+    final result = await multiCallContract([
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoin),
+        entryPointSelector: getSelectorByName('get_team_allocation'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoin),
+        entryPointSelector: getSelectorByName('launched_at_block_number'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoin),
+        entryPointSelector: getSelectorByName('is_launched'),
+        calldata: [],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(factoryAddress),
+        entryPointSelector: getSelectorByName('locked_liquidity'),
+        calldata: [Felt.fromHexString(memecoin)],
+      ),
+      FunctionCall(
+        contractAddress: Felt.fromHexString(memecoin),
+        entryPointSelector:
+            getSelectorByName('launched_with_liquidity_parameters'),
+        calldata: [],
+      ),
+    ]);
+    final [
+      teamAllocation,
+      [launchBlockNumber],
+      [launched],
+      [dontHaveLiq, lockManager, liqTypeIndex, ekuboId],
+      launchParams
+    ] = result;
+    final liquidityType = getLiquidityType(liqTypeIndex.toInt());
+    final isLaunched = dontHaveLiq == Felt.zero &&
+        launched == Felt.fromInt(1) &&
+        launchParams[0] == Felt.zero &&
+        liquidityType != null;
+    if (!isLaunched) {
+      return null;
+    }
+    late LiquidityQuoteToken liquidityQuote;
+    JediLockDetails? jediLockDetails;
+    EkuboLockDetails? ekuboLockDetails;
+    switch (liquidityType) {
+      case 'STARKDEFI_ERC20':
+      case 'JEDISWAP_ERC20':
+        final baseLiquidity = BaseLiquidity(
+          type: liquidityType,
+          lockManager: lockManager,
+          lockPosition: launchParams[5],
+          quoteToken: launchParams[2],
+          quoteAmount: Uint256(
+            low: launchParams[3],
+            high: launchParams[4],
+          ).toBigInt(),
+        );
+        liquidityQuote = LiquidityQuoteToken(quoteToken: launchParams[2]);
+        await getJediswapLiquidityLockPosition(baseLiquidity);
+        break;
+      case 'EKUBO_NFT':
+        final ekuboLiquidity = EkuboLiquidity(
+            type: liquidityType, // String?
+            lockManager: lockManager, // Felt
+            ekuboId: ekuboId, // Felt
+            quoteToken: launchParams[7], // Felt
+            startingTick: launchParams[4].toInt() *
+                (launchParams[5] == Felt.fromInt(1) ? -1 : 1) // Felt
+            );
+        liquidityQuote = LiquidityQuoteToken(quoteToken: launchParams[7]);
+        ekuboLockDetails = await getEkuboLiquidityLockPosition(ekuboLiquidity);
+        break;
+      default:
+        throw Exception('Unknown liquidity type: $liquidityType');
+    }
 
-//  async getBaseMemecoin(address) {
-//     const result = await multiCallContract(this.config.provider, this.config.chainId, [
-//       {
-//         contractAddress: FACTORY_ADDRESSES[this.config.chainId],
-//         entrypoint: "is_memecoin" /* IS_MEMECOIN */,
-//         calldata: [address]
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "name" /* NAME */
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "symbol" /* SYMBOL */
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "owner" /* OWNER */
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "total_supply" /* TOTAL_SUPPLY */
-//       }
-//     ]);
-//     const [[isMemecoin], [name], [symbol], [owner], totalSupply] = result;
-//     if (!+isMemecoin) return void 0;
-//     return {
-//       address,
-//       name: import_starknet5.shortString.decodeShortString(name),
-//       symbol: import_starknet5.shortString.decodeShortString(symbol),
-//       owner: (0, import_starknet5.getChecksumAddress)(owner),
-//       decimals: DECIMALS,
-//       totalSupply: import_starknet5.uint256.uint256ToBN({ low: totalSupply[0], high: totalSupply[1] }).toString()
-//     };
-//   }
-//   //
-//   // GET LAUNCH
-//   //
-//   async getMemecoinLaunchData(address) {
-//     const result = await multiCallContract(this.config.provider, this.config.chainId, [
-//       {
-//         contractAddress: address,
-//         entrypoint: "get_team_allocation" /* GET_TEAM_ALLOCATION */
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "launched_at_block_number" /* LAUNCHED_AT_BLOCK_NUMBER */
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "is_launched" /* IS_LAUNCHED */
-//       },
-//       {
-//         contractAddress: FACTORY_ADDRESSES[this.config.chainId],
-//         entrypoint: "locked_liquidity" /* LOCKED_LIQUIDITY */,
-//         calldata: [address]
-//       },
-//       {
-//         contractAddress: address,
-//         entrypoint: "launched_with_liquidity_parameters" /* LAUNCHED_WITH_LIQUIDITY_PARAMETERS */
-//       }
-//     ]);
-//     const [
-//       teamAllocation,
-//       [launchBlockNumber],
-//       [launched],
-//       [dontHaveLiq, lockManager, liqTypeIndex, ekuboId],
-//       launchParams
-//     ] = result;
-//     const liquidityType = Object.values(LiquidityType)[+liqTypeIndex];
-//     const isLaunched = !!+launched && !+dontHaveLiq && !+launchParams[0] && liquidityType;
-//     if (!isLaunched) {
-//       return {
-//         isLaunched: false
-//       };
-//     }
-//     let liquidity;
-//     switch (liquidityType) {
-//       case "STARKDEFI_ERC20" /* STARKDEFI_ERC20 */:
-//       case "JEDISWAP_ERC20" /* JEDISWAP_ERC20 */: {
-//         const baseLiquidity = {
-//           type: liquidityType,
-//           lockManager,
-//           lockPosition: launchParams[5],
-//           quoteToken: (0, import_starknet5.getChecksumAddress)(launchParams[2]),
-//           quoteAmount: import_starknet5.uint256.uint256ToBN({ low: launchParams[3], high: launchParams[4] }).toString()
-//         };
-//         liquidity = {
-//           ...baseLiquidity,
-//           ...await this.getJediswapLiquidityLockPosition(baseLiquidity)
-//         };
-//         break;
-//       }
-//       case "EKUBO_NFT" /* EKUBO_NFT */: {
-//         const baseLiquidity = {
-//           type: liquidityType,
-//           lockManager,
-//           ekuboId,
-//           quoteToken: (0, import_starknet5.getChecksumAddress)(launchParams[7]),
-//           startingTick: +launchParams[4] * (+launchParams[5] ? -1 : 1)
-//           // mag * sign
-//         };
-//         liquidity = {
-//           ...baseLiquidity,
-//           ...await this.getEkuboLiquidityLockPosition(baseLiquidity)
-//         };
-//       }
-//     }
-//     return {
-//       isLaunched: true,
-//       quoteToken: QUOTE_TOKENS[this.config.chainId][liquidity.quoteToken],
-//       launch: {
-//         teamAllocation: import_starknet5.uint256.uint256ToBN({ low: teamAllocation[0], high: teamAllocation[1] }).toString(),
-//         blockNumber: Number(launchBlockNumber)
-//       },
-//       liquidity
-//     };
-//   }
+    final chainId = await getChainId();
+
+    return MemeLaunchData(
+      jediLockDetails: jediLockDetails, // JediLockDetails?
+      ekuboLockDetails: ekuboLockDetails, // EkuboLockDetails?
+      isLaunched: true, // bool
+      quoteToken: StarknetHelper.quoteTokens[chainId.toHexString()]![
+          liquidityQuote.quoteToken.toHexString()],
+      launch: Launch(
+        teamAllocation: Uint256(
+          low: teamAllocation[0],
+          high: teamAllocation[1],
+        ).toBigInt(), // BigInt
+        blockNumber: launchBlockNumber.toBigInt(), // BigInt
+      ),
+      liquidity: liquidityQuote, // LiquidityQuote
+    );
+  }
+
+  Future<JediLockDetails> getJediswapLiquidityLockPosition(
+      BaseLiquidity liquidity) async {
+    final provider = await apiProvider();
+    final liqCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: liquidity.lockManager,
+        entryPointSelector: getSelectorByName('get_lock_details'),
+        calldata: [liquidity.lockPosition],
+      ),
+      blockId: BlockId.latest,
+    );
+    final result = liqCall.when<List<Felt>>(
+      error: (error) {
+        throw Exception(error);
+      },
+      result: (result) {
+        return result;
+      },
+    );
+    return JediLockDetails(
+      owner: result[3],
+      unlockTime: result[4].toBigInt(),
+    );
+  }
+
+  Future<EkuboLockDetails> getEkuboLiquidityLockPosition(
+    EkuboLiquidity liquidity,
+  ) async {
+    BigInt liquidityLockForeverTimestamp = BigInt.from(9999999999);
+    final provider = await apiProvider();
+    final liqCall = await provider.call(
+      request: FunctionCall(
+        contractAddress: liquidity.lockManager,
+        entryPointSelector: getSelectorByName('liquidity_position_details'),
+        calldata: [liquidity.ekuboId],
+      ),
+      blockId: BlockId.latest,
+    );
+    final result = liqCall.when<List<Felt>>(
+      error: (error) {
+        throw Exception(error);
+      },
+      result: (result) {
+        return result;
+      },
+    );
+
+    return EkuboLockDetails(
+      unlockTime: liquidityLockForeverTimestamp,
+      owner: result[1],
+      poolKey: PoolKey(
+        token0: result[2],
+        token1: result[3],
+        fee: result[4],
+        tickSpacing: result[5],
+        extension: result[6],
+      ),
+      bounds: Bounds(
+        lower: Bound(
+          mag: result[7].toInt(),
+          sign: result[8] == Felt.fromInt(1),
+        ),
+        upper: Bound(
+          mag: result[9].toInt(),
+          sign: result[10] == Felt.fromInt(1),
+        ),
+      ),
+    );
+  }
+
+  String? getLiquidityType(int liqTypeIndex) {
+    switch (liqTypeIndex) {
+      case 0:
+        return 'JEDISWAP_ERC20';
+      case 1:
+        return 'STARKDEFI_ERC20';
+      case 2:
+        return 'EKUBO_NFT';
+      default:
+        return null;
+    }
+  }
 
   Future<List<List<Felt>>> multiCallContract(List<FunctionCall> calls) async {
     final provider = await apiProvider();
@@ -1336,29 +1590,6 @@ class StarknetCoin extends Coin {
     }
     return result;
   }
-
-// async function multiCallContract(provider, chainId, calls) {
-//   const calldata = calls.map((call) => {
-//     return import_starknet3.CallData.compile({
-//       to: call.contractAddress,
-//       selector: import_starknet3.hash.getSelector(call.entrypoint),
-//       calldata: call.calldata ?? []
-//     });
-//   });
-//   const rawResult = await provider.callContract({
-//     contractAddress: MULTICALL_ADDRESSES[chainId],
-//     entrypoint: "aggregate" /* AGGREGATE */,
-//     calldata: [calldata.length, ...calldata.flat()]
-//   });
-//   const raw = rawResult.slice(2);
-//   const result = [];
-//   let idx = 0;
-//   for (let i = 0; i < raw.length; i += idx + 1) {
-//     idx = parseInt(raw[i], 16);
-//     result.push(raw.slice(i + 1, i + 1 + idx));
-//   }
-//   return result;
-// }
 
   Felt computeAddressWithDeployer({
     required Felt classHash,
@@ -1869,11 +2100,13 @@ class StakeInfo {
 }
 
 class DeployMeme {
-  final String? txHash;
+  final String? liquidityTx;
   final String? tokenAddress;
+  final String? deployTokenTx;
   const DeployMeme({
-    required this.txHash,
+    required this.liquidityTx,
     required this.tokenAddress,
+    required this.deployTokenTx,
   });
 }
 
@@ -2015,9 +2248,9 @@ class AddDeclareTransactionParameters {
 class LaunchParameters {
   final Account starknetAccount;
   final String memecoinAddress;
-  final String startingMarketCap;
-  final String holdLimit;
-  final String fees;
+  final int startingMarketCap;
+  final int holdLimit;
+  final int fees;
   final int antiBotPeriodInSecs;
   final int? liquidityLockPeriod;
   final String currencyAddress;
@@ -2051,7 +2284,7 @@ class LaunchParameters {
 
 class TeamAllocation {
   final String address;
-  final String amount;
+  final BigInt amount;
 
   TeamAllocation({required this.address, required this.amount});
 
@@ -2059,4 +2292,225 @@ class TeamAllocation {
         'address': address,
         'amount': amount,
       };
+}
+
+class TokenMetadata {
+  final String address;
+  final String name;
+  final String symbol;
+  final String owner;
+  final int decimals;
+  final Uint256 totalSupply;
+
+  TokenMetadata({
+    required this.address,
+    required this.name,
+    required this.symbol,
+    required this.owner,
+    this.decimals = 18,
+    required this.totalSupply,
+  });
+
+  factory TokenMetadata.fromStarknetData({
+    required Felt memecoinAddress,
+    required Felt name,
+    required Felt symbol,
+    required Felt owner,
+    required List<Felt> totalSupply,
+  }) {
+    return TokenMetadata(
+      address: memecoinAddress.toHexString(),
+      name: decodeShortString(name.toHexString()),
+      symbol: decodeShortString(symbol.toHexString()),
+      owner: owner.toHexString(),
+      totalSupply: Uint256(low: totalSupply[0], high: totalSupply[1]),
+    );
+  }
+}
+
+class BaseLiquidity {
+  final String? type; // Nullable string
+  final Felt lockManager;
+  final Felt lockPosition;
+  final Felt quoteToken;
+  final BigInt quoteAmount;
+
+  BaseLiquidity({
+    required this.type,
+    required this.lockManager,
+    required this.lockPosition,
+    required this.quoteToken,
+    required this.quoteAmount,
+  });
+
+  factory BaseLiquidity.fromLaunchParams({
+    required String? liquidityType,
+    required Felt lockManager,
+    required List<Felt> launchParams,
+  }) {
+    return BaseLiquidity(
+      type: liquidityType,
+      lockManager: lockManager,
+      lockPosition: launchParams[5],
+      quoteToken: launchParams[2],
+      quoteAmount: Uint256(
+        low: launchParams[3],
+        high: launchParams[4],
+      ).toBigInt(),
+    );
+  }
+}
+
+// return {
+//       'unlockTime': result[4].toInt(),
+//       'owner': Felt.fromHexString(result[3]).toHexString(),
+//     };
+
+class JediLockDetails {
+  final BigInt unlockTime;
+  final Felt owner;
+
+  JediLockDetails({
+    required this.unlockTime,
+    required this.owner,
+  });
+}
+
+class EkuboLiquidity {
+  final String? type; // Nullable string
+  final Felt lockManager;
+  final Felt ekuboId;
+  final Felt quoteToken;
+  final int startingTick;
+
+  EkuboLiquidity({
+    required this.type,
+    required this.lockManager,
+    required this.ekuboId,
+    required this.quoteToken,
+    required this.startingTick,
+  });
+}
+
+class EkuboLockDetails {
+  final BigInt unlockTime;
+  final Felt owner;
+  final PoolKey poolKey;
+  final Bounds bounds;
+
+  EkuboLockDetails({
+    required this.unlockTime,
+    required this.owner,
+    required this.poolKey,
+    required this.bounds,
+  });
+}
+
+class PoolKey {
+  final Felt token0;
+  final Felt token1;
+  final Felt fee;
+  final Felt tickSpacing;
+  final Felt extension;
+
+  PoolKey({
+    required this.token0,
+    required this.token1,
+    required this.fee,
+    required this.tickSpacing,
+    required this.extension,
+  });
+}
+
+class Bounds {
+  final Bound lower;
+  final Bound upper;
+
+  Bounds({
+    required this.lower,
+    required this.upper,
+  });
+}
+
+class Bound {
+  final int mag;
+  final bool sign;
+
+  Bound({
+    required this.mag,
+    required this.sign,
+  });
+}
+
+class LiquidityQuoteToken {
+  final Felt quoteToken;
+  const LiquidityQuoteToken({
+    required this.quoteToken,
+  });
+}
+
+class MemeLaunchData {
+  final bool isLaunched;
+  final TokenInfo? quoteToken;
+  final Launch launch;
+  final LiquidityQuoteToken liquidity;
+  final JediLockDetails? jediLockDetails;
+  final EkuboLockDetails? ekuboLockDetails;
+
+  MemeLaunchData({
+    required this.isLaunched,
+    required this.quoteToken,
+    required this.launch,
+    required this.liquidity,
+    this.jediLockDetails,
+    this.ekuboLockDetails,
+  });
+}
+
+class Launch {
+  final BigInt teamAllocation;
+  final BigInt blockNumber;
+
+  Launch({
+    required this.teamAllocation,
+    required this.blockNumber,
+  });
+}
+
+class EkuboLaunchData {
+  final String amm;
+  final int antiBotPeriod;
+  final int fees;
+  final int holdLimit;
+  final TokenInfo? quoteToken;
+  final int startingMarketCap;
+  final List<TeamAllocation> teamAllocations;
+
+  EkuboLaunchData({
+    required this.amm,
+    required this.antiBotPeriod,
+    required this.fees,
+    required this.holdLimit,
+    required this.quoteToken,
+    required this.startingMarketCap,
+    required this.teamAllocations,
+  });
+}
+
+class I129StartingTickParameters {
+  final int mag;
+  final bool sign;
+
+  I129StartingTickParameters({
+    required this.mag,
+    required this.sign,
+  });
+}
+
+int getStartingTick(int initialPrice) {
+  double ekuboTickSizeLog = log(ekuboTickSize);
+  final double logInitialPrice = log(initialPrice);
+  final double division = logInitialPrice / ekuboTickSizeLog / ekuboTickSpacing;
+  final int floored = division.floor();
+  return floored * ekuboTickSpacing;
 }
