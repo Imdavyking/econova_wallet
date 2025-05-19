@@ -1005,7 +1005,7 @@ class StarknetCoin extends Coin {
   validateAddress(String address) {
     final checkedAddress = zeroPadAddressTo66(address);
     final isValid = isHexString(checkedAddress);
-    final correctLength = address.length == 66;
+    final correctLength = checkedAddress.length == 66;
 
     if (!isValid) {
       throw Exception('Invalid $symbol address: $address');
@@ -1195,6 +1195,7 @@ class StarknetCoin extends Coin {
   Future<String?> launchOnEkubo(
     LaunchParameters params,
   ) async {
+    print(params.memecoinAddress);
     final memecoin = await getMemecoin(params.memecoinAddress);
     if (memecoin == null) {
       throw Exception('Invalid memecoin address');
@@ -1752,7 +1753,7 @@ List<StarknetCoin> getStarknetBlockchains() {
       ),
       StarknetCoin(
         multiCallAddress:
-            '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
+            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
         blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
         api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
         classHash:
