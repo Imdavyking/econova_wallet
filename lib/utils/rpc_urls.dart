@@ -541,21 +541,31 @@ Future<String> getCurrencyJson() async {
 }
 
 Future<double> totalCryptoBalance({
-  required Map allCryptoPrice,
+  required Map<String, dynamic> allCryptoPrice,
   required String defaultCurrency,
 }) async {
   double totalBalance = 0.0;
 
-  for (int i = 0; i < supportedChains.length; i++) {
+  for (final coin in supportedChains) {
     try {
-      final coin = supportedChains[i];
       if (WalletService.removeCoin(coin)) continue;
+
       final balance = await coin.getBalance(!NetworkGuard().isConnected);
-      final priceDetails = allCryptoPrice[coin.getGeckoId()];
-      double price =
-          (priceDetails[defaultCurrency.toLowerCase()] as num).toDouble();
+      final geckoId = coin.getGeckoId();
+      final priceData = allCryptoPrice[geckoId];
+
+      if (priceData == null ||
+          priceData[defaultCurrency.toLowerCase()] == null) {
+        continue; // Skip if price data is missing
+      }
+
+      final price =
+          (priceData[defaultCurrency.toLowerCase()] as num).toDouble();
       totalBalance += balance * price;
-    } catch (_) {}
+    } catch (e, stack) {
+      // You can optionally log or report the error:
+      debugPrint('Failed to calculate balance for ${coin.getGeckoId()}: $e');
+    }
   }
 
   return totalBalance;

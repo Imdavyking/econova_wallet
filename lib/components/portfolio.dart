@@ -43,7 +43,7 @@ class _PortfolioState extends State<Portfolio> {
         await getCryptoPrice(
           skipNetworkRequest: true,
         ),
-      ) as Map;
+      ) as Map<String, dynamic>;
 
       final currencyWithSymbol = jsonDecode(currencyJson);
 
