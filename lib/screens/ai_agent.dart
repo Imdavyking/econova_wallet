@@ -12,14 +12,13 @@ import "package:langchain/langchain.dart" as lang_chain;
 
 class AIAgent extends StatefulWidget {
   final String referralAddress;
-  const AIAgent({Key? key, this.referralAddress = zeroAddress})
-      : super(key: key);
+  const AIAgent({super.key, this.referralAddress = zeroAddress});
 
   @override
-  _AIAgentState createState() => _AIAgentState();
+  AIAgentState createState() => AIAgentState();
 }
 
-class _AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
+class AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   List<ChatMessage> messages = <ChatMessage>[];
   List<ChatUser> typingUsers = [];
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
