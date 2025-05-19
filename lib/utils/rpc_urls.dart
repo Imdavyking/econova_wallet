@@ -545,6 +545,7 @@ Future<double> totalCryptoBalance({
     } catch (e, stack) {
       // You can optionally log or report the error:
       debugPrint('Failed to calculate balance for ${coin.getGeckoId()}: $e');
+      debugPrint('Stack trace: $stack');
     }
   }
 
