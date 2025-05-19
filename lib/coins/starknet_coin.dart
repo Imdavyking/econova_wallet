@@ -18,7 +18,7 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
 import '../extensions/fraction_ext.dart';
-import '../extensions/call_data_strk.dart';
+// import '../extensions/call_data_strk.dart';
 
 const starkDecimals = 18;
 const strkNativeToken =
@@ -113,10 +113,14 @@ class StarknetCoin extends Coin {
       await deployAccount();
     }
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
-    final importedData = await importData(walletData);
-
-    final signer =
-        Signer(privateKey: Felt.fromHexString(importedData.privateKey!));
+    final response = await importData(walletData);
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
 
@@ -124,7 +128,7 @@ class StarknetCoin extends Coin {
     final fundingAccount = Account(
       provider: provider,
       signer: signer,
-      accountAddress: Felt.fromHexString(importedData.address),
+      accountAddress: Felt.fromHexString(response.address),
       chainId: chainId,
     );
 
@@ -236,7 +240,9 @@ class StarknetCoin extends Coin {
     }
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
     final fundingAccount = Account(
@@ -348,7 +354,9 @@ class StarknetCoin extends Coin {
 
     final privateKeyBytes = Felt.fromHexString(privateKeyHex);
 
-    final signer = Signer(privateKey: privateKeyBytes);
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: privateKeyBytes),
+    );
 
     final address = Contract.computeAddress(
       classHash: Felt.fromHexString(classHash),
@@ -489,7 +497,9 @@ class StarknetCoin extends Coin {
     final chainId = await getChainId();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
 
     final fundingAccount = Account(
       provider: provider,
@@ -646,7 +656,9 @@ class StarknetCoin extends Coin {
   Future<String?> claimRewards(String amount) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
     final account = Account(
@@ -679,7 +691,9 @@ class StarknetCoin extends Coin {
   Future<String?> unstakeToken(String amount) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
     final account = Account(
@@ -711,7 +725,9 @@ class StarknetCoin extends Coin {
   Future<String?> stakeToken(String amount) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
     final account = Account(
@@ -820,7 +836,9 @@ class StarknetCoin extends Coin {
   Future<double?> getTotalStaked() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
     final provider = await apiProvider();
     final chainId = await getChainId();
     final account = Account(
@@ -893,9 +911,10 @@ class StarknetCoin extends Coin {
               .toList(),
         );
       }).toList();
-
-      final signer =
-          Signer(privateKey: Felt.fromHexString(response.privateKey!));
+      final signer = StarkAccountSigner(
+        signer:
+            StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+      );
       final provider = await apiProvider();
       final chainId = await getChainId();
       final fundingAccount = Account(
@@ -929,8 +948,9 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
+    );
 
     final userBalance = await getUserBalance(address: response.address);
 
@@ -939,7 +959,7 @@ class StarknetCoin extends Coin {
     }
 
     final tx = await Account.deployAccount(
-      signer: signer,
+      accountSigner: signer,
       provider: provider,
       classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
@@ -1034,7 +1054,13 @@ class StarknetCoin extends Coin {
     final chainId = await getChainId();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
 
     final fundingAccount = Account(
       provider: provider,
@@ -1077,15 +1103,17 @@ class StarknetCoin extends Coin {
     required String symbol,
     required String initialSupply,
   }) async {
-    print("Deploying memecoin...");
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    print("Deploying memecoin...2");
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
     final provider = await apiProvider();
-    print("Deploying memecoin...3");
     final chainId = await getChainId();
-    print("Deploying memecoin...4");
     if (tokenClassHash.isEmpty || factoryAddress.isEmpty) {
       debugPrint('Token class hash or factory address is empty');
       return const DeployMeme(
@@ -1118,17 +1146,13 @@ class StarknetCoin extends Coin {
       deployerAddress: Felt.fromHexString(factoryAddress),
     );
 
-    print("Deploying memecoin...5");
-
     final dployTx = FunctionCall(
       contractAddress: Felt.fromHexString(factoryAddress),
       entryPointSelector: getSelectorByName('create_memecoin'),
       calldata: constructorCalldata,
     );
-    print("Deploying memecoin...6");
 
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
-    print("Deploying memecoin...7");
     final deployTokenTx = tx.when(
       result: (result) {
         return result.transaction_hash;
@@ -1204,7 +1228,13 @@ class StarknetCoin extends Coin {
   Future<DeploymentDataResult> getDeploymentData() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
     final pubKey = signer.publicKey.toHexString();
     return DeploymentDataResult(
       classHash: classHash,
@@ -1743,16 +1773,19 @@ class StarknetDeriveArgs {
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
   final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
-  final signer = Signer(privateKey: privateKey);
+  final signer = StarkAccountSigner(
+    signer: StarkSigner(privateKey: privateKey),
+  );
 
   final address = Contract.computeAddress(
     classHash: Felt.fromHexString(config.classHash),
     calldata: [signer.publicKey],
     salt: signer.publicKey,
   );
+
   return {
     'address': StarknetCoin.zeroPadAddressTo66(address.toHexString()),
-    'privateKey': signer.privateKey.toHexString(),
+    'privateKey': privateKey.toHexString(),
   };
 }
 
