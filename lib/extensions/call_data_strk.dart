@@ -1,6 +1,6 @@
 import 'package:starknet/starknet.dart';
 
-extension on List<Felt> {
+extension CallDataExt on List<Felt> {
   List<Felt> toCalldata() {
     return [
       Felt.fromInt(length),
@@ -9,7 +9,7 @@ extension on List<Felt> {
   }
 }
 
-extension on List<List<Felt>> {
+extension CallDataListExt on List<List<Felt>> {
   List<Felt> toCalldata() {
     if (isEmpty) {
       return [Felt.zero];

@@ -17,8 +17,8 @@ import '../utils/app_config.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
-
 import '../extensions/fraction_ext.dart';
+import '../extensions/call_data_strk.dart';
 
 const starkDecimals = 18;
 const strkNativeToken =
@@ -32,14 +32,7 @@ const ekuboMaxPrice = "0x100000000000000000000000000000000";
 const ekuboFeesMultiplicator = ekuboMaxPrice;
 int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toInt());
 
-extension on List<Felt> {
-  List<Felt> toCalldata() {
-    return [
-      Felt.fromInt(length),
-      ...this,
-    ];
-  }
-}
+
 
 class StarknetCoin extends Coin {
   String api;
