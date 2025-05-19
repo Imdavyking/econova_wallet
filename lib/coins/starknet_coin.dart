@@ -1641,14 +1641,6 @@ class StarknetCoin extends Coin {
     required Felt salt,
     required Felt deployerAddress,
   }) {
-    print({
-      'classHash': classHash.toHexString(),
-      'calldata': calldata.map((e) => e.toBigInt()).toList(),
-      'salt': salt.toHexString(),
-      'deployerAddress': deployerAddress.toHexString(),
-    });
-
-//  {classHash: 0x5ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac, calldata: [409839289081445989959895241365215982471859366667883513158396630516156987165, 93659290327548028024482158, 1296387397, 1000000000000000000000000, 0], salt: 0x401666741e9e5bc846c883b4e4afd010d3e3b7fe4c7614ba703f67d5100af2b, deployerAddress: 0x1a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc}
     final constructorCalldataHash =
         computeHashOnElements(calldata.map((e) => e.toBigInt()).toList());
     final contractAddressPrefix = Felt.fromHexString(
@@ -1664,7 +1656,6 @@ class StarknetCoin extends Coin {
     final BigInt maxStorageItemSize = BigInt.from(256);
     final BigInt modulus = (BigInt.two.pow(251)) - maxStorageItemSize;
     final BigInt address = hash % modulus;
-    print(Felt(address).toHexString());
     return Felt(address);
   }
 

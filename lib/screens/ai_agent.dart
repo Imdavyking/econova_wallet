@@ -2,6 +2,7 @@
 
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -162,6 +163,12 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
+    await starkNetCoins.first.deployMemeCoin(
+      name: 'MemeCoin',
+      symbol: 'MEME',
+      initialSupply: '1000000',
+    );
+    return;
     final userMessage = textMessage.copyWith(
       user: Constants.user,
       createdAt: DateTime.now(),
