@@ -1415,7 +1415,7 @@ class StarknetCoin extends Coin {
       },
     );
 
-    final [reserve0Low, reserve0High, reserve1Low, reserve1High] = result;
+    final [reserve0Low, reserve0High, reserve1Low, reserve1High, _] = result;
     final numerator = Uint256(low: reserve1Low, high: reserve1High).toBigInt();
     final denominator =
         Uint256(low: reserve0Low, high: reserve0High).toBigInt();
@@ -1516,14 +1516,23 @@ class StarknetCoin extends Coin {
         calldata: [],
       ),
     ]);
-    final [
-      teamAllocation,
-      [launchBlockNumber],
-      [launched],
-      [dontHaveLiq, lockManager, liqTypeIndex, ekuboId],
-      launchParams
-    ] = result;
-    final liquidityType = getLiquidityType(liqTypeIndex.toInt());
+
+    print(result[0]);
+
+    final teamAllocation = result[0];
+    final launchBlockNumber =
+        (result[1] as List).isNotEmpty ? result[1][0] : null;
+    final launched = (result[2] as List).isNotEmpty ? result[2][0] : null;
+
+    final fourth = result[3];
+    final dontHaveLiq = fourth.isNotEmpty ? fourth[0] : null;
+    final lockManager = fourth.length > 1 ? fourth[1] : null;
+    final liqTypeIndex = fourth.length > 2 ? fourth[2] : null;
+    final ekuboId = fourth.length > 3 ? fourth[3] : null;
+    final launchParams = result[4];
+
+    final liquidityType =
+        liqTypeIndex != null ? getLiquidityType(liqTypeIndex.toInt()) : null;
     final isLaunched = dontHaveLiq == Felt.zero &&
         launched == Felt.fromInt(1) &&
         launchParams[0] == Felt.zero &&
@@ -1539,7 +1548,7 @@ class StarknetCoin extends Coin {
       case 'JEDISWAP_ERC20':
         final baseLiquidity = BaseLiquidity(
           type: liquidityType,
-          lockManager: lockManager,
+          lockManager: lockManager!,
           lockPosition: launchParams[5],
           quoteToken: launchParams[2],
           quoteAmount: Uint256(
@@ -1553,8 +1562,8 @@ class StarknetCoin extends Coin {
       case 'EKUBO_NFT':
         final ekuboLiquidity = EkuboLiquidity(
             type: liquidityType, // String?
-            lockManager: lockManager, // Felt
-            ekuboId: ekuboId, // Felt
+            lockManager: lockManager!, // Felt
+            ekuboId: ekuboId!, // Felt
             quoteToken: launchParams[7], // Felt
             startingTick: launchParams[4].toInt() *
                 (launchParams[5] == Felt.fromInt(1) ? -1 : 1) // Felt
@@ -1579,7 +1588,7 @@ class StarknetCoin extends Coin {
           low: teamAllocation[0],
           high: teamAllocation[1],
         ).toBigInt(), // BigInt
-        blockNumber: launchBlockNumber.toBigInt(), // BigInt
+        blockNumber: launchBlockNumber!.toBigInt(), // BigInt
       ),
       liquidity: liquidityQuote, // LiquidityQuote
     );
@@ -1655,7 +1664,7 @@ class StarknetCoin extends Coin {
     );
   }
 
-  String? getLiquidityType(int liqTypeIndex) {
+  String? getLiquidityType(int? liqTypeIndex) {
     switch (liqTypeIndex) {
       case 0:
         return 'JEDISWAP_ERC20';
@@ -1690,7 +1699,7 @@ class StarknetCoin extends Coin {
     List<List<Felt>> result = [];
     int idx = 0;
     for (int i = 0; i < raw.length; i += idx + 1) {
-      idx = int.parse(raw[i].toHexString(), radix: 16);
+      idx = int.parse(raw[i].toHexString());
       result.add(raw.sublist(i + 1, i + 1 + idx));
     }
     return result;
