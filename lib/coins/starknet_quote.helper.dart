@@ -35,7 +35,7 @@ class StarknetHelper {
     StarknetChainId.SN_SEPOLIA:
         "0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a",
     StarknetChainId.SN_MAIN:
-        "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
   };
 
   static const Map<String, String> strkAddresses = {
