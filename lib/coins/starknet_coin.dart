@@ -1128,19 +1128,15 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
-    // final salt = Account.getSalt(); //FIXME: use random salt
-
-    final salt = Felt.fromHexString(
-      "0x401666741e9e5bc846c883b4e4afd010d3e3b7fe4c7614ba703f67d5100af2b",
-    );
+    final salt = Account.getSalt();
 
     final totalSupplyUint =
-        Uint256.fromBigInt("1000000".toBigIntDec(decimals()));
+        Uint256.fromBigInt(initialSupply.toBigIntDec(decimals()));
 
     final constructorCalldata = [
       fundingAccount.accountAddress,
-      Felt.fromString("My Memecoin"),
-      Felt.fromString('MEME'),
+      Felt.fromString(name),
+      Felt.fromString(symbol),
       totalSupplyUint.low,
       totalSupplyUint.high,
       salt,
@@ -1159,15 +1155,7 @@ class StarknetCoin extends Coin {
       calldata: constructorCalldata,
     );
 
-    // return const DeployMeme(
-    //   tokenAddress: null,
-    //   liquidityTx: null,
-    //   deployTokenTx: null,
-    // );
-
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
-
-    print(tx);
 
     final deployTokenTx = tx.when(
       result: (result) {
