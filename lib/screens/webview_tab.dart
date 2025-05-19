@@ -32,7 +32,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
-import '../utils/snip12/typed_data.dart';
 import '../coins/ethereum_coin.dart';
 import '../main.dart';
 import '../model/multix_sign_model.dart' hide Transaction;
