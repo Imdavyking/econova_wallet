@@ -1152,7 +1152,7 @@ class StarknetCoin extends Coin {
         holdLimit: 2,
         fees: 3,
         antiBotPeriodInSecs: 3600,
-        currencyAddress: currencyAddress,
+        currencyAddress: strkEthNativeToken,
         teamAllocations: [
           TeamAllocation(
             address: fundingAccount.accountAddress.toHexString(),

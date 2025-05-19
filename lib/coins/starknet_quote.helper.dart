@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 class StarknetChainId {
   static const String SN_MAIN = "0x534e5f4d41494e";
   static const String SN_SEPOLIA = "0x534e5f5345504f4c4941";

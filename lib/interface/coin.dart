@@ -143,6 +143,7 @@ abstract class Coin {
     return const DeployMeme(
       liquidityTx: null,
       tokenAddress: null,
+      deployTokenTx: null,
     );
   }
 

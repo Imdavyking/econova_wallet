@@ -328,7 +328,7 @@ Future<Map> ensToContentHashAndIPFS({required String cryptoDomainName}) async {
     String contentHash = bytesToHex(contentHashList);
 
     if (!contentHash.startsWith('0x')) {
-      contentHash = "0x" + contentHash;
+      contentHash = "0x$contentHash";
     }
     final ipfsCIDRegex = RegExp(
         r'^0xe3010170(([0-9a-f][0-9a-f])([0-9a-f][0-9a-f])([0-9a-f]*))$');
@@ -351,7 +351,7 @@ Future<Map> ensToContentHashAndIPFS({required String cryptoDomainName}) async {
       throw Exception('invalid IPFS checksum');
     } else if (swarmMatch != null) {
       if (swarmMatch.group(1)!.length == (32 * 2)) {
-        return {'success': true, 'msg': "bzz://" + swarmMatch.group(2)!};
+        return {'success': true, 'msg': "bzz://${swarmMatch.group(2)!}"};
       }
       throw Exception('invalid SWARM checksum');
     }
@@ -472,7 +472,7 @@ Future<String> getCryptoPrice({
     if (currentIndex == coinGeckoIDs.length - 1) {
       allCrypto += value;
     } else {
-      allCrypto += value + ",";
+      allCrypto += "$value,";
     }
     currentIndex++;
   }
@@ -548,10 +548,9 @@ Future<double> totalCryptoBalance({
 
   for (int i = 0; i < supportedChains.length; i++) {
     try {
-      NetworkGuard().throwIfOffline();
       final coin = supportedChains[i];
       if (WalletService.removeCoin(coin)) continue;
-      final balance = await coin.getBalance(true);
+      final balance = await coin.getBalance(!NetworkGuard().isConnected);
       final priceDetails = allCryptoPrice[coin.getGeckoId()];
       double price =
           (priceDetails[defaultCurrency.toLowerCase()] as num).toDouble();
