@@ -24,7 +24,7 @@
   Stake your tokens and earn rewards through integrated staking protocols.
 
 - 🌐 **Domain Name Resolution**  
-  Enjoy readable wallet names for improved usability and fewer errors.
+  Replace long, complex addresses with simple, memorable names like fricoben.stark, vitalik.eth, or foundation.sol—making transactions easier and reducing errors.
 
 - 🐸 **Meme Coin Deployment**  
   Deploy your own meme token on Starknet in minutes—no coding required.
@@ -53,6 +53,7 @@
 Econova Wallet brings **true multichain magic** to your fingertips. No more hopping between wallets—**all your assets, all your tokens, all your chains, in one place.**
 
 Here's what you get out of the box:
+
 - 🌀 **Starknet** – Native L2 support with zero-knowledge security and blazing performance
 - 🔥 **EVM Chains** – Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base, and more (~15 major EVM networks)
 - ⚡ **Solana** – Speed meets scalability (includes SPL token support)
