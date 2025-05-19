@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
@@ -15,10 +17,10 @@ class AIAgent extends StatefulWidget {
   const AIAgent({super.key, this.referralAddress = zeroAddress});
 
   @override
-  AIAgentState createState() => AIAgentState();
+  _AIAgent createState() => _AIAgent();
 }
 
-class AIAgentState extends State<AIAgent> with AutomaticKeepAliveClientMixin {
+class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   List<ChatMessage> messages = <ChatMessage>[];
   List<ChatUser> typingUsers = [];
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
