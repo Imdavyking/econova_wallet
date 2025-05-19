@@ -1152,6 +1152,7 @@ class StarknetCoin extends Coin {
     );
 
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
+
     final deployTokenTx = tx.when(
       result: (result) {
         return result.transaction_hash;
