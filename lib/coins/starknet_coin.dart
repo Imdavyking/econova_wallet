@@ -997,11 +997,9 @@ class StarknetCoin extends Coin {
 
   @override
   validateAddress(String address) {
-    if (!address.startsWith('0x')) {
-      address = '0x$address';
-    }
-    final isValid = isHexString(address);
-    final correctLength = address.length >= 65 && address.length <= 66;
+    final checkedAddress = zeroPadAddressTo66(address);
+    final isValid = isHexString(checkedAddress);
+    final correctLength = address.length == 66;
 
     if (!isValid) {
       throw Exception('Invalid $symbol address: $address');
