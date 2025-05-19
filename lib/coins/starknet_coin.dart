@@ -17,6 +17,7 @@ import '../utils/app_config.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
+
 import '../extensions/fraction_ext.dart';
 
 const starkDecimals = 18;
@@ -30,6 +31,15 @@ int ekuboTickSpacing = 5982;
 const ekuboMaxPrice = "0x100000000000000000000000000000000";
 const ekuboFeesMultiplicator = ekuboMaxPrice;
 int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toInt());
+
+extension on List<Felt> {
+  List<Felt> toCalldata() {
+    return [
+      Felt.fromInt(length),
+      ...this,
+    ];
+  }
+}
 
 class StarknetCoin extends Coin {
   String api;
@@ -1269,8 +1279,8 @@ class StarknetCoin extends Coin {
         Felt.fromInt(data.antiBotPeriod),
         Felt.fromInt(data.holdLimit * 100),
         Felt.fromHexString(data.quoteToken!.address),
-        Felt.fromCallData(initialHolders),
-        Felt.fromCallData(initialHoldersAmounts),
+        ...initialHolders.toCalldata(),
+        ...initialHoldersAmounts.toCalldata(),
         Felt.fromInt(fees),
         Felt.fromInt(ekuboTickSpacing),
         Felt.fromInt(i129StartingTick.sign ? 1 : 0),
