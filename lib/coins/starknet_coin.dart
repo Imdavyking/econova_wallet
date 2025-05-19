@@ -1183,9 +1183,14 @@ class StarknetCoin extends Coin {
       );
     }
 
-    print('Token deployed at: ${tokenAddress.toHexString()}');
     final tenPercentSupply =
         totalSupplyUint.toBigInt() * BigInt.from(10) ~/ BigInt.from(100);
+
+    debugPrint('waiting for token deployment ${tokenAddress.toHexString()}');
+
+    await waitForContractDeployment(contractAddress: tokenAddress);
+
+    debugPrint('contract deployed at ${tokenAddress.toHexString()}');
 
     final liquidityTx = await launchOnEkubo(
       LaunchParameters(
@@ -1208,6 +1213,43 @@ class StarknetCoin extends Coin {
       liquidityTx: liquidityTx,
       deployTokenTx: deployTokenTx,
       tokenAddress: tokenAddress.toHexString(),
+    );
+  }
+
+  Future<void> waitForContractDeployment({
+    required Felt contractAddress,
+  }) async {
+    Duration timeout = const Duration(seconds: 60);
+    Duration interval = const Duration(seconds: 2);
+    final provider = await apiProvider();
+    final endTime = DateTime.now().add(timeout);
+
+    while (DateTime.now().isBefore(endTime)) {
+      try {
+        final result = await provider.getClassHashAt(
+          contractAddress: contractAddress,
+          blockId: BlockId.latest,
+        );
+
+        final isDeployed = result.when(
+          result: (hash) => true,
+          error: (_) => false,
+        );
+
+        if (isDeployed) {
+          debugPrint(
+              '✅ Contract deployed and available at: ${contractAddress.toHexString()}');
+          return;
+        }
+      } catch (e) {
+        // Optional: log error or ignore
+      }
+
+      await Future.delayed(interval);
+    }
+
+    throw Exception(
+      '❌ Contract at ${contractAddress.toHexString()} not visible on-chain after ${timeout.inSeconds} seconds.',
     );
   }
 
