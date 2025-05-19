@@ -364,7 +364,7 @@ class StarknetCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'CairoStarknetAcc${walletImportType.name}$api';
+    String saveKey = 'CairoStarknetUserAcc${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
