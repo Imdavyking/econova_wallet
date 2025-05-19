@@ -35,7 +35,7 @@ abstract class Coin {
   void validateAddress(String address);
   Future<String> addressExplorer();
   Map toJson();
-  Future<double> getBalance(bool skipNetworkRequest);
+  Future<double> getBalance(bool useCache);
   Future<String?> transferToken(
     String amount,
     String to, {
