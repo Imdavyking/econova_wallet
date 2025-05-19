@@ -573,6 +573,7 @@ class AItools {
 
           return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress';
         } catch (e) {
+          print(e);
           return 'Failed to deploy meme token: $e';
         }
       },

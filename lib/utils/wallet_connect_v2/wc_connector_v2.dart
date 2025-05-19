@@ -99,6 +99,7 @@ class WcConnectorV2 {
   }
 
   Future<void> init() async {
+    if (enableTestNet) return;
     signClient = await SignClient.init(
       projectId: walletConnectKey,
       relayUrl: "wss://relay.walletconnect.com",
