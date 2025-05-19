@@ -2077,18 +2077,20 @@ packages:
   starknet:
     dependency: "direct main"
     description:
-      name: starknet
-      sha256: "748be6927a0c2eee3dbdfc795d4ad0ace09b8840bac267fa2e5ccee3ac096e96"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/starknet"
+      ref: HEAD
+      resolved-ref: "3e6fe998056178064443452b3beedf05c560f53b"
+      url: "https://github.com/focustree/starknet.dart"
+    source: git
     version: "0.1.2+1"
   starknet_provider:
     dependency: "direct main"
     description:
-      name: starknet_provider
-      sha256: "74213a24a032e5ab599ff0cb35c6eaa4e1ee3e5ff4eece080e6f5884bc280923"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/starknet_provider"
+      ref: HEAD
+      resolved-ref: "3e6fe998056178064443452b3beedf05c560f53b"
+      url: "https://github.com/focustree/starknet.dart"
+    source: git
     version: "0.1.1+2"
   state_notifier:
     dependency: transitive
