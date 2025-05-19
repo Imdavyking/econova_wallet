@@ -529,8 +529,7 @@ Future<double> totalCryptoBalance({
   for (final coin in supportedChains) {
     try {
       if (WalletService.removeCoin(coin)) continue;
-
-      final balance = await coin.getBalance(!NetworkGuard().isConnected);
+      final balance = await coin.getBalance(true);
       final geckoId = coin.getGeckoId();
       final priceData = allCryptoPrice[geckoId];
 
