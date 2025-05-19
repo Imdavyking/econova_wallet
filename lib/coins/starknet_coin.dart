@@ -1616,6 +1616,17 @@ class StarknetCoin extends Coin {
 
   @override
   String getRampID() => rampID;
+
+  static String zeroPadAddressTo66(String address) {
+    // Remove the '0x' prefix if present
+    String hex = address.startsWith('0x') ? address.substring(2) : address;
+
+    // Pad left with zeros to length 64 (32 bytes * 2 hex chars)
+    String paddedHex = hex.padLeft(64, '0');
+
+    // Add '0x' prefix back
+    return '0x$paddedHex';
+  }
 }
 
 List<StarknetCoin> getStarknetBlockchains() {
@@ -1703,8 +1714,6 @@ class StarknetDeriveArgs {
   });
 }
 
-// 0x050d4da9f66589eadaa1d5e31cf73b08ac1a67c8b4dcd88e6fd4fe501c628af2
-
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
   final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
   final signer = Signer(privateKey: privateKey);
@@ -1715,7 +1724,7 @@ Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
     salt: signer.publicKey,
   );
   return {
-    'address': address.toHexString(),
+    'address': StarknetCoin.zeroPadAddressTo66(address.toHexString()),
     'privateKey': signer.privateKey.toHexString(),
   };
 }
