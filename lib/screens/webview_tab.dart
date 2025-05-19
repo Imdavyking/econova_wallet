@@ -571,7 +571,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       'wallet_addStarknetChain',
       'wallet_switchStarknetChain',
       'wallet_watchAsset',
-      'wallet_deploymentData',
     ];
 
     try {
@@ -620,6 +619,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
           );
           return;
         }
+        await sendResponse(responseData);
+      } else if (requestType == 'wallet_deploymentData') {
+        final coin = starkNetCoins.first;
+        final deployData = await coin.getDeploymentData();
+        final responseData = {
+          "origin": origin,
+          "requestId": requestId,
+          "chainId": chainId,
+          "requestType": requestType,
+          "address": coinData.address,
+          "class_hash": deployData.classHash,
+          "salt": deployData.addressSalt,
+          "calldata": deployData.constructorCalldata,
+          "version": deployData.version
+        };
         await sendResponse(responseData);
       } else if (requestType == 'wallet_addDeclareTransaction') {
         final params = request['params'];

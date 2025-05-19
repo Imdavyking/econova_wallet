@@ -32,8 +32,6 @@ const ekuboMaxPrice = "0x100000000000000000000000000000000";
 const ekuboFeesMultiplicator = ekuboMaxPrice;
 int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toInt());
 
-
-
 class StarknetCoin extends Coin {
   String api;
   String blockExplorer;
@@ -1206,6 +1204,20 @@ class StarknetCoin extends Coin {
       ),
     );
     return txHash;
+  }
+
+  Future<DeploymentDataResult> getDeploymentData() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
+    final pubKey = signer.publicKey.toHexString();
+    return DeploymentDataResult(
+      classHash: classHash,
+      constructorCalldata: [pubKey],
+      addressSalt: pubKey,
+      contractAddress: response.address,
+      version: 1,
+    );
   }
 
   Future<List<FunctionCall>> getEkuboLaunchCalldata(
@@ -2523,4 +2535,28 @@ int getStartingTick(int initialPrice) {
   final double division = logInitialPrice / ekuboTickSizeLog / ekuboTickSpacing;
   final int floored = division.floor();
   return floored * ekuboTickSpacing;
+}
+
+//  return {
+//       "classHash": classHash,
+//       "constructorCalldata": [pubKey],
+//       "addressSalt": pubKey,
+//       "contractAddress": response.address,
+//       "version": "1"
+//     };
+
+class DeploymentDataResult {
+  final String classHash;
+  final List<String> constructorCalldata;
+  final String addressSalt;
+  final String contractAddress;
+  final int version;
+
+  const DeploymentDataResult({
+    required this.classHash,
+    required this.constructorCalldata,
+    required this.addressSalt,
+    required this.version,
+    required this.contractAddress,
+  });
 }

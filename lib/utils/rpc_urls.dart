@@ -847,6 +847,9 @@ Future setupWebViewWalletBridge(
             case 'wallet_requestChainId':
               resolve(chainId);
               break;
+            case 'wallet_deploymentData':
+              resolve(data);
+              break;
             case 'wallet_addInvokeTransaction':
               const txHash = data.txHash;
               console.log("txHash", txHash);
