@@ -463,68 +463,48 @@ AbiDecodedResult? decodeAbi(String txData) {
   }
 }
 
-Future<String> getCryptoPrice({
-  bool skipNetworkRequest = false,
-}) async {
-  String allCrypto = "";
-  int currentIndex = 0;
-  for (final value in coinGeckoIDs) {
-    if (currentIndex == coinGeckoIDs.length - 1) {
-      allCrypto += value;
-    } else {
-      allCrypto += "$value,";
-    }
-    currentIndex++;
-  }
-  const secondsToResendRequest = 15;
+Future<String> getCryptoPrice({bool skipNetworkRequest = false}) async {
+  const int secondsToResendRequest = 15;
 
-  final savedCryptoPrice = pref.get(coinGeckoCryptoPriceKey);
+  final String? savedCryptoPrice = pref.get(coinGeckoCryptoPriceKey);
+  final DateTime now = DateTime.now();
+  final int secondsSinceLastFetch =
+      now.difference(MyApp.lastcoinGeckoData).inSeconds;
+  final bool useCached = secondsSinceLastFetch < secondsToResendRequest;
 
-  if (savedCryptoPrice != null) {
-    DateTime now = DateTime.now();
-    final nowInSeconds = now.difference(MyApp.lastcoinGeckoData).inSeconds;
-
-    final useCachedResponse = nowInSeconds < secondsToResendRequest;
-
-    if (nowInSeconds > secondsToResendRequest) {
-      MyApp.lastcoinGeckoData = DateTime.now();
-      MyApp.getCoinGeckoData = true;
-    }
-
-    if (useCachedResponse || skipNetworkRequest) {
-      return json.decode(savedCryptoPrice)['data'];
-    }
+  // Return cached response if within cooldown or skipping network
+  if ((useCached || skipNetworkRequest || !NetworkGuard().isConnected) &&
+      savedCryptoPrice != null) {
+    return json.decode(savedCryptoPrice)['data'];
   }
 
   try {
-    NetworkGuard().throwIfOffline();
-    String defaultCurrency = pref.get('defaultCurrency') ?? "usd";
+    final String defaultCurrency = pref.get('defaultCurrency') ?? "usd";
 
     if (!MyApp.getCoinGeckoData && savedCryptoPrice != null) {
       return json.decode(savedCryptoPrice)['data'];
     }
-    MyApp.getCoinGeckoData = false;
-    MyApp.lastcoinGeckoData = DateTime.now();
+    final String allCrypto = coinGeckoIDs.join(',');
 
-    final dataUrl =
-        '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=$defaultCurrency&include_24hr_change=true';
+    final Uri apiUrl = Uri.parse(
+      '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=$defaultCurrency&include_24hr_change=true',
+    );
 
-    final response =
-        await get(Uri.parse(dataUrl)).timeout(networkTimeOutDuration);
+    final response = await get(apiUrl).timeout(networkTimeOutDuration);
+
+    if (response.statusCode >= 400) {
+      throw Exception("CoinGecko Error: ${response.statusCode}");
+    }
 
     final responseBody = response.body;
-    // check for http status code of 4** or 5**
-    if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
-      throw Exception(responseBody);
-    }
+
+    // Update cache and flags
+    MyApp.getCoinGeckoData = false;
+    MyApp.lastcoinGeckoData = now;
 
     await pref.put(
       coinGeckoCryptoPriceKey,
-      json.encode(
-        {
-          'data': responseBody,
-        },
-      ),
+      json.encode({'data': responseBody}),
     );
 
     return responseBody;
@@ -532,7 +512,7 @@ Future<String> getCryptoPrice({
     if (savedCryptoPrice != null) {
       return json.decode(savedCryptoPrice)['data'];
     }
-    throw Exception('failed to get data from coin gecko');
+    throw Exception('Failed to get data from CoinGecko: $e');
   }
 }
 
