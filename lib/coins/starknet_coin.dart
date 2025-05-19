@@ -107,12 +107,11 @@ class StarknetCoin extends Coin {
   }
 
   Future<DeclareTransactionResponseResult?> addDeclareDapp(
-      AddDeclareTransactionParameters params) async {
-    // Retrieve active wallet key and import related data
+    AddDeclareTransactionParameters params,
+  ) async {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final importedData = await importData(walletData);
 
-    // Initialize signer and provider
     final signer =
         Signer(privateKey: Felt.fromHexString(importedData.privateKey!));
     final provider = await apiProvider();
@@ -2517,14 +2516,6 @@ int getStartingTick(int initialPrice) {
   final int floored = division.floor();
   return floored * ekuboTickSpacing;
 }
-
-//  return {
-//       "classHash": classHash,
-//       "constructorCalldata": [pubKey],
-//       "addressSalt": pubKey,
-//       "contractAddress": response.address,
-//       "version": "1"
-//     };
 
 class DeploymentDataResult {
   final String classHash;
