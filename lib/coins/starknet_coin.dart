@@ -941,9 +941,7 @@ class StarknetCoin extends Coin {
     final tx = await Account.deployAccount(
       signer: signer,
       provider: provider,
-      classHash: Felt.fromHexString(
-        classHash,
-      ),
+      classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
     );
     final txHash = tx.when(
