@@ -1168,6 +1168,10 @@ class StarknetCoin extends Coin {
       },
     );
 
+    // 10% of the total supply
+    final tenPercentSupply =
+        totalSupplyUint.toBigInt() * BigInt.from(10) ~/ BigInt.from(100);
+
     final liquidityTx = await launchOnEkubo(
       LaunchParameters(
         starknetAccount: fundingAccount,
@@ -1180,7 +1184,7 @@ class StarknetCoin extends Coin {
         teamAllocations: [
           TeamAllocation(
             address: fundingAccount.accountAddress.toHexString(),
-            amount: BigInt.from(100000 * pow(10, decimals())),
+            amount: tenPercentSupply,
           )
         ],
       ),
