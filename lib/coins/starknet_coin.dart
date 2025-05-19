@@ -109,6 +109,9 @@ class StarknetCoin extends Coin {
   Future<DeclareTransactionResponseResult?> addDeclareDapp(
     AddDeclareTransactionParameters params,
   ) async {
+    if (await needDeploy()) {
+      await deployAccount();
+    }
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final importedData = await importData(walletData);
 
@@ -228,6 +231,9 @@ class StarknetCoin extends Coin {
   }
 
   Future<String?> executeInvokeDapp(List<StarknetCall> calls) async {
+    if (await needDeploy()) {
+      await deployAccount();
+    }
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
@@ -937,6 +943,7 @@ class StarknetCoin extends Coin {
       provider: provider,
       classHash: Felt.fromHexString(classHash),
       constructorCalldata: [signer.publicKey],
+      useSTRKFee: useStarkToken,
     );
     final txHash = tx.when(
       result: (result) {
