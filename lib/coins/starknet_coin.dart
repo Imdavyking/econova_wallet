@@ -1130,8 +1130,6 @@ class StarknetCoin extends Coin {
 
     final salt = Account.getSalt();
 
-    print('Salt: ${salt.toHexString()}');
-
     final totalSupplyUint = Uint256(
       low: Felt(initialSupply.toBigIntDec(decimals())),
       high: Felt.zero,
@@ -1159,13 +1157,6 @@ class StarknetCoin extends Coin {
       calldata: constructorCalldata,
     );
 
-    if (kDebugMode) {
-      print('Token address: ${tokenAddress.toHexString()}');
-      print("Contract address: ${dployTx.contractAddress.toHexString()}");
-      print("Entry point: ${dployTx.entryPointSelector.toHexString()}");
-      print("Call data: ${dployTx.calldata}");
-    }
-
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
 
     final deployTokenTx = tx.when(
@@ -1179,7 +1170,18 @@ class StarknetCoin extends Coin {
       },
     );
 
-    // 10% of the total supply
+    final isAccepted = await waitForAcceptance(
+      transactionHash: deployTokenTx,
+      provider: provider,
+    );
+
+    if (!isAccepted) {
+      return const DeployMeme(
+        tokenAddress: null,
+        liquidityTx: null,
+        deployTokenTx: null,
+      );
+    }
     final tenPercentSupply =
         totalSupplyUint.toBigInt() * BigInt.from(10) ~/ BigInt.from(100);
 
