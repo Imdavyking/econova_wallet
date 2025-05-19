@@ -162,7 +162,7 @@ class ZilliqaCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
 
     final key = 'ZilliqaAddressBalance$address$rpc$name';
@@ -175,7 +175,7 @@ class ZilliqaCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final balance = await getUserBalance(address: address);

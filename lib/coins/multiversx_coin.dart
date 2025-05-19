@@ -196,7 +196,7 @@ class MultiversxCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'multiversxAddressBalance$address$rpc';
 
@@ -208,7 +208,7 @@ class MultiversxCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double fraction = await getUserBalance(address: address);

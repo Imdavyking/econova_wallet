@@ -174,7 +174,7 @@ class HarmonyCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'harmonyAddressBalance$address$rpc';
 
@@ -186,7 +186,7 @@ class HarmonyCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double ethBalance = await getUserBalance(address: address);

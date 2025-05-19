@@ -250,7 +250,7 @@ class CosmosCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'cosmosAddressBalance$address$lcdUrl';
 
@@ -262,7 +262,7 @@ class CosmosCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
     try {
       double cosmosBal = await getUserBalance(address: address);
       await pref.put(key, cosmosBal);

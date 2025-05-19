@@ -41,7 +41,7 @@ class _PortfolioState extends State<Portfolio> {
     try {
       final allCryptoPrice = jsonDecode(
         await getCryptoPrice(
-          skipNetworkRequest: true,
+          useCache: true,
         ),
       ) as Map<String, dynamic>;
 

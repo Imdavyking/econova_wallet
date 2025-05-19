@@ -23,7 +23,7 @@ class BlockchainInfo {
 }
 
 class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   Coin coin;
 
   BlockchainInfoData({required this.coin}) : super(null);
@@ -38,7 +38,7 @@ class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
 
       Map allCryptoPrice = jsonDecode(
         await getCryptoPrice(
-          skipNetworkRequest: skipNetworkRequest,
+          useCache: useCache,
         ),
       ) as Map;
 
@@ -69,7 +69,7 @@ class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
 }
 
 class TransactionData extends StateNotifier<Map?> {
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   Coin coin;
   TransactionData({required this.coin}) : super(null);
 
@@ -81,13 +81,13 @@ class TransactionData extends StateNotifier<Map?> {
 }
 
 class TokenBalance extends StateNotifier<double?> {
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   Coin coin;
   TokenBalance({required this.coin}) : super(null);
 
   Future getBlockchainBalance() async {
     try {
-      state = await coin.getBalance(skipNetworkRequest);
+      state = await coin.getBalance(useCache);
     } catch (_) {}
   }
 }

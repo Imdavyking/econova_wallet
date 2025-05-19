@@ -100,7 +100,7 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
 
   List<ERC20NftDetails>? nftData;
 
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   late ScrollController controller;
   late BlockChainNFTs nft;
   @override
@@ -128,10 +128,10 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
       final allNFTs = await erc20NFTs(
         nft.ethCoin.chainId,
         response.address,
-        skipNetworkRequest: skipNetworkRequest,
+        useCache: useCache,
       );
 
-      if (skipNetworkRequest) skipNetworkRequest = false;
+      if (useCache) useCache = false;
 
       if (allNFTs['success'] != null && allNFTs['success']) {
         List usrNFt = allNFTs['msg']['ownedNfts'];

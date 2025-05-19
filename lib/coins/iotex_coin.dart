@@ -174,7 +174,7 @@ class IOTEXCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'iotexAddressBalance$address$rpc';
 
@@ -186,7 +186,7 @@ class IOTEXCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double ethBalance = await getUserBalance(address: address);

@@ -88,7 +88,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
   @override
   int decimals() => mintDecimals;
 
-  Future<double> _getBalanceV10(bool skipNetworkRequest) async {
+  Future<double> _getBalanceV10(bool useCache) async {
     final address = await getAddress();
 
     final key = 'TronFTBalance$type$tokenID$address$api';
@@ -101,7 +101,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final rpc = TronProvider(TronHTTPProvider(url: api));
@@ -139,7 +139,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
 
   String contractAddress() => tokenID;
 
-  Future<double> _getBalanceV20(bool skipNetworkRequest) async {
+  Future<double> _getBalanceV20(bool useCache) async {
     final address = await getAddress();
 
     final key = 'TronAddressBalance$type$tokenID$address$api';
@@ -152,7 +152,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final address = await getAddress();
@@ -187,11 +187,11 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     if (type == TRCFTTYPES.v10) {
-      return await _getBalanceV10(skipNetworkRequest);
+      return await _getBalanceV10(useCache);
     } else if (type == TRCFTTYPES.v20) {
-      return await _getBalanceV20(skipNetworkRequest);
+      return await _getBalanceV20(useCache);
     }
 
     throw Exception('unknown tron type');

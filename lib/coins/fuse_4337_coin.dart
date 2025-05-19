@@ -430,7 +430,7 @@ class FuseCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     String address = roninAddrToEth(await getAddress());
 
     final tokenKey = '$rpc$address/balance4337$contractAddress';
@@ -440,7 +440,7 @@ class FuseCoin extends Coin {
 
     if (storedBalance != null) savedBalance = storedBalance;
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double fuseBalance = await getUserBalance(address: address);

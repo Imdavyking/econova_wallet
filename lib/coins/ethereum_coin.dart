@@ -209,7 +209,7 @@ class EthereumCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     String address = roninAddrToEth(await getAddress());
     final tokenKey = '$rpc$address/balance';
     final storedBalance = pref.get(tokenKey);
@@ -218,7 +218,7 @@ class EthereumCoin extends Coin {
 
     if (storedBalance != null) savedBalance = storedBalance;
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double ethBalance = await getUserBalance(address: address);

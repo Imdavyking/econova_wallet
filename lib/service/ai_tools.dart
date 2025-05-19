@@ -102,7 +102,7 @@ class AItools {
         try {
           debugPrint('coinGeckoId: $coinGeckoId');
           Map allCryptoPrice = jsonDecode(
-            await getCryptoPrice(skipNetworkRequest: true),
+            await getCryptoPrice(useCache: true),
           ) as Map;
 
           final Map cryptoMarket = allCryptoPrice[coinGeckoId];

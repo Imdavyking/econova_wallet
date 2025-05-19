@@ -105,7 +105,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'ESDTddressBalance$identifier$rpc$address';
 
@@ -117,7 +117,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double fraction = await getUserBalance(address: address);

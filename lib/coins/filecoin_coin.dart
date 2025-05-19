@@ -197,7 +197,7 @@ class FilecoinCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'fileCoinAddressBalance$address$baseUrl';
 
@@ -209,7 +209,7 @@ class FilecoinCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double fileCoinBal = await getUserBalance(address: address);

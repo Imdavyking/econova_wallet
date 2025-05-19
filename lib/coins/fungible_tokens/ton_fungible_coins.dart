@@ -118,7 +118,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
 
@@ -133,7 +133,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double balTon = await getUserBalance(address: address);

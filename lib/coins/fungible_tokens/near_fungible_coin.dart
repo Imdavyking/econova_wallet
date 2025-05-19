@@ -208,7 +208,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'nearAddressBalance$address$api$contractID';
 
@@ -220,7 +220,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final tknBal = await getUserBalance(address: address);

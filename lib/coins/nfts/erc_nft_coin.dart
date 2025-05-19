@@ -204,7 +204,7 @@ class ERCNFTCoin extends EthereumCoin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     return 1;
   }
 

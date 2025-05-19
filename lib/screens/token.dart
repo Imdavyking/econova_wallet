@@ -34,7 +34,7 @@ class Token extends StatefulWidget {
 
 class _TokenState extends State<Token> {
   late Map tokenTransaction;
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   ValueNotifier<bool> trxOpen = ValueNotifier(true);
   late String currentAddress;
   String? description;

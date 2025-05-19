@@ -292,7 +292,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     String address = roninAddrToEth(await getAddress());
 
     final balanceKey = '$chainId${tokenAddress()}${address}ercBalance';
@@ -304,7 +304,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final fraction = getUserBalance(address: address);

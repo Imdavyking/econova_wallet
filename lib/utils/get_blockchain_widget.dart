@@ -31,7 +31,7 @@ class GetBlockChainWidget extends StatefulWidget {
 class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
   Timer? timer;
   BlockchainPrice? cryptoInfo;
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   ValueNotifier<double> coinWorth = ValueNotifier<double>(0);
   late Coin coin;
 
@@ -63,11 +63,11 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
     try {
       Map allCryptoPrice = jsonDecode(
         await getCryptoPrice(
-          skipNetworkRequest: skipNetworkRequest,
+          useCache: useCache,
         ),
       ) as Map;
 
-      if (skipNetworkRequest) skipNetworkRequest = false;
+      if (useCache) useCache = false;
 
       final currencyWithSymbol = jsonDecode(currencyJson);
 

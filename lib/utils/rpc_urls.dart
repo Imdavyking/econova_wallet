@@ -96,7 +96,7 @@ solidityFunctionSig(String methodId) {
 Future<Map> multivrNFT(
   String address, {
   required String multiversxApi,
-  required bool skipNetworkRequest,
+  required bool useCache,
 }) async {
   final tokenListKey = 'multiversnListKey_$address$multiversxApi';
 
@@ -109,7 +109,7 @@ Future<Map> multivrNFT(
     userTokens = {'msg': json.decode(tokenList) as List, 'success': true};
   }
 
-  if (skipNetworkRequest) return userTokens;
+  if (useCache) return userTokens;
 
   try {
     final url = '$multiversxApi/accounts/$address/nfts';
@@ -133,7 +133,7 @@ Future<Map> multivrNFT(
 Future<Map> erc20NFTs(
   int chainId,
   String address, {
-  required bool skipNetworkRequest,
+  required bool useCache,
 }) async {
   final tokenListKey = 'tokenListKey_$chainId-$address/__';
   final tokenList = pref.get(tokenListKey);
@@ -145,7 +145,7 @@ Future<Map> erc20NFTs(
     userTokens = {'msg': json.decode(tokenList) as Map, 'success': true};
   }
 
-  if (skipNetworkRequest) return userTokens;
+  if (useCache) return userTokens;
   try {
     String baseUrl = '';
     switch (chainId) {
@@ -463,7 +463,7 @@ AbiDecodedResult? decodeAbi(String txData) {
   }
 }
 
-Future<String> getCryptoPrice({bool skipNetworkRequest = false}) async {
+Future<String> getCryptoPrice({bool useCache = false}) async {
   const int secondsToResendRequest = 15;
 
   final String? savedCryptoPrice = pref.get(coinGeckoCryptoPriceKey);
@@ -473,7 +473,7 @@ Future<String> getCryptoPrice({bool skipNetworkRequest = false}) async {
   final bool useCached = secondsSinceLastFetch < secondsToResendRequest;
 
   // Return cached response if within cooldown or skipping network
-  if ((useCached || skipNetworkRequest || !NetworkGuard().isConnected) &&
+  if ((useCached || useCache || !NetworkGuard().isConnected) &&
       savedCryptoPrice != null) {
     return json.decode(savedCryptoPrice)['data'];
   }

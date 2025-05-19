@@ -436,7 +436,7 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     String address = await getAddress();
 
     final key = 'StarknetAddressBalance$address$api$name';
@@ -449,7 +449,7 @@ class StarknetCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final userBalance = await getUserBalance(address: address);

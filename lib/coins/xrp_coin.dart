@@ -164,7 +164,7 @@ class XRPCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'xrpAddressBalance$address$api';
 
@@ -176,7 +176,7 @@ class XRPCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
     try {
       final userBalance = await getUserBalance(address: address);
       await pref.put(key, userBalance);

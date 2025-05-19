@@ -133,7 +133,7 @@ class TonCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'tonAddressBalance$address$api';
 
@@ -145,7 +145,7 @@ class TonCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       double balTon = await getUserBalance(address: address);

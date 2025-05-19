@@ -155,7 +155,7 @@ class SuiCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     final key = 'suiAddressBalance$address$rpc';
 
@@ -167,7 +167,7 @@ class SuiCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final balance = await getUserBalance(address: address);

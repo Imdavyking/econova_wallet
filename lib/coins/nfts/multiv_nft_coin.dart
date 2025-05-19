@@ -99,7 +99,7 @@ class MultiversxNFTCoin extends MultiversxCoin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     return balance;
   }
 

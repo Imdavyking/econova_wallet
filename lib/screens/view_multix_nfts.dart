@@ -102,7 +102,7 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
 
   List<MultiversxNft>? nftData;
 
-  bool skipNetworkRequest = true;
+  bool useCache = true;
   late ScrollController controller;
   late BlockChainNFTs nft;
   @override
@@ -132,10 +132,10 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
       final nftsData = await multivrNFT(
         response.address,
         multiversxApi: api!,
-        skipNetworkRequest: skipNetworkRequest,
+        useCache: useCache,
       );
 
-      if (skipNetworkRequest) skipNetworkRequest = false;
+      if (useCache) useCache = false;
 
       if (nftsData['success'] != null && nftsData['success']) {
         List usrNFt = nftsData['msg'];
