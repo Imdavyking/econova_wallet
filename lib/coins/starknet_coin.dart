@@ -1182,6 +1182,8 @@ class StarknetCoin extends Coin {
         deployTokenTx: null,
       );
     }
+
+    print('Token deployed at: ${tokenAddress.toHexString()}');
     final tenPercentSupply =
         totalSupplyUint.toBigInt() * BigInt.from(10) ~/ BigInt.from(100);
 
@@ -1212,7 +1214,6 @@ class StarknetCoin extends Coin {
   Future<String?> launchOnEkubo(
     LaunchParameters params,
   ) async {
-    print(params.memecoinAddress);
     final memecoin = await getMemecoin(params.memecoinAddress);
     if (memecoin == null) {
       throw Exception('Invalid memecoin address');
