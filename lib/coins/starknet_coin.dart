@@ -18,7 +18,6 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
 import '../extensions/fraction_ext.dart';
-// import '../extensions/call_data_strk.dart';
 
 const starkDecimals = 18;
 const strkNativeToken =

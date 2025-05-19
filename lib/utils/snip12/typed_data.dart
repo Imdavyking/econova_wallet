@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:starknet/starknet.dart';
 import 'encode.dart';
-import 'merkle_tree.dart';
 import 'num.dart';
 import 'shortstring.dart';
 

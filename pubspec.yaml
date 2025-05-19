@@ -124,6 +124,7 @@ dependencies:
   starknet_provider: ^0.1.1+1
   fraction: 5.0.3
   http_parser: 4.0.2
+  freezed_annotation: 2.4.4
   jazzicon:
     path: ./jazzicon
   near_api_flutter:
@@ -153,7 +154,7 @@ dependency_overrides:
   cached_network_image: ^3.3.1
   web_socket_channel: ^3.0.0
   uuid: ^4.0.0
-  freezed_annotation: ^2.2.0
+  freezed_annotation: 2.4.4
   intl: ^0.19.0
   dio: ^5.5.0+1
   decimal: ^2.2.0
