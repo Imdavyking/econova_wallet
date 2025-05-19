@@ -1698,6 +1698,25 @@ List<StarknetCoin> getStarknetBlockchains() {
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
       ),
+      StarknetCoin(
+        multiCallAddress:
+            '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
+        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
+        api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
+        classHash:
+            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
+        contractAddress: strkEthNativeToken,
+        symbol: 'ETH (STRK)',
+        name: 'Ethereum (STRK)',
+        default_: 'ETH',
+        image: 'assets/ethereum_logo.png',
+        geckoID: "ethereum",
+        payScheme: 'ethereum',
+        rampID: 'ETH_ETH',
+        useStarkToken: false,
+        tokenClassHash: '',
+        factoryAddress: '',
+      ),
     ]);
   }
   return blockChains;
