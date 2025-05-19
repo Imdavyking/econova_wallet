@@ -1130,8 +1130,12 @@ class StarknetCoin extends Coin {
 
     final salt = Account.getSalt();
 
-    final totalSupplyUint =
-        Uint256.fromBigInt(initialSupply.toBigIntDec(decimals()));
+    print('Salt: ${salt.toHexString()}');
+
+    final totalSupplyUint = Uint256(
+      low: Felt(initialSupply.toBigIntDec(decimals())),
+      high: Felt.zero,
+    );
 
     final constructorCalldata = [
       fundingAccount.accountAddress,
@@ -1154,6 +1158,13 @@ class StarknetCoin extends Coin {
       entryPointSelector: getSelectorByName('create_memecoin'),
       calldata: constructorCalldata,
     );
+
+    if (kDebugMode) {
+      print('Token address: ${tokenAddress.toHexString()}');
+      print("Contract address: ${dployTx.contractAddress.toHexString()}");
+      print("Entry point: ${dployTx.entryPointSelector.toHexString()}");
+      print("Call data: ${dployTx.calldata}");
+    }
 
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
 

@@ -164,9 +164,9 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
     await starkNetCoins.first.deployMemeCoin(
-      name: 'MemeCoin',
-      symbol: 'MEME',
-      initialSupply: '1000000',
+      name: 'MEMExy',
+      symbol: 'zMemeCoin',
+      initialSupply: '15000000',
     );
     return;
     final userMessage = textMessage.copyWith(
