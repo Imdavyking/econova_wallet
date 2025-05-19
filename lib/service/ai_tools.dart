@@ -1,5 +1,6 @@
 import "dart:convert";
 
+import "package:flutter/foundation.dart";
 import "package:wallet_app/coins/starknet_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
@@ -573,7 +574,9 @@ class AItools {
 
           return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress';
         } catch (e) {
-          print(e);
+          if (kDebugMode) {
+            print(e);
+          }
           return 'Failed to deploy meme token: $e';
         }
       },

@@ -1077,12 +1077,17 @@ class StarknetCoin extends Coin {
     required String symbol,
     required String initialSupply,
   }) async {
+    print("Deploying memecoin...");
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
+    print("Deploying memecoin...2");
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
     final provider = await apiProvider();
+    print("Deploying memecoin...3");
     final chainId = await getChainId();
+    print("Deploying memecoin...4");
     if (tokenClassHash.isEmpty || factoryAddress.isEmpty) {
+      debugPrint('Token class hash or factory address is empty');
       return const DeployMeme(
         tokenAddress: null,
         liquidityTx: null,
@@ -1108,18 +1113,22 @@ class StarknetCoin extends Coin {
 
     final tokenAddress = computeAddressWithDeployer(
       classHash: Felt.fromHexString(tokenClassHash),
-      calldata: constructorCalldata,
+      calldata: constructorCalldata.sublist(0, constructorCalldata.length - 1),
       salt: salt,
       deployerAddress: Felt.fromHexString(factoryAddress),
     );
+
+    print("Deploying memecoin...5");
 
     final dployTx = FunctionCall(
       contractAddress: Felt.fromHexString(factoryAddress),
       entryPointSelector: getSelectorByName('create_memecoin'),
       calldata: constructorCalldata,
     );
+    print("Deploying memecoin...6");
 
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
+    print("Deploying memecoin...7");
     final deployTokenTx = tx.when(
       result: (result) {
         return result.transaction_hash;
