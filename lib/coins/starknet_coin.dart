@@ -1128,17 +1128,25 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
-    final salt = Account.getSalt();
+    // final salt = Account.getSalt(); //FIXME: use random salt
+
+    final salt = Felt.fromHexString(
+      "0x401666741e9e5bc846c883b4e4afd010d3e3b7fe4c7614ba703f67d5100af2b",
+    );
+
+    final totalSupplyUint =
+        Uint256.fromBigInt("1000000".toBigIntDec(decimals()));
 
     final constructorCalldata = [
       fundingAccount.accountAddress,
-      Felt.fromString(name),
-      Felt.fromString(symbol),
-      Felt(initialSupply.toBigIntDec(decimals())),
+      Felt.fromString("My Memecoin"),
+      Felt.fromString('MEME'),
+      totalSupplyUint.low,
+      totalSupplyUint.high,
       salt,
     ];
 
-    final tokenAddress = computeAddressWithDeployer(
+    final tokenAddress = calculateContractAddressFromHash(
       classHash: Felt.fromHexString(tokenClassHash),
       calldata: constructorCalldata.sublist(0, constructorCalldata.length - 1),
       salt: salt,
@@ -1151,7 +1159,15 @@ class StarknetCoin extends Coin {
       calldata: constructorCalldata,
     );
 
+    // return const DeployMeme(
+    //   tokenAddress: null,
+    //   liquidityTx: null,
+    //   deployTokenTx: null,
+    // );
+
     final tx = await fundingAccount.execute(functionCalls: [dployTx]);
+
+    print(tx);
 
     final deployTokenTx = tx.when(
       result: (result) {
@@ -1631,20 +1647,36 @@ class StarknetCoin extends Coin {
     return result;
   }
 
-  Felt computeAddressWithDeployer({
+  Felt calculateContractAddressFromHash({
     required Felt classHash,
     required List<Felt> calldata,
     required Felt salt,
     required Felt deployerAddress,
   }) {
-    final elements = <BigInt>[];
-    elements.add(Felt.fromString('STARKNET_CONTRACT_ADDRESS').toBigInt());
-    elements.add(deployerAddress.toBigInt());
-    elements.add(salt.toBigInt());
-    elements.add(classHash.toBigInt());
-    elements
-        .add(computeHashOnElements(calldata.map((e) => e.toBigInt()).toList()));
-    final address = computeHashOnElements(elements);
+    print({
+      'classHash': classHash.toHexString(),
+      'calldata': calldata.map((e) => e.toBigInt()).toList(),
+      'salt': salt.toHexString(),
+      'deployerAddress': deployerAddress.toHexString(),
+    });
+
+//  {classHash: 0x5ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac, calldata: [409839289081445989959895241365215982471859366667883513158396630516156987165, 93659290327548028024482158, 1296387397, 1000000000000000000000000, 0], salt: 0x401666741e9e5bc846c883b4e4afd010d3e3b7fe4c7614ba703f67d5100af2b, deployerAddress: 0x1a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc}
+    final constructorCalldataHash =
+        computeHashOnElements(calldata.map((e) => e.toBigInt()).toList());
+    final contractAddressPrefix = Felt.fromHexString(
+      "0x535441524b4e45545f434f4e54524143545f41444452455353",
+    );
+    final hash = computeHashOnElements([
+      contractAddressPrefix.toBigInt(),
+      deployerAddress.toBigInt(),
+      salt.toBigInt(),
+      classHash.toBigInt(),
+      constructorCalldataHash,
+    ]);
+    final BigInt maxStorageItemSize = BigInt.from(256);
+    final BigInt modulus = (BigInt.two.pow(251)) - maxStorageItemSize;
+    final BigInt address = hash % modulus;
+    print(Felt(address).toHexString());
     return Felt(address);
   }
 
@@ -1735,7 +1767,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         contractAddress: strkNativeToken,
         useStarkToken: true,
         tokenClassHash:
-            '0x05ba9aea47a8dd7073ab82b9e91721bdb3a2c1b259cffd68669da1454faa80ac',
+            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
       ),
@@ -1755,8 +1787,10 @@ List<StarknetCoin> getStarknetBlockchains() {
         payScheme: 'ethereum',
         rampID: 'ETH_ETH',
         useStarkToken: false,
-        tokenClassHash: '',
-        factoryAddress: '',
+        tokenClassHash:
+            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
+        factoryAddress:
+            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
       ),
     ]);
   }
