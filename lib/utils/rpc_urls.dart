@@ -535,7 +535,7 @@ Future<double> totalCryptoBalance({
 
       if (priceData == null ||
           priceData[defaultCurrency.toLowerCase()] == null) {
-        continue; // Skip if price data is missing
+        continue;
       }
 
       final price =
