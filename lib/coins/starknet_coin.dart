@@ -927,29 +927,10 @@ class StarknetCoin extends Coin {
 
     final signer = Signer(privateKey: Felt.fromHexString(response.privateKey!));
 
-    final deployMaxFee = 10000000000000 / pow(10, 18);
-    final providerCall = await provider.call(
-      request: FunctionCall(
-        contractAddress: Felt.fromHexString(strkEthNativeToken),
-        entryPointSelector: getSelectorByName('balanceOf'),
-        calldata: [Felt.fromHexString(response.address)],
-      ),
-      blockId: BlockId.latest,
-    );
+    final userBalance = await getUserBalance(address: response.address);
 
-    final userBalance = providerCall.when<double>(
-      error: (error) {
-        throw Exception(error);
-      },
-      result: (result) {
-        final strkBalance = Uint256.fromFeltList(result).toBigInt() /
-            BigInt.from(10).pow(decimals());
-        return strkBalance;
-      },
-    );
-
-    if (userBalance < deployMaxFee / pow(10, 18)) {
-      throw Exception('Need $deployMaxFee ETH on STRK to deploy');
+    if (userBalance == 0) {
+      throw Exception('Account has no balance');
     }
 
     final tx = await Account.deployAccount(
