@@ -1324,6 +1324,8 @@ class StarknetCoin extends Coin {
     int totalSupply = memecoin!.$1.totalSupply.toBigInt().toInt();
     int scale = decimalsScale(decimals());
 
+    print(quoteTokenPrice);
+
     Fraction teamAllocationPercentage = Fraction(
       teamAllocationFraction.quotient,
       (Fraction(totalSupply, scale)).quotient,

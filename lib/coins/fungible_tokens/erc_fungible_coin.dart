@@ -307,7 +307,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     if (useCache) return savedBalance;
 
     try {
-      final fraction = getUserBalance(address: address);
+      final fraction = await getUserBalance(address: address);
       await pref.put(balanceKey, fraction);
 
       return fraction;
