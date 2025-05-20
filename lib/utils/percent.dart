@@ -12,7 +12,7 @@ class Percent {
     if (denominator == BigInt.zero) {
       throw Exception('Division by zero');
     }
-    return numerator.toDouble() / denominator.toDouble();
+    return numerator / denominator;
   }
 
   Fraction multiply(Fraction other) {
@@ -24,6 +24,13 @@ class Percent {
   String toString() {
     final value = toDouble() * 100;
     return '${value.toStringAsFixed(2)}%';
+  }
+
+  toJson() {
+    return {
+      'numerator': numerator.toString(),
+      'denominator': denominator.toString(),
+    };
   }
 }
 

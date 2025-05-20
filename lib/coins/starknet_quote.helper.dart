@@ -21,6 +21,17 @@ class TokenInfo {
     required this.camelCased,
     this.usdcPair,
   });
+
+  toJson() {
+    return {
+      "address": address,
+      "symbol": symbol,
+      "name": name,
+      "decimals": decimals,
+      "camelCased": camelCased,
+      "usdcPair": usdcPair?.toJson(),
+    };
+  }
 }
 
 class UsdcPair {
@@ -28,6 +39,13 @@ class UsdcPair {
   final bool reversed;
 
   UsdcPair({required this.address, required this.reversed});
+
+  toJson() {
+    return {
+      "address": address,
+      "reversed": reversed,
+    };
+  }
 }
 
 class StarknetHelper {
