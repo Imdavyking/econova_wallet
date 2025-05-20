@@ -229,7 +229,7 @@ List<SplTokenCoin> getSplTokens() {
         default_: 'SOL',
         blockExplorer:
             'https://explorer.solana.com/tx/$blockExplorerPlaceholder',
-        rpc: 'https://solana-api.projectserum.com',
+        rpc: 'https://api.mainnet-beta.solana.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       ),

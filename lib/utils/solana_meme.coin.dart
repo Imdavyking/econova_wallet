@@ -147,23 +147,22 @@ class PumpfunTokenManager {
         metadataResponse: metadata,
         options: options,
       );
-      SignedTx newCompiledMessage =
-          await SignedTx.fromBytes(txBytes).resign(wallet: wallet);
+      final bh = await solanaClient.getLatestBlockhash(
+        commitment: Commitment.finalized,
+      );
+      SignedTx newCompiledMessage = await SignedTx.fromBytes(txBytes).resign(
+        wallet: wallet,
+        blockhash: bh.value.blockhash,
+      );
+
+      print(
+          "Transaction: ${base64.encode(newCompiledMessage.toByteArray().toList())}");
 
       newCompiledMessage = await newCompiledMessage.resign(wallet: mintKeypair);
 
       final transactionHash = await solanaClient.sendTransaction(
         base64.encode(newCompiledMessage.toByteArray().toList()),
       );
-
-      //  tx = VersionedTransaction.from_bytes(tx_data)
-      //           logger.info("Signing transaction...")
-      //           signature = wallet.sign_message(message.to_bytes_versioned(tx.message))
-      //           logger.info("Sending transaction to Solana...")
-      //           signed_txn = VersionedTransaction.populate(tx.message, [signature])
-
-      // final transactionHash = '';
-      // final signature = await solanaClient.sendTransaction(txBytes, [wallet]);
 
       return TokenLaunchResult(
         transactionHash: transactionHash,
