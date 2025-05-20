@@ -1185,7 +1185,7 @@ class StarknetCoin extends Coin {
     }
 
     final tenPercentSupply =
-        totalSupplyUint.toBigInt() * BigInt.from(10) ~/ BigInt.from(100);
+        (totalSupplyUint.toBigInt() * BigInt.from(10)) ~/ BigInt.from(100);
 
     debugPrint('waiting for token deployment ${tokenAddress.toHexString()}');
 
@@ -1321,63 +1321,75 @@ class StarknetCoin extends Coin {
     Fraction quoteTokenPrice = await getPairPrice(data.quoteToken!.usdcPair);
     print('quoteTokenPrice $quoteTokenPrice');
     print('data.teamAllocations ${data.teamAllocations}');
-    Fraction teamAllocationFraction = data.teamAllocations.fold(
-      Fraction(0),
-      (Fraction acc, element) {
-        print('element: ${element.amount}');
-        return acc + Fraction.fromDouble(element.amount.toDouble());
-      },
+    BigInt teamAllocationFraction = data.teamAllocations.fold(
+      BigInt.zero,
+      (BigInt acc, element) => acc + element.amount,
     );
-    print('teamAllocationFraction: $teamAllocationFraction');
     BigInt totalSupply = memecoin!.$1.totalSupply.toBigInt();
     print('totalSupply $totalSupply');
     BigInt scale = decimalsScale(decimals());
     print('scale $scale');
+
+    Percent teamAllocationPercentage = Percent(
+      teamAllocationFraction,
+      totalSupply,
+    );
+
+    print('teamAllocationPercentage $teamAllocationPercentage');
+
+    Fraction teamAllocationQuoteAmount = Fraction(data.startingMarketCap)
+        .divide(quoteTokenPrice)
+        .multiply(teamAllocationPercentage
+            .multiply(Fraction.fromDouble(data.fees.toDouble() + 1)));
+
+    print('teamAllocationQuoteAmount $teamAllocationQuoteAmount');
+
+    final uint256TeamAllocationQuoteAmount = Fraction.fromDouble(
+            teamAllocationQuoteAmount.toDouble() *
+                decimalsScale(data.quoteToken!.decimals).toDouble())
+        .quotient;
+
+    print('uint256TeamAllocationQuoteAmount $uint256TeamAllocationQuoteAmount');
+
+    final initialPrice = (data.startingMarketCap /
+        quoteTokenPrice.toDouble() *
+        decimalsScale(decimals()).toDouble() /
+        memecoin.$1.totalSupply.toBigInt().toDouble());
+
+    print('initialPrice $initialPrice');
+
+    final startingTickMag = getStartingTick(initialPrice);
+
+    print('startingTickMag $startingTickMag');
+
+    I129StartingTickParameters i129StartingTick = I129StartingTickParameters(
+      mag: startingTickMag.abs(),
+      sign: startingTickMag < 0,
+    );
+
+    final fees =
+        Fraction(data.fees.numerator.toInt(), data.fees.denominator.toInt())
+            .multiply(Fraction.fromDouble(
+                BigInt.parse(ekuboFeesMultiplicator).toDouble()))
+            .quotient;
+    print('fees $fees');
+
+    final initialHolders = data.teamAllocations
+        .map((allocation) => Felt.fromHexString(allocation.address))
+        .toList();
+    print('initialHolders $initialHolders');
+    final initialHoldersAmounts = data.teamAllocations
+        .map((allocation) => Felt.fromInt(allocation.amount.toInt()))
+        .toList();
+
+    print('initialHoldersAmounts $initialHoldersAmounts');
+
     return [];
-
-    // Percent teamAllocationPercentage = Percent(
-    //   teamAllocationFraction.quotient,
-    //   (Fraction(totalSupply, scale)).quotient,
-    // );
-
-    // Fraction teamAllocationQuoteAmount = Fraction(data.startingMarketCap)
-    //     .divide(quoteTokenPrice)
-    //     .multiply(teamAllocationPercentage.multiply(Fraction(data.fees + 1)));
-
-    // final uin256TeamAllocationQuoteAmount = teamAllocationQuoteAmount
-    //     .multiply(Fraction(decimalsScale(data.quoteToken!.decimals)))
-    //     .quotient;
-
-    // final initialPrice = Fraction(data.startingMarketCap)
-    //     .divide(quoteTokenPrice)
-    //     .multiply(Fraction(decimalsScale(decimals())))
-    //     .divide(Fraction(memecoin.$1.totalSupply.toBigInt().toInt()))
-    //     .toFixed(12);
-
-    // final startingTickMag = getStartingTick(initialPrice);
-
-    // I129StartingTickParameters i129StartingTick = I129StartingTickParameters(
-    //   mag: startingTickMag.abs(),
-    //   sign: startingTickMag < 0,
-    // );
-
-    // final fees =
-    //     Fraction(data.fees.numerator.toInt(), data.fees.denominator.toInt())
-    //         .multiply(Fraction(BigInt.parse(ekuboFeesMultiplicator).toInt()))
-    //         .quotient;
-
-    // final initialHolders = data.teamAllocations
-    //     .map((allocation) => Felt.fromHexString(allocation.address))
-    //     .toList();
-
-    // final initialHoldersAmounts = data.teamAllocations
-    //     .map((allocation) => Felt.fromInt(allocation.amount.toInt()))
-    //     .toList();
 
     // final transferCalldata = FunctionCall(
     //   calldata: [
     //     Felt.fromHexString(factoryAddress),
-    //     Felt.fromInt(uin256TeamAllocationQuoteAmount),
+    //     Felt.fromInt(uint256TeamAllocationQuoteAmount),
     //   ],
     //   contractAddress: Felt.fromHexString(data.quoteToken!.address),
     //   entryPointSelector: getSelectorByName('transfer'),
@@ -2672,9 +2684,9 @@ class I129StartingTickParameters {
   });
 }
 
-int getStartingTick(int initialPrice) {
-  double ekuboTickSizeLog = log(ekuboTickSize);
+int getStartingTick(num initialPrice) {
   final double logInitialPrice = log(initialPrice);
+  double ekuboTickSizeLog = log(ekuboTickSize);
   final double division = logInitialPrice / ekuboTickSizeLog / ekuboTickSpacing;
   final int floored = division.floor();
   return floored * ekuboTickSpacing;
