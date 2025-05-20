@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:on_chain/on_chain.dart';
+import '../extensions/resign_solana.dart';
+import 'package:solana/encoder.dart';
 import 'package:solana/solana.dart';
 
 class PumpfunTokenOptions {
@@ -146,23 +147,22 @@ class PumpfunTokenManager {
         metadataResponse: metadata,
         options: options,
       );
-      final signature = await wallet.sign(txBytes);
-      final transactionHash =
-          await solanaClient.sendTransaction(base64Encode(signature.bytes));
-      signature.bytes;
+      SignedTx newCompiledMessage =
+          await SignedTx.fromBytes(txBytes).resign(wallet: wallet);
 
-      VersionedMessage vMesssage = VersionedMessage.fromBuffer(txBytes);
-      print(vMesssage.compiledInstructions);
-      // print("Message: $message");
-      // print(message.compiledInstructions);
+      newCompiledMessage = await newCompiledMessage.resign(wallet: mintKeypair);
 
-      // final tx = await signTransaction(
-      //   message.recentBlockhash,
-      //   message,
-      //   signers,
-      // );
+      final transactionHash = await solanaClient.sendTransaction(
+        base64.encode(newCompiledMessage.toByteArray().toList()),
+      );
 
-      // final signature = '';
+      //  tx = VersionedTransaction.from_bytes(tx_data)
+      //           logger.info("Signing transaction...")
+      //           signature = wallet.sign_message(message.to_bytes_versioned(tx.message))
+      //           logger.info("Sending transaction to Solana...")
+      //           signed_txn = VersionedTransaction.populate(tx.message, [signature])
+
+      // final transactionHash = '';
       // final signature = await solanaClient.sendTransaction(txBytes, [wallet]);
 
       return TokenLaunchResult(
