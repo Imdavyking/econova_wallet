@@ -18,7 +18,6 @@ import '../utils/app_config.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
-import '../extensions/fraction_ext.dart';
 
 const starkDecimals = 18;
 const strkNativeToken =
@@ -30,7 +29,6 @@ double ekuboTickSize = 1.000001;
 int ekuboTickSpacing = 5982;
 const ekuboMaxPrice = "0x100000000000000000000000000000000";
 const ekuboFeesMultiplicator = ekuboMaxPrice;
-int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toInt());
 
 class StarknetCoin extends Coin {
   String api;
@@ -1158,33 +1156,32 @@ class StarknetCoin extends Coin {
       calldata: constructorCalldata,
     );
 
-    // final tx = await fundingAccount.execute(functionCalls: [dployTx]);
+    final tx = await fundingAccount.execute(functionCalls: [dployTx]);
 
-    // final deployTokenTx = tx.when(
-    //   result: (result) {
-    //     return result.transaction_hash;
-    //   },
-    //   error: (error) {
-    //     throw Exception(
-    //       "Error transfer (${error.code}): ${error.message}  ${error.errorData}",
-    //     );
-    //   },
-    // );
+    final deployTokenTx = tx.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception(
+          "Error transfer (${error.code}): ${error.message}  ${error.errorData}",
+        );
+      },
+    );
 
-    // final isAccepted = await waitForAcceptance(
-    //   transactionHash: deployTokenTx,
-    //   provider: provider,
-    // );
+    final isAccepted = await waitForAcceptance(
+      transactionHash: deployTokenTx,
+      provider: provider,
+    );
 
-    // if (!isAccepted) {
-    //   return const DeployMeme(
-    //     tokenAddress: null,
-    //     liquidityTx: null,
-    //     deployTokenTx: null,
-    //   );
-    // }
+    if (!isAccepted) {
+      return const DeployMeme(
+        tokenAddress: null,
+        liquidityTx: null,
+        deployTokenTx: null,
+      );
+    }
 
-    print('totalSupplyUint $totalSupplyUint');
     final tenPercentSupply = totalSupplyUint.toBigInt() *
         BigInt.from(10) ~/
         BigInt.from(100) ~/
@@ -1199,8 +1196,7 @@ class StarknetCoin extends Coin {
     final liquidityTx = await launchOnEkubo(
       LaunchParameters(
         starknetAccount: fundingAccount,
-        memecoinAddress:
-            '0x101a94e59c44dd6e5135c1463a55a1aaedad84433f590263367a7fc9c5c0787',
+        memecoinAddress: tokenAddress.toHexString(),
         startingMarketCap: 1,
         holdLimit: '2.5',
         fees: '0.5',
@@ -1247,7 +1243,9 @@ class StarknetCoin extends Coin {
           return;
         }
       } catch (e) {
-        // Optional: log error or ignore
+        debugPrint(
+          'Error checking contract deployment: $e',
+        );
       }
 
       await Future.delayed(interval);
@@ -1283,7 +1281,7 @@ class StarknetCoin extends Coin {
     );
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
-    // return null;
+
     final res = await params.starknetAccount.execute(functionCalls: calls);
     final txHash = res.when(
       result: (result) {
@@ -1324,32 +1322,31 @@ class StarknetCoin extends Coin {
     EkuboLaunchData data,
   ) async {
     Fraction quoteTokenPrice = await getPairPrice(data.quoteToken!.usdcPair);
-    print('quoteTokenPrice: $quoteTokenPrice');
 
     BigInt teamAllocationFraction = data.teamAllocations.fold(
       BigInt.zero,
       (BigInt acc, element) => acc + element.amount,
     );
-    print('teamAllocationFraction: $teamAllocationFraction');
     BigInt totalSupply = memecoin!.$1.totalSupply.toBigInt();
-
-    print('totalSupply: $totalSupply');
 
     Percent teamAllocationPercentage = Percent(
       teamAllocationFraction,
       BigInt.from(totalSupply / BigInt.from(10).pow(decimals())),
     );
-    print('teamAllocationPercentage: $teamAllocationPercentage');
 
-    Fraction teamAllocationQuoteAmount = Fraction(data.startingMarketCap)
-        .divide(quoteTokenPrice)
-        .multiply(teamAllocationPercentage
-            .multiply(Fraction.fromDouble(data.fees.toDouble() + 1)));
+    double startingMarketCap = data.startingMarketCap.toDouble();
+    double quoteTokenPriceDouble = quoteTokenPrice.toDouble();
+    double teamAllocationPercentageDouble = teamAllocationPercentage.toDouble();
+    double feesMultiplier = data.fees.toDouble() + 1;
 
-    final uint256TeamAllocationQuoteAmount = Fraction.fromDouble(
-            teamAllocationQuoteAmount.toDouble() *
-                decimalsScale(data.quoteToken!.decimals).toDouble())
-        .quotient;
+    double teamAllocationQuoteAmount =
+        (startingMarketCap / quoteTokenPriceDouble) *
+            teamAllocationPercentageDouble *
+            feesMultiplier;
+
+    double scale = decimalsScale(data.quoteToken!.decimals).toDouble();
+    double rawAmount = teamAllocationQuoteAmount.toDouble() * scale;
+    BigInt uint256TeamAllocationQuoteAmount = BigInt.from(rawAmount.floor());
 
     final initialPrice = (data.startingMarketCap /
         quoteTokenPrice.toDouble() *
@@ -1371,38 +1368,43 @@ class StarknetCoin extends Coin {
     final initialHolders = data.teamAllocations
         .map((allocation) => Felt.fromHexString(allocation.address))
         .toList();
-    final initialHoldersAmounts = data.teamAllocations
-        .map((allocation) => Felt.fromInt(allocation.amount.toInt()))
+    final initialHoldersAmounts_ = data.teamAllocations
+        .map((allocation) => Uint256(
+            low: Felt(allocation.amount * BigInt.from(scale)), high: Felt.zero))
         .toList();
+    final initialHoldersAmounts = [];
+
+    for (int i = 0; i < initialHoldersAmounts_.length; i++) {
+      final amount = initialHoldersAmounts_[i];
+      initialHoldersAmounts.add(amount.low);
+      initialHoldersAmounts.add(amount.high);
+    }
 
     final transferCalldata = FunctionCall(
       calldata: [
         Felt.fromHexString(factoryAddress),
-        Felt.fromInt(uint256TeamAllocationQuoteAmount),
+        Felt(uint256TeamAllocationQuoteAmount),
       ],
       contractAddress: Felt.fromHexString(data.quoteToken!.address),
       entryPointSelector: getSelectorByName('transfer'),
     );
 
-    print(transferCalldata.toJson());
-
-    // return [];
+    double holdLimitPercent = (data.holdLimit.numerator.toDouble() /
+            data.holdLimit.denominator.toDouble()) *
+        100;
+    int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toDouble());
 
     final launchCalldata = FunctionCall(
       calldata: [
         Felt.fromHexString(memecoin.$1.address),
         Felt.fromInt(data.antiBotPeriod),
-        Felt.fromDouble(
-          (Fraction.fromDouble(
-                      data.holdLimit.numerator / data.holdLimit.denominator) *
-                  Fraction(100))
-              .toDouble(),
-        ),
+        Felt.fromDouble(holdLimitPercent * 100),
         Felt.fromHexString(data.quoteToken!.address),
         ...initialHolders.toCalldata(),
-        ...initialHoldersAmounts.toCalldata(),
+        ...initialHoldersAmounts,
         fees,
         Felt.fromInt(ekuboTickSpacing),
+        Felt.fromInt(i129StartingTick.mag),
         Felt.fromInt(i129StartingTick.sign ? 1 : 0),
         Felt.fromInt(ekuboBound),
       ],
