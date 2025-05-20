@@ -230,9 +230,10 @@ class SolanaCoin extends Coin {
 
     final currPrice = cryptoMarket['usd'] as num;
 
+    const dollarLiqInSol = 0.3;
+
     final options = PumpfunTokenOptions(
-      initialLiquiditySol:
-          1 / currPrice, // this determines how much LP is in the pool
+      initialLiquiditySol: dollarLiqInSol / currPrice,
       slippageBps: 500, // 5%
       priorityFee: 0,
     );
