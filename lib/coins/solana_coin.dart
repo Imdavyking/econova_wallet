@@ -258,7 +258,7 @@ class SolanaCoin extends Coin {
     return DeployMeme(
       liquidityTx: result.transactionHash,
       tokenAddress: result.mintAddress,
-      deployTokenTx: result.metadataUri,
+      deployTokenTx: result.transactionHash,
     );
   }
 
