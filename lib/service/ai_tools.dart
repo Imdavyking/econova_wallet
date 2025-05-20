@@ -553,8 +553,12 @@ class AItools {
         String name = toolInput.name;
         String symbol = toolInput.symbol;
         String initialSupply = toolInput.initialSupply;
+        const mininumTotalSupply = 1000000; // so users can deploy meme token
 
         try {
+          if (int.parse(initialSupply) < mininumTotalSupply) {
+            return 'Initial supply must be greater than $mininumTotalSupply';
+          }
           final message =
               'You are about to deploy a meme token with name $name, symbol $symbol, and initial supply $initialSupply';
           final confirmation = await confirmTransaction(message);
