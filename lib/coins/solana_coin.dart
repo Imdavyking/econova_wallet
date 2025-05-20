@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
+import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/utils/solana_meme.coin.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -208,6 +210,47 @@ class SolanaCoin extends Coin {
     } catch (e) {
       return savedBalance;
     }
+  }
+
+  @override
+  Future<DeployMeme> deployMemeCoin({
+    required String name,
+    required String symbol,
+    required String initialSupply,
+  }) async {
+    const imageUrl =
+        "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg";
+    const description = "A meme token created with Pump.fun";
+
+    final options = PumpfunTokenOptions(
+      initialLiquiditySol: 0.1, // this determines how much LP is in the pool
+      slippageBps: 500, // 5%
+      priorityFee: 0,
+    );
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+
+    final privateKeyBytes = HEX.decode(response.privateKey!);
+
+    final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+      privateKey: privateKeyBytes,
+    );
+
+    final result = await PumpfunTokenManager.launchPumpfunToken(
+      solanaClient: getProxy().rpcClient,
+      wallet: keyPair,
+      tokenName: name,
+      tokenTicker: symbol,
+      description: description,
+      imageUrl: imageUrl,
+      options: options,
+    );
+
+    return DeployMeme(
+      liquidityTx: result.transactionSignature,
+      tokenAddress: result.mintAddress,
+      deployTokenTx: result.metadataUri,
+    );
   }
 
   @override
