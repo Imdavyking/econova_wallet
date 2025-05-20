@@ -313,7 +313,6 @@ class SolanaCoin extends Coin {
   }
 
   solana.SolanaClient getProxy() {
-    print('RPC: $rpc');
     return solana.SolanaClient(
       rpcUrl: Uri.parse(rpc),
       websocketUrl: Uri.parse(ws),
