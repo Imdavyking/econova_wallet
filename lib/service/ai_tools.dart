@@ -581,7 +581,13 @@ class AItools {
 
           final tokenAddress = memeData.tokenAddress;
 
-          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress, deployTx ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}';
+          if (tokenAddress == null) {
+            return 'Failed to deploy meme token';
+          }
+
+          final dexScreener = coin.getDexScreener(tokenAddress);
+
+          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress, deployTx ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)} $dexScreener';
         } catch (e) {
           if (kDebugMode) {
             print(e);

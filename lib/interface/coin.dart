@@ -126,6 +126,10 @@ abstract class Coin {
     return details.address;
   }
 
+  String? getDexScreener(String tokenaddress) {
+    return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';
+  }
+
   Future<bool> get canTransfer async => true;
 
   Future<double> getTransactionFee(String amount, String to);
