@@ -1376,9 +1376,19 @@ class StarknetCoin extends Coin {
     final initialHolders = data.teamAllocations
         .map((allocation) => Felt.fromHexString(allocation.address))
         .toList();
-    final initialHoldersAmounts = data.teamAllocations
-        .map((allocation) => Felt(allocation.amount * BigInt.from(scale)))
+    final initialHoldersAmounts_ = data.teamAllocations
+        .map((allocation) => Uint256(
+            low: Felt(allocation.amount * BigInt.from(scale)), high: Felt.zero))
         .toList();
+    List<Felt> initialHoldersAmounts = [
+      Felt.fromInt(initialHoldersAmounts_.length)
+    ];
+
+    for (int i = 0; i < initialHoldersAmounts_.length; i++) {
+      final amount = initialHoldersAmounts_[i];
+      initialHoldersAmounts.add(amount.low);
+      initialHoldersAmounts.add(amount.high);
+    }
 
     final transferCalldata = FunctionCall(
       calldata: [
@@ -1395,25 +1405,22 @@ class StarknetCoin extends Coin {
         100;
     int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toDouble());
 
-    print('initialHolders.toCalldata() ${initialHoldersAmounts.toCalldata()}');
-    print('initialHolders $initialHoldersAmounts');
-
-    print('---------');
+    final calldata = [
+      Felt.fromHexString(memecoin.$1.address),
+      Felt.fromInt(data.antiBotPeriod),
+      Felt.fromDouble(holdLimitPercent * 100),
+      Felt.fromHexString(data.quoteToken!.address),
+      ...initialHolders.toCalldata(),
+      ...initialHoldersAmounts,
+      fees,
+      Felt.fromInt(ekuboTickSpacing),
+      Felt.fromInt(i129StartingTick.mag),
+      Felt.fromInt(i129StartingTick.sign ? 1 : 0),
+      Felt.fromInt(ekuboBound),
+    ];
 
     final launchCalldata = FunctionCall(
-      calldata: [
-        Felt.fromHexString(memecoin.$1.address),
-        Felt.fromInt(data.antiBotPeriod),
-        Felt.fromDouble(holdLimitPercent * 100),
-        Felt.fromHexString(data.quoteToken!.address),
-        ...initialHolders.toCalldata(),
-        ...initialHoldersAmounts.toCalldata(),
-        fees,
-        Felt.fromInt(ekuboTickSpacing),
-        Felt.fromInt(i129StartingTick.mag),
-        Felt.fromInt(i129StartingTick.sign ? 1 : 0),
-        Felt.fromInt(ekuboBound),
-      ],
+      calldata: calldata,
       contractAddress: Felt.fromHexString(factoryAddress),
       entryPointSelector: getSelectorByName('launch_on_ekubo'),
     );
