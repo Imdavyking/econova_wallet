@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:on_chain/on_chain.dart';
 import 'package:solana/solana.dart';
 
 class PumpfunTokenOptions {
@@ -23,12 +24,12 @@ class PumpfunTokenOptions {
 }
 
 class TokenLaunchResult {
-  final String transactionSignature;
+  final String transactionHash;
   final String mintAddress;
   final String metadataUri;
 
   TokenLaunchResult({
-    required this.transactionSignature,
+    required this.transactionHash,
     required this.mintAddress,
     required this.metadataUri,
   });
@@ -145,12 +146,27 @@ class PumpfunTokenManager {
         metadataResponse: metadata,
         options: options,
       );
+      final signature = await wallet.sign(txBytes);
+      final transactionHash =
+          await solanaClient.sendTransaction(base64Encode(signature.bytes));
+      signature.bytes;
 
+      VersionedMessage vMesssage = VersionedMessage.fromBuffer(txBytes);
+      print(vMesssage.compiledInstructions);
+      // print("Message: $message");
+      // print(message.compiledInstructions);
+
+      // final tx = await signTransaction(
+      //   message.recentBlockhash,
+      //   message,
+      //   signers,
+      // );
+
+      // final signature = '';
       // final signature = await solanaClient.sendTransaction(txBytes, [wallet]);
-      const signature = '';
 
       return TokenLaunchResult(
-        transactionSignature: signature,
+        transactionHash: transactionHash,
         mintAddress: mintKeypair.address,
         metadataUri: metadata["metadataUri"],
       );
