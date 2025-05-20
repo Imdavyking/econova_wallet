@@ -163,12 +163,6 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
-    await solanaChains.first.deployMemeCoin(
-      name: 'MEMExy',
-      symbol: 'zMemeCoin',
-      initialSupply: '15000000',
-    );
-    return;
     final userMessage = textMessage.copyWith(
       user: Constants.user,
       createdAt: DateTime.now(),
