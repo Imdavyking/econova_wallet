@@ -1282,6 +1282,13 @@ class StarknetCoin extends Coin {
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
 
+    print(calls[0].calldata);
+    print(calls[1].calldata);
+
+    return null;
+
+    // return null;
+
     final res = await params.starknetAccount.execute(functionCalls: calls);
     final txHash = res.when(
       result: (result) {
@@ -1346,7 +1353,8 @@ class StarknetCoin extends Coin {
 
     double scale = decimalsScale(data.quoteToken!.decimals).toDouble();
     double rawAmount = teamAllocationQuoteAmount.toDouble() * scale;
-    BigInt uint256TeamAllocationQuoteAmount = BigInt.from(rawAmount.floor());
+    Uint256 uint256TeamAllocationQuoteAmount =
+        Uint256.fromBigInt(BigInt.from(rawAmount.floor()));
 
     final initialPrice = (data.startingMarketCap /
         quoteTokenPrice.toDouble() *
@@ -1368,22 +1376,15 @@ class StarknetCoin extends Coin {
     final initialHolders = data.teamAllocations
         .map((allocation) => Felt.fromHexString(allocation.address))
         .toList();
-    final initialHoldersAmounts_ = data.teamAllocations
-        .map((allocation) => Uint256(
-            low: Felt(allocation.amount * BigInt.from(scale)), high: Felt.zero))
+    final initialHoldersAmounts = data.teamAllocations
+        .map((allocation) => Felt(allocation.amount * BigInt.from(scale)))
         .toList();
-    final initialHoldersAmounts = [];
-
-    for (int i = 0; i < initialHoldersAmounts_.length; i++) {
-      final amount = initialHoldersAmounts_[i];
-      initialHoldersAmounts.add(amount.low);
-      initialHoldersAmounts.add(amount.high);
-    }
 
     final transferCalldata = FunctionCall(
       calldata: [
         Felt.fromHexString(factoryAddress),
-        Felt(uint256TeamAllocationQuoteAmount),
+        uint256TeamAllocationQuoteAmount.low,
+        uint256TeamAllocationQuoteAmount.high,
       ],
       contractAddress: Felt.fromHexString(data.quoteToken!.address),
       entryPointSelector: getSelectorByName('transfer'),
@@ -1394,6 +1395,11 @@ class StarknetCoin extends Coin {
         100;
     int ekuboBound = getStartingTick(BigInt.parse(ekuboMaxPrice).toDouble());
 
+    print('initialHolders.toCalldata() ${initialHoldersAmounts.toCalldata()}');
+    print('initialHolders $initialHoldersAmounts');
+
+    print('---------');
+
     final launchCalldata = FunctionCall(
       calldata: [
         Felt.fromHexString(memecoin.$1.address),
@@ -1401,7 +1407,7 @@ class StarknetCoin extends Coin {
         Felt.fromDouble(holdLimitPercent * 100),
         Felt.fromHexString(data.quoteToken!.address),
         ...initialHolders.toCalldata(),
-        ...initialHoldersAmounts,
+        ...initialHoldersAmounts.toCalldata(),
         fees,
         Felt.fromInt(ekuboTickSpacing),
         Felt.fromInt(i129StartingTick.mag),
