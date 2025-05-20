@@ -1367,11 +1367,14 @@ class StarknetCoin extends Coin {
       sign: startingTickMag < 0,
     );
 
-    final fees =
-        Fraction(data.fees.numerator.toInt(), data.fees.denominator.toInt())
-            .multiply(Fraction.fromDouble(
-                BigInt.parse(ekuboFeesMultiplicator).toDouble()))
-            .quotient;
+    print('i129StartingTick $i129StartingTick');
+
+    final feesFrac = (data.fees.numerator / data.fees.denominator) *
+        BigInt.parse(ekuboFeesMultiplicator).toDouble();
+
+    print('feesFrac $feesFrac');
+
+    final fees = Felt.fromDouble(feesFrac);
     print('fees $fees');
 
     final initialHolders = data.teamAllocations
@@ -1397,14 +1400,16 @@ class StarknetCoin extends Coin {
       calldata: [
         Felt.fromHexString(memecoin.$1.address),
         Felt.fromInt(data.antiBotPeriod),
-        Felt.fromDouble((Fraction.fromDouble(
-                    data.holdLimit.numerator / data.holdLimit.denominator) *
-                Fraction(100))
-            .toDouble()),
+        Felt.fromDouble(
+          (Fraction.fromDouble(
+                      data.holdLimit.numerator / data.holdLimit.denominator) *
+                  Fraction(100))
+              .toDouble(),
+        ),
         Felt.fromHexString(data.quoteToken!.address),
         ...initialHolders.toCalldata(),
         ...initialHoldersAmounts.toCalldata(),
-        Felt.fromInt(fees),
+        fees,
         Felt.fromInt(ekuboTickSpacing),
         Felt.fromInt(i129StartingTick.sign ? 1 : 0),
         Felt.fromInt(ekuboBound),
@@ -2538,11 +2543,6 @@ class BaseLiquidity {
     );
   }
 }
-
-// return {
-//       'unlockTime': result[4].toInt(),
-//       'owner': Felt.fromHexString(result[3]).toHexString(),
-//     };
 
 class JediLockDetails {
   final BigInt unlockTime;
