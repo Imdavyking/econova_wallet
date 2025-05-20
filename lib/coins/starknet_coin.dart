@@ -1384,38 +1384,39 @@ class StarknetCoin extends Coin {
 
     print('initialHoldersAmounts $initialHoldersAmounts');
 
-    return [];
+    final transferCalldata = FunctionCall(
+      calldata: [
+        Felt.fromHexString(factoryAddress),
+        Felt.fromInt(uint256TeamAllocationQuoteAmount),
+      ],
+      contractAddress: Felt.fromHexString(data.quoteToken!.address),
+      entryPointSelector: getSelectorByName('transfer'),
+    );
 
-    // final transferCalldata = FunctionCall(
-    //   calldata: [
-    //     Felt.fromHexString(factoryAddress),
-    //     Felt.fromInt(uint256TeamAllocationQuoteAmount),
-    //   ],
-    //   contractAddress: Felt.fromHexString(data.quoteToken!.address),
-    //   entryPointSelector: getSelectorByName('transfer'),
-    // );
+    final launchCalldata = FunctionCall(
+      calldata: [
+        Felt.fromHexString(memecoin.$1.address),
+        Felt.fromInt(data.antiBotPeriod),
+        Felt.fromDouble((Fraction.fromDouble(
+                    data.holdLimit.numerator / data.holdLimit.denominator) *
+                Fraction(100))
+            .toDouble()),
+        Felt.fromHexString(data.quoteToken!.address),
+        ...initialHolders.toCalldata(),
+        ...initialHoldersAmounts.toCalldata(),
+        Felt.fromInt(fees),
+        Felt.fromInt(ekuboTickSpacing),
+        Felt.fromInt(i129StartingTick.sign ? 1 : 0),
+        Felt.fromInt(ekuboBound),
+      ],
+      contractAddress: Felt.fromHexString(factoryAddress),
+      entryPointSelector: getSelectorByName('launch_on_ekubo'),
+    );
 
-    // final launchCalldata = FunctionCall(
-    //   calldata: [
-    //     Felt.fromHexString(memecoin.$1.address),
-    //     Felt.fromInt(data.antiBotPeriod),
-    //     // Felt.fromInt(data.holdLimit * 100),
-    //     Felt.fromHexString(data.quoteToken!.address),
-    //     ...initialHolders.toCalldata(),
-    //     ...initialHoldersAmounts.toCalldata(),
-    //     Felt.fromInt(fees),
-    //     Felt.fromInt(ekuboTickSpacing),
-    //     Felt.fromInt(i129StartingTick.sign ? 1 : 0),
-    //     Felt.fromInt(ekuboBound),
-    //   ],
-    //   contractAddress: Felt.fromHexString(factoryAddress),
-    //   entryPointSelector: getSelectorByName('launch_on_ekubo'),
-    // );
-
-    // return [
-    //   transferCalldata,
-    //   launchCalldata,
-    // ];
+    return [
+      transferCalldata,
+      launchCalldata,
+    ];
   }
 
   Future<Fraction> getPairPrice(UsdcPair? pair) async {
