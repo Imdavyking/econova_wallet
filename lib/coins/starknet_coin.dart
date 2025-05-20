@@ -1096,6 +1096,11 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  String? getDexScreener(String _) {
+    return null;
+  }
+
+  @override
   Future<DeployMeme> deployMemeCoin({
     required String name,
     required String symbol,

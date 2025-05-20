@@ -602,8 +602,7 @@ class AItools {
           🌊 Liquidity Transaction:
           ${coin.formatTxHash(memeData.liquidityTx!)}
 
-          📊 View on DexScreener:
-          $dexScreener
+          ${dexScreener != null ? '🔗 DexScreener: $dexScreener' : ''}
           ''';
         } catch (e) {
           if (kDebugMode) {
