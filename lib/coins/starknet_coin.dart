@@ -1263,6 +1263,7 @@ class StarknetCoin extends Coin {
     if (memecoin == null) {
       throw Exception('Invalid memecoin address');
     }
+    final provider = await apiProvider();
     final chainId = await getChainId();
     final chainIdHex = chainId.toHexString();
     final quoteToken =
@@ -1282,13 +1283,6 @@ class StarknetCoin extends Coin {
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
 
-    print(calls[0].calldata);
-    print(calls[1].calldata);
-
-    return null;
-
-    // return null;
-
     final res = await params.starknetAccount.execute(functionCalls: calls);
     final txHash = res.when(
       result: (result) {
@@ -1301,6 +1295,17 @@ class StarknetCoin extends Coin {
         'Token launch failed: ${error.code}: ${error.message} ${error.errorData}',
       ),
     );
+
+    final isAccepted = await waitForAcceptance(
+      transactionHash: txHash,
+      provider: provider,
+    );
+    if (!isAccepted) {
+      final receipt =
+          await provider.getTransactionReceipt(Felt.fromHexString(txHash));
+      prettyPrintJson(receipt.toJson());
+      throw Exception("error launching token");
+    }
     return txHash;
   }
 
