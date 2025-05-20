@@ -222,8 +222,17 @@ class SolanaCoin extends Coin {
         "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg";
     const description = "A meme token created with Pump.fun";
 
+    Map allCryptoPrice = jsonDecode(
+      await getCryptoPrice(useCache: true),
+    ) as Map;
+
+    final Map cryptoMarket = allCryptoPrice[geckoID];
+
+    final currPrice = cryptoMarket['usd'] as num;
+
     final options = PumpfunTokenOptions(
-      initialLiquiditySol: 0.1, // this determines how much LP is in the pool
+      initialLiquiditySol:
+          1 / currPrice, // this determines how much LP is in the pool
       slippageBps: 500, // 5%
       priorityFee: 0,
     );

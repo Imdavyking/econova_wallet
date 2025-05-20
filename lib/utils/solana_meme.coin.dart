@@ -155,9 +155,6 @@ class PumpfunTokenManager {
         blockhash: bh.value.blockhash,
       );
 
-      print(
-          "Transaction: ${base64.encode(newCompiledMessage.toByteArray().toList())}");
-
       newCompiledMessage = await newCompiledMessage.resign(wallet: mintKeypair);
 
       final transactionHash = await solanaClient.sendTransaction(

@@ -487,7 +487,7 @@ Future<String> getCryptoPrice({bool useCache = false}) async {
     final String allCrypto = coinGeckoIDs.join(',');
 
     final Uri apiUrl = Uri.parse(
-      '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=$defaultCurrency&include_24hr_change=true',
+      '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=usd,$defaultCurrency&include_24hr_change=true',
     );
 
     final response = await get(apiUrl).timeout(networkTimeOutDuration);
