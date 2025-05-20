@@ -566,13 +566,18 @@ class AItools {
             symbol: symbol,
             initialSupply: initialSupply,
           );
-          if (memeData.liquidityTx == null) {
+
+          if (memeData.deployTokenTx == null) {
             return 'Failed to deploy meme token';
+          }
+
+          if (memeData.liquidityTx == null && memeData.deployTokenTx != null) {
+            return 'Failed to add liquidity for meme token but deployed token successfully. Transaction hash: ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}';
           }
 
           final tokenAddress = memeData.tokenAddress;
 
-          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress';
+          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress, deployTx ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}';
         } catch (e) {
           if (kDebugMode) {
             print(e);

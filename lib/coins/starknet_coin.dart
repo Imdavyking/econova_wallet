@@ -1212,7 +1212,7 @@ class StarknetCoin extends Coin {
     );
     return DeployMeme(
       liquidityTx: liquidityTx,
-      deployTokenTx: null,
+      deployTokenTx: deployTokenTx,
       tokenAddress: tokenAddress.toHexString(),
     );
   }
