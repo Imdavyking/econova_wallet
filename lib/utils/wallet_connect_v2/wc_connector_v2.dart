@@ -306,74 +306,101 @@ class WcConnectorV2 {
       return;
     }
 
-    showDialog(
-      barrierDismissible: false,
-      context: context,
-      builder: (_) {
-        AppLocalizations localization = AppLocalizations.of(context)!;
-        return SimpleDialog(
-          title: Column(
-            children: [
-              if (metadata.icons.isNotEmpty)
-                Container(
-                  height: 100.0,
-                  width: 100.0,
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: CachedNetworkImage(
-                    imageUrl: ipfsTohttp(metadata.icons.first),
-                    placeholder: (context, url) => const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: Loader(
-                            color: appPrimaryColor,
-                          ),
-                        )
-                      ],
-                    ),
-                    errorWidget: (context, url, error) => const Icon(
-                      Icons.error,
-                      color: Colors.red,
+    if (context.mounted) {
+      showDialog(
+        barrierDismissible: false,
+        context: context,
+        builder: (_) {
+          AppLocalizations localization = AppLocalizations.of(context)!;
+          return SimpleDialog(
+            title: Column(
+              children: [
+                if (metadata.icons.isNotEmpty)
+                  Container(
+                    height: 100.0,
+                    width: 100.0,
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: CachedNetworkImage(
+                      imageUrl: ipfsTohttp(metadata.icons.first),
+                      placeholder: (context, url) => const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Loader(
+                              color: appPrimaryColor,
+                            ),
+                          )
+                        ],
+                      ),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.error,
+                        color: Colors.red,
+                      ),
                     ),
                   ),
+                Text(metadata.name),
+              ],
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+            children: [
+              if (metadata.description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(metadata.description),
                 ),
-              Text(metadata.name),
-            ],
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-          children: [
-            if (metadata.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(metadata.description),
-              ),
-            if (metadata.url.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text('${localization.connectedTo} ${metadata.url}'),
-              ),
-            if (coinWidgets.isNotEmpty) ...coinWidgets,
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    onPressed: () async {
-                      try {
-                        final params = SessionApproveParams(
-                          id: id,
-                          namespaces: namespaces,
-                        );
-                        await signClient.approve(params);
+              if (metadata.url.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text('${localization.connectedTo} ${metadata.url}'),
+                ),
+              if (coinWidgets.isNotEmpty) ...coinWidgets,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondary,
+                      ),
+                      onPressed: () async {
+                        try {
+                          final params = SessionApproveParams(
+                            id: id,
+                            namespaces: namespaces,
+                          );
+                          await signClient.approve(params);
 
-                        signClient.events.emit(WcConnectorV2.connEvent);
-                        Navigator.pop(context);
-                      } catch (_) {
+                          signClient.events.emit(WcConnectorV2.connEvent);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        } catch (_) {
+                          signClient.reject(
+                            SessionRejectParams(
+                              id: id,
+                              reason:
+                                  getSdkError(SdkErrorKey.USER_DISCONNECTED),
+                            ),
+                          );
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        }
+                      },
+                      child: Text(localization.confirm),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondary,
+                      ),
+                      onPressed: () {
                         signClient.reject(
                           SessionRejectParams(
                             id: id,
@@ -381,35 +408,17 @@ class WcConnectorV2 {
                           ),
                         );
                         Navigator.pop(context);
-                      }
-                    },
-                    child: Text(localization.confirm),
-                  ),
-                ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      },
+                      child: Text(localization.reject),
                     ),
-                    onPressed: () {
-                      signClient.reject(
-                        SessionRejectParams(
-                          id: id,
-                          reason: getSdkError(SdkErrorKey.USER_DISCONNECTED),
-                        ),
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: Text(localization.reject),
                   ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   _onSessionClosed(int? code, String? reason) {
@@ -469,13 +478,13 @@ class WcConnectorV2 {
           EthereumCoin coin = evmFromChainId(chainId)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String _privateKey = response.privateKey!;
-          Web3Client _web3client = Web3Client(
+          String privateKey = response.privateKey!;
+          Web3Client web3client = Web3Client(
             coin.rpc,
             http.Client(),
           );
-          final creds = EthPrivateKey.fromHex(_privateKey);
-          final tx = await _web3client.signTransaction(
+          final creds = EthPrivateKey.fromHex(privateKey);
+          final tx = await web3client.signTransaction(
             creds,
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: chainId,
@@ -501,7 +510,9 @@ class WcConnectorV2 {
             ),
           );
         } finally {
-          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
         }
       },
       onReject: () {
@@ -533,13 +544,13 @@ class WcConnectorV2 {
           EthereumCoin coin = evmFromChainId(chainId)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String _privateKey = response.privateKey!;
-          final creds = EthPrivateKey.fromHex(_privateKey);
-          Web3Client _web3client = Web3Client(
+          String privateKey = response.privateKey!;
+          final creds = EthPrivateKey.fromHex(privateKey);
+          Web3Client web3client = Web3Client(
             coin.rpc,
             http.Client(),
           );
-          final txhash = await _web3client.sendTransaction(
+          final txhash = await web3client.sendTransaction(
             creds,
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: chainId,
@@ -563,7 +574,9 @@ class WcConnectorV2 {
             ),
           );
         } finally {
-          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
         }
       },
       onReject: () {
@@ -644,24 +657,24 @@ class WcConnectorV2 {
             chainId == null ? evmFromSymbol('ETH')! : evmFromChainId(chainId)!;
         final walletData = WalletService.getActiveKey(walletImportType)!.data;
         final response = await coin.importData(walletData);
-        String _privateKey = response.privateKey!;
+        String privateKey = response.privateKey!;
         late String signedDataHex;
-        final credentials = EthPrivateKey.fromHex(_privateKey);
+        final credentials = EthPrivateKey.fromHex(privateKey);
         if (ethereumSignMessage.type == WCSignType.TYPED_MESSAGE_V1) {
           signedDataHex = EthSigUtil.signTypedData(
-            privateKey: _privateKey,
+            privateKey: privateKey,
             jsonData: ethereumSignMessage.data,
             version: TypedDataVersion.V1,
           );
         } else if (ethereumSignMessage.type == WCSignType.TYPED_MESSAGE_V3) {
           signedDataHex = EthSigUtil.signTypedData(
-            privateKey: _privateKey,
+            privateKey: privateKey,
             jsonData: ethereumSignMessage.data,
             version: TypedDataVersion.V3,
           );
         } else if (ethereumSignMessage.type == WCSignType.TYPED_MESSAGE_V4) {
           signedDataHex = EthSigUtil.signTypedData(
-            privateKey: _privateKey,
+            privateKey: privateKey,
             jsonData: ethereumSignMessage.data,
             version: TypedDataVersion.V4,
           );
@@ -675,7 +688,7 @@ class WcConnectorV2 {
         } else if (ethereumSignMessage.type == WCSignType.MESSAGE) {
           try {
             signedDataHex = EthSigUtil.signMessage(
-              privateKey: _privateKey,
+              privateKey: privateKey,
               message: txDataToUintList(
                 ethereumSignMessage.data,
               ),
@@ -699,7 +712,9 @@ class WcConnectorV2 {
             ),
           ),
         );
-        Navigator.pop(context);
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
       },
       onReject: () {
         signClient.respond(
