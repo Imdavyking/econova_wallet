@@ -103,6 +103,7 @@ class WcConnectorV2 {
     const wcEndpoint = 'wss://relay.walletconnect.com';
     final channel = WebSocketChannel.connect(Uri.parse(wcEndpoint));
     await channel.ready.timeout(const Duration(seconds: 3));
+    await channel.sink.close();
     signClient = await SignClient.init(
       projectId: walletConnectKey,
       relayUrl: wcEndpoint,
