@@ -1096,7 +1096,7 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  String? getDexScreener(String _) {
+  String? getDexScreener(String tokenaddress) {
     return null;
   }
 
@@ -1287,6 +1287,8 @@ class StarknetCoin extends Coin {
     );
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
+
+    print(calls);
 
     final res = await params.starknetAccount.execute(functionCalls: calls);
     final txHash = res.when(
