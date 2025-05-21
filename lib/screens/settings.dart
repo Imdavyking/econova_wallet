@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, library_private_types_in_public_api
 
 import 'dart:convert';
 
@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
 import 'change_identicon.dart';
@@ -29,7 +30,7 @@ import 'google_fa/google_fa_status.dart';
 import 'launch_url.dart';
 
 class Settings extends StatefulWidget {
-  const Settings({Key? key}) : super(key: key);
+  const Settings({super.key});
 
   @override
   _SettingsState createState() => _SettingsState();
@@ -381,12 +382,29 @@ class _SettingsState extends State<Settings>
                         if (!WalletService.isViewKey()) ...[
                           InkWell(
                             onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (ctx) {
-                                  return const WalletConnect();
-                                }),
-                              );
+                              try {
+                                WcConnectorV2.signClient;
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (ctx) {
+                                    return const WalletConnect();
+                                  }),
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: Colors.red,
+                                      content: Text(
+                                        localization.errorTryAgain,
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
                             },
                             child: Container(
                               color: Colors.transparent,
