@@ -1,7 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:sui/rpc/websocket_client.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
