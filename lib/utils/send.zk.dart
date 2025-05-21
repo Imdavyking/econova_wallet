@@ -28,3 +28,15 @@
 //     Get encrypted message from payload
 //     Decrypt message using recipient’s private key
 //     Display decrypted message to recipient
+
+
+// receive(message, zk_proof, public_inputs)
+
+// is_valid = verify_zk_proof(zk_proof, public_inputs)
+
+// if is_valid then
+//     decrypted_message = decrypt_message(message, recipient_private_key)
+//     display(decrypted_message)
+// else
+//     reject("Invalid proof - message not trusted")
+// end if
