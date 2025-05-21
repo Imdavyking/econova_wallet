@@ -1,6 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:sui/rpc/websocket_client.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -18,6 +19,7 @@ import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart' hide Wallet;
 import 'package:http/http.dart' as http;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../components/loader.dart';
 import '../../interface/coin.dart';
 import '../../screens/build_row.dart';
@@ -99,10 +101,12 @@ class WcConnectorV2 {
   }
 
   Future<void> init() async {
-    return;
+    const wcEndpoint = 'wss://relay.walletconnect.com';
+    final channel = WebSocketChannel.connect(Uri.parse(wcEndpoint));
+    await channel.ready.timeout(const Duration(seconds: 3));
     signClient = await SignClient.init(
       projectId: walletConnectKey,
-      relayUrl: "wss://relay.walletconnect.com",
+      relayUrl: wcEndpoint,
       metadata: const AppMetadata(
         name: walletName,
         url: walletURL,
