@@ -587,23 +587,7 @@ class AItools {
 
           final dexScreener = coin.getDexScreener(tokenAddress);
 
-          return '''
-          🎉 Successfully deployed meme token!
-
-          🪙 Name: $name
-          🔤 Symbol: $symbol
-          💰 Initial Supply: $initialSupply
-
-          📦 Token Address: $tokenAddress
-
-          🚀 Deployment Transaction:
-          ${coin.formatTxHash(memeData.deployTokenTx!)}
-
-          🌊 Liquidity Transaction:
-          ${coin.formatTxHash(memeData.liquidityTx!)}
-
-          ${dexScreener != null ? '🔗 DexScreener: $dexScreener' : ''}
-          ''';
+          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply. Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. Token address: $tokenAddress, deployTx ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)} ${dexScreener ?? ''}';
         } catch (e) {
           if (kDebugMode) {
             print(e);
