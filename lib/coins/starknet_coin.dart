@@ -1288,8 +1288,6 @@ class StarknetCoin extends Coin {
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
 
-    print(calls[1].calldata);
-
     final res = await params.starknetAccount.execute(functionCalls: calls);
     final txHash = res.when(
       result: (result) {
