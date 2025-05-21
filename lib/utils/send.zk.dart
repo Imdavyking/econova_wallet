@@ -7,11 +7,11 @@
 
 // Encrypt the plain text message using recipient's public key
 
-// (Optional) Generate zero-knowledge proof to prove sender validity anonymously
+// Generate zero-knowledge proof to prove sender validity anonymously
 
 // Create message payload containing:
 //     - Encrypted message
-//     - Zero-knowledge proof (optional)
+//     - Zero-knowledge proof 
 //     - Recipient address
 
 // Store the message payload on decentralized storage or backend
