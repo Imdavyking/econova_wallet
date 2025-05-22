@@ -40,9 +40,15 @@
   Access and interact with dApps directly.  
   **Supports:** Starknet, EVM chains (e.g. Ethereum, BNB Chain), Solana, NEAR, and MultiversX.
 
-- 🤖 **AI Chatbot Assistant**  
-  Use natural language to transact:  
-  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, and more.
+* 👥 **Send to Saved Contacts**
+  Save trusted addresses with nicknames and send crypto using friendly commands like
+  _“Send \$20 ETH to Wisdom”_ or _“Send STRK to Mom”_—no need to remember long wallet addresses.
+
+* 🤖 **AI Chatbot Assistant**
+  Use natural language to manage your wallet:
+  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, or even
+  _“Send \$10 USDC to Wisdom”_ using your **saved contacts**.
+  The AI understands your intent, parses your command, and handles transactions across supported chains.
 
 - 🧩 **All Chains. One Wallet.**  
   No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
