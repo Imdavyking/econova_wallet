@@ -12,9 +12,9 @@ class Contact extends StatefulWidget {
   final bool? showAdd;
 
   const Contact({
-    Key? key,
+    super.key,
     this.showAdd,
-  }) : super(key: key);
+  });
 
   @override
   State<Contact> createState() => _ContactState();
@@ -52,18 +52,20 @@ class _ContactState extends State<Contact> {
                   );
 
                   if (coin == null) return;
-                  List<ContactParams>? updatedData = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (ctx) => AddContact(
-                        params: ContactParams(coin: coin),
+                  if (context.mounted) {
+                    List<ContactParams>? updatedData = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (ctx) => AddContact(
+                          params: ContactParams(coin: coin),
+                        ),
                       ),
-                    ),
-                  );
+                    );
 
-                  if (updatedData == null) return;
+                    if (updatedData == null) return;
 
-                  contacts.value = updatedData;
+                    contacts.value = updatedData;
+                  }
                 },
                 icon: const Icon(FontAwesomeIcons.plus)),
         ],
@@ -160,9 +162,22 @@ class _ContactState extends State<Contact> {
                                         params.name!,
                                         style: const TextStyle(fontSize: 18),
                                       ),
-                                      const Icon(
-                                        Icons.arrow_forward_ios,
-                                        color: Colors.grey,
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundImage: AssetImage(
+                                              params.coin.getImage(),
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                            width: 10,
+                                          ),
+                                          const Icon(
+                                            Icons.arrow_forward_ios,
+                                            color: Colors.grey,
+                                          )
+                                        ],
                                       )
                                     ],
                                   ),
