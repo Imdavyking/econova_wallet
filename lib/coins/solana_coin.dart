@@ -10,7 +10,9 @@ import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:solana_name_service/solana_name_service.dart';
-
+import '../extensions/resign_solana.dart';
+import 'package:solana/encoder.dart';
+import 'package:solana/solana.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -210,6 +212,26 @@ class SolanaCoin extends Coin {
     } catch (e) {
       return savedBalance;
     }
+  }
+
+  Future<List<int>> signVersionTx(Uint8List txBytes) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+
+    final privateKeyBytes = HEX.decode(response.privateKey!);
+
+    final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+      privateKey: privateKeyBytes,
+    );
+    final bh = await getProxy()
+        .rpcClient
+        .getLatestBlockhash(commitment: Commitment.finalized);
+    SignedTx newCompiledMessage = await SignedTx.fromBytes(txBytes).resign(
+      wallet: keyPair,
+      blockhash: bh.value.blockhash,
+    );
+
+    return newCompiledMessage.toByteArray().toList();
   }
 
   @override
