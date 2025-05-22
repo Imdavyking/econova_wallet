@@ -3,7 +3,6 @@
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
-import 'package:wallet_app/service/contact_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
