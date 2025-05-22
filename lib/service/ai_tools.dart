@@ -288,9 +288,12 @@ class AItools {
           }
         }
 
-        final message =
+        String message =
             'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
 
+        if (memo != null && memo.isNotEmpty) {
+          message += '\n\nMemo: $memo';
+        }
         try {
           coin.validateAddress(recipient);
         } catch (e) {
