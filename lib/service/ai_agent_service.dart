@@ -3,7 +3,6 @@ import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/ai_tools.dart";
-import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/utils/all_coins.dart";
 import "package:wallet_app/utils/app_config.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
