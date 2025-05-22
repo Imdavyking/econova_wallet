@@ -3,6 +3,7 @@ import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/ai_tools.dart";
+import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/utils/all_coins.dart";
 import "package:wallet_app/utils/app_config.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
@@ -171,6 +172,12 @@ class AIAgentService {
           .toList()
           .join(',');
 
+      final contacts = ContactService.getContacts().map(
+        (e) {
+          return "Saved Contact ${e.name} on ${e.coin.getDefault()} is ${e.address} ${e.memo != null && e.memo!.isNotEmpty ? 'and memo: ${e.memo}' : ''}";
+        },
+      );
+
       final prompt = """You are $walletName,
         a smart wallet that allows users to perform transactions,
         and query the blockchain using natural language.
@@ -179,6 +186,7 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
+        $contacts
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
         other coins are $otherCoins.

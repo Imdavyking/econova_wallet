@@ -185,6 +185,10 @@ class AItools {
             'type': 'number',
             'description': 'The amount to transfer',
           },
+          'memo': {
+            'type': 'number',
+            'description': 'the memo used to send',
+          },
           'tokenAddress': {
             'type': 'string',
             'description': 'The token address',
@@ -196,6 +200,7 @@ class AItools {
         final recipient = toolInput.recipient.trim();
         final amount = toolInput.amount;
         final tokenAddress = toolInput.tokenAddress;
+        final memo = toolInput.memo;
 
         if (recipient.isEmpty) {
           return 'Recipient address is empty.';
@@ -234,8 +239,11 @@ class AItools {
         }
 
         try {
-          final txHash =
-              await token.transferToken(amount.toString(), recipient);
+          final txHash = await token.transferToken(
+            amount.toString(),
+            recipient,
+            memo: memo,
+          );
 
           if (txHash == null || txHash.isEmpty) {
             return '${token.getSymbol()} Transaction failed: no transaction hash returned.';
@@ -724,11 +732,13 @@ class _GetSwapInput {
 class _GetTransferInput {
   final String recipient;
   final String tokenAddress;
+  final String? memo;
   final num amount;
 
   _GetTransferInput({
     required this.recipient,
     required this.amount,
+    required this.memo,
     required this.tokenAddress,
   });
 
@@ -737,6 +747,7 @@ class _GetTransferInput {
     return _GetTransferInput(
       recipient: json['recipient'] as String,
       tokenAddress: json['tokenAddress'] as String,
+      memo: json['memo'] as String,
       amount: json['amount'] as num,
     );
   }
