@@ -695,7 +695,7 @@ class _GetContactNameInput {
   factory _GetContactNameInput.fromJson(Map<String, dynamic> json) {
     debugPrint('getContactNameInput: $json');
     return _GetContactNameInput(
-      contactName: json['domainName'] as String,
+      contactName: json['contactName'] as String,
     );
   }
 }
