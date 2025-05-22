@@ -826,7 +826,7 @@ class _GetTransferInput {
     return _GetTransferInput(
       recipient: json['recipient'] as String,
       tokenAddress: json['tokenAddress'] as String,
-      memo: json['memo'] as String,
+      memo: json['memo'] as String?,
       amount: json['amount'] as num,
     );
   }
