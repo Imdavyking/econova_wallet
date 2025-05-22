@@ -95,6 +95,8 @@ class AItools {
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
 
+              
+
           return 'The address for "$contactName" on $coin is "$address"$memoText.';
         }
 
@@ -251,7 +253,7 @@ class AItools {
             'description': 'The amount to transfer',
           },
           'memo': {
-            'type': 'number',
+            'type': 'string',
             'description': 'the memo used to send',
           },
           'tokenAddress': {
