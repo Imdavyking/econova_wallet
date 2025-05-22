@@ -90,10 +90,12 @@ class AItools {
             return 'Invalid address for $coin: $address';
           }
 
-          final memo =
-              exactMatch.memo?.isNotEmpty == true ? exactMatch.memo : 'None';
+          final hasMemo = exactMatch.memo?.isNotEmpty == true;
+          final memoText = hasMemo
+              ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
+              : '';
 
-          return 'The address for "$contactName" on $coin is "$address", memo: $memo.';
+          return 'The address for "$contactName" on $coin is "$address"$memoText.';
         }
 
         final contactNames = contacts.map((c) => c.name).toList();
@@ -105,7 +107,7 @@ class AItools {
           return 'Contact "$contactName" not found.';
         }
 
-        if (bestMatch.rating! > 0.6) {
+        if (bestMatch.rating! > 0.5) {
           return 'Contact "$contactName" not found. Did you mean "${bestMatch.target}"?';
         }
 
