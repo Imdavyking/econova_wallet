@@ -108,9 +108,11 @@ class AItools {
 
         if (bestMatch.rating! > 0.5) {
           return 'Contact "$contactName" not found. Did you mean "${bestMatch.target}"?';
+        } else if (bestMatch.rating! > 0.25) {
+          return 'Closest match is "${bestMatch.target}", but similarity is low.';
+        } else {
+          return 'Contact "$contactName" not found for $coin.';
         }
-
-        return 'Contact "$contactName" not found for $coin.';
       },
       getInputFromJson: _GetContactNameInput.fromJson,
     );
