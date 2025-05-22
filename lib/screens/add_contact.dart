@@ -266,17 +266,7 @@ class _AddContactState extends State<AddContact> {
                             );
                           }
                           final memo = memoController.text.trim();
-                          if (int.tryParse(memo) == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: Colors.red,
-                                content: Text(
-                                  'Incorrect ${localization.memo}',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            );
-                          }
+
                           final address = addressController.text.trim();
 
                           if (name.isEmpty || address.isEmpty) {

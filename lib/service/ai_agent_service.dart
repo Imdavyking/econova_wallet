@@ -171,16 +171,6 @@ class AIAgentService {
           )
           .toList()
           .join(',');
-      final contacts = ContactService.getContacts().map((contact) {
-        final name = contact.name;
-        final coin = contact.coin.getDefault();
-        final address = contact.address;
-        final memo = (contact.memo != null && contact.memo!.isNotEmpty)
-            ? ' with memo: ${contact.memo}'
-            : '';
-
-        return 'Saved contact "$name" for $coin at address: $address$memo.';
-      });
 
       final prompt = """You are $walletName,
         a smart wallet that allows users to perform transactions,
@@ -190,7 +180,6 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        $contacts
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
         other coins are $otherCoins.

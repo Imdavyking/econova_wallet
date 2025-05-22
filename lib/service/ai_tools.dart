@@ -5,12 +5,14 @@ import "package:wallet_app/coins/starknet_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/main.dart";
+import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:wallet_app/screens/navigator_service.dart";
 import "./ai_confirm_transaction.dart";
 import "./ai_agent_service.dart";
+import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
   static Coin coin = starkNetCoins.first;
@@ -52,6 +54,66 @@ class AItools {
       },
       getInputFromJson: _GetAddressInput.fromJson,
     );
+
+    final resolveUserContactTool =
+        Tool.fromFunction<_GetContactNameInput, String>(
+      name: 'QRY_resolveUsercontact',
+      description: 'Tool for resolving user contact to address',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'contactName': {
+            'type': 'string',
+            'description': 'The domain name to resolve',
+          },
+        },
+        'required': ['contactName'],
+      },
+      func: (final _GetContactNameInput toolInput) async {
+        final contactName = toolInput.contactName;
+        final contacts =
+            ContactService.getContacts().where((c) => c.coin == coin).toList();
+
+        final exactMatch = contacts.firstWhereOrNull(
+          (c) => c.name?.toLowerCase() == contactName.toLowerCase(),
+        );
+
+        if (exactMatch != null) {
+          final address = exactMatch.address;
+          if (address == null || address.isEmpty) {
+            return 'Contact "$contactName" has no associated address.';
+          }
+
+          try {
+            coin.validateAddress(address);
+          } catch (e) {
+            return 'Invalid address for $coin: $address';
+          }
+
+          final memo =
+              exactMatch.memo?.isNotEmpty == true ? exactMatch.memo : 'None';
+
+          return 'The address for "$contactName" on $coin is "$address", memo: $memo.';
+        }
+
+        final contactNames = contacts.map((c) => c.name).toList();
+        final bestMatch =
+            StringSimilarity.findBestMatch(contactName, contactNames).bestMatch;
+
+        if (bestMatch.rating == null) {
+          debugPrint('bestMatch: ${bestMatch.target} ${bestMatch.rating}');
+          return 'Contact "$contactName" not found.';
+        }
+
+        if (bestMatch.rating! > 0.6) {
+          return 'Contact "$contactName" not found. Did you mean "${bestMatch.target}"?';
+        }
+
+        return 'Contact "$contactName" not found for $coin.';
+      },
+      getInputFromJson: _GetContactNameInput.fromJson,
+    );
+
     final resolveDomainNameTool =
         Tool.fromFunction<_GetDomainNameInput, String>(
       name: 'QRY_resolveDomainName',
@@ -613,6 +675,7 @@ class AItools {
       transferTool,
       getQuote,
       swapTool,
+      resolveUserContactTool,
       getTokenPriceTool,
       stakeTool,
       switchCoinTool,
@@ -621,6 +684,19 @@ class AItools {
       stakeRewardsTool,
       deployMeme,
     ];
+  }
+}
+
+class _GetContactNameInput {
+  final String contactName;
+
+  _GetContactNameInput({required this.contactName});
+
+  factory _GetContactNameInput.fromJson(Map<String, dynamic> json) {
+    debugPrint('getContactNameInput: $json');
+    return _GetContactNameInput(
+      contactName: json['domainName'] as String,
+    );
   }
 }
 
