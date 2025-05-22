@@ -2,14 +2,15 @@
 
 **Econova Wallet** is a secure, user-friendly, and AI-powered cryptocurrency wallet tailored for the **Starknet** ecosystem—and beyond. It empowers users to manage crypto assets, stake tokens, interact with liquidity pools, and explore decentralized applications **all in one place**.
 
-> ⚠️ **Note:** Voice command features are currently under development and not yet functional.
-
 ---
 
 ## 🚀 Features
 
 - 📬 **Multi-Network Wallet & Balance Display**  
   View and manage your wallet across supported blockchains.
+
+- 🎙️ **Voice Recognition**  
+  Use your voice to execute wallet actions like "Send 10 STRK to 0x...", "Swap ETH to USDC", or "Show my transaction history."
 
 - 💸 **Token Transfers & Swaps**  
   Send, receive, and swap tokens easily—via a traditional UI or natural language commands.

@@ -22,7 +22,8 @@ class AIAgent extends StatefulWidget {
   _AIAgent createState() => _AIAgent();
 }
 
-class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
+class _AIAgent extends State<AIAgent>
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   List<ChatMessage> messages = <ChatMessage>[];
   List<ChatUser> typingUsers = [];
   var isMobiletPlatform = defaultTargetPlatform == TargetPlatform.iOS ||
@@ -31,13 +32,22 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
   lang_chain.ConversationBufferMemory memory = AIAgentService.memory;
   final stt.SpeechToText _speechToText = stt.SpeechToText();
   bool speechEnabled = false;
-  ValueNotifier<String> lastWords = ValueNotifier<String>("");
   late AppLocalizations localization;
+  late AnimationController _micAnimationController;
+  late Animation<double> _micScaleAnimation;
 
   @override
   initState() {
     super.initState();
     _initSpeech();
+    _micAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _micScaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _micAnimationController, curve: Curves.easeInOut),
+    );
     loadHistory();
   }
 
@@ -48,16 +58,32 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
 
   void _startListening() async {
     await _speechToText.listen(onResult: _onSpeechResult);
+    _micAnimationController.repeat(reverse: true);
     setState(() {});
   }
 
   void _stopListening() async {
     await _speechToText.stop();
+    _micAnimationController.stop();
     setState(() {});
   }
 
+  @override
+  void dispose() {
+    _micAnimationController.dispose();
+    super.dispose();
+  }
+
   void _onSpeechResult(SpeechRecognitionResult result) {
-    lastWords.value = result.recognizedWords;
+    if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
+      final userMessage = ChatMessage(
+        user: Constants.user,
+        text: result.recognizedWords.trim(),
+        createdAt: DateTime.now(),
+      );
+
+      _handleOnSendPressed(userMessage);
+    }
   }
 
   @override
@@ -153,10 +179,18 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
           trailing: [
             if (isMobiletPlatform)
               IconButton(
-                icon: Icon(
-                  _speechToText.isNotListening ? Icons.mic_off : Icons.mic,
-                  color: appPrimaryColor,
-                ),
+                icon: _speechToText.isListening
+                    ? ScaleTransition(
+                        scale: _micScaleAnimation,
+                        child: const Icon(
+                          Icons.mic,
+                          color: appPrimaryColor,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.mic_off,
+                        color: appPrimaryColor,
+                      ),
                 onPressed: _speechToText.isNotListening
                     ? _startListening
                     : _stopListening,
