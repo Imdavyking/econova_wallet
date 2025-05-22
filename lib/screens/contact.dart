@@ -159,7 +159,10 @@ class _ContactState extends State<Contact> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        params.name!,
+                                        ellipsify(
+                                          str: params.name!,
+                                          maxLength: 20,
+                                        ),
                                         style: const TextStyle(fontSize: 18),
                                       ),
                                       Row(
