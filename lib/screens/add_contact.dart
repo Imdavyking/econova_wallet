@@ -253,7 +253,18 @@ class _AddContactState extends State<AddContact> {
                         onPressed: () async {
                           ScaffoldMessenger.of(context).clearSnackBars();
                           final name = nameController.text.trim();
-                          // make username name doesnt' include space or alphabet and numbers and underscore
+                          final validUsername = RegExp(r'^[a-zA-Z0-9_]+$');
+                          if (!validUsername.hasMatch(name)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: Colors.red,
+                                content: Text(
+                                  localization.validContactName,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            );
+                          }
                           final memo = memoController.text.trim();
                           if (int.tryParse(memo) == null) {
                             ScaffoldMessenger.of(context).showSnackBar(

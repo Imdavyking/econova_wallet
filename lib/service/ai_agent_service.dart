@@ -171,12 +171,16 @@ class AIAgentService {
           )
           .toList()
           .join(',');
+      final contacts = ContactService.getContacts().map((contact) {
+        final name = contact.name;
+        final coin = contact.coin.getDefault();
+        final address = contact.address;
+        final memo = (contact.memo != null && contact.memo!.isNotEmpty)
+            ? ' with memo: ${contact.memo}'
+            : '';
 
-      final contacts = ContactService.getContacts().map(
-        (e) {
-          return "Saved Contact ${e.name} on ${e.coin.getDefault()} is ${e.address} ${e.memo != null && e.memo!.isNotEmpty ? 'and memo: ${e.memo}' : ''}";
-        },
-      );
+        return 'Saved contact "$name" for $coin at address: $address$memo.';
+      });
 
       final prompt = """You are $walletName,
         a smart wallet that allows users to perform transactions,

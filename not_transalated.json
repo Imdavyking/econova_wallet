@@ -9,7 +9,8 @@
     "education",
     "setSavingGoal",
     "goalName",
-    "deployAccount"
+    "deployAccount",
+    "validContactName"
   ],
 
   "fr": [
@@ -22,7 +23,8 @@
     "education",
     "setSavingGoal",
     "goalName",
-    "deployAccount"
+    "deployAccount",
+    "validContactName"
   ],
 
   "hi": [
@@ -35,7 +37,8 @@
     "education",
     "setSavingGoal",
     "goalName",
-    "deployAccount"
+    "deployAccount",
+    "validContactName"
   ],
 
   "zh": [
@@ -48,6 +51,7 @@
     "education",
     "setSavingGoal",
     "goalName",
-    "deployAccount"
+    "deployAccount",
+    "validContactName"
   ]
 }

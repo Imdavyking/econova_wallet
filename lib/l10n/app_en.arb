@@ -296,5 +296,6 @@
   "education": "Education",
   "setSavingGoal": "Set Saving Goal",
   "goalName": "Goal Name",
-  "deployAccount": "Deploy account"
+  "deployAccount": "Deploy account",
+  "validContactName": "Invalid username. Only letters, numbers, and underscores are allowed. No spaces."
 }
