@@ -77,12 +77,6 @@ Econova Wallet is built to grow with the ecosystem—supporting new chains as th
 
 ---
 
-## ⚠️ Current Limitations
-
-- **Voice Commands** – Under development and not yet available
-
----
-
 ## 🛠 Getting Started
 
 1. Clone the repository:
