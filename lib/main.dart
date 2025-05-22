@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
@@ -113,6 +114,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...starkNetCoins,
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
+    ...getAptosBlockchain(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   return blockchains;

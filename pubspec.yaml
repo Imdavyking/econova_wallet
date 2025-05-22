@@ -129,6 +129,7 @@ dependencies:
   ed25519_edwards: 0.3.1
   string_similarity: ^2.0.0
   speech_to_text: ^7.0.0
+  aptos: ^0.0.6
   jazzicon:
     path: ./jazzicon
   near_api_flutter:
