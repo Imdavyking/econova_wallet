@@ -47,9 +47,14 @@ PODS:
     - FlutterMacOS
   - smart_auth (0.0.1):
     - Flutter
+  - speech_to_text (0.0.1):
+    - Flutter
+    - FlutterMacOS
+    - Try
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
+  - Try (2.1.1)
   - url_launcher_ios (0.0.1):
     - Flutter
   - vibration (3.0.0):
@@ -78,6 +83,7 @@ DEPENDENCIES:
   - share (from `.symlinks/plugins/share/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - smart_auth (from `.symlinks/plugins/smart_auth/ios`)
+  - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - vibration (from `.symlinks/plugins/vibration/ios`)
@@ -87,6 +93,7 @@ SPEC REPOS:
   trunk:
     - MTBBarcodeScanner
     - OrderedSet
+    - Try
 
 EXTERNAL SOURCES:
   connectivity_plus:
@@ -127,6 +134,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   smart_auth:
     :path: ".symlinks/plugins/smart_auth/ios"
+  speech_to_text:
+    :path: ".symlinks/plugins/speech_to_text/darwin"
   sqflite_darwin:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   url_launcher_ios:
@@ -158,7 +167,9 @@ SPEC CHECKSUMS:
   share: a34936589f3090d59481bcdc5c30cc9dd47c75f6
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   smart_auth: 33668081c5f646af84f10492a067d25fdcd16951
+  speech_to_text: 9dc43a5df3cbc2813f8c7cc9bd0fbf94268ed7ac
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
+  Try: 5ef669ae832617b3cee58cb2c6f99fb767a4ff96
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
   vibration: 69774ad57825b11c951ee4c46155f455d7a592ce
   video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b

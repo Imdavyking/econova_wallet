@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
@@ -11,6 +12,7 @@ import 'package:dash_chat_2/dash_chat_2.dart';
 import "../utils/ai_agent_utils.dart";
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import "package:langchain/langchain.dart" as lang_chain;
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class AIAgent extends StatefulWidget {
   final String referralAddress;
@@ -27,13 +29,35 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
       defaultTargetPlatform == TargetPlatform.android;
   final AIAgentService _chatRepository = AIAgentService();
   lang_chain.ConversationBufferMemory memory = AIAgentService.memory;
-
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool speechEnabled = false;
+  ValueNotifier<String> lastWords = ValueNotifier<String>("");
   late AppLocalizations localization;
 
   @override
   initState() {
     super.initState();
+    _initSpeech();
     loadHistory();
+  }
+
+  void _initSpeech() async {
+    speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
+
+  void _startListening() async {
+    await _speechToText.listen(onResult: _onSpeechResult);
+    setState(() {});
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {});
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    lastWords.value = result.recognizedWords;
   }
 
   @override
@@ -129,11 +153,13 @@ class _AIAgent extends State<AIAgent> with AutomaticKeepAliveClientMixin {
           trailing: [
             if (isMobiletPlatform)
               IconButton(
-                icon: const Icon(
-                  Icons.mic,
+                icon: Icon(
+                  _speechToText.isNotListening ? Icons.mic_off : Icons.mic,
                   color: appPrimaryColor,
                 ),
-                onPressed: () {},
+                onPressed: _speechToText.isNotListening
+                    ? _startListening
+                    : _stopListening,
               ),
           ],
           inputDecoration: InputDecoration(

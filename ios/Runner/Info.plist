@@ -52,6 +52,8 @@
 	<string>This app uses the local network to enable debugging and performance monitoring.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>WebRTC requires access to microphone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>AI requires access to microphone.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>App needs access to photo lib to upload images.</string>
 	<key>NSUserTrackingUsageDescription</key>
