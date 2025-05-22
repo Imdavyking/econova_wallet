@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import '../extensions/big_int_ext.dart';
 import '../model/near_trx_obj.dart' as near_trx_obj;
-import '../service/mint_service.dart';
 import '../service/wallet_service.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
@@ -405,42 +404,6 @@ class NearCoin extends Coin {
     Uint8List hashedSerializedTx =
         TransactionManager.toSHA256(serializedTransaction);
     return TransactionManager.signTransaction(privateKey, hashedSerializedTx);
-  }
-
-  Future<bool> mintToken() async {
-    try {
-      final account = await getAccount();
-      String method = 'ft_mint';
-      BigInt mintAmt = MintService.getMint();
-      String args = json.encode(
-        {
-          "account": account.accountId,
-          "amount": mintAmt.toString(),
-        },
-      );
-
-      Contract contract = Contract(mintContractID!, account);
-
-      Map result = await contract.callFunction(
-        method,
-        args,
-      );
-
-      final entry = result['result'];
-
-      if (entry == null) {
-        return false;
-      }
-
-      if (entry['final_execution_status'] == 'EXECUTED_OPTIMISTIC') {
-        await MintService.deleteMint();
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      return false;
-    }
   }
 
   Future<Account> getAccount() async {
