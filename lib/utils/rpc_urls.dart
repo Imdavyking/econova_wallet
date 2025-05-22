@@ -706,6 +706,7 @@ Future setupWebViewWalletBridge(
   final data = WalletService.getActiveKey(walletImportType)!.data;
   final coin = evmFromChainId(chainId)!;
   final response = await coin.importData(data);
+
   final address = response.address;
 
   String twProvider = """
@@ -717,7 +718,7 @@ Future setupWebViewWalletBridge(
                     address: "$address"
                 },
                 solana: {
-                     cluster: "mainnet-beta",
+                     cluster: "${solanaChains.first.rpc}",
                 },
                 aptos: {
                    network: "network",
@@ -735,7 +736,15 @@ Future setupWebViewWalletBridge(
                         return;
                     }
 
-                  webkit.messageHandlers._tw_.postMessage(params);
+                    const interval = setInterval(() => {
+                      if (isFlutterInAppWebViewReady) {
+                        clearInterval(interval);
+                        window.flutter_inappwebview.callHandler(
+                          "CryptoHandler",
+                          JSON.stringify({ ...params, url: window.location.origin })
+                        );
+                      }
+                    }, 100);
                 });
 
                 // Generate instances
@@ -882,6 +891,8 @@ Future setupWebViewWalletBridge(
             }
         })();
         """;
+
+  print(twProvider);
 
   return '''
    (function() {
