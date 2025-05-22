@@ -101,9 +101,8 @@ class AItools {
         final contactNames = contacts.map((c) => c.name).toList();
         final bestMatch =
             StringSimilarity.findBestMatch(contactName, contactNames).bestMatch;
-
+        debugPrint('bestMatch: ${bestMatch.target} ${bestMatch.rating}');
         if (bestMatch.rating == null) {
-          debugPrint('bestMatch: ${bestMatch.target} ${bestMatch.rating}');
           return 'Contact "$contactName" not found.';
         }
 
