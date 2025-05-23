@@ -719,6 +719,7 @@ Future setupWebViewWalletBridge(
                 },
                 solana: {
                      cluster: "${solanaChains.first.rpc}",
+                     useLegacySign: true
                 },
                 aptos: {
                    network: "network",
