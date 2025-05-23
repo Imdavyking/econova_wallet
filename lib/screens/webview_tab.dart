@@ -1606,6 +1606,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               jsData.object ?? {},
                             );
 
+                            final version = data.version;
+                            version;
+
                             final SolanaWeb3Res solanaWeb3Res =
                                 SolanaWeb3Res.fromJson(
                               json.decode(data.data),
