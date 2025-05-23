@@ -9,6 +9,7 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
+import 'package:pinput/pinput.dart';
 import "../utils/ai_agent_utils.dart";
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import "package:langchain/langchain.dart" as lang_chain;
@@ -35,6 +36,7 @@ class _AIAgent extends State<AIAgent>
   late AppLocalizations localization;
   late AnimationController _micAnimationController;
   late Animation<double> _micScaleAnimation;
+  TextEditingController chatController = TextEditingController();
 
   @override
   initState() {
@@ -75,14 +77,8 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
-    if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
-      final userMessage = ChatMessage(
-        user: Constants.user,
-        text: result.recognizedWords.trim(),
-        createdAt: DateTime.now(),
-      );
-
-      _handleOnSendPressed(userMessage);
+    if (result.recognizedWords.trim().isNotEmpty) {
+      chatController.setText(result.recognizedWords);
     }
   }
 
@@ -176,6 +172,7 @@ class _AIAgent extends State<AIAgent>
           showOtherUsersName: true,
         ),
         inputOptions: InputOptions(
+          textController: chatController,
           trailing: [
             if (isMobiletPlatform)
               IconButton(
