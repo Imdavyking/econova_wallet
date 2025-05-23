@@ -1,51 +1,24 @@
 import 'package:starknet/starknet.dart';
 
-// Interface for objects that can be serialized to calldata
-abstract class ToCalldata {
+abstract class StarknetSerializable {
   List<Felt> toCalldata();
 }
 
-// Extension for lists of objects that implement ToCalldata
-extension ListToCalldata<T extends ToCalldata> on List<T> {
+extension SerializableListToCalldata<T> on List<T> {
   List<Felt> toCalldata() {
-    if (isEmpty) {
-      return [Felt.zero];
+    if (isEmpty) return [Felt.zero];
+    final dynamic first = this.first;
+    if (first is! StarknetSerializable) {
+      throw Exception(
+          'Element of type ${first.runtimeType} does not implement StarknetSerializable');
     }
+
     return [
-      Felt.fromInt(length), // Length prefix
-      ...expand((item) => item.toCalldata()), // Flatten serialized items
-    ];
-  }
-}
-
-// Extension for Felt to support ToCalldata
-extension FeltToCalldata on Felt {
-  List<Felt> toCalldata() => [this];
-}
-
-// Extension for Uint256 to support ToCalldata
-extension Uint256ToCalldata on Uint256 {
-  List<Felt> toCalldata() => [low, high];
-}
-
-// Extension for List<Felt> to support ToCalldata
-extension FeltListToCalldata on List<Felt> {
-  List<Felt> toCalldata() => [
-        Felt.fromInt(length),
-        ...this,
-      ];
-}
-
-// Extension for nested lists of ToCalldata types
-extension NestedListToCalldata<T extends ToCalldata> on List<List<T>> {
-  List<Felt> toCalldata() {
-    if (isEmpty) {
-      return [Felt.zero];
-    }
-    return [
-      Felt.fromInt(length), // Length prefix for outer list
-      ...map((innerList) => innerList.toCalldata())
-          .expand((list) => list), // Flatten inner lists
+      Felt.fromInt(length),
+      ...map((element) {
+        final serializable = element as StarknetSerializable;
+        return serializable.toCalldata();
+      }).expand((x) => x),
     ];
   }
 }
