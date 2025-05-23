@@ -13,7 +13,18 @@ class ContactService {
     String jsonList = pref.get(_keyList) ?? '[]';
     List<dynamic> jsonData = json.decode(jsonList);
 
-    return jsonData.map((item) => ContactParams.fromJson(item)).toList();
+    return jsonData
+        .where((json) {
+          Map jsonCoin = json['coin'];
+          Coin? coin = supportedChains.firstWhereOrNull((element) {
+            final sameName = element.getName() == jsonCoin['name'];
+            final sameDefault = element.getDefault() == jsonCoin['default'];
+            return sameName && sameDefault;
+          });
+          return coin != null;
+        })
+        .map((item) => ContactParams.fromJson(item))
+        .toList();
   }
 
   static Future<void> _setContacts(List<ContactParams> keysList) async {
