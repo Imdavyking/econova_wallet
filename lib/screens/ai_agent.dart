@@ -228,7 +228,7 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
-    chatController.clear();
+    chatController.setText('');
     _stopListening();
     final userMessage = textMessage.copyWith(
       user: Constants.user,
