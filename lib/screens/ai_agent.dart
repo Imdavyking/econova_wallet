@@ -37,6 +37,7 @@ class _AIAgent extends State<AIAgent>
   late AnimationController _micAnimationController;
   late Animation<double> _micScaleAnimation;
   TextEditingController chatController = TextEditingController();
+  ValueNotifier<bool> isListening = ValueNotifier(false);
 
   @override
   initState() {
@@ -54,7 +55,12 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _initSpeech() async {
-    speechEnabled = await _speechToText.initialize();
+    speechEnabled = await _speechToText.initialize(onStatus: (status) {
+      isListening.value = status == 'listening';
+    }, onError: (error) {
+      isListening.value = false;
+      setState(() {});
+    });
     setState(() {});
   }
 
@@ -175,22 +181,25 @@ class _AIAgent extends State<AIAgent>
           textController: chatController,
           trailing: [
             if (isMobiletPlatform)
-              IconButton(
-                icon: _speechToText.isListening
-                    ? ScaleTransition(
-                        scale: _micScaleAnimation,
-                        child: const Icon(
-                          Icons.mic,
-                          color: appPrimaryColor,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.mic_off,
-                        color: appPrimaryColor,
-                      ),
-                onPressed: _speechToText.isNotListening
-                    ? _startListening
-                    : _stopListening,
+              ValueListenableBuilder(
+                valueListenable: isListening,
+                builder: (context, value, child) {
+                  return IconButton(
+                    icon: value
+                        ? ScaleTransition(
+                            scale: _micScaleAnimation,
+                            child: const Icon(
+                              Icons.mic,
+                              color: appPrimaryColor,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.mic_off,
+                            color: appPrimaryColor,
+                          ),
+                    onPressed: !value ? _startListening : _stopListening,
+                  );
+                },
               ),
           ],
           inputDecoration: InputDecoration(
