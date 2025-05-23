@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:fraction/fraction.dart';
 import 'package:wallet_app/coins/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
-import 'package:wallet_app/extensions/starknet_uint.dart';
 import 'package:wallet_app/screens/stake_token.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';

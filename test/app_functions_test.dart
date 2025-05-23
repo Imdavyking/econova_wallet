@@ -1,4 +1,3 @@
-import 'package:starknet/starknet.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
@@ -20,7 +19,6 @@ import 'package:hive_test/hive_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/extensions/starknet_uint.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -507,53 +505,6 @@ void main() async {
     expect(
       privateKey,
       keyStoreRes,
-    );
-  });
-
-  test('Ensure valid calldata encoding for a list of Uint256', () {
-    final args = [
-      Uint256(low: Felt.two, high: Felt.one),
-      Uint256(low: Felt.zero, high: Felt.two),
-    ];
-    expect(
-      args.toCalldata(),
-      equals(
-        [Felt.two, Felt.two, Felt.one, Felt.zero, Felt.two],
-      ),
-    );
-  });
-
-  test('Ensure valid calldata encoding for a list of lists of Uint256', () {
-    List<List<Uint256>> args = [
-      [
-        Uint256(low: Felt.two, high: Felt.one),
-        Uint256(low: Felt.zero, high: Felt.two),
-      ],
-      [
-        Uint256(low: Felt.one, high: Felt.zero),
-      ]
-    ];
-    expect(
-      args.toCalldata(),
-      equals([
-        Felt.two,
-        Felt.two,
-        Felt.two,
-        Felt.one,
-        Felt.zero,
-        Felt.two,
-        Felt.one,
-        Felt.one,
-        Felt.zero,
-      ]),
-    );
-  });
-
-  test('Ensure valid calldata encoding for an empty list', () {
-    final List<Uint256> args = [];
-    expect(
-      args.toCalldata(),
-      equals([Felt.zero]),
     );
   });
   test('check if seed phrase generates the correct crypto address', () async {
