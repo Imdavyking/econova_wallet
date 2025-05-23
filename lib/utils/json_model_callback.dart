@@ -81,13 +81,22 @@ class JsSolanaMessageObject {
 class JsSolanaTransactionObject {
   String data;
   String raw;
+  String? rawMessage;
+  String? version;
 
-  JsSolanaTransactionObject({required this.data, required this.raw});
+  JsSolanaTransactionObject({
+    required this.data,
+    required this.raw,
+    this.rawMessage,
+    this.version,
+  });
 
   factory JsSolanaTransactionObject.fromJson(Map<String, dynamic> json) {
     return JsSolanaTransactionObject(
       data: json['data'],
       raw: json['raw'],
+      rawMessage: json['rawMessage'],
+      version: json['version'],
     );
   }
 
@@ -96,6 +105,8 @@ class JsSolanaTransactionObject {
 
     data['data'] = data;
     data['raw'] = raw;
+    data['rawMessage'] = rawMessage;
+    data['version'] = version;
     return data;
   }
 }
