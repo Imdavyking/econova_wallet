@@ -17,9 +17,9 @@ class SavedUrls extends StatefulWidget {
     this.title,
     this.emptyText,
     this.savedKey, {
-    Key? key,
+    super.key,
     required this.data,
-  }) : super(key: key);
+  });
   @override
   State<SavedUrls> createState() => _SavedUrlsState();
 }

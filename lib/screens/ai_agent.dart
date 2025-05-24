@@ -59,6 +59,7 @@ class _AIAgent extends State<AIAgent>
       isListening.value = status == 'listening';
     }, onError: (error) {
       isListening.value = false;
+      debugPrint('${error.errorMsg} - ${error.permanent}');
       setState(() {});
     });
     setState(() {});
