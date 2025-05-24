@@ -174,7 +174,6 @@ dependency_overrides:
     git:
       url: https://github.com/focustree/starknet.dart
       path: packages/starknet_provider
-  
 
 dev_dependencies:
   flutter_test:
@@ -244,3 +243,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+# image_picker and local_auth need sdk 35 for android
