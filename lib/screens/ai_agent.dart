@@ -71,6 +71,7 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _stopListening() async {
+    isListening.value = false;
     await _speechToText.stop();
     _micAnimationController.stop();
     setState(() {});
@@ -83,7 +84,7 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
-    if (result.recognizedWords.trim().isNotEmpty) {
+    if (result.recognizedWords.trim().isNotEmpty && isListening.value) {
       chatController.setText(result.recognizedWords);
     }
   }
@@ -228,8 +229,8 @@ class _AIAgent extends State<AIAgent>
   }
 
   void _handleOnSendPressed(ChatMessage textMessage) async {
-    chatController.setText('');
     _stopListening();
+    chatController.setText('');
     final userMessage = textMessage.copyWith(
       user: Constants.user,
       createdAt: DateTime.now(),
