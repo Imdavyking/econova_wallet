@@ -656,7 +656,8 @@ class AItools {
 ⚠️ Liquidity addition failed, but meme token was deployed successfully!
 
 ✅ Token Address: ${memeData.tokenAddress}
-🔗 Deploy Tx Hash: ${coin.formatTxHash(memeData.deployTokenTx!)}
+🔗 Deploy Tx Hash: ${memeData.deployTokenTx!}
+🔗 Deploy Tx Hash Explorer: ${coin.formatTxHash(memeData.deployTokenTx!)}
 ''';
           }
 
