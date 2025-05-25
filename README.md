@@ -108,7 +108,10 @@ Econova Wallet is built to grow with the ecosystem—supporting new chains as th
 3. Configure your environment:
 
    - Copy `.env.example` to `.env`
-   - Add your API keys, Starknet endpoints, chatbot credentials, and other required configs.
+   - Add your OPENAI_API_KEY keys.
+  ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
 4. Launch the App:
 
