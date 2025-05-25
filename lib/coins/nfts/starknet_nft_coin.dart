@@ -3,6 +3,7 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/service/wallet_service.dart';
+import '../../extensions//uint256_starknet.dart';
 import '../../main.dart';
 
 class StarknetTTypes {
@@ -116,13 +117,15 @@ class StarknetNFTCoin extends StarknetCoin {
       chainId: chainId,
     );
 
+    List<Felt> data = [];
+
     final List<Felt> calldata = [
       Felt.fromHexString(response.address),
       Felt.fromHexString(to),
       ...Uint256.fromBigInt(tokenId).toCalldata(),
       if (tokenType == StarknetTTypes.v1155)
         ...Uint256.fromBigInt(BigInt.from(double.parse(amount))).toCalldata(),
-      Felt.fromInt(0),
+      ...data.toCalldata(),
     ];
 
     final tx = await fundingAccount.execute(functionCalls: [
