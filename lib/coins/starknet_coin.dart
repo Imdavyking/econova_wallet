@@ -4,6 +4,7 @@ import 'package:fraction/fraction.dart';
 import 'package:wallet_app/coins/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/screens/stake_token.dart';
+import 'package:wallet_app/screens/view_starknet_nfts.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/percent.dart';
@@ -232,16 +233,19 @@ class StarknetCoin extends Coin {
     return isAccepted ? declareResult : null;
   }
 
-  Future<List<NFT>> getStarknetNFTs({required String address}) async {
+  @override
+  Widget? getNFTPage() => ViewStarknetNFTs(starknetCoin: this);
+
+  Future<List<StarknetNFT>> getStarknetNFTs({required String address}) async {
     address =
         '0x031c0b3ce1e629066ff59578f212a1bd2db6efda0788d718fb5303df90292772';
     final url = Uri.parse(
-        'https://starknet-${enableTestNet ? "sepolia" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
+        'https://starknet-${enableTestNet ? "mainnet" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> nftsData = data['nfts'];
-      return nftsData.map((nft) => NFT.fromJson(nft)).toList();
+      return nftsData.map((nft) => StarknetNFT.fromJson(nft)).toList();
     } else {
       throw Exception('Failed to load NFTs');
     }
@@ -2753,7 +2757,7 @@ class DeploymentDataResult {
   });
 }
 
-class NFT {
+class StarknetNFT {
   final String contractAddress;
   final String contractName;
   final String contractSymbol;
@@ -2764,19 +2768,18 @@ class NFT {
   final int mintTimestamp;
   final String mintTransactionHash;
   final String numberOfTokens;
-  final String numberOfOwners;
+  final int numberOfOwners;
   final String ownerAddress;
   final WalletBalance walletBalance;
   final String tokenUri;
   final String tokenMetadata;
   final String name;
   final String description;
-  final List<Attribute> attributes;
   final String? externalLink;
   final String imageUrl;
   final String? animationUrl;
 
-  NFT({
+  StarknetNFT({
     required this.contractAddress,
     required this.contractName,
     required this.contractSymbol,
@@ -2794,14 +2797,13 @@ class NFT {
     required this.tokenMetadata,
     required this.name,
     required this.description,
-    required this.attributes,
     this.externalLink,
     required this.imageUrl,
     this.animationUrl,
   });
 
-  factory NFT.fromJson(Map<String, dynamic> json) {
-    return NFT(
+  factory StarknetNFT.fromJson(Map<String, dynamic> json) {
+    return StarknetNFT(
       contractAddress: json['contractAddress'],
       contractName: json['contractName'],
       contractSymbol: json['contractSymbol'],
@@ -2819,9 +2821,6 @@ class NFT {
       tokenMetadata: json['tokenMetadata'],
       name: json['name'],
       description: json['description'],
-      attributes: (json['attributes'] as List)
-          .map((attr) => Attribute.fromJson(attr))
-          .toList(),
       externalLink: json['externalLink'],
       imageUrl: json['imageUrl'],
       animationUrl: json['animationUrl'],
@@ -2851,23 +2850,6 @@ class WalletBalance {
       tokenId: json['tokenId'],
       walletAddress: json['walletAddress'],
       tokenBalance: json['tokenBalance'],
-    );
-  }
-}
-
-class Attribute {
-  final String traitType;
-  final List<String> value;
-
-  Attribute({
-    required this.traitType,
-    required this.value,
-  });
-
-  factory Attribute.fromJson(Map<String, dynamic> json) {
-    return Attribute(
-      traitType: json['trait_type'],
-      value: List<String>.from(json['value']),
     );
   }
 }
