@@ -124,8 +124,10 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
     try {
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final response = await nft.starknetCoin.importData(data);
-      final allNFTs =
-          await nft.starknetCoin.getStarknetNFTs(address: response.address);
+      final allNFTs = await nft.starknetCoin.getStarknetNFTs(
+        address: response.address,
+        useCache: useCache,
+      );
 
       if (useCache) useCache = false;
 
