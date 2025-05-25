@@ -1126,6 +1126,7 @@ class StarknetCoin extends Coin {
   @override
   Future<String> addressExplorer() async {
     final address = await getAddress();
+
     return blockExplorer
         .replaceFirst('/tx/', '/contract/')
         .replaceFirst(blockExplorerPlaceholder, address);
