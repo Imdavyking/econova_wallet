@@ -60,7 +60,6 @@ class _AIAgent extends State<AIAgent>
     }, onError: (error) {
       isListening.value = false;
       debugPrint('${error.errorMsg} - ${error.permanent}');
-      setState(() {});
     });
     setState(() {});
   }
@@ -68,14 +67,12 @@ class _AIAgent extends State<AIAgent>
   void _startListening() async {
     await _speechToText.listen(onResult: _onSpeechResult);
     _micAnimationController.repeat(reverse: true);
-    setState(() {});
   }
 
   void _stopListening() async {
     isListening.value = false;
     await _speechToText.stop();
     _micAnimationController.stop();
-    setState(() {});
   }
 
   @override
