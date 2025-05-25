@@ -915,23 +915,40 @@ window.addEventListener("beforeunload", () => {
   const seconds = Math.floor(activeTime / 1000);
 
   const data = {
+    action: "activeTime",
     url: window.location.href,
     duration: seconds,
     timestamp: new Date().toISOString(),
   };
-
-  console.log("AI Tracker Data unload:", JSON.stringify(data));
+  const interval = setInterval(() => {
+    if (isFlutterInAppWebViewReady) {
+      clearInterval(interval);
+      window.flutter_inappwebview.callHandler(
+        "AITrackerHandler",
+        JSON.stringify(data)
+      );
+    }
+  }, 100);
 });
 
 document.addEventListener("click", (e) => {
   const data = {
+    action: "click",
     timestamp: new Date().toISOString(),
     element: e.target.tagName,
     text: e.target.innerText.slice(0, 100),
     url: window.location.href
   };
 
-  console.log("AI Tracker Data:", JSON.stringify(data))
+  const interval = setInterval(() => {
+    if (isFlutterInAppWebViewReady) {
+      clearInterval(interval);
+      window.flutter_inappwebview.callHandler(
+        "AITrackerHandler",
+        JSON.stringify(data)
+      );
+    }
+  }, 100);
 });
 ''';
 

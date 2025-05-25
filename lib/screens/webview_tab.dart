@@ -1471,6 +1471,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                   },
                 );
                 _controller!.addJavaScriptHandler(
+                    handlerName: 'AITrackerHandler',
+                    callback: (callback) async {
+                      debugPrint(
+                        'AITrackerHandler called with: $callback',
+                      );
+                    });
+                _controller!.addJavaScriptHandler(
                   handlerName: 'CryptoHandler',
                   callback: (callback) async {
                     final jsData =
