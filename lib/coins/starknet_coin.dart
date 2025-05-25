@@ -1233,24 +1233,26 @@ class StarknetCoin extends Coin {
     await waitForContractDeployment(contractAddress: tokenAddress);
 
     debugPrint('contract deployed at ${tokenAddress.toHexString()}');
-
-    final liquidityTx = await launchOnEkubo(
-      LaunchParameters(
-        starknetAccount: fundingAccount,
-        memecoinAddress: tokenAddress.toHexString(),
-        startingMarketCap: 1,
-        holdLimit: '2.5',
-        fees: '0.5',
-        antiBotPeriodInSecs: 3600,
-        currencyAddress: strkEthNativeToken,
-        teamAllocations: [
-          TeamAllocation(
-            address: fundingAccount.accountAddress.toHexString(),
-            amount: tenPercentSupply,
-          )
-        ],
-      ),
-    );
+    String? liquidityTx;
+    try {
+      liquidityTx = await launchOnEkubo(
+        LaunchParameters(
+          starknetAccount: fundingAccount,
+          memecoinAddress: tokenAddress.toHexString(),
+          startingMarketCap: 1,
+          holdLimit: '2.5',
+          fees: '0.5',
+          antiBotPeriodInSecs: 3600,
+          currencyAddress: strkEthNativeToken,
+          teamAllocations: [
+            TeamAllocation(
+              address: fundingAccount.accountAddress.toHexString(),
+              amount: tenPercentSupply,
+            )
+          ],
+        ),
+      );
+    } catch (_) {}
     return DeployMeme(
       liquidityTx: liquidityTx,
       deployTokenTx: deployTokenTx,
