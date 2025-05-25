@@ -651,8 +651,13 @@ class StarknetCoin extends Coin {
     return jsonEncode(quote.toJson());
   }
 
-  Felt get delegationPoolAddress => Felt.fromHexString(
-      '0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b');
+  Felt get delegationPoolAddress => api.contains('sepolia')
+      ? Felt.fromHexString(
+          '0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b',
+        )
+      : Felt.fromHexString(
+          '0x02cb02c72e8a0975e69e88298443e984d965a49eab38f5bdde1f5072daa09cfe',
+        );
 
   Contract getStakingContract(Account account) {
     return Contract(
