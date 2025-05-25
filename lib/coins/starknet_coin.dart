@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
+import '../extensions/uint256_starknet.dart';
 import 'package:wallet_app/coins/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/screens/stake_token.dart';
@@ -1178,8 +1179,7 @@ class StarknetCoin extends Coin {
       fundingAccount.accountAddress,
       Felt.fromString(name),
       Felt.fromString(symbol),
-      totalSupplyUint.low,
-      totalSupplyUint.high,
+      ...totalSupplyUint.toCalldata(),
       salt,
     ];
 
@@ -1421,19 +1421,10 @@ class StarknetCoin extends Coin {
     final initialHolders = data.teamAllocations
         .map((allocation) => Felt.fromHexString(allocation.address))
         .toList();
-    final initialHoldersAmounts_ = data.teamAllocations
+    final initialHoldersAmounts = data.teamAllocations
         .map((allocation) => Uint256(
             low: Felt(allocation.amount * BigInt.from(scale)), high: Felt.zero))
         .toList();
-    List<Felt> initialHoldersAmounts = [
-      Felt.fromInt(initialHoldersAmounts_.length)
-    ];
-
-    for (int i = 0; i < initialHoldersAmounts_.length; i++) {
-      final amount = initialHoldersAmounts_[i];
-      initialHoldersAmounts.add(amount.low);
-      initialHoldersAmounts.add(amount.high);
-    }
 
     final transferCalldata = FunctionCall(
       calldata: [
@@ -1456,7 +1447,7 @@ class StarknetCoin extends Coin {
       Felt.fromDouble(holdLimitPercent * 100),
       Felt.fromHexString(data.quoteToken!.address),
       ...initialHolders.toCalldata(),
-      ...initialHoldersAmounts,
+      ...initialHoldersAmounts.toCalldata(),
       fees,
       Felt.fromInt(ekuboTickSpacing),
       Felt.fromInt(i129StartingTick.mag),
