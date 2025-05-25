@@ -1,5 +1,8 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'package:wallet_app/api/notification_api.dart';
+import 'package:wallet_app/coins/nfts/starknet_nft_coin.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/config/colors.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -7,22 +10,20 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-
-import '../coins/nfts/erc_nft_coin.dart';
 import '../model/transfer_trx_result.dart';
 
 class TransferStarknetNFT extends StatefulWidget {
-  final ERCNFTCoin coin;
+  final StarknetNFTCoin coin;
   final String? cryptoDomain;
   final String recipient;
   final String amount;
   const TransferStarknetNFT({
-    Key? key,
-    required this.coin,
+    super.key,
     this.cryptoDomain,
+    required this.coin,
     required this.recipient,
     required this.amount,
-  }) : super(key: key);
+  });
 
   @override
   _TransferStarknetNFTState createState() => _TransferStarknetNFTState();
@@ -33,7 +34,7 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
   bool isSending = false;
   late Timer timer;
   late SendTrxInfo trxInfo;
-  late ERCNFTCoin coin;
+  late StarknetNFTCoin coin;
 
   @override
   void initState() {
@@ -77,11 +78,11 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
     String trnFee = coin.getDefault();
     bool haveTrx = false;
     if (trxInfo.fee != 0.0) {
-      trnFee = '${Decimal.parse('${trxInfo.fee}')} ' + trnFee;
+      trnFee = '${Decimal.parse('${trxInfo.fee}')} $trnFee';
       haveTrx = true;
     }
     if (!haveTrx) {
-      trnFee = '--- ' + trnFee;
+      trnFee = '--- $trnFee';
     }
     return Scaffold(
       key: _scaffoldKey,
@@ -207,7 +208,9 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
                       onPressed: () async {
                         if (isSending) return;
                         if (await authenticate(context)) {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          }
                           if (mounted) {
                             setState(() {
                               isSending = true;
@@ -222,13 +225,15 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
                             if (transactionHash == null) {
                               throw Exception('Sending failed');
                             }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  localization.trxSent,
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    localization.trxSent,
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            }
 
                             String tokenSent = '#${coin.tokenId}';
 
@@ -243,15 +248,17 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
                                 isSending = false;
                               });
                             }
-                            if (Navigator.canPop(context)) {
-                              int count = 0;
-                              Navigator.popUntil(context, (route) {
-                                return count++ == 2;
-                              });
+                            if (context.mounted) {
+                              if (Navigator.canPop(context)) {
+                                int count = 0;
+                                Navigator.popUntil(context, (route) {
+                                  return count++ == 2;
+                                });
+                              }
                             }
                             return;
                           } catch (e) {
-                            if (mounted) {
+                            if (mounted && context.mounted) {
                               setState(() {
                                 isSending = false;
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -268,15 +275,17 @@ class _TransferStarknetNFTState extends State<TransferStarknetNFT> {
                             }
                           }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: Colors.red,
-                              content: Text(
-                                localization.authFailed,
-                                style: const TextStyle(color: Colors.white),
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: Colors.red,
+                                content: Text(
+                                  localization.authFailed,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         }
                       },
                       child: Padding(

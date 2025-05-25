@@ -3,6 +3,7 @@ import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/screens/contact.dart';
 import 'package:wallet_app/screens/transfer_erc_nft.dart';
+import 'package:wallet_app/screens/transfer_starknet_nft.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
@@ -356,7 +357,7 @@ class _SendStarknetNFTState extends State<SendStarknetNFT> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => TransferERCNFT(
+                            builder: (ctx) => TransferStarknetNFT(
                               amount:
                                   Decimal.parse(amountContrl.text).toString(),
                               recipient: recipient!,
