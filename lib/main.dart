@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:camera/camera.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
@@ -54,7 +53,6 @@ import '../coins/stellar_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 List<Coin> supportedChains = [];
-late List<CameraDescription> cameras;
 late String currencyJson;
 late String currencyJsonSearch;
 late String provider;
@@ -134,7 +132,6 @@ void main() async {
   await FlutterDownloader.initialize();
   await Hive.initFlutter();
   await dotenv.load();
-    cameras = await availableCameras();
   FocusManager.instance.primaryFocus?.unfocus();
   // make app always in portrait mode
   SystemChrome.setPreferredOrientations([

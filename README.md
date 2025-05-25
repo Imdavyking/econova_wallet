@@ -1,6 +1,6 @@
 # 🌿 Econova Wallet
 
-**Econova Wallet** is your all-in-one **AI-powered crypto sidekick**—built for **Starknet** and beyond. Whether you're **talking to your wallet**, **deploying the next viral meme coin**, or **getting paid to train AI while you browse**, Econova puts the future of Web3 in your pocket.
+**Econova Wallet** is your all-in-one **AI-powered crypto sidekick**—built for **Starknet** and beyond. Whether you're **talking to your wallet** or **deploying the next viral meme coin** Econova puts the future of Web3 in your pocket.
 
 Seamlessly manage your assets, stake tokens, dive into DeFi, and interact with dApps across **30+ blockchains**—all with voice commands, natural language, and a sleek, intuitive interface.
 
@@ -54,11 +54,6 @@ Seamlessly manage your assets, stake tokens, dive into DeFi, and interact with d
 
 - 🧩 **All Chains. One Wallet.**  
   No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
-
-- 🧠 **Crypto-Powered AI Browser**
-  A built-in browser that rewards users with crypto for assisting and training generative AI models.
-  Earn tokens by contributing to language improvement, labeling data, or interacting with AI tools inside the wallet.
-  Turn your time and knowledge into crypto rewards—_directly from the wallet app_.
 
 ---
 
