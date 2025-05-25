@@ -123,9 +123,7 @@ Future<Map> multivrNFT(
     await pref.put(tokenListKey, response.body);
     return {'msg': json.decode(response.body), 'success': true};
   } catch (_) {
-    if (kDebugMode) {
-      print(_);
-    }
+    if (kDebugMode) {}
     return userTokens;
   }
 }
@@ -236,12 +234,14 @@ Future<bool> authenticate(
 
   if (googleAuthEnabled) {
     FADetails faDetails = FADetails(secret: GoogleFA.getOTPSecret()!);
-    didAuthenticate = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => GoogleFAScreenVerify(faDetails: faDetails),
-      ),
-    );
+    if (context.mounted) {
+      didAuthenticate = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => GoogleFAScreenVerify(faDetails: faDetails),
+        ),
+      );
+    }
 
     return didAuthenticate ??= false;
   }
@@ -249,15 +249,17 @@ Future<bool> authenticate(
     didAuthenticate = await localAuthentication();
   }
   if (!didAuthenticate) {
-    didAuthenticate = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => Security(
-          isEnterPin: true,
-          useLocalAuth: useLocalAuth,
+    if (context.mounted) {
+      didAuthenticate = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => Security(
+            isEnterPin: true,
+            useLocalAuth: useLocalAuth,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   await enableScreenShot();
@@ -964,8 +966,6 @@ document.addEventListener("click", (e) => {
    
     $twProvider
 
-    $aITracker
-
 
     nightly.postMessage = (json) => {
       const interval = setInterval(() => {
@@ -1197,17 +1197,19 @@ Future navigateToDappBrowser(
     coin.rpc,
   );
 
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => Dapp(
-        provider: '$provider;$nightly',
-        webNotifier: webNotifer,
-        init: init,
-        data: data,
+  if (context.mounted) {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Dapp(
+          provider: '$provider;$nightly',
+          webNotifier: webNotifer,
+          init: init,
+          data: data,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 Future addEthereumChain({
@@ -2162,7 +2164,7 @@ signEVMTransaction({
 }) async {
   final coin = evmFromChainId(chainId)!;
 
-  final _wcClient = web3.Web3Client(
+  final wcClient = web3.Web3Client(
     coin.rpc,
     Client(),
   );
@@ -2273,7 +2275,7 @@ signEVMTransaction({
                 // first tab bar view widget
                 FutureBuilder(future: () async {
                   final bal =
-                      await _wcClient.getBalance(EthereumAddress.fromHex(from));
+                      await wcClient.getBalance(EthereumAddress.fromHex(from));
                   userBalance = bal.getInWei.toDouble();
 
                   transactionFee = await getEtherTransactionFee(
@@ -2293,14 +2295,14 @@ signEVMTransaction({
                   final List decodedResult = decodedFunction.decodedInputs;
 
                   if (decodedName == 'safeBatchTransferFrom') {
-                    String _sender = '${decodedResult[0]}';
-                    String _receiver = '${decodedResult[1]}';
+                    String sender = '${decodedResult[0]}';
+                    String receiver = '${decodedResult[1]}';
 
-                    List<dynamic> _nftIds = decodedResult[2];
-                    List<dynamic> _nftAmounts = decodedResult[3];
+                    List<dynamic> nftIds = decodedResult[2];
+                    List<dynamic> nftAmounts = decodedResult[3];
 
                     BigInt totalAmount = BigInt.zero;
-                    for (var amount in _nftAmounts) {
+                    for (var amount in nftAmounts) {
                       totalAmount += amount;
                     }
 
@@ -2308,20 +2310,20 @@ signEVMTransaction({
                         totalAmount == BigInt.one ? 'NFT' : 'NFTs';
 
                     // Prepare token IDs string
-                    String tokenIdsString = _nftIds.join(', ');
+                    String tokenIdsString = nftIds.join(', ');
 
                     message =
-                        "$totalAmount $nftOrNfts (IDs: $tokenIdsString) would be sent from $_sender to $_receiver.";
+                        "$totalAmount $nftOrNfts (IDs: $tokenIdsString) would be sent from $sender to $receiver.";
                   } else if (decodedName == 'safeTransferFrom') {
-                    String _sender = '${decodedResult[0]}';
-                    String _receiver = '${decodedResult[1]}';
-                    String _tokenId = '${decodedResult[2]}';
+                    String sender = '${decodedResult[0]}';
+                    String receiver = '${decodedResult[1]}';
+                    String tokenId = '${decodedResult[2]}';
 
                     message =
-                        "Transfer NFT $_tokenId ($to) from $_sender to $_receiver";
+                        "Transfer NFT $tokenId ($to) from $sender to $receiver";
                   } else if (decodedName == 'approve') {
-                    String _spender = '${decodedResult[0]}';
-                    BigInt _tokenAmt = decodedResult[1];
+                    String spender = '${decodedResult[0]}';
+                    BigInt tokenAmt = decodedResult[1];
                     final ftCoin = ERCFungibleCoin(
                       contractAddress_: to!,
                       geckoID: '',
@@ -2338,13 +2340,13 @@ signEVMTransaction({
                     final tokenDetails = await ftCoin.getERC20Meta();
                     final decimals = tokenDetails!.decimals;
 
-                    final _amount = _tokenAmt / BigInt.from(pow(10, decimals));
+                    final amount0 = tokenAmt / BigInt.from(pow(10, decimals));
 
                     message =
-                        "Allow $_spender to spend $_amount ${tokenDetails.symbol} ($to)";
+                        "Allow $spender to spend $amount0 ${tokenDetails.symbol} ($to)";
                   } else if (decodedName == 'transfer') {
-                    String _recipient = '${decodedResult[0]}';
-                    BigInt _tokenAmt = decodedResult[1];
+                    String recipient = '${decodedResult[0]}';
+                    BigInt tokenAmt = decodedResult[1];
                     final ftCoin = ERCFungibleCoin(
                       contractAddress_: to!,
                       rpc: coin.rpc,
@@ -2360,13 +2362,13 @@ signEVMTransaction({
                     );
                     final tokenDetails = await ftCoin.getERC20Meta();
                     final decimals = tokenDetails!.decimals;
-                    final amount = _tokenAmt / BigInt.from(pow(10, decimals));
+                    final amount = tokenAmt / BigInt.from(pow(10, decimals));
                     message =
-                        "Transfer $amount ${tokenDetails.symbol} ($to) to $_recipient";
+                        "Transfer $amount ${tokenDetails.symbol} ($to) to $recipient";
                   } else if (decodedName == 'transferFrom') {
-                    String _sender = '${decodedResult[0]}';
-                    String _recipient = '${decodedResult[1]}';
-                    BigInt _tokenAmt = decodedResult[2];
+                    String sender = '${decodedResult[0]}';
+                    String recipient = '${decodedResult[1]}';
+                    BigInt tokenAmt = decodedResult[2];
 
                     final ftCoin = ERCFungibleCoin(
                       contractAddress_: to!,
@@ -2383,9 +2385,9 @@ signEVMTransaction({
                     );
                     final tokenDetails = await ftCoin.getERC20Meta();
                     final decimals = tokenDetails!.decimals;
-                    final amount = _tokenAmt / BigInt.from(pow(10, decimals));
+                    final amount = tokenAmt / BigInt.from(pow(10, decimals));
                     message =
-                        "Transfer $amount ${tokenDetails.symbol} ($to) from $_sender to $_recipient";
+                        "Transfer $amount ${tokenDetails.symbol} ($to) from $sender to $recipient";
                   }
 
                   return true;
