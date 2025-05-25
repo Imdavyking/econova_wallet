@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:wallet_app/coins/nfts/starknet_nft_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/nft_image_webview.dart';
@@ -7,6 +8,7 @@ import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/send_starknet_nft.dart';
 import '../service/wallet_service.dart';
 
 class ViewStarknetNFTs extends StatefulWidget {
@@ -391,32 +393,55 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                         ),
                                         onPressed: () async {
                                           try {
-                                            // await Navigator.push(
-                                            //   context,
-                                            //   MaterialPageRoute(
-                                            //     builder: (ctx) => SendERCNFT(
-                                            //       coin: ERCNFTCoin(
-                                            //         name: name,
-                                            //         symbol: symbol,
-                                            //         tokenId: tokenId,
-                                            //         contractAddress_:
-                                            //             contractAddress,
-                                            //         rpc: nft.starknetCoin.rpc,
-                                            //         chainId: nft
-                                            //             .starknetCoin.chainId,
-                                            //         coinType: nft
-                                            //             .starknetCoin.coinType,
-                                            //         default_: nft
-                                            //             .starknetCoin.default_,
-                                            //         tokenType: tokenType,
-                                            //         blockExplorer: nft
-                                            //             .starknetCoin
-                                            //             .blockExplorer,
-                                            //         image: '',
-                                            //       ),
-                                            //     ),
-                                            //   ),
-                                            // );
+                                            final starkCoinInfo =
+                                                nft.starknetCoin;
+
+//                                                 The named parameter 'contractAddress' is required, but there's no corresponding argument.
+// Try adding the required argument.dartmissing_required_argument
+// The named parameter 'multiCallAddress' is required, but there's no corresponding argument.
+// Try adding the required argument.dartmissing_required_argument
+// The named parameter 'factoryAddress' is required, but there's no corresponding argument.
+// Try adding the required argument.dartmissing_required_argument
+// The named parameter 'tokenClassHash' is required, but there's no corresponding argument.
+// Try adding the required argument.da
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (ctx) =>
+                                                    SendStarknetNFT(
+                                                  coin: StarknetNFTCoin(
+                                                    name: name,
+                                                    symbol: symbol,
+                                                    tokenId: tokenId,
+                                                    contractAddress_:
+                                                        contractAddress,
+                                                    api: starkCoinInfo.api,
+                                                    default_:
+                                                        starkCoinInfo.default_,
+                                                    tokenType: tokenType,
+                                                    blockExplorer: starkCoinInfo
+                                                        .blockExplorer,
+                                                    classHash:
+                                                        starkCoinInfo.classHash,
+                                                    image: '',
+                                                    useStarkToken: starkCoinInfo
+                                                        .useStarkToken,
+                                                    multiCallAddress:
+                                                        starkCoinInfo
+                                                            .multiCallAddress,
+                                                    factoryAddress:
+                                                        starkCoinInfo
+                                                            .factoryAddress,
+                                                    tokenClassHash:
+                                                        starkCoinInfo
+                                                            .tokenClassHash,
+                                                    contractAddress:
+                                                        starkCoinInfo
+                                                            .contractAddress,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
                                           } catch (e) {
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context)

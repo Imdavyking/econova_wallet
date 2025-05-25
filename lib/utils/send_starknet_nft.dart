@@ -1,3 +1,4 @@
+import 'package:wallet_app/coins/nfts/starknet_nft_coin.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/screens/contact.dart';
@@ -19,11 +20,11 @@ import 'package:pinput/pinput.dart';
 import '../coins/nfts/erc_nft_coin.dart';
 import '../service/contact_service.dart';
 
-class SendERCNFT extends StatefulWidget {
-  final ERCNFTCoin coin;
+class SendStarknetNFT extends StatefulWidget {
+  final StarknetNFTCoin coin;
   final String? amount;
   final String? recipient;
-  const SendERCNFT({
+  const SendStarknetNFT({
     required this.coin,
     super.key,
     this.amount,
@@ -31,10 +32,10 @@ class SendERCNFT extends StatefulWidget {
   });
 
   @override
-  _SendERCNFTState createState() => _SendERCNFTState();
+  _SendStarknetNFTState createState() => _SendStarknetNFTState();
 }
 
-class _SendERCNFTState extends State<SendERCNFT> {
+class _SendStarknetNFTState extends State<SendStarknetNFT> {
   final recipientContrl = TextEditingController();
   final amountContrl = TextEditingController();
   final tokenIdContrl = TextEditingController();
