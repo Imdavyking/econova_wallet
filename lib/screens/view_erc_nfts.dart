@@ -179,7 +179,8 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                       String description = nftDetails.description ?? '';
 
                       String balance = nftDetails.balance;
-                      String? image = nftDetails.metadata.image;
+                      String? image =
+                          ipfsTohttp(nftDetails.metadata.image ?? '');
 
                       return SizedBox(
                         width: 250,
@@ -216,7 +217,7 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                               },
                               child: ListView(
                                 children: [
-                                  if (image != null && image.isNotEmpty)
+                                  if (image.isNotEmpty)
                                     SizedBox(
                                       height: 150,
                                       child: NFTImageWebview(

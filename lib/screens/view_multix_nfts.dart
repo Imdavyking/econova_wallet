@@ -17,9 +17,9 @@ import '../utils/send_multiver_nft.dart';
 class ViewMultixNFTs extends StatefulWidget {
   final MultiversxCoin coin;
   const ViewMultixNFTs({
-    Key? key,
+    super.key,
     required this.coin,
-  }) : super(key: key);
+  });
 
   @override
   State<ViewMultixNFTs> createState() => _ViewMultixNFTsState();

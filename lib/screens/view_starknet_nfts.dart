@@ -170,7 +170,7 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                       String description = nftDetails.description;
 
                       String balance = nftDetails.numberOfTokens;
-                      String? image = nftDetails.imageUrl;
+                      String? image = ipfsTohttp(nftDetails.imageUrl);
 
                       return SizedBox(
                         width: 250,
@@ -397,15 +397,6 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                           try {
                                             final starkCoinInfo =
                                                 nft.starknetCoin;
-
-//                                                 The named parameter 'contractAddress' is required, but there's no corresponding argument.
-// Try adding the required argument.dartmissing_required_argument
-// The named parameter 'multiCallAddress' is required, but there's no corresponding argument.
-// Try adding the required argument.dartmissing_required_argument
-// The named parameter 'factoryAddress' is required, but there's no corresponding argument.
-// Try adding the required argument.dartmissing_required_argument
-// The named parameter 'tokenClassHash' is required, but there's no corresponding argument.
-// Try adding the required argument.da
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
