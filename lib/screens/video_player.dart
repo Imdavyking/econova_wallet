@@ -3,7 +3,7 @@ import "package:video_player/video_player.dart";
 
 class VideoPlayerWidget extends StatefulWidget {
   final String url;
-  const VideoPlayerWidget({Key? key, required this.url}) : super(key: key);
+  const VideoPlayerWidget({super.key, required this.url});
 
   @override
   _VideoPlayerWidgetState createState() => _VideoPlayerWidgetState();
@@ -22,6 +22,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.url);
     return Scaffold(
       body: Center(
         child: _controller.value.isInitialized
