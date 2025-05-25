@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:starknet/starknet.dart';
+import 'package:starknet_provider/starknet_provider.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import '../../main.dart';
 
 class StarknetTTypes {
@@ -116,7 +121,51 @@ class StarknetNFTCoin extends StarknetCoin {
   @override
   Future<String?> transferToken(String amount, String to,
       {String? memo}) async {
-    return '';
+    print(tokenId);
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(walletData);
+
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
+    final fundingAccount = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
+
+    final List<Felt> calldata = [
+      Felt.fromHexString(response.address),
+      Felt.fromHexString(to),
+      ...Uint256.fromBigInt(tokenId).toCalldata(),
+      Felt.fromInt(0),
+      // BigInt.from(
+      //   double.parse(amount),
+      // ),
+    ];
+
+    final tx = await fundingAccount.execute(functionCalls: [
+      FunctionCall(
+        contractAddress: Felt.fromHexString(contractAddress_),
+        entryPointSelector: getSelectorByName('safe_transfer_from'),
+        calldata: calldata,
+      )
+    ]);
+    return tx.when(
+      result: (result) {
+        return result.transaction_hash;
+      },
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
     // await fillParameter(amount, to);
 
     // final client = Web3Client(
