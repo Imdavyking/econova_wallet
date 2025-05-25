@@ -251,10 +251,8 @@ class StarknetCoin extends Coin {
     }
     if (useCache) return userTokens;
     try {
-      address =
-          '0x031c0b3ce1e629066ff59578f212a1bd2db6efda0788d718fb5303df90292772';
       final url = Uri.parse(
-          'https://starknet-${enableTestNet ? "mainnet" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
+          'https://starknet-${enableTestNet ? "sepolia" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
       final response = await http.get(url);
       if (response.statusCode == 200) {
         await pref.put(tokenListKey, response.body);
