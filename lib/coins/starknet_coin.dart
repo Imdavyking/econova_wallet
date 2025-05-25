@@ -42,7 +42,7 @@ class StarknetCoin extends Coin {
   String rampID;
   String payScheme;
   String classHash;
-  String contractAddress;
+  String tokenContractAddress;
   bool useStarkToken;
   String multiCallAddress;
   String factoryAddress;
@@ -59,7 +59,7 @@ class StarknetCoin extends Coin {
     required this.payScheme,
     required this.rampID,
     required this.classHash,
-    required this.contractAddress,
+    required this.tokenContractAddress,
     required this.useStarkToken,
     required this.multiCallAddress,
     required this.factoryAddress,
@@ -78,7 +78,7 @@ class StarknetCoin extends Coin {
       rampID: json['rampID'],
       payScheme: json['payScheme'],
       classHash: json['classHash'],
-      contractAddress: json['contractAddress'],
+      tokenContractAddress: json['contractAddress'],
       useStarkToken: json['useStarkToken'],
       multiCallAddress: json['multiCallAddress'],
       factoryAddress: json['factoryAddress'],
@@ -365,7 +365,7 @@ class StarknetCoin extends Coin {
     data['payScheme'] = payScheme;
     data['rampID'] = rampID;
     data['classHash'] = classHash;
-    data['contractAddress'] = contractAddress;
+    data['contractAddress'] = tokenContractAddress;
     data['useStarkToken'] = useStarkToken;
 
     return data;
@@ -451,7 +451,7 @@ class StarknetCoin extends Coin {
     final provider = await apiProvider();
     final providerCall = await provider.call(
       request: FunctionCall(
-        contractAddress: Felt.fromHexString(contractAddress),
+        contractAddress: Felt.fromHexString(tokenContractAddress),
         entryPointSelector: getSelectorByName('balanceOf'),
         calldata: [Felt.fromHexString(address)],
       ),
@@ -501,7 +501,7 @@ class StarknetCoin extends Coin {
 
   @override
   String? tokenAddress() =>
-      getStarknetBlockchains().first.name == name ? null : contractAddress;
+      getStarknetBlockchains().first.name == name ? null : tokenContractAddress;
 
   @override
   Widget? getStakingPage() {
@@ -1107,7 +1107,7 @@ class StarknetCoin extends Coin {
     final maxFee = await fundingAccount.getEstimateMaxFeeForInvokeTx(
       functionCalls: [
         FunctionCall(
-          contractAddress: Felt.fromHexString(contractAddress),
+          contractAddress: Felt.fromHexString(tokenContractAddress),
           entryPointSelector: getSelectorByName("transfer"),
           calldata: [
             Felt.fromHexString(to),
@@ -1852,7 +1852,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress: strkNativeToken,
+        tokenContractAddress: strkNativeToken,
         useStarkToken: true,
         tokenClassHash: '',
         factoryAddress: '',
@@ -1865,7 +1865,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress: strkEthNativeToken,
+        tokenContractAddress: strkEthNativeToken,
         symbol: 'ETH (STRK)',
         name: 'Ethereum (STRK)',
         default_: 'ETH',
@@ -1894,7 +1894,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress: strkNativeToken,
+        tokenContractAddress: strkNativeToken,
         useStarkToken: true,
         tokenClassHash:
             '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
@@ -1908,7 +1908,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        contractAddress: strkEthNativeToken,
+        tokenContractAddress: strkEthNativeToken,
         symbol: 'ETH (STRK)',
         name: 'Ethereum (STRK)',
         default_: 'ETH',

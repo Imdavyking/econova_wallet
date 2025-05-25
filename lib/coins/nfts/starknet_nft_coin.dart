@@ -32,7 +32,7 @@ class StarknetNFTCoin extends StarknetCoin {
     required super.classHash,
     required super.api,
     required super.useStarkToken,
-    required super.contractAddress,
+    required super.tokenContractAddress,
     required super.multiCallAddress,
     required super.factoryAddress,
     required super.tokenClassHash,
@@ -60,7 +60,7 @@ class StarknetNFTCoin extends StarknetCoin {
       useStarkToken: json['useStarkToken'],
       multiCallAddress: json['multiCallAddress'],
       factoryAddress: json['factoryAddress'],
-      contractAddress: json['contractAddress'],
+      tokenContractAddress: json['contractAddress'],
       tokenClassHash: json['tokenClassHash'],
     );
   }
@@ -82,7 +82,7 @@ class StarknetNFTCoin extends StarknetCoin {
     data['useStarkToken'] = useStarkToken;
     data['multiCallAddress'] = multiCallAddress;
     data['factoryAddress'] = factoryAddress;
-    data['contractAddress'] = contractAddress;
+    data['contractAddress'] = tokenContractAddress;
     data['tokenClassHash'] = tokenClassHash;
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
@@ -93,28 +93,6 @@ class StarknetNFTCoin extends StarknetCoin {
 
   @override
   String get badgeImage => starkNetCoins.first.image;
-
-  // Future<void> fillParameter(String amount, String to) async {
-  // final address = await getAddress();
-
-  // if (tokenType == ERCFTTYPES.v721) {
-  //     parameters_ = [
-  //       EthereumAddress.fromHex(address),
-  //       EthereumAddress.fromHex(to),
-  //       tokenId,
-  //     ];
-  //   } else if (tokenType == ERCFTTYPES.v1155) {
-  //     parameters_ = [
-  //       EthereumAddress.fromHex(address),
-  //       EthereumAddress.fromHex(to),
-  //       tokenId,
-  //       BigInt.from(
-  //         double.parse(amount),
-  //       ),
-  //       Uint8List(1)
-  //     ];
-  //   }
-  // }
 
   @override
   Future<String?> transferToken(String amount, String to,
@@ -202,12 +180,11 @@ class StarknetNFTCoin extends StarknetCoin {
     final maxFee = await fundingAccount.getEstimateMaxFeeForInvokeTx(
       functionCalls: [
         FunctionCall(
-          contractAddress: Felt.fromHexString(contractAddress),
-          entryPointSelector: getSelectorByName("transfer"),
+          contractAddress: Felt.fromHexString(contractAddress_),
+          entryPointSelector: getSelectorByName("safe_transfer_from"),
           calldata: calldata,
         ),
       ],
-      useSTRKFee: useStarkToken,
     );
     final base = BigInt.from(10);
 

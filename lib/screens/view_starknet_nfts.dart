@@ -429,9 +429,9 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                                     tokenClassHash:
                                                         starkCoinInfo
                                                             .tokenClassHash,
-                                                    contractAddress:
+                                                    tokenContractAddress:
                                                         starkCoinInfo
-                                                            .contractAddress,
+                                                            .tokenContractAddress,
                                                   ),
                                                 ),
                                               ),
