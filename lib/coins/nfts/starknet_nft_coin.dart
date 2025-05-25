@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
@@ -121,7 +119,6 @@ class StarknetNFTCoin extends StarknetCoin {
   @override
   Future<String?> transferToken(String amount, String to,
       {String? memo}) async {
-    print(tokenId);
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(walletData);
 
@@ -145,10 +142,9 @@ class StarknetNFTCoin extends StarknetCoin {
       Felt.fromHexString(response.address),
       Felt.fromHexString(to),
       ...Uint256.fromBigInt(tokenId).toCalldata(),
+      if (tokenType == StarknetTTypes.v1155)
+        ...Uint256.fromBigInt(BigInt.from(double.parse(amount))).toCalldata(),
       Felt.fromInt(0),
-      // BigInt.from(
-      //   double.parse(amount),
-      // ),
     ];
 
     final tx = await fundingAccount.execute(functionCalls: [
@@ -166,40 +162,6 @@ class StarknetNFTCoin extends StarknetCoin {
         throw Exception("Error transfer (${error.code}): ${error.message}");
       },
     );
-    // await fillParameter(amount, to);
-
-    // final client = Web3Client(
-    //   rpc,
-    //   Client(),
-    // );
-    // final data = WalletService.getActiveKey(walletImportType)!.data;
-    // AccountData response = await importData(data);
-    // final credentials = EthPrivateKey.fromHex(response.privateKey!);
-
-    // final contract = DeployedContract(
-    //   contrAbi,
-    //   EthereumAddress.fromHex(
-    //     contractAddress_,
-    //   ),
-    // );
-
-    // ContractFunction transfer =
-    //     contract.findFunctionsByName('safeTransferFrom').toList()[0];
-
-    // final trans = await client.signTransaction(
-    //   credentials,
-    //   Transaction.callContract(
-    //     contract: contract,
-    //     function: transfer,
-    //     parameters: parameters_,
-    //   ),
-    //   chainId: chainId,
-    // );
-
-    // final transactionHash = await client.sendRawTransaction(trans);
-
-    // await client.dispose();
-    // return transactionHash;
   }
 
   @override
@@ -209,33 +171,47 @@ class StarknetNFTCoin extends StarknetCoin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    return 0;
-    // await fillParameter(amount, to);
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(walletData);
 
-    // String address = roninAddrToEth(await getAddress());
+    final provider = await apiProvider();
+    final chainId = await getChainId();
+    final signer = StarkAccountSigner(
+      signer: StarkSigner(
+        privateKey: Felt.fromHexString(
+          response.privateKey!,
+        ),
+      ),
+    );
+    final fundingAccount = Account(
+      provider: provider,
+      signer: signer,
+      accountAddress: Felt.fromHexString(response.address),
+      chainId: chainId,
+    );
 
-    // final sendingAddress = EthereumAddress.fromHex(address);
+    final List<Felt> calldata = [
+      Felt.fromHexString(response.address),
+      Felt.fromHexString(to),
+      ...Uint256.fromBigInt(tokenId).toCalldata(),
+      if (tokenType == StarknetTTypes.v1155)
+        ...Uint256.fromBigInt(BigInt.from(double.parse(amount))).toCalldata(),
+      Felt.fromInt(0),
+    ];
 
-    // final contract = DeployedContract(
-    //   contrAbi,
-    //   EthereumAddress.fromHex(tokenAddress()),
-    // );
+    final maxFee = await fundingAccount.getEstimateMaxFeeForInvokeTx(
+      functionCalls: [
+        FunctionCall(
+          contractAddress: Felt.fromHexString(contractAddress),
+          entryPointSelector: getSelectorByName("transfer"),
+          calldata: calldata,
+        ),
+      ],
+      useSTRKFee: useStarkToken,
+    );
+    final base = BigInt.from(10);
 
-    // final transfer =
-    //     contract.findFunctionsByName('safeTransferFrom').toList()[0];
-
-    // Uint8List contractData = transfer.encodeCall(parameters_);
-
-    // final transactionFee = await getEtherTransactionFee(
-    //   rpc,
-    //   contractData,
-    //   sendingAddress,
-    //   EthereumAddress.fromHex(
-    //     tokenAddress(),
-    //   ),
-    // );
-
-    // return transactionFee / pow(10, etherDecimals);
+    return maxFee.maxFee.toBigInt() / base.pow(decimals());
   }
 
   @override
