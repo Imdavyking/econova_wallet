@@ -137,7 +137,9 @@ class StarknetNFTCoin extends StarknetCoin {
         return result.transaction_hash;
       },
       error: (error) {
-        throw Exception("Error transfer (${error.code}): ${error.message}");
+        throw Exception(
+          "Error transfer (${error.code}): ${error.message} ${error.errorData}",
+        );
       },
     );
   }
