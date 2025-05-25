@@ -30,6 +30,8 @@ class _NFTImageWebviewState extends State<NFTImageWebview> {
   Future<void> _detectMimeType() async {
     try {
       final response = await http.head(Uri.parse(widget.imageUrl));
+      if (!mounted) return; // ✅ Always check before any setState
+
       if (response.statusCode == 200) {
         setState(() {
           mimeType = response.headers['content-type'];
@@ -42,6 +44,7 @@ class _NFTImageWebviewState extends State<NFTImageWebview> {
         });
       }
     } catch (e) {
+      if (!mounted) return; // ✅ Check again before calling setState
       setState(() {
         mimeType = 'error';
         isLoading = false;
