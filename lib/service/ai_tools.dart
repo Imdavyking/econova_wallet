@@ -95,8 +95,6 @@ class AItools {
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
 
-              
-
           return 'The address for "$contactName" on $coin is "$address"$memoText.';
         }
 
@@ -649,19 +647,20 @@ class AItools {
             initialSupply: initialSupply,
           );
 
-          if (memeData.deployTokenTx == null) {
-            return 'Failed to deploy meme token';
+          if (memeData.deployTokenTx == null || memeData.tokenAddress == null) {
+            return '❌ Failed to deploy meme token.';
           }
 
-          if (memeData.liquidityTx == null && memeData.deployTokenTx != null) {
-            return 'Failed to add liquidity for meme token but deployed token successfully. Transaction hash: ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}';
+          if (memeData.liquidityTx == null) {
+            return '''
+⚠️ Liquidity addition failed, but meme token was deployed successfully!
+
+✅ Token Address: ${memeData.tokenAddress}
+🔗 Deploy Tx Hash: ${coin.formatTxHash(memeData.deployTokenTx!)}
+''';
           }
 
-          final tokenAddress = memeData.tokenAddress;
-
-          if (tokenAddress == null) {
-            return 'Failed to deploy meme token';
-          }
+          final tokenAddress = memeData.tokenAddress!;
 
           final dexScreener = coin.getDexScreener(tokenAddress);
 
