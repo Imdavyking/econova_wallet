@@ -650,7 +650,7 @@ class StarknetCoin extends Coin {
   }
 
   Felt get delegationPoolAddress => Felt.fromHexString(
-        api.contains('sepolia')
+        enableTestNet
             ? '0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b'
             : '0x02cb02c72e8a0975e69e88298443e984d965a49eab38f5bdde1f5072daa09cfe',
       );
@@ -826,7 +826,7 @@ class StarknetCoin extends Coin {
       final delegationPoolContract = getStakingContract(account);
 
       final poolData = await delegationPoolContract.call(
-        api.contains('sepolia') ? 'pool_member_info_v1' : 'pool_member_info',
+        enableTestNet ? 'pool_member_info_v1' : 'pool_member_info',
         [account.accountAddress],
       );
 
