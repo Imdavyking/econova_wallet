@@ -390,46 +390,48 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                           ),
                                         ),
                                         onPressed: () async {
-                                          // try {
-                                          //   await Navigator.push(
-                                          //     context,
-                                          //     MaterialPageRoute(
-                                          //       builder: (ctx) => SendERCNFT(
-                                          //         coin: ERCNFTCoin(
-                                          //           name: name,
-                                          //           symbol: symbol,
-                                          //           tokenId: tokenId,
-                                          //           contractAddress_:
-                                          //               contractAddress,
-                                          //           rpc: nft.starknetCoin.rpc,
-                                          //           chainId: nft
-                                          //               .starknetCoin.chainId,
-                                          //           coinType: nft
-                                          //               .starknetCoin.coinType,
-                                          //           default_: nft
-                                          //               .starknetCoin.default_,
-                                          //           tokenType: tokenType,
-                                          //           blockExplorer: nft
-                                          //               .starknetCoin
-                                          //               .blockExplorer,
-                                          //           image: '',
-                                          //         ),
-                                          //       ),
-                                          //     ),
-                                          //   );
-                                          // } catch (e) {
-                                          //   ScaffoldMessenger.of(context)
-                                          //       .showSnackBar(
-                                          //     SnackBar(
-                                          //       backgroundColor: Colors.red,
-                                          //       content: Text(
-                                          //         e.toString(),
-                                          //         style: const TextStyle(
-                                          //             color: Colors.white),
-                                          //       ),
-                                          //     ),
-                                          //   );
-                                          // }
+                                          try {
+                                            // await Navigator.push(
+                                            //   context,
+                                            //   MaterialPageRoute(
+                                            //     builder: (ctx) => SendERCNFT(
+                                            //       coin: ERCNFTCoin(
+                                            //         name: name,
+                                            //         symbol: symbol,
+                                            //         tokenId: tokenId,
+                                            //         contractAddress_:
+                                            //             contractAddress,
+                                            //         rpc: nft.starknetCoin.rpc,
+                                            //         chainId: nft
+                                            //             .starknetCoin.chainId,
+                                            //         coinType: nft
+                                            //             .starknetCoin.coinType,
+                                            //         default_: nft
+                                            //             .starknetCoin.default_,
+                                            //         tokenType: tokenType,
+                                            //         blockExplorer: nft
+                                            //             .starknetCoin
+                                            //             .blockExplorer,
+                                            //         image: '',
+                                            //       ),
+                                            //     ),
+                                            //   ),
+                                            // );
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  backgroundColor: Colors.red,
+                                                  content: Text(
+                                                    e.toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
                                         },
                                         child: Text(
                                           localization.send,

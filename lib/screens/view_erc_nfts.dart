@@ -430,17 +430,19 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                               ),
                                             );
                                           } catch (e) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                backgroundColor: Colors.red,
-                                                content: Text(
-                                                  e.toString(),
-                                                  style: const TextStyle(
-                                                      color: Colors.white),
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  backgroundColor: Colors.red,
+                                                  content: Text(
+                                                    e.toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
                                                 ),
-                                              ),
-                                            );
+                                              );
+                                            }
                                           }
                                         },
                                         child: Text(
