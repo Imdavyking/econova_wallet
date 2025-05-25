@@ -322,3 +322,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
+
+// https://docs.blastapi.io/blast-documentation/apis-documentation/builder-api/starknet/nft/getwalletnftcollections for NFTs starknet

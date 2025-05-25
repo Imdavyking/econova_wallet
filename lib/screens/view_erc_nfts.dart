@@ -15,9 +15,9 @@ import '../coins/ethereum_coin.dart';
 class ViewErcNFTs extends StatefulWidget {
   final EthereumCoin ethCoin;
   const ViewErcNFTs({
-    Key? key,
+    super.key,
     required this.ethCoin,
-  }) : super(key: key);
+  });
 
   @override
   State<ViewErcNFTs> createState() => _ViewErcNFTsState();
@@ -85,11 +85,11 @@ class BlockChainNFTs extends StatefulWidget {
   final ScrollController controller;
   final EthereumCoin ethCoin;
   const BlockChainNFTs({
-    Key? key,
+    super.key,
     required this.controller,
     required this.ethCoin,
     required this.nftLoaded,
-  }) : super(key: key);
+  });
 
   @override
   State<BlockChainNFTs> createState() => _BlockChainNFTsState();
