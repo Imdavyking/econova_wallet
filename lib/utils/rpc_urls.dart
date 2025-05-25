@@ -893,7 +893,47 @@ Future setupWebViewWalletBridge(
         })();
         """;
 
-  print(twProvider);
+  const aITracker = '''
+let activeTime = 0;
+let lastActive = Date.now();
+
+function updateActiveTime() {
+  if (document.visibilityState === "hidden") {
+    activeTime += Date.now() - lastActive;
+  } else {
+    lastActive = Date.now();
+  }
+}
+
+document.addEventListener("visibilitychange", updateActiveTime);
+
+window.addEventListener("beforeunload", () => {
+  if (document.visibilityState === "visible") {
+    activeTime += Date.now() - lastActive;
+  }
+
+  const seconds = Math.floor(activeTime / 1000);
+
+  const data = {
+    url: window.location.href,
+    duration: seconds,
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log("AI Tracker Data unload:", JSON.stringify(data));
+});
+
+document.addEventListener("click", (e) => {
+  const data = {
+    timestamp: new Date().toISOString(),
+    element: e.target.tagName,
+    text: e.target.innerText.slice(0, 100),
+    url: window.location.href
+  };
+
+  console.log("AI Tracker Data:", JSON.stringify(data))
+});
+''';
 
   return '''
    (function() {
@@ -906,6 +946,8 @@ Future setupWebViewWalletBridge(
  
    
     $twProvider
+
+    $aITracker
 
 
     nightly.postMessage = (json) => {
