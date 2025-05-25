@@ -1,8 +1,9 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/coins/nfts/starknet_nft_coin.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/screens/contact.dart';
-import 'package:wallet_app/screens/transfer_erc_nft.dart';
 import 'package:wallet_app/screens/transfer_starknet_nft.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
@@ -13,11 +14,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
-// import 'package:cardano_wallet_sdk/cardano_wallet_sdk.dart' as cardano;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:pinput/pinput.dart';
-
 import '../coins/nfts/erc_nft_coin.dart';
 import '../service/contact_service.dart';
 

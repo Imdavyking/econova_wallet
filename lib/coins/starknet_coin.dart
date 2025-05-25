@@ -236,18 +236,34 @@ class StarknetCoin extends Coin {
   @override
   Widget? getNFTPage() => ViewStarknetNFTs(starknetCoin: this);
 
-  Future<List<StarknetNFT>> getStarknetNFTs({required String address}) async {
-    address =
-        '0x031c0b3ce1e629066ff59578f212a1bd2db6efda0788d718fb5303df90292772';
-    final url = Uri.parse(
-        'https://starknet-${enableTestNet ? "mainnet" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List<dynamic> nftsData = data['nfts'];
-      return nftsData.map((nft) => StarknetNFT.fromJson(nft)).toList();
-    } else {
-      throw Exception('Failed to load NFTs');
+  Future<List<StarknetNFT>> getStarknetNFTs({
+    required String address,
+    required bool useCache,
+  }) async {
+    final tokenListKey = 'tokenListKey_$api-$address/__$enableTestNet';
+    final tokenList = pref.get(tokenListKey);
+    List<StarknetNFT> userTokens = [];
+    if (tokenList != null) {
+      final tokensResponse = jsonDecode(tokenList);
+      final List<dynamic> nftsData = tokensResponse['nfts'];
+      userTokens = nftsData.map((nft) => StarknetNFT.fromJson(nft)).toList();
+    }
+    if (useCache) return userTokens;
+    try {
+      address =
+          '0x031c0b3ce1e629066ff59578f212a1bd2db6efda0788d718fb5303df90292772';
+      final url = Uri.parse(
+          'https://starknet-${enableTestNet ? "mainnet" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        await pref.put(tokenListKey, response.body);
+        final data = jsonDecode(response.body);
+        final List<dynamic> nftsData = data['nfts'];
+        return nftsData.map((nft) => StarknetNFT.fromJson(nft)).toList();
+      }
+      return userTokens;
+    } catch (e) {
+      return userTokens;
     }
   }
 

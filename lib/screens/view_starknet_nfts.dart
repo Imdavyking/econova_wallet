@@ -418,7 +418,8 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                                     api: starkCoinInfo.api,
                                                     default_:
                                                         starkCoinInfo.default_,
-                                                    tokenType: tokenType,
+                                                    tokenType:
+                                                        tokenType.toUpperCase(),
                                                     blockExplorer: starkCoinInfo
                                                         .blockExplorer,
                                                     classHash:

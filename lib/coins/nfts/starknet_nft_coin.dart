@@ -3,8 +3,8 @@ import 'package:wallet_app/coins/starknet_coin.dart';
 import '../../main.dart';
 
 class StarknetTTypes {
-  static String v1155 = 'erc1155';
-  static String v721 = 'erc721';
+  static String v1155 = 'ERC1155';
+  static String v721 = 'ERC721';
 }
 
 class StarknetNFTCoin extends StarknetCoin {
