@@ -9,9 +9,11 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 class SelectBlockchain extends StatefulWidget {
   final bool evmOnly;
   final bool removeCoin;
-  const SelectBlockchain(
-      {Key? key, this.evmOnly = false, this.removeCoin = true})
-      : super(key: key);
+  const SelectBlockchain({
+    super.key,
+    this.evmOnly = false,
+    this.removeCoin = true,
+  });
 
   @override
   State<SelectBlockchain> createState() => _SelectBlockchainState();
