@@ -9,7 +9,6 @@ import 'package:wallet_app/screens/need_deploy_widget.dart';
 import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_token.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
-import 'package:wallet_app/screens/unstake_token.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/format_money.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
