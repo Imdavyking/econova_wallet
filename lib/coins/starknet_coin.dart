@@ -232,6 +232,21 @@ class StarknetCoin extends Coin {
     return isAccepted ? declareResult : null;
   }
 
+  Future<List<NFT>> getStarknetNFTs({required String address}) async {
+    address =
+        '0x031c0b3ce1e629066ff59578f212a1bd2db6efda0788d718fb5303df90292772';
+    final url = Uri.parse(
+        'https://starknet-${enableTestNet ? "sepolia" : "mainnet"}.blastapi.io/$blastApiProjectId/builder/getWalletNFTs?walletAddress=$address');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List<dynamic> nftsData = data['nfts'];
+      return nftsData.map((nft) => NFT.fromJson(nft)).toList();
+    } else {
+      throw Exception('Failed to load NFTs');
+    }
+  }
+
   Future<String?> executeInvokeDapp(List<StarknetCall> calls) async {
     if (await needDeploy()) {
       await deployAccount();
@@ -2736,4 +2751,123 @@ class DeploymentDataResult {
     required this.version,
     required this.contractAddress,
   });
+}
+
+class NFT {
+  final String contractAddress;
+  final String contractName;
+  final String contractSymbol;
+  final String contractType;
+  final String tokenId;
+  final String minterAddress;
+  final int mintBlockNumber;
+  final int mintTimestamp;
+  final String mintTransactionHash;
+  final String numberOfTokens;
+  final String numberOfOwners;
+  final String ownerAddress;
+  final WalletBalance walletBalance;
+  final String tokenUri;
+  final String tokenMetadata;
+  final String name;
+  final String description;
+  final List<Attribute> attributes;
+  final String? externalLink;
+  final String imageUrl;
+  final String? animationUrl;
+
+  NFT({
+    required this.contractAddress,
+    required this.contractName,
+    required this.contractSymbol,
+    required this.contractType,
+    required this.tokenId,
+    required this.minterAddress,
+    required this.mintBlockNumber,
+    required this.mintTimestamp,
+    required this.mintTransactionHash,
+    required this.numberOfTokens,
+    required this.numberOfOwners,
+    required this.ownerAddress,
+    required this.walletBalance,
+    required this.tokenUri,
+    required this.tokenMetadata,
+    required this.name,
+    required this.description,
+    required this.attributes,
+    this.externalLink,
+    required this.imageUrl,
+    this.animationUrl,
+  });
+
+  factory NFT.fromJson(Map<String, dynamic> json) {
+    return NFT(
+      contractAddress: json['contractAddress'],
+      contractName: json['contractName'],
+      contractSymbol: json['contractSymbol'],
+      contractType: json['contractType'],
+      tokenId: json['tokenId'],
+      minterAddress: json['minterAddress'],
+      mintBlockNumber: json['mintBlockNumber'],
+      mintTimestamp: json['mintTimestamp'],
+      mintTransactionHash: json['mintTransactionHash'],
+      numberOfTokens: json['numberOfTokens'],
+      numberOfOwners: json['numberOfOwners'],
+      ownerAddress: json['ownerAddress'],
+      walletBalance: WalletBalance.fromJson(json['walletBalance']),
+      tokenUri: json['tokenUri'],
+      tokenMetadata: json['tokenMetadata'],
+      name: json['name'],
+      description: json['description'],
+      attributes: (json['attributes'] as List)
+          .map((attr) => Attribute.fromJson(attr))
+          .toList(),
+      externalLink: json['externalLink'],
+      imageUrl: json['imageUrl'],
+      animationUrl: json['animationUrl'],
+    );
+  }
+}
+
+class WalletBalance {
+  final String contractAddress;
+  final String contractType;
+  final String tokenId;
+  final String walletAddress;
+  final String tokenBalance;
+
+  WalletBalance({
+    required this.contractAddress,
+    required this.contractType,
+    required this.tokenId,
+    required this.walletAddress,
+    required this.tokenBalance,
+  });
+
+  factory WalletBalance.fromJson(Map<String, dynamic> json) {
+    return WalletBalance(
+      contractAddress: json['contractAddress'],
+      contractType: json['contractType'],
+      tokenId: json['tokenId'],
+      walletAddress: json['walletAddress'],
+      tokenBalance: json['tokenBalance'],
+    );
+  }
+}
+
+class Attribute {
+  final String traitType;
+  final List<String> value;
+
+  Attribute({
+    required this.traitType,
+    required this.value,
+  });
+
+  factory Attribute.fromJson(Map<String, dynamic> json) {
+    return Attribute(
+      traitType: json['trait_type'],
+      value: List<String>.from(json['value']),
+    );
+  }
 }
