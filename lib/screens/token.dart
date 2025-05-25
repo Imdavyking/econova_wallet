@@ -244,12 +244,10 @@ class _TokenState extends State<Token> {
                                                       width: 5,
                                                     ),
                                                     Text(
-                                                      crypto.changeSign +
-                                                          formatMoney(
-                                                            crypto.change,
-                                                            true,
-                                                          ) +
-                                                          '%',
+                                                      '${crypto.changeSign}${formatMoney(
+                                                        crypto.change,
+                                                        true,
+                                                      )}%',
                                                       style: TextStyle(
                                                         fontSize: 14,
                                                         color: crypto.color,
@@ -348,15 +346,17 @@ class _TokenState extends State<Token> {
                                                       _snackBarTransferBlocked();
                                                       return;
                                                     }
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (ctx) =>
-                                                            SendToken(
-                                                          tokenData: coin,
+                                                    if (context.mounted) {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (ctx) =>
+                                                              SendToken(
+                                                            tokenData: coin,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    );
+                                                      );
+                                                    }
                                                   },
                                             child: Container(
                                               width: 40,
@@ -397,15 +397,17 @@ class _TokenState extends State<Token> {
                                                 _snackBarTransferBlocked();
                                                 return;
                                               }
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (ctx) =>
-                                                      ReceiveToken(
-                                                    coin: coin,
+                                              if (context.mounted) {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (ctx) =>
+                                                        ReceiveToken(
+                                                      coin: coin,
+                                                    ),
                                                   ),
-                                                ),
-                                              );
+                                                );
+                                              }
                                             },
                                             child: Container(
                                               width: 40,
@@ -494,41 +496,6 @@ class _TokenState extends State<Token> {
                                               height: 5,
                                             ),
                                             const Text('Stake'),
-                                          ],
-                                        ),
-                                        const SizedBox(
-                                          width: 30,
-                                        ),
-                                        Column(
-                                          children: [
-                                            GestureDetector(
-                                              onTap: () async {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (ctx) =>
-                                                        UnStakeToken(
-                                                            tokenData: coin),
-                                                  ),
-                                                );
-                                              },
-                                              child: Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: const BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  color: appBackgroundblue,
-                                                ),
-                                                child: const Icon(
-                                                  FontAwesomeIcons.piggyBank,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              height: 5,
-                                            ),
-                                            const Text('Unstake'),
                                           ],
                                         ),
                                       ],
