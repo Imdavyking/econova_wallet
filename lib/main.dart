@@ -139,20 +139,20 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  // ErrorWidget.builder = (FlutterErrorDetails details) {
-  //   if (kReleaseMode) {
-  //     return Container();
-  //   }
-  //   return Container(
-  //     color: Colors.red,
-  //     child: Center(
-  //       child: Text(
-  //         details.exceptionAsString(),
-  //         style: const TextStyle(color: Colors.white),
-  //       ),
-  //     ),
-  //   );
-  // };
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    if (kReleaseMode) {
+      return Container();
+    }
+    return Container(
+      color: Colors.red,
+      child: Center(
+        child: Text(
+          details.exceptionAsString(),
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  };
 
   const secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
 
