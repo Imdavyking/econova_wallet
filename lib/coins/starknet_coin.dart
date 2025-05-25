@@ -78,7 +78,7 @@ class StarknetCoin extends Coin {
       rampID: json['rampID'],
       payScheme: json['payScheme'],
       classHash: json['classHash'],
-      tokenContractAddress: json['contractAddress'],
+      tokenContractAddress: json['tokenContractAddress'],
       useStarkToken: json['useStarkToken'],
       multiCallAddress: json['multiCallAddress'],
       factoryAddress: json['factoryAddress'],
@@ -365,7 +365,7 @@ class StarknetCoin extends Coin {
     data['payScheme'] = payScheme;
     data['rampID'] = rampID;
     data['classHash'] = classHash;
-    data['contractAddress'] = tokenContractAddress;
+    data['tokenContractAddress'] = tokenContractAddress;
     data['useStarkToken'] = useStarkToken;
 
     return data;
