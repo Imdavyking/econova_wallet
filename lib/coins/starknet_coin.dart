@@ -826,49 +826,53 @@ class StarknetCoin extends Coin {
   }
 
   Future<StakeInfo?> getStakeInfo(Account account) async {
-    final delegationPoolContract = getStakingContract(account);
+    try {
+      final delegationPoolContract = getStakingContract(account);
 
-    final poolData = await delegationPoolContract.call(
-      'pool_member_info_v1',
-      [account.accountAddress],
-    );
+      final poolData = await delegationPoolContract.call(
+        api.contains('sepolia') ? 'pool_member_info_v1' : 'pool_member_info',
+        [account.accountAddress],
+      );
 
-    if (poolData.length == 1) {
+      if (poolData.length == 1) {
+        return null;
+      }
+
+      final unwrappedRes = PoolMember.fromJson(poolData);
+
+      final rewardAddress = unwrappedRes.rewardAddress;
+      final stake = unwrappedRes.amount.toBigInt();
+      final pendingUnstakeAmount = unwrappedRes.unpoolAmount.toBigInt();
+
+      final totalStake = stake + pendingUnstakeAmount;
+      final pendingRewards = unwrappedRes.unclaimedRewards.toBigInt();
+      final unwrappedUnpoolTimestamp = unwrappedRes.unpoolTime;
+      DateTime? unlockDate = unwrappedUnpoolTimestamp != Felt.zero
+          ? DateTime.fromMillisecondsSinceEpoch(
+              unwrappedUnpoolTimestamp.toInt() * 1000)
+          : null;
+      PendingUnstake? pendingUnstake;
+
+      if (pendingUnstakeAmount > BigInt.zero && unlockDate != null) {
+        pendingUnstake = PendingUnstake(
+          amount: pendingUnstakeAmount,
+          unlockDate: unlockDate,
+          unlocked: DateTime.now().isAfter(unlockDate),
+        );
+      }
+
+      debugPrint('Pending Unstake: $totalStake');
+
+      return StakeInfo(
+        rewardAddress: rewardAddress, // Felt
+        stake: stake, // BigInt
+        totalStake: totalStake, // BigInt
+        pendingRewards: pendingRewards, // BigInt
+        pendingUnstake: pendingUnstake, // PendingUnstake?
+      );
+    } catch (e) {
       return null;
     }
-
-    final unwrappedRes = PoolMember.fromJson(poolData);
-
-    final rewardAddress = unwrappedRes.rewardAddress;
-    final stake = unwrappedRes.amount.toBigInt();
-    final pendingUnstakeAmount = unwrappedRes.unpoolAmount.toBigInt();
-
-    final totalStake = stake + pendingUnstakeAmount;
-    final pendingRewards = unwrappedRes.unclaimedRewards.toBigInt();
-    final unwrappedUnpoolTimestamp = unwrappedRes.unpoolTime;
-    DateTime? unlockDate = unwrappedUnpoolTimestamp != Felt.zero
-        ? DateTime.fromMillisecondsSinceEpoch(
-            unwrappedUnpoolTimestamp.toInt() * 1000)
-        : null;
-    PendingUnstake? pendingUnstake;
-
-    if (pendingUnstakeAmount > BigInt.zero && unlockDate != null) {
-      pendingUnstake = PendingUnstake(
-        amount: pendingUnstakeAmount,
-        unlockDate: unlockDate,
-        unlocked: DateTime.now().isAfter(unlockDate),
-      );
-    }
-
-    debugPrint('Pending Unstake: $totalStake');
-
-    return StakeInfo(
-      rewardAddress: rewardAddress, // Felt
-      stake: stake, // BigInt
-      totalStake: totalStake, // BigInt
-      pendingRewards: pendingRewards, // BigInt
-      pendingUnstake: pendingUnstake, // PendingUnstake?
-    );
   }
 
   @override
