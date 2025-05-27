@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:wallet_app/utils/solanasigner.dart';
+import 'package:wallet_app/utils/solana_signer.dart';
 
 Uint8List signEd25519(
     {required Uint8List message, required Uint8List privateKey}) {

@@ -18,7 +18,7 @@ class UserBalance extends StatefulWidget {
   final Widget? mustIcon;
   final bool seperate;
   const UserBalance({
-    Key? key,
+    super.key,
     required this.symbol,
     required this.balance,
     this.haveValue = true,
@@ -30,7 +30,7 @@ class UserBalance extends StatefulWidget {
     this.iconDivider,
     this.reversed = false,
     this.mustIcon,
-  }) : super(key: key);
+  });
 
   @override
   State<UserBalance> createState() => _UserBalanceState();

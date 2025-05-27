@@ -11,7 +11,7 @@ import '../main.dart';
 import '../utils/app_config.dart';
 
 class Portfolio extends StatefulWidget {
-  const Portfolio({Key? key}) : super(key: key);
+  const Portfolio({super.key});
 
   @override
   State<Portfolio> createState() => _PortfolioState();
@@ -66,7 +66,6 @@ class _PortfolioState extends State<Portfolio> {
     } catch (_, sk) {
       if (kDebugMode) {
         print(sk);
-        print(_);
       }
     }
   }

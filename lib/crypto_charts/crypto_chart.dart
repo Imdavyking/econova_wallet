@@ -1,4 +1,4 @@
-// ignore_for_file: implementation_imports
+// ignore_for_file: implementation_imports, library_prefixes
 
 import 'dart:convert';
 import 'dart:math';
@@ -22,9 +22,9 @@ import '../utils/app_config.dart';
 class CryptoChart extends StatefulWidget {
   final Coin coin;
   const CryptoChart({
-    Key? key,
+    super.key,
     required this.coin,
-  }) : super(key: key);
+  });
 
   @override
   State<CryptoChart> createState() => _CryptoChartState();
@@ -277,9 +277,9 @@ class _CryptoChartState extends State<CryptoChart> {
                                     animate: false,
                                   );
                                 } else {
-                                  return Column(
+                                  return const Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
+                                    children: [
                                       Loader(),
                                     ],
                                   );

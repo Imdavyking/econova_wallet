@@ -57,7 +57,7 @@ class SSS {
   /// Convert hex string to Uint8List
   Uint8List hexToU8(String hex) {
     if (hex.length % 2 == 1) {
-      hex = "0" + hex;
+      hex = "0$hex";
     }
 
     int len = hex.length ~/ 2;
@@ -87,7 +87,7 @@ class SSS {
     String hexdata = number.toRadixString(16);
     int n = 64 - hexdata.length;
     for (int i = 0; i < n; i++) {
-      hexdata = "0" + hexdata;
+      hexdata = "0$hexdata";
     }
     return base64Url.encode(hexToU8(hexdata));
   }
@@ -103,7 +103,7 @@ class SSS {
     String hexdata = number.toRadixString(16);
     int n = 64 - hexdata.length;
     for (int i = 0; i < n; i++) {
-      hexdata = "0" + hexdata;
+      hexdata = "0$hexdata";
     }
     return base64Url.encode(utf8.encode(hexdata));
   }
@@ -119,7 +119,7 @@ class SSS {
     String hexdata = number.toRadixString(16);
     int n = 64 - hexdata.length;
     for (int i = 0; i < n; i++) {
-      hexdata = "0" + hexdata;
+      hexdata = "0$hexdata";
     }
     return hexdata;
   }
@@ -173,7 +173,7 @@ class SSS {
       String tmp = s.toRadixString(16);
       int n = 64 - tmp.length;
       for (int j = 0; j < n; j++) {
-        tmp = "0" + tmp;
+        tmp = "0$tmp";
       }
       hexData = hexData + tmp;
     }

@@ -1,9 +1,11 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 
 class JsonViewer extends StatefulWidget {
   final dynamic jsonObj;
   final double? fontSize;
-  const JsonViewer(this.jsonObj, {Key? key, this.fontSize}) : super(key: key);
+  const JsonViewer(this.jsonObj, {super.key, this.fontSize});
   @override
   _JsonViewerState createState() => _JsonViewerState();
 }
@@ -148,6 +150,7 @@ class JsonObjectViewerState extends State<JsonObjectViewer> {
     } else if (entry.value is String) {
       return Expanded(
           child: Text(
+        // ignore: prefer_interpolation_to_compose_strings, unnecessary_string_escapes
         '\"' + entry.value + '\"',
         style: TextStyle(color: Colors.redAccent, fontSize: widget.fontSize),
       ));
@@ -233,10 +236,10 @@ class JsonArrayViewer extends StatefulWidget {
 
   const JsonArrayViewer(
     this.jsonArray, {
-    Key? key,
+    super.key,
     this.notRoot = false,
     this.fontSize,
-  }) : super(key: key);
+  });
 
   @override
   _JsonArrayViewerState createState() => _JsonArrayViewerState();
@@ -329,7 +332,7 @@ class _JsonArrayViewerState extends State<JsonArrayViewer> {
     } else if (content is String) {
       return Expanded(
           child: Text(
-        '\"' + content + '\"',
+        '"$content"',
         style: TextStyle(color: Colors.redAccent, fontSize: widget.fontSize),
       ));
     } else if (content is bool) {

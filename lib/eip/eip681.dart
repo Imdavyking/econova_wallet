@@ -37,11 +37,7 @@ class EIP681 {
       }
     }
 
-    String fullRegex = ('^ethereum:(' +
-        (prefix ?? '') +
-        '-)?' +
-        (addressRegex) +
-        '\\@?([\\w]*)*\\/?([\\w]*)*');
+    String fullRegex = ('^ethereum:(${prefix ?? ''}-)?$addressRegex\\@?([\\w]*)*\\/?([\\w]*)*');
 
     RegExp regex = RegExp(fullRegex);
 
@@ -153,6 +149,6 @@ class EIP681 {
       }).join('&');
     }
 
-    return "ethereum:${prefix != null ? prefix + '-' : ''}$targetAddress${chainId != null ? '@$chainId' : ''}${functionName != null ? '/$functionName' : ''}${query != null ? '?' + query : ''}";
+    return "ethereum:${prefix != null ? '$prefix-' : ''}$targetAddress${chainId != null ? '@$chainId' : ''}${functionName != null ? '/$functionName' : ''}${query != null ? '?$query' : ''}";
   }
 }

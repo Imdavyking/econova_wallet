@@ -7,12 +7,12 @@ class HideBalanceWidget extends StatelessWidget {
   final Widget? iconDivider;
   final Widget? iconSuffix;
   const HideBalanceWidget({
-    Key? key,
+    super.key,
     this.iconSize,
     this.iconColor,
     this.iconDivider,
     this.iconSuffix,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

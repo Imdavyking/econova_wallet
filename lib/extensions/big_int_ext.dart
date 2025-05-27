@@ -29,12 +29,12 @@ extension BigIntExt on String {
 
 extension BigIntExtension on BigInt {
   Uint8List toUint8List() {
-    final _byteMask = BigInt.from(0xff);
+    final byteMask = BigInt.from(0xff);
     var number = this;
     var size = (number.bitLength + 7) >> 3;
     var result = Uint8List(size);
     for (var i = 0; i < size; i++) {
-      result[size - i - 1] = (number & _byteMask).toInt();
+      result[size - i - 1] = (number & byteMask).toInt();
       number = number >> 8;
     }
     return result;

@@ -17,12 +17,11 @@ class GetBlockChainWidget extends StatefulWidget {
   final Coin coin;
 
   const GetBlockChainWidget({
-    Key? key,
+    super.key,
     required Coin coin_,
     required Widget cryptoAmount_,
   })  : coin = coin_,
-        cryptoAmount = cryptoAmount_,
-        super(key: key);
+        cryptoAmount = cryptoAmount_;
 
   @override
   State<GetBlockChainWidget> createState() => _GetBlockChainWidgetState();
@@ -100,21 +99,15 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
         color: color,
       );
       if (mounted) setState(() {});
-    } catch (_) {
-      if (kDebugMode) {
-        print(_);
-      }
-    }
+    } catch (_) {}
   }
 
   Widget _buildPriceUI() {
     return Text(
-      cryptoInfo!.changeSign +
-          formatMoney(
-            cryptoInfo!.change,
-            true,
-          ) +
-          '%',
+      '${cryptoInfo!.changeSign}${formatMoney(
+        cryptoInfo!.change,
+        true,
+      )}%',
       style: TextStyle(
         fontSize: 12,
         color: cryptoInfo!.color,
@@ -177,8 +170,8 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
                             ],
                           )
                         else
-                          Row(
-                            children: const [
+                          const Row(
+                            children: [
                               Text(
                                 '\$-',
                                 style: TextStyle(

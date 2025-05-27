@@ -1,7 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
 import 'dart:typed_data';
-
 import 'package:base32/base32.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import './blake2bhash.dart';

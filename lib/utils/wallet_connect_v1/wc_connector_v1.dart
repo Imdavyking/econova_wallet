@@ -58,10 +58,10 @@ class WcConnectorV1 {
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: CachedNetworkImage(
                     imageUrl: ipfsTohttp(peerMeta.icons.first),
-                    placeholder: (context, url) => Column(
+                    placeholder: (context, url) => const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         SizedBox(
                           width: 20,
                           height: 20,
@@ -127,10 +127,14 @@ class WcConnectorV1 {
                             ),
                           );
                         }
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       } catch (e) {
                         wcClient.rejectSession();
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       }
                     },
                     child: Text(localization.confirm),
@@ -244,14 +248,14 @@ class WcConnectorV1 {
           EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String _privateKey = response.privateKey!;
+          String privateKey = response.privateKey!;
 
-          Web3Client _web3client = Web3Client(
+          Web3Client web3client = Web3Client(
             coin.rpc,
             http.Client(),
           );
-          final creds = EthPrivateKey.fromHex(_privateKey);
-          final tx = await _web3client.signTransaction(
+          final creds = EthPrivateKey.fromHex(privateKey);
+          final tx = await web3client.signTransaction(
             creds,
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: wcClient.chainId,
@@ -266,7 +270,9 @@ class WcConnectorV1 {
         } catch (e) {
           wcClient.rejectRequest(id: id);
         } finally {
-          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
         }
       },
       onReject: () {
@@ -296,6 +302,7 @@ class WcConnectorV1 {
       onConfirm: () async {
         await wcClient.updateSession(chainId: chainIdNew);
         wcClient.approveRequest<void>(id: id, result: null);
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Changed network to $chainIdNew.'),
         ));
@@ -323,14 +330,14 @@ class WcConnectorV1 {
           EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String _privateKey = response.privateKey!;
+          String privateKey = response.privateKey!;
 
-          Web3Client _web3client = Web3Client(
+          Web3Client web3client = Web3Client(
             coin.rpc,
             http.Client(),
           );
-          final creds = EthPrivateKey.fromHex(_privateKey);
-          final txhash = await _web3client.sendTransaction(
+          final creds = EthPrivateKey.fromHex(privateKey);
+          final txhash = await web3client.sendTransaction(
             creds,
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: wcClient.chainId,
@@ -343,7 +350,9 @@ class WcConnectorV1 {
         } catch (e) {
           wcClient.rejectRequest(id: id);
         } finally {
-          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
         }
       },
       onReject: () {
@@ -404,13 +413,13 @@ class WcConnectorV1 {
         EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
         final walletData = WalletService.getActiveKey(walletImportType)!.data;
         final response = await coin.importData(walletData);
-        String _privateKey = response.privateKey!;
+        String privateKey = response.privateKey!;
 
         late String signedDataHex;
-        final credentials = EthPrivateKey.fromHex(_privateKey);
+        final credentials = EthPrivateKey.fromHex(privateKey);
         if (ethereumSignMessage.type == WCSignType.TYPED_MESSAGE) {
           signedDataHex = EthSigUtil.signTypedData(
-            privateKey: _privateKey,
+            privateKey: privateKey,
             jsonData: ethereumSignMessage.data!,
             version: TypedDataVersion.V4,
           );
@@ -424,7 +433,7 @@ class WcConnectorV1 {
         } else if (ethereumSignMessage.type == WCSignType.MESSAGE) {
           try {
             signedDataHex = EthSigUtil.signMessage(
-              privateKey: _privateKey,
+              privateKey: privateKey,
               message: txDataToUintList(
                 ethereumSignMessage.data!,
               ),
@@ -443,7 +452,9 @@ class WcConnectorV1 {
           id: id,
           result: signedDataHex,
         );
-        Navigator.pop(context);
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
       },
       onReject: () {
         wcClient.rejectRequest(id: id);

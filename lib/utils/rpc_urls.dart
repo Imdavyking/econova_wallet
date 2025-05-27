@@ -1,5 +1,3 @@
-// ignore_for_file: unused_local_variable
-
 import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
@@ -12,9 +10,6 @@ import 'package:near_api_flutter/near_api_flutter.dart' hide Account;
 import 'package:on_chain/on_chain.dart' hide Permission;
 import 'package:sui/utils/sha.dart';
 import '../coins/near_coin.dart';
-// ignore: implementation_imports, unused_import
-import 'package:near_api_flutter/src/models/actions/dapp_function.dart'
-    as near_borsh_dapp;
 import '../model/near_trx_obj.dart' as near_obj;
 import '../screens/google_fa/fa_details.dart';
 import '../screens/google_fa/google_fa_screen_verify.dart';
@@ -901,6 +896,7 @@ Future setupWebViewWalletBridge(
         })();
         """;
 
+  // ignore: unused_local_variable
   const aITracker = '''
 let activeTime = 0;
 let lastActive = Date.now();
@@ -2761,8 +2757,6 @@ signStarkNetTransaction({
 }) async {
   final localization = AppLocalizations.of(context)!;
 
-  String info = localization.info;
-
   ValueNotifier<bool> isSigning = ValueNotifier(false);
 
   slideUpPanel(
@@ -3174,14 +3168,7 @@ signNearTransaction({
   String? name,
   required String symbol,
 }) async {
-  double userBalance = 0;
-
-  Uint8List trxDataList = Uint8List.fromList([]);
-  double transactionFee = 0;
-
   final localization = AppLocalizations.of(context)!;
-
-  String info = localization.info;
 
   ValueNotifier<bool> isSigning = ValueNotifier(false);
   slideUpPanel(

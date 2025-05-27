@@ -13,8 +13,7 @@ class UserDetailsPlaceHolder extends StatefulWidget {
 
   final double? textSize;
 
-  const UserDetailsPlaceHolder({Key? key, this.size, this.textSize})
-      : super(key: key);
+  const UserDetailsPlaceHolder({super.key, this.size, this.textSize});
 
   @override
   State<UserDetailsPlaceHolder> createState() => _UserDetailsPlaceHolderState();

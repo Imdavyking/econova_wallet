@@ -1,5 +1,4 @@
 import 'package:encrypt/encrypt.dart' as encrypt;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../coins/ethereum_coin.dart';
 
@@ -19,7 +18,6 @@ const browserUrl =
 // const browserUrl = 'https://duckduckgo.com/';
 const oneInchApi = "https://api.1inch.dev";
 const oneInceApiKey = 'cc7YbgSI5NA9t5KGLa00uNdklhGFxJhi';
-const unlockAI = false;
 
 // dapp links
 const blogUrl = "https://www.starknet.io/blog/";

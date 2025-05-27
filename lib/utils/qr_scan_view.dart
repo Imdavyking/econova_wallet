@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,7 @@ import 'package:scan/scan.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class QRScanView extends StatefulWidget {
-  const QRScanView({Key? key}) : super(key: key);
+  const QRScanView({super.key});
 
   @override
   _QRScanViewState createState() => _QRScanViewState();
@@ -101,6 +103,7 @@ class _QRScanViewState extends State<QRScanView> with WidgetsBindingObserver {
                         context: context,
                         onSelect: (XFile file) async {
                           final data = await Scan.parse(file.path);
+                          if (!context.mounted) return;
                           if (data != null) {
                             Navigator.pop(context, data);
                           } else {
