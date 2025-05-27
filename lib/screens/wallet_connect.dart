@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:wallet_app/screens/wallet_connect_preview_v1.dart';
 import 'package:wallet_app/screens/wallet_connect_preview_v2.dart';
@@ -16,7 +18,7 @@ import '../utils/qr_scan_view.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 
 class WalletConnect extends StatefulWidget {
-  const WalletConnect({Key? key}) : super(key: key);
+  const WalletConnect({super.key});
 
   @override
   _WalletConnectState createState() => _WalletConnectState();
@@ -269,7 +271,6 @@ class _WalletConnectState extends State<WalletConnect> {
                                     (DismissDirection direction) async {
                                   if (direction.name == 'endToStart') {
                                     try {
-                                      // WcConnectorV2.signClient.session.delete(e.id); //TODO: delete
                                       return true;
                                     } catch (_) {
                                       return false;
@@ -323,13 +324,13 @@ class _WalletConnectState extends State<WalletConnect> {
                                                       ),
                                                       placeholder:
                                                           (context, url) =>
-                                                              Column(
+                                                              const Column(
                                                         mainAxisAlignment:
                                                             MainAxisAlignment
                                                                 .center,
                                                         mainAxisSize:
                                                             MainAxisSize.min,
-                                                        children: const [
+                                                        children: [
                                                           SizedBox(
                                                             width: 20,
                                                             height: 20,
@@ -490,13 +491,13 @@ class _WalletConnectState extends State<WalletConnect> {
                                                         .peerMeta.icons[0],
                                                   ),
                                                   placeholder: (context, url) =>
-                                                      Column(
+                                                      const Column(
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
                                                             .center,
                                                     mainAxisSize:
                                                         MainAxisSize.min,
-                                                    children: const [
+                                                    children: [
                                                       SizedBox(
                                                         width: 20,
                                                         height: 20,

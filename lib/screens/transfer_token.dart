@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'dart:math';
 import 'package:wallet_app/components/loader.dart';
@@ -23,13 +25,13 @@ class TransferToken extends StatefulWidget {
   final String amount;
   final String? memo;
   const TransferToken({
-    Key? key,
+    super.key,
     required this.coin,
     this.cryptoDomain,
     required this.recipient,
     this.memo,
     required this.amount,
-  }) : super(key: key);
+  });
 
   @override
   _TransferTokenState createState() => _TransferTokenState();
@@ -84,11 +86,11 @@ class _TransferTokenState extends State<TransferToken> {
     String trnFee = widget.coin.getDefault();
     bool haveTrx = false;
     if (trxInfo.fee != 0.0) {
-      trnFee = '${Decimal.parse('${trxInfo.fee}')} ' + trnFee;
+      trnFee = '${Decimal.parse('${trxInfo.fee}')} $trnFee';
       haveTrx = true;
     }
     if (!haveTrx) {
-      trnFee = '--- ' + trnFee;
+      trnFee = '--- $trnFee';
     }
     return Scaffold(
       key: _scaffoldKey,
@@ -218,6 +220,7 @@ class _TransferTokenState extends State<TransferToken> {
                           : () async {
                               if (isSending) return;
                               if (await authenticate(context)) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context)
                                     .hideCurrentSnackBar();
                                 if (mounted) {
@@ -242,6 +245,7 @@ class _TransferTokenState extends State<TransferToken> {
                                   if (transactionHash == null) {
                                     throw Exception('Sending failed');
                                   }
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -301,6 +305,7 @@ class _TransferTokenState extends State<TransferToken> {
                                       isSending = false;
                                     });
                                   }
+                                  if (!context.mounted) return;
                                   if (Navigator.canPop(context)) {
                                     int count = 0;
                                     Navigator.popUntil(context, (route) {
@@ -330,6 +335,7 @@ class _TransferTokenState extends State<TransferToken> {
                                   }
                                 }
                               } else {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: Colors.red,

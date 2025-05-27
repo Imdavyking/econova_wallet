@@ -8,7 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class OpenAppPinFailed extends StatefulWidget {
   final int? remainSec;
-  const OpenAppPinFailed({Key? key, this.remainSec}) : super(key: key);
+  const OpenAppPinFailed({super.key, this.remainSec});
 
   @override
   State<OpenAppPinFailed> createState() => _OpenAppPinFailedState();

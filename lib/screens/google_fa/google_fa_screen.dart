@@ -9,7 +9,7 @@ import 'fa_details.dart';
 import 'google_fa_screen_verify.dart';
 
 class GoogleFAScreen extends StatefulWidget {
-  const GoogleFAScreen({Key? key}) : super(key: key);
+  const GoogleFAScreen({super.key});
 
   @override
   State<GoogleFAScreen> createState() => _GoogleFAScreenState();
@@ -102,7 +102,7 @@ class _GoogleFAScreenState extends State<GoogleFAScreen> {
                                 await Clipboard.setData(ClipboardData(
                                   text: value.secret,
                                 ));
-
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -160,6 +160,7 @@ class _GoogleFAScreenState extends State<GoogleFAScreen> {
                               if (verified == null) return;
 
                               if (verified == false) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -174,7 +175,7 @@ class _GoogleFAScreenState extends State<GoogleFAScreen> {
                               await GoogleFA.saveOTPSecret(
                                 secret: value.secret,
                               );
-
+                              if (!context.mounted) return;
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(

@@ -10,7 +10,7 @@ import 'google_fa_screen.dart';
 
 class GoogleFAStatus extends StatefulWidget {
   static ValueNotifier<FADetails?> faDetails = ValueNotifier(null);
-  const GoogleFAStatus({Key? key}) : super(key: key);
+  const GoogleFAStatus({super.key});
 
   @override
   State<GoogleFAStatus> createState() => _GoogleFAStatusState();
@@ -35,6 +35,7 @@ class _GoogleFAStatusState extends State<GoogleFAStatus> {
         activeColor: appBackgroundblue,
         onChanged: (bool enable) async {
           if (!await authenticate(context)) {
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -49,6 +50,7 @@ class _GoogleFAStatusState extends State<GoogleFAStatus> {
           }
 
           if (enable) {
+            if (!context.mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(

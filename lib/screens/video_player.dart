@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import "package:video_player/video_player.dart";
 
@@ -22,7 +24,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    print(widget.url);
     return Scaffold(
       body: Center(
         child: _controller.value.isInitialized

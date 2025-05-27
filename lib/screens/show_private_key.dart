@@ -6,7 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 class ShowPrivateKey extends StatelessWidget {
   final String data;
-  const ShowPrivateKey({Key? key, required this.data}) : super(key: key);
+  const ShowPrivateKey({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class ShowPrivateKey extends StatelessWidget {
                       await Clipboard.setData(ClipboardData(
                         text: data,
                       ));
-
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(

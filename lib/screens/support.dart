@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:validators/validators.dart';
@@ -7,7 +9,7 @@ import '../config/colors.dart';
 import '../utils/app_config.dart';
 
 class Support extends StatefulWidget {
-  const Support({Key? key}) : super(key: key);
+  const Support({super.key});
 
   @override
   _SupportState createState() => _SupportState();
@@ -125,7 +127,7 @@ class _SupportState extends State<Support> {
                           throw Exception("message can not be empty");
                         }
                         await Future.delayed(const Duration(seconds: 2));
-
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.green,

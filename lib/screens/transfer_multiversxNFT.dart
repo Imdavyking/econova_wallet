@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'package:wallet_app/api/notification_api.dart';
 import 'package:wallet_app/coins/nfts/multiv_nft_coin.dart';
@@ -17,12 +19,12 @@ class TransferMultiversxNFT extends StatefulWidget {
   final String recipient;
   final String amount;
   const TransferMultiversxNFT({
-    Key? key,
+    super.key,
     required this.coin,
     this.cryptoDomain,
     required this.recipient,
     required this.amount,
-  }) : super(key: key);
+  });
 
   @override
   _TransferMultiversxNFTState createState() => _TransferMultiversxNFTState();
@@ -77,11 +79,11 @@ class _TransferMultiversxNFTState extends State<TransferMultiversxNFT> {
     String trnFee = widget.coin.getDefault();
     bool haveTrx = false;
     if (trxInfo.fee != 0.0) {
-      trnFee = '${Decimal.parse('${trxInfo.fee}')} ' + trnFee;
+      trnFee = '${Decimal.parse('${trxInfo.fee}')} $trnFee';
       haveTrx = true;
     }
     if (!haveTrx) {
-      trnFee = '--- ' + trnFee;
+      trnFee = '--- $trnFee';
     }
     return Scaffold(
       key: _scaffoldKey,
@@ -207,6 +209,7 @@ class _TransferMultiversxNFTState extends State<TransferMultiversxNFT> {
                       onPressed: () async {
                         if (isSending) return;
                         if (await authenticate(context)) {
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           if (mounted) {
                             setState(() {
@@ -222,6 +225,7 @@ class _TransferMultiversxNFTState extends State<TransferMultiversxNFT> {
                             if (transactionHash == null) {
                               throw Exception('Sending failed');
                             }
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -243,6 +247,7 @@ class _TransferMultiversxNFTState extends State<TransferMultiversxNFT> {
                                 isSending = false;
                               });
                             }
+                            if (!context.mounted) return;
                             if (Navigator.canPop(context)) {
                               int count = 0;
                               Navigator.popUntil(context, (route) {
@@ -268,6 +273,7 @@ class _TransferMultiversxNFTState extends State<TransferMultiversxNFT> {
                             }
                           }
                         } else {
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: Colors.red,

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 
 class DarkModeToggler extends StatefulWidget {
-  const DarkModeToggler({Key? key}) : super(key: key);
+  const DarkModeToggler({super.key});
 
   @override
   State<DarkModeToggler> createState() => _DarkModeTogglerState();

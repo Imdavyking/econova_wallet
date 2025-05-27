@@ -87,11 +87,11 @@ class BlockChainNFTs extends StatefulWidget {
   final ScrollController controller;
   final MultiversxCoin coin;
   const BlockChainNFTs({
-    Key? key,
+    super.key,
     required this.controller,
     required this.coin,
     required this.nftLoaded,
-  }) : super(key: key);
+  });
 
   @override
   State<BlockChainNFTs> createState() => _BlockChainNFTsState();
@@ -151,7 +151,6 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
       }
     } catch (_, sk) {
       if (kDebugMode) {
-        print(_);
         print(sk);
       }
     }
@@ -442,6 +441,7 @@ class _BlockChainNFTsState extends State<BlockChainNFTs> {
                                               ),
                                             );
                                           } catch (e) {
+                                            if (!context.mounted) return;
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
                                               SnackBar(

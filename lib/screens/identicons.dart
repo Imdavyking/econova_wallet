@@ -9,7 +9,7 @@ import '../utils/app_config.dart';
 
 class Identicon extends StatefulWidget {
   final String address;
-  const Identicon({Key? key, required this.address}) : super(key: key);
+  const Identicon({super.key, required this.address});
 
   @override
   State<Identicon> createState() => _IdenticonState();

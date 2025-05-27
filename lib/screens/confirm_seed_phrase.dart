@@ -1,4 +1,4 @@
-// ignore_for_file: prefer__ructors, prefer_const_constructors
+// ignore_for_file: prefer__ructors, prefer_const_constructors, library_private_types_in_public_api
 
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -18,9 +18,9 @@ import 'package:bip39/bip39.dart' as bip39;
 class Confirmmnemonic extends StatefulWidget {
   final List<String> mmenomic;
   const Confirmmnemonic({
-    Key? key,
+    super.key,
     required this.mmenomic,
-  }) : super(key: key);
+  });
   @override
   _ConfirmmnemonicState createState() => _ConfirmmnemonicState();
 }
@@ -297,6 +297,7 @@ class _ConfirmmnemonicState extends State<Confirmmnemonic> {
                                 mnemonics,
                               );
                               if (!mnemonicValid) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: Colors.red,
@@ -355,6 +356,7 @@ class _ConfirmmnemonicState extends State<Confirmmnemonic> {
                               if (kDebugMode) {
                                 print(e);
                               }
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: Colors.red,

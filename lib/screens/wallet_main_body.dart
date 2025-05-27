@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'package:wallet_app/components/portfolio.dart';
 import 'package:wallet_app/components/user_balance.dart';
@@ -21,7 +23,7 @@ import '../utils/get_blockchain_widget.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class WalletMainBody extends StatefulWidget {
-  const WalletMainBody({Key? key}) : super(key: key);
+  const WalletMainBody({super.key});
 
   @override
   _WalletMainBodyState createState() => _WalletMainBodyState();
