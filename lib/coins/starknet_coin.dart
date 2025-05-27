@@ -397,7 +397,7 @@ class StarknetCoin extends Coin {
     );
 
     final keys = AccountData(
-      address: address.toHexString(),
+      address: StarknetCoin.zeroPadAddressTo66(address.toHexString()),
       privateKey: privateKeyHex,
     ).toJson();
 
