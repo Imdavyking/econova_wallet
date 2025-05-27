@@ -1,5 +1,6 @@
 // ignore_for_file: prefer__ructors, prefer_const_constructors
 
+import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/wallet.dart';
@@ -373,14 +374,7 @@ class _ConfirmmnemonicState extends State<Confirmmnemonic> {
                     child: Padding(
                       padding: const EdgeInsets.all(15),
                       child: isLoading
-                          ? Text(
-                              localization.loading,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            )
-                          // Loader(color: Colors.black)
+                          ? Loader(color: Colors.black)
                           : Text(
                               localization.continue_,
                               style: TextStyle(

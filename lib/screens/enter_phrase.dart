@@ -1,3 +1,4 @@
+import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/import_shamir_secret.dart';
@@ -439,17 +440,9 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                             child: Padding(
                               padding: const EdgeInsets.all(15),
                               child: isLoading
-                                  ? Text(
-                                      localization.loading,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  ? const Loader(
+                                      color: Colors.black,
                                     )
-                                  // const Loader(
-                                  //     color: Colors.black,
-                                  //   )
                                   : Text(
                                       localization.confirm,
                                       style: const TextStyle(
