@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
@@ -38,6 +39,7 @@ class _AIAgent extends State<AIAgent>
   late Animation<double> _micScaleAnimation;
   TextEditingController chatController = TextEditingController();
   ValueNotifier<bool> isListening = ValueNotifier(false);
+  final ImagePicker _picker = ImagePicker();
 
   @override
   initState() {
@@ -180,6 +182,18 @@ class _AIAgent extends State<AIAgent>
           textController: chatController,
           trailing: [
             if (isMobiletPlatform)
+              IconButton(
+                icon: const Icon(Icons.camera_alt),
+                onPressed: typingUsers.isEmpty
+                    ? () => _pickAndShowImageDialog(source: ImageSource.camera)
+                    : null,
+              ),
+            IconButton(
+              icon: const Icon(Icons.image),
+              onPressed:
+                  typingUsers.isEmpty ? () => _pickAndShowImageDialog() : null,
+            ),
+            if (isMobiletPlatform)
               ValueListenableBuilder(
                 valueListenable: isListening,
                 builder: (context, value, child) {
@@ -222,6 +236,64 @@ class _AIAgent extends State<AIAgent>
         ),
         onSend: _handleOnSendPressed,
         messages: messages,
+      ),
+    );
+  }
+
+  Future<void> _pickAndShowImageDialog({
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    final XFile? image = await _picker.pickImage(source: source);
+
+    if (image != null) {
+      if (!mounted) return;
+
+      final result = await context.showImageCaptionDialog(image);
+
+      result.fold<void>(
+        (error) => context.showErrorMessage(error),
+        (right) async {
+          await _sendImageMessage(image: right.image, caption: right.caption);
+        },
+      );
+    }
+  }
+
+  Future<void> _sendImageMessage({
+    required XFile image,
+    required String caption,
+  }) async {
+    final XFile(:mimeType, :name, :path) = image;
+
+    final userMessage = ChatMessage(
+      user: Constants.user,
+      createdAt: DateTime.now(),
+      text: caption,
+      medias: [
+        ChatMedia(
+          url: path,
+          fileName: name,
+          type: MediaType.image,
+          customProperties: {
+            "mimeType": mimeType,
+          },
+        ),
+      ],
+    );
+
+    _addUserMessage(userMessage);
+
+    final response = await _chatRepository.sendImageMessage(userMessage);
+
+    setState(() {
+      typingUsers.remove(Constants.ai);
+    });
+
+    response.fold<void>(
+      (error) => _handleSendError(error: error, userMessage: userMessage),
+      (chatMessage) => _handleSendSuccess(
+        userMessage: userMessage,
+        aiMessage: chatMessage,
       ),
     );
   }

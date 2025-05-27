@@ -1,4 +1,5 @@
 import "dart:convert";
+import "dart:io";
 import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
@@ -31,6 +32,21 @@ class AIAgentService {
   static const historyKey = '33221-93d0-8007-8a0f-cd31191';
   static final logger = Logger();
   static const defaultCoinTokenAddress = '0xdefault';
+  final botPrompt = '''You are $walletName,
+        a smart wallet that allows users to perform transactions,
+        and query the blockchain using natural language.
+        With your intuitive interface,
+        users can seamlessly interact with the blockchain,
+        making transactions, checking balances,
+        check the current coin is correct or ask the user to switch to the coin needed,
+        and querying smart contracts—all through simple, conversational commands.
+        for sending,always use memo if available.''';
+  final llm = ChatOpenAI(
+    apiKey: dotenv.env['OPENAI_API_KEY'],
+    defaultOptions: const ChatOpenAIOptions(
+      temperature: 0,
+    ),
+  );
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -129,15 +145,8 @@ class AIAgentService {
     try {
       final coin = AItools.coin;
 
-      final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
       final currentCoin =
           "name: ${coin.getName().split('(')[0]},symbol: (${coin.getSymbol()}),coinGeckoId: ${coin.getGeckoId()}) default_: ${coin.getDefault()}";
-      final llm = ChatOpenAI(
-        apiKey: openaiApiKey,
-        defaultOptions: const ChatOpenAIOptions(
-          temperature: 0,
-        ),
-      );
 
       final List<String> listFungibleToken = [];
 
@@ -171,21 +180,12 @@ class AIAgentService {
           .toList()
           .join(',');
 
-      final prompt = """You are $walletName,
-        a smart wallet that allows users to perform transactions,
-        and query the blockchain using natural language.
-        With your intuitive interface,
-        users can seamlessly interact with the blockchain,
-        making transactions, checking balances,
-        check the current coin is correct or ask the user to switch to the coin needed,
-        and querying smart contracts—all through simple, conversational commands.
-        for sending,always use memo if available.
+      final prompt = """
+        $botPrompt
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
         other coins are $otherCoins.
         """;
-
-      debugPrint(prompt);
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
@@ -221,6 +221,97 @@ class AIAgentService {
       }
 
       return const Left("Something went wrong. Try again Later.");
+    }
+  }
+
+  Future<Either<String, DashChatMessage>> sendImageMessage(
+    DashChatMessage chatMessage,
+  ) async {
+    final medias = chatMessage.medias ?? <DashChatMedia>[];
+
+    final mediaContents = <ChatMessageContent>[];
+
+    try {
+      if (medias.isNotEmpty) {
+        for (final DashChatMedia(:url, :customProperties) in medias) {
+          final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
+
+          final data =
+              isExternal ? url : base64Encode(File(url).readAsBytesSync());
+
+          mediaContents.add(
+            ChatMessageContent.image(
+              mimeType: customProperties?["mimeType"] ?? "image/jpeg",
+              data: data,
+            ),
+          );
+        }
+      }
+
+      final history = await memory.loadMemoryVariables();
+
+      debugPrint("history: $history");
+
+      var humanMessage = chatMessage.text;
+
+      final prompt = PromptValue.chat([
+        ChatMessage.system(
+          """
+          You are Dash, the enthusiastic and creative mascot of Flutter. 
+          Your goal is to be engaging, resourceful, and developer-friendly
+          in all interactions. 
+          Prioritize concise and actionable responses that cater to developers
+          of all skill levels. 
+      
+          Guidelines for responses:
+          - Use **Flutter-specific terminology** and relevant examples wherever
+            possible.
+          - Provide **clear, step-by-step guidance** for technical topics.
+          - Ensure all responses are beautifully formatted in **Markdown**:
+              - Use headers (`#`, `##`) to structure content.
+              - Highlight important terms with **bold** or *italicized* text.
+              - Include inline code (`code`) or code blocks (```language) for
+                code snippets.
+              - Use lists, tables, and blockquotes for clarity and emphasis.
+          - Maintain a friendly, approachable tone.
+      
+          This is the history of the conversation so far:
+          $history
+          """,
+        ),
+        ChatMessage.human(
+          ChatMessageContent.multiModal([
+            ChatMessageContent.text(humanMessage),
+            ...mediaContents,
+          ]),
+        ),
+      ]);
+
+      final chain = llm.pipe(const StringOutputParser());
+
+      final response = await chain.invoke(prompt);
+
+      await memory.saveContext(
+        inputValues: {"input": humanMessage},
+        outputValues: {"output": response},
+      );
+
+      return Right(
+        DashChatMessage(
+          isMarkdown: true,
+          user: Constants.ai,
+          createdAt: DateTime.now(),
+          text: response,
+        ),
+      );
+    } on Exception catch (error, stackTrace) {
+      debugPrint("sendImageMessage error: $error, stackTrace: $stackTrace");
+
+      if (error is OpenAIClientException) {
+        return Left(error.message);
+      }
+
+      return Left("Something went wrong. Try again Later.");
     }
   }
 }
