@@ -3,6 +3,7 @@
 import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
+import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/network_guard.dart';
 import 'package:wallet_app/utils/starknet_call.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
@@ -414,7 +415,12 @@ String decryptText(String encrypted, String password) {
 Future<void> importAllKeys(String mnemonic) async {
   await Future.wait(
     supportedChains.map(
-      (blockchain) => blockchain.importData(mnemonic),
+      (blockchain) {
+        EventBusService.instance.fire(
+          SeedPharseInitializationEvent(coin: blockchain),
+        );
+        return blockchain.importData(mnemonic);
+      },
     ),
   );
 }
