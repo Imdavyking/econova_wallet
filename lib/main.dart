@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
+import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
@@ -114,6 +115,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
+    ...getStarknetFungibleCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   return blockchains;
@@ -219,8 +221,7 @@ class MyApp extends StatefulWidget {
   final bool userDarkMode;
   final Locale locale;
 
-  const MyApp({Key? key, required this.userDarkMode, required this.locale})
-      : super(key: key);
+  const MyApp({super.key, required this.userDarkMode, required this.locale});
   static _MyAppState of(BuildContext context) =>
       context.findAncestorStateOfType<_MyAppState>()!;
 
@@ -276,7 +277,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key}) : super(key: key);
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();

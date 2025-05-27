@@ -20,23 +20,16 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   String identifier;
   int mintDecimals;
   ESDTCoin({
-    required String blockExplorer,
-    required String symbol,
-    required String default_,
-    required String image,
-    required String rpc,
-    required String name,
-    required String geckoID,
+    required super.blockExplorer,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.rpc,
+    required super.name,
+    required super.geckoID,
     required this.identifier,
     required this.mintDecimals,
   }) : super(
-          blockExplorer: blockExplorer,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          rpc: rpc,
-          name: name,
-          geckoID: geckoID,
           rampID: '',
           payScheme: '',
         );

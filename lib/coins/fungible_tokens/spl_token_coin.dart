@@ -18,27 +18,19 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   int mintDecimals;
 
   SplTokenCoin({
-    required String blockExplorer,
-    required String symbol,
-    required String default_,
-    required String image,
-    required String name,
-    required String rpc,
-    required String ws,
-    required String geckoID,
+    required super.blockExplorer,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.name,
+    required super.rpc,
+    required super.ws,
+    required super.geckoID,
     required this.mint,
     required this.mintDecimals,
   }) : super(
           rampID: '',
           payScheme: '',
-          blockExplorer: blockExplorer,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          rpc: rpc,
-          name: name,
-          ws: ws,
-          geckoID: geckoID,
         );
 
   factory SplTokenCoin.fromJson(Map<String, dynamic> json) {
@@ -92,16 +84,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     final address = await getAddress();
     final subscription = getProxy().createSubscriptionClient();
 
-    subscription.accountSubscribe(address).listen((Account event) {
-      // final data = TokenInfo.decode(event);
-
-      // CryptoNotificationsEventBus.instance.fire(
-      //   CryptoNotificationEvent(
-      //     body: 'ok ',
-      //     title: 'cool',
-      //   ),
-      // );
-    });
+    subscription.accountSubscribe(address).listen((Account event) {});
   }
 
   @override

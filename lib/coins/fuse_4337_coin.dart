@@ -404,8 +404,6 @@ class FuseCoin extends Coin {
     final dio = Dio(
       BaseOptions(
         connectTimeout: const Duration(seconds: 3),
-        sendTimeout: const Duration(seconds: 3),
-        receiveTimeout: const Duration(seconds: 3),
         baseUrl: Uri.https(Variables.BASE_URL, '/api').toString(),
         headers: {
           'Content-Type': 'application/json',

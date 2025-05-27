@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
 import '../extensions/uint256_starknet.dart';
-import 'package:wallet_app/coins/starknet_quote.helper.dart';
+import 'package:wallet_app/utils/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/screens/stake_token.dart';
 import 'package:wallet_app/screens/view_starknet_nfts.dart';
@@ -22,11 +22,16 @@ import 'package:starknet_provider/starknet_provider.dart';
 import 'package:http/http.dart' as http;
 
 const starkDecimals = 18;
-const strkNativeToken =
-    '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
-const strkEthNativeToken =
-    '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+class StarknetMainAddress {
+  static String ethAddress =
+      '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+  static String strkAddress =
+      '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+  static String usdcAddress =
+      '0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8';
+}
+
 double ekuboTickSize = 1.000001;
 int ekuboTickSpacing = 5982;
 const ekuboMaxPrice = "0x100000000000000000000000000000000";
@@ -499,21 +504,12 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  String? tokenAddress() =>
-      getStarknetBlockchains().first.name == name ? null : tokenContractAddress;
-
-  @override
   Widget? getStakingPage() {
     if (getStarknetBlockchains().first.name != name) return null;
     return StakeToken(
       tokenData: this,
     );
   }
-
-  @override
-  String? get badgeImage => getStarknetBlockchains().first.name == name
-      ? null
-      : getStarknetBlockchains().first.image;
 
   @override
   Future<String?> transferToken(
@@ -623,9 +619,9 @@ class StarknetCoin extends Coin {
     String amount,
   ) async {
     if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
-      tokenIn = strkNativeToken;
+      tokenIn = StarknetMainAddress.strkAddress;
     } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
-      tokenOut = strkNativeToken;
+      tokenOut = StarknetMainAddress.strkAddress;
     }
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
@@ -665,7 +661,7 @@ class StarknetCoin extends Coin {
   Contract getStarkContract(Account account) {
     return Contract(
       account: account,
-      address: Felt.fromHexString(strkNativeToken),
+      address: Felt.fromHexString(StarknetMainAddress.strkAddress),
     );
   }
 
@@ -901,9 +897,9 @@ class StarknetCoin extends Coin {
     String amount,
   ) async {
     if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
-      tokenIn = strkNativeToken;
+      tokenIn = StarknetMainAddress.strkAddress;
     } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
-      tokenOut = strkNativeToken;
+      tokenOut = StarknetMainAddress.strkAddress;
     }
     await deployAccount();
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -1248,7 +1244,7 @@ class StarknetCoin extends Coin {
           holdLimit: '2.5',
           fees: '0.5',
           antiBotPeriodInSecs: 3600,
-          currencyAddress: strkEthNativeToken,
+          currencyAddress: StarknetMainAddress.ethAddress,
           teamAllocations: [
             TeamAllocation(
               address: fundingAccount.accountAddress.toHexString(),
@@ -1832,7 +1828,6 @@ class StarknetCoin extends Coin {
 
 List<StarknetCoin> getStarknetBlockchains() {
   List<StarknetCoin> blockChains = [];
-
   if (enableTestNet) {
     blockChains.addAll([
       StarknetCoin(
@@ -1851,28 +1846,8 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: strkNativeToken,
+        tokenContractAddress: StarknetMainAddress.strkAddress,
         useStarkToken: true,
-        tokenClassHash: '',
-        factoryAddress: '',
-      ),
-      StarknetCoin(
-        multiCallAddress:
-            '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
-        blockExplorer:
-            'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
-        api: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
-        classHash:
-            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: strkEthNativeToken,
-        symbol: 'ETH (STRK)',
-        name: 'Ethereum (STRK)',
-        default_: 'ETH',
-        image: 'assets/ethereum_logo.png',
-        geckoID: "ethereum",
-        payScheme: 'ethereum',
-        rampID: 'ETH_ETH',
-        useStarkToken: false,
         tokenClassHash: '',
         factoryAddress: '',
       ),
@@ -1893,29 +1868,8 @@ List<StarknetCoin> getStarknetBlockchains() {
         rampID: '',
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: strkNativeToken,
+        tokenContractAddress: StarknetMainAddress.strkAddress,
         useStarkToken: true,
-        tokenClassHash:
-            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
-        factoryAddress:
-            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
-      ),
-      StarknetCoin(
-        multiCallAddress:
-            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
-        api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
-        classHash:
-            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: strkEthNativeToken,
-        symbol: 'ETH (STRK)',
-        name: 'Ethereum (STRK)',
-        default_: 'ETH',
-        image: 'assets/ethereum_logo.png',
-        geckoID: "ethereum",
-        payScheme: 'ethereum',
-        rampID: 'ETH_ETH',
-        useStarkToken: false,
         tokenClassHash:
             '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
         factoryAddress:
