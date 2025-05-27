@@ -10,7 +10,7 @@ import 'package:web3dart/web3dart.dart';
 class CreateGoal extends StatefulWidget {
   final FuseCoin coin;
 
-  const CreateGoal({Key? key, required this.coin}) : super(key: key);
+  const CreateGoal({super.key, required this.coin});
 
   @override
   State<CreateGoal> createState() => _CreateGoalState();
@@ -145,6 +145,7 @@ class _CreateGoalState extends State<CreateGoal> {
                         EthereumAddress.fromHex(tokenAddress);
                         isLoading.value = true;
                         await widget.coin.createGoal(goalName, tokenAddress);
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Colors.green,
