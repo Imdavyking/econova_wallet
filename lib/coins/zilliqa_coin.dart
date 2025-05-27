@@ -114,13 +114,13 @@ class ZilliqaCoin extends Coin {
       address: account!.address!.bech32,
       privateKey: privateKey,
       publicKey: account.publicKey!,
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

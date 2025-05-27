@@ -404,13 +404,13 @@ class StarknetCoin extends Coin {
     final keys = AccountData(
       address: StarknetCoin.zeroPadAddressTo66(address.toHexString()),
       privateKey: privateKeyHex,
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

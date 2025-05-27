@@ -132,18 +132,16 @@ class FilecoinCoin extends Coin {
       }
     }
 
-    final results = _FilecoinDerive.fromPrivateKey(
+    final keys = _FilecoinDerive.fromPrivateKey(
       privateKey: HEX.decode(privateKey),
       addressPrefix: prefix,
     );
 
-    final keys = results.toJson();
-
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override
