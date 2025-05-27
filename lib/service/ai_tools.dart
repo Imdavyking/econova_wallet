@@ -589,8 +589,10 @@ class AItools {
           if (confirmation != null) {
             return confirmation;
           }
-          coin = supportedChains
-              .firstWhere((Coin value) => value.getSymbol() == default_);
+          coin = supportedChains.firstWhere(
+            (Coin value) =>
+                value.getSymbol() == default_ && coin.tokenAddress() == null,
+          );
 
           return 'Switched to $name $default_';
         } catch (e) {
