@@ -135,6 +135,7 @@ dependencies:
   convert: 3.1.2
   pinenacl: 0.6.0
   video_player: 2.9.5
+  pointycastle: 3.9.1
   jazzicon:
     path: ./jazzicon
   near_api_flutter:

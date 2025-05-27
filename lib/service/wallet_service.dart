@@ -44,16 +44,11 @@ abstract class WalletParams {
 
 class PrivateKeyParams extends WalletParams {
   PrivateKeyParams({
-    required String data,
-    String? defaultCoin,
-    required String name,
-    String? coinName,
-  }) : super(
-          data: data,
-          defaultCoin: defaultCoin,
-          coinName: coinName,
-          name: name,
-        );
+    required super.data,
+    super.defaultCoin,
+    required super.name,
+    super.coinName,
+  });
 
   @override
   Map<String, dynamic> toJson() {
@@ -76,12 +71,10 @@ class PrivateKeyParams extends WalletParams {
 }
 
 class SeedPhraseParams extends WalletParams {
-  SeedPhraseParams({required String data, required String name})
+  SeedPhraseParams({required super.data, required super.name})
       : super(
-          data: data,
           defaultCoin: null,
           coinName: null,
-          name: name,
         );
 
   @override
@@ -102,16 +95,11 @@ class SeedPhraseParams extends WalletParams {
 
 class ViewKeyParams extends WalletParams {
   ViewKeyParams({
-    required String data,
-    String? defaultCoin,
-    required String name,
-    String? coinName,
-  }) : super(
-          data: data,
-          defaultCoin: defaultCoin,
-          coinName: coinName,
-          name: name,
-        );
+    required super.data,
+    super.defaultCoin,
+    required super.name,
+    super.coinName,
+  });
   @override
   Map<String, dynamic> toJson() {
     return {

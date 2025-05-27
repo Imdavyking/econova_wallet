@@ -291,7 +291,7 @@ class AItools {
         String message =
             'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
 
-        if (memo != null && memo.isNotEmpty) {
+        if (memo != null && memo.isNotEmpty && coin.requireMemo()) {
           message += '\n\nMemo: $memo';
         }
         try {
