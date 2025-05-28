@@ -323,8 +323,8 @@ class AIAgentService {
 
       final response = await chain.invoke(prompt);
 
-      //TODO: save the response to memory
       await memory.chatHistory.addChatMessage(info);
+      await memory.chatHistory.addAIChatMessage(response);
       await saveHistory();
 
       return Right(
