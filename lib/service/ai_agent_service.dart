@@ -71,6 +71,7 @@ class AIAgentService {
           ).toList(),
         );
       case 'HumanChatMessage':
+        print(json);
         //      factory ChatMessageContent.image({
         //   required final String data,
         //   final String? mimeType,
@@ -82,7 +83,7 @@ class AIAgentService {
         // ) =>
         //     ChatMessageContentMultiModal(parts: parts);
         return lang_chain.HumanChatMessage(
-          content: lang_chain.ChatMessageContent.text(json['content']),
+          content: lang_chain.ChatMessageContent.text("json['content']"),
         );
       case 'ToolChatMessage':
         return lang_chain.ToolChatMessage(
@@ -102,7 +103,6 @@ class AIAgentService {
   static Future<void> saveHistory() async {
     List<lang_chain.ChatMessage> histories =
         await memory.chatHistory.getChatMessages();
-
     histories = histories.reversed.toList();
 
     List chatHistoryStore = [];
@@ -259,7 +259,13 @@ class AIAgentService {
       }
 
       final history = await memory.loadMemoryVariables();
-
+      final humanMessage = chatMessage.text;
+      final info = ChatMessage.human(
+        ChatMessageContent.multiModal([
+          ChatMessageContent.text(humanMessage),
+          ...mediaContents,
+        ]),
+      );
       final prompt = PromptValue.chat([
         ChatMessage.system(
           """
@@ -267,18 +273,15 @@ class AIAgentService {
           $history
           """,
         ),
-        ChatMessage.human(
-          ChatMessageContent.multiModal([
-            ChatMessageContent.text(chatMessage.text),
-            ...mediaContents,
-          ]),
-        ),
+        info,
       ]);
 
       final chain = llm.pipe(const StringOutputParser());
 
       final response = await chain.invoke(prompt);
 
+      //TODO: save the response to memory
+      await memory.chatHistory.addChatMessage(info);
       await saveHistory();
 
       return Right(

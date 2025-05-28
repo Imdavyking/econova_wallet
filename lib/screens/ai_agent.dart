@@ -101,13 +101,13 @@ class _AIAgent extends State<AIAgent>
       for (final savedMessage in savedMessages) {
         final message = savedMessage.message;
         if (message.runtimeType == lang_chain.HumanChatMessage) {
-          messages.add(
-            ChatMessage(
-              user: Constants.user,
-              text: message.contentAsString,
-              createdAt: savedMessage.date,
-            ),
-          );
+          // messages.add(
+          //   ChatMessage(
+          //     user: Constants.user,
+          //     text: message.contentAsString,
+          //     createdAt: savedMessage.date,
+          //   ),
+          // );
         } else if (message.runtimeType == lang_chain.AIChatMessage) {
           messages.add(
             ChatMessage(
