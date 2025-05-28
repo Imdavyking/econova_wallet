@@ -260,8 +260,6 @@ class AIAgentService {
 
       final history = await memory.loadMemoryVariables();
 
-      var humanMessage = chatMessage.text;
-
       final prompt = PromptValue.chat([
         ChatMessage.system(
           """
@@ -271,7 +269,7 @@ class AIAgentService {
         ),
         ChatMessage.human(
           ChatMessageContent.multiModal([
-            ChatMessageContent.text(humanMessage),
+            ChatMessageContent.text(chatMessage.text),
             ...mediaContents,
           ]),
         ),
