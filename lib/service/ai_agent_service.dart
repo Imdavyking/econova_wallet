@@ -71,6 +71,16 @@ class AIAgentService {
           ).toList(),
         );
       case 'HumanChatMessage':
+        //      factory ChatMessageContent.image({
+        //   required final String data,
+        //   final String? mimeType,
+        //   final ChatMessageContentImageDetail imageDetail =
+        //       ChatMessageContentImageDetail.auto,
+        // })
+        // factory ChatMessageContent.multiModal(
+        //   final List<ChatMessageContent> parts,
+        // ) =>
+        //     ChatMessageContentMultiModal(parts: parts);
         return lang_chain.HumanChatMessage(
           content: lang_chain.ChatMessageContent.text(json['content']),
         );
