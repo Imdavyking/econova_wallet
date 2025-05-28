@@ -1,6 +1,10 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
@@ -92,6 +96,29 @@ class _AIAgent extends State<AIAgent>
   @override
   bool get wantKeepAlive => true;
 
+  Future<ChatMedia> createImageMedia(String data, String? mimeType) async {
+    final isExternal = Uri.tryParse(data)?.hasScheme ?? false;
+
+    String imageUrl;
+    if (isExternal) {
+      imageUrl = data;
+    } else {
+      final bytes = base64Decode(data);
+      final tempDir = await getTemporaryDirectory();
+      final filePath =
+          '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = await File(filePath).writeAsBytes(bytes);
+      imageUrl = file.path;
+    }
+
+    return ChatMedia(
+      url: imageUrl,
+      fileName: 'image.jpg',
+      type: MediaType.image,
+      customProperties: {'mimeType': mimeType},
+    );
+  }
+
   Future<void> loadHistory() async {
     if (messages.isNotEmpty) return;
     final List<ChatMessageWithDate> savedMessages =
@@ -105,36 +132,17 @@ class _AIAgent extends State<AIAgent>
 
           List<ChatMedia> medias = [];
           String text = '';
+
           if (content is lang_chain.ChatMessageContentText) {
             text = content.text;
           } else if (content is lang_chain.ChatMessageContentImage) {
-            final isExternal = Uri.tryParse(content.data)?.hasScheme ?? false;
-            final imageUrl = isExternal
-                ? content.data
-                : 'data:${content.mimeType ?? "image/jpeg"};base64,${content.data}';
-
-            medias.add(ChatMedia(
-              url: imageUrl,
-              fileName: 'image.jpg',
-              type: MediaType.image,
-              customProperties: {'mimeType': content.mimeType},
-            ));
+            medias.add(await createImageMedia(content.data, content.mimeType));
           } else if (content is lang_chain.ChatMessageContentMultiModal) {
             for (final part in content.parts) {
               if (part is lang_chain.ChatMessageContentText) {
                 text += part.text;
               } else if (part is lang_chain.ChatMessageContentImage) {
-                final isExternal = Uri.tryParse(part.data)?.hasScheme ?? false;
-                final imageUrl = isExternal
-                    ? part.data
-                    : 'data:${part.mimeType ?? "image/jpeg"};base64,${part.data}';
-
-                medias.add(ChatMedia(
-                  url: imageUrl,
-                  fileName: 'image.jpg',
-                  type: MediaType.image,
-                  customProperties: {'mimeType': part.mimeType},
-                ));
+                medias.add(await createImageMedia(part.data, part.mimeType));
               }
             }
           }
