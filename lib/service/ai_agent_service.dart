@@ -319,10 +319,7 @@ class AIAgentService {
         info,
       ]);
 
-      final chain = ChatOpenAI(
-        apiKey: llm.apiKey,
-        defaultOptions: llm.defaultOptions.copyWith(model: "gpt-4o"),
-      ).pipe(const StringOutputParser());
+      final chain = llm.pipe(const StringOutputParser());
 
       final response = await chain.invoke(prompt);
 

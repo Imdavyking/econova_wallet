@@ -366,7 +366,7 @@ class _AIAgent extends State<AIAgent>
     }
 
     // Resize image (adjust width as needed)
-    final resizedImage = img.copyResize(originalImage, width: 800);
+    final resizedImage = img.copyResize(originalImage, height: 500);
 
     // Compress image to JPEG with quality 70
     final compressedBytes = img.encodeJpg(resizedImage, quality: 70);
