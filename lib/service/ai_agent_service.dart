@@ -271,10 +271,7 @@ class AIAgentService {
 
       final response = await chain.invoke(prompt);
 
-      await memory.saveContext(
-        inputValues: {"input": humanMessage},
-        outputValues: {"output": response},
-      );
+      await saveHistory();
 
       return Right(
         DashChatMessage(
