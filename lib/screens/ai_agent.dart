@@ -183,13 +183,19 @@ class _AIAgent extends State<AIAgent>
           trailing: [
             if (isMobiletPlatform)
               IconButton(
-                icon: const Icon(Icons.camera_alt),
+                icon: const Icon(
+                  Icons.camera_alt,
+                  color: appPrimaryColor,
+                ),
                 onPressed: typingUsers.isEmpty
                     ? () => _pickAndShowImageDialog(source: ImageSource.camera)
                     : null,
               ),
             IconButton(
-              icon: const Icon(Icons.image),
+              icon: const Icon(
+                Icons.image,
+                color: appPrimaryColor,
+              ),
               onPressed:
                   typingUsers.isEmpty ? () => _pickAndShowImageDialog() : null,
             ),
