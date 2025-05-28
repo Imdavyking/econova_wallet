@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:pinput/pinput.dart';
 import "../utils/ai_agent_utils.dart";
+import 'package:image/image.dart' as img;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import "package:langchain/langchain.dart" as lang_chain;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -355,13 +356,34 @@ class _AIAgent extends State<AIAgent>
   }) async {
     final XFile(:mimeType, :name, :path) = image;
 
+    // Read image file bytes
+    final fileBytes = await File(path).readAsBytes();
+
+    // Decode image
+    final originalImage = img.decodeImage(fileBytes);
+    if (originalImage == null) {
+      throw Exception("Invalid image file");
+    }
+
+    // Resize image (adjust width as needed)
+    final resizedImage = img.copyResize(originalImage, width: 800);
+
+    // Compress image to JPEG with quality 70
+    final compressedBytes = img.encodeJpg(resizedImage, quality: 70);
+
+    final tempDir = await getTemporaryDirectory();
+    final compressedPath =
+        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_compressed.jpg';
+    final compressedFile =
+        await File(compressedPath).writeAsBytes(compressedBytes);
+
     final userMessage = ChatMessage(
       user: Constants.user,
       createdAt: DateTime.now(),
       text: caption,
       medias: [
         ChatMedia(
-          url: path,
+          url: compressedFile.path,
           fileName: name,
           type: MediaType.image,
           customProperties: {

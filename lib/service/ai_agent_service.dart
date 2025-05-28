@@ -14,7 +14,6 @@ import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
-import 'package:image/image.dart' as img;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 typedef DashChatMessage = dash_chat.ChatMessage;
@@ -290,29 +289,8 @@ class AIAgentService {
         for (final DashChatMedia(:url, :customProperties) in medias) {
           final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
 
-          final data = isExternal
-              ? url
-              : (() {
-                  // Read the original image file
-                  final fileBytes = File(url).readAsBytesSync();
-
-                  // Decode image
-                  img.Image? originalImage = img.decodeImage(fileBytes);
-                  if (originalImage == null) {
-                    throw Exception("Invalid image file");
-                  }
-
-                  // Resize the image (adjust width/height as needed)
-                  final resizedImage =
-                      img.copyResize(originalImage, width: 800);
-
-                  // Compress as JPEG with quality (0–100)
-                  final compressedBytes =
-                      img.encodeJpg(resizedImage, quality: 70);
-
-                  // Encode to base64
-                  return base64Encode(compressedBytes);
-                })();
+          final data =
+              isExternal ? url : base64Encode(File(url).readAsBytesSync());
 
           mediaContents.add(
             ChatMessageContent.image(
