@@ -101,13 +101,52 @@ class _AIAgent extends State<AIAgent>
       for (final savedMessage in savedMessages) {
         final message = savedMessage.message;
         if (message.runtimeType == lang_chain.HumanChatMessage) {
-          // messages.add(
-          //   ChatMessage(
-          //     user: Constants.user,
-          //     text: message.contentAsString,
-          //     createdAt: savedMessage.date,
-          //   ),
-          // );
+          final content = (message as lang_chain.HumanChatMessage).content;
+
+          List<ChatMedia> medias = [];
+          String text = '';
+          if (content is lang_chain.ChatMessageContentText) {
+            text = content.text;
+          } else if (content is lang_chain.ChatMessageContentImage) {
+            final isExternal = Uri.tryParse(content.data)?.hasScheme ?? false;
+            final imageUrl = isExternal
+                ? content.data
+                : 'data:${content.mimeType ?? "image/jpeg"};base64,${content.data}';
+
+            medias.add(ChatMedia(
+              url: imageUrl,
+              fileName: 'image.jpg',
+              type: MediaType.image,
+              customProperties: {'mimeType': content.mimeType},
+            ));
+          } else if (content is lang_chain.ChatMessageContentMultiModal) {
+            for (final part in content.parts) {
+              if (part is lang_chain.ChatMessageContentText) {
+                text += part.text;
+              } else if (part is lang_chain.ChatMessageContentImage) {
+                final isExternal = Uri.tryParse(part.data)?.hasScheme ?? false;
+                final imageUrl = isExternal
+                    ? part.data
+                    : 'data:${part.mimeType ?? "image/jpeg"};base64,${part.data}';
+
+                medias.add(ChatMedia(
+                  url: imageUrl,
+                  fileName: 'image.jpg',
+                  type: MediaType.image,
+                  customProperties: {'mimeType': part.mimeType},
+                ));
+              }
+            }
+          }
+
+          messages.add(
+            ChatMessage(
+              user: Constants.user,
+              createdAt: DateTime.now(),
+              text: text,
+              medias: medias,
+            ),
+          );
         } else if (message.runtimeType == lang_chain.AIChatMessage) {
           messages.add(
             ChatMessage(

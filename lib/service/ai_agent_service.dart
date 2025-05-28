@@ -71,20 +71,63 @@ class AIAgentService {
           ).toList(),
         );
       case 'HumanChatMessage':
-        print(json);
-        //      factory ChatMessageContent.image({
-        //   required final String data,
-        //   final String? mimeType,
-        //   final ChatMessageContentImageDetail imageDetail =
-        //       ChatMessageContentImageDetail.auto,
-        // })
-        // factory ChatMessageContent.multiModal(
-        //   final List<ChatMessageContent> parts,
-        // ) =>
-        //     ChatMessageContentMultiModal(parts: parts);
-        return lang_chain.HumanChatMessage(
-          content: lang_chain.ChatMessageContent.text("json['content']"),
+        final List<Map<String, dynamic>> contents =
+            (json['content'] as List).cast<Map<String, dynamic>>();
+
+        final List<lang_chain.ChatMessageContent> chatContents = [];
+
+        for (final content in contents) {
+          switch (content['type']) {
+            case 'text':
+              chatContents.add(
+                lang_chain.ChatMessageContent.text(content['data'] as String),
+              );
+              break;
+            case 'image':
+              chatContents.add(
+                lang_chain.ChatMessageContent.image(
+                  data: content['data'] as String,
+                  mimeType: content['mimeType'] as String? ?? 'image/jpeg',
+                ),
+              );
+              break;
+            case 'multi-modal':
+              final List<Map<String, dynamic>> parts =
+                  (content['data'] as List).cast<Map<String, dynamic>>();
+
+              final parsedParts = parts.map((part) {
+                switch (part['type']) {
+                  case 'text':
+                    return lang_chain.ChatMessageContent.text(
+                        part['data'] as String);
+                  case 'image':
+                    return lang_chain.ChatMessageContent.image(
+                      data: part['data'] as String,
+                      mimeType: part['mimeType'] as String? ?? 'image/jpeg',
+                    );
+                  default:
+                    return lang_chain.ChatMessageContent.text('Unknown part');
+                }
+              }).toList();
+
+              chatContents.add(
+                lang_chain.ChatMessageContent.multiModal(parsedParts),
+              );
+              break;
+
+            default:
+              chatContents.add(
+                lang_chain.ChatMessageContent.text('Unsupported content type'),
+              );
+          }
+        }
+
+        return lang_chain.ChatMessage.human(
+          chatContents.length == 1
+              ? chatContents.first
+              : lang_chain.ChatMessageContent.multiModal(chatContents),
         );
+
       case 'ToolChatMessage':
         return lang_chain.ToolChatMessage(
           content: json['content'],
