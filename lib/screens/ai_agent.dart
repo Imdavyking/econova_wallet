@@ -182,23 +182,59 @@ class _AIAgent extends State<AIAgent>
           textController: chatController,
           trailing: [
             if (isMobiletPlatform)
-              IconButton(
-                icon: const Icon(
-                  Icons.camera_alt,
-                  color: appPrimaryColor,
+              Theme(
+                data: Theme.of(context).copyWith(
+                  popupMenuTheme: PopupMenuThemeData(
+                    color: Theme.of(context).cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-                onPressed: typingUsers.isEmpty
-                    ? () => _pickAndShowImageDialog(source: ImageSource.camera)
-                    : null,
+                child: PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.add_a_photo,
+                    color: appPrimaryColor,
+                  ),
+                  onSelected: (String value) {
+                    if (typingUsers.isEmpty) {
+                      if (value == 'camera') {
+                        _pickAndShowImageDialog(source: ImageSource.camera);
+                      } else if (value == 'gallery') {
+                        _pickAndShowImageDialog();
+                      }
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem<String>(
+                      value: 'camera',
+                      child: Row(
+                        children: [
+                          Icon(Icons.camera_alt, color: appPrimaryColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Camera',
+                            style: TextStyle(color: appPrimaryColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'gallery',
+                      child: Row(
+                        children: [
+                          Icon(Icons.image, color: appPrimaryColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Gallery',
+                            style: TextStyle(color: appPrimaryColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            IconButton(
-              icon: const Icon(
-                Icons.image,
-                color: appPrimaryColor,
-              ),
-              onPressed:
-                  typingUsers.isEmpty ? () => _pickAndShowImageDialog() : null,
-            ),
             if (isMobiletPlatform)
               ValueListenableBuilder(
                 valueListenable: isListening,
@@ -239,6 +275,7 @@ class _AIAgent extends State<AIAgent>
           inputDisabled: typingUsers.isNotEmpty,
           sendOnEnter: true,
           alwaysShowSend: true,
+          showTraillingBeforeSend: true,
         ),
         onSend: _handleOnSendPressed,
         messages: messages,
