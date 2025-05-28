@@ -136,6 +136,7 @@ dependencies:
   pinenacl: 0.6.0
   video_player: 2.9.5
   pointycastle: 3.9.1
+  image: 4.3.0
   jazzicon:
     path: ./jazzicon
   near_api_flutter:
@@ -172,7 +173,6 @@ dependency_overrides:
   ffi: 2.0.0
   pinenacl: ^0.6.0
   pointycastle: ^3.4.0
-  image: 4.3.0
   starknet:
     git:
       url: https://github.com/focustree/starknet.dart
