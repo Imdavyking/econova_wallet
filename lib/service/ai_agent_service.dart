@@ -250,32 +250,12 @@ class AIAgentService {
 
       final history = await memory.loadMemoryVariables();
 
-      debugPrint("history: $history");
-
       var humanMessage = chatMessage.text;
 
       final prompt = PromptValue.chat([
         ChatMessage.system(
           """
-          You are Dash, the enthusiastic and creative mascot of Flutter. 
-          Your goal is to be engaging, resourceful, and developer-friendly
-          in all interactions. 
-          Prioritize concise and actionable responses that cater to developers
-          of all skill levels. 
-      
-          Guidelines for responses:
-          - Use **Flutter-specific terminology** and relevant examples wherever
-            possible.
-          - Provide **clear, step-by-step guidance** for technical topics.
-          - Ensure all responses are beautifully formatted in **Markdown**:
-              - Use headers (`#`, `##`) to structure content.
-              - Highlight important terms with **bold** or *italicized* text.
-              - Include inline code (`code`) or code blocks (```language) for
-                code snippets.
-              - Use lists, tables, and blockquotes for clarity and emphasis.
-          - Maintain a friendly, approachable tone.
-      
-          This is the history of the conversation so far:
+          $botPrompt
           $history
           """,
         ),
@@ -308,10 +288,11 @@ class AIAgentService {
       debugPrint("sendImageMessage error: $error, stackTrace: $stackTrace");
 
       if (error is OpenAIClientException) {
+        await loadSavedMessages();
         return Left(error.message);
       }
 
-      return Left("Something went wrong. Try again Later.");
+      return const Left("Something went wrong. Try again Later.");
     }
   }
 }
