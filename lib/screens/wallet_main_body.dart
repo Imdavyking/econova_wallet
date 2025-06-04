@@ -232,7 +232,9 @@ class _WalletMainBodyState extends State<WalletMainBody>
                       Coin? coin = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (ctx) => const SelectBlockchain(),
+                          builder: (ctx) => SelectBlockchain(
+                            filterFn: (coin) => true,
+                          ),
                         ),
                       );
 

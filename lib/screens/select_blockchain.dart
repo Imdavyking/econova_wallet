@@ -1,18 +1,16 @@
-import 'package:wallet_app/main.dart';
-import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter/material.dart';
-
+import 'package:wallet_app/main.dart';
 import '../interface/coin.dart';
 import 'build_row.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class SelectBlockchain extends StatefulWidget {
-  final bool evmOnly;
-  final bool removeCoin;
+  /// Filter to select which coins to show (e.g. only EVM coins)
+  final bool Function(Coin coin) filterFn;
+
   const SelectBlockchain({
     super.key,
-    this.evmOnly = false,
-    this.removeCoin = true,
+    required this.filterFn,
   });
 
   @override
@@ -23,15 +21,23 @@ class _SelectBlockchainState extends State<SelectBlockchain> {
   final blockchains = ValueNotifier<List<Coin>>([]);
   final searchController = TextEditingController();
 
-  List<Coin> savedCoins = [];
+  late final List<Coin> filteredCoins;
 
   @override
   void initState() {
     super.initState();
 
-    savedCoins = widget.evmOnly ? evmChains : supportedChains;
+    // Apply the external filterFn once at init
+    filteredCoins = supportedChains.where(widget.filterFn).toList();
+    blockchains.value = filteredCoins;
+  }
 
-    blockchains.value = savedCoins;
+  void _handleSearch(String query) {
+    final q = query.toLowerCase();
+    blockchains.value = filteredCoins.where((coin) {
+      return coin.getName().toLowerCase().contains(q) ||
+          coin.getSymbol().toLowerCase().contains(q);
+    }).toList();
   }
 
   @override
@@ -40,83 +46,53 @@ class _SelectBlockchainState extends State<SelectBlockchain> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          localization.selectBlockchains,
-        ),
+        title: Text(localization.selectBlockchains),
       ),
-      body: SizedBox(
-        height: double.infinity,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: TextFormField(
-                    onChanged: (String value) {
-                      blockchains.value = savedCoins.where((blockchain) {
-                        final name = blockchain.getName().toLowerCase();
-                        final symbol = blockchain.getSymbol().toLowerCase();
-                        final userInput = value.toLowerCase();
-                        if (name.contains(userInput) ||
-                            symbol.contains(userInput)) {
-                          return true;
-                        }
-                        return false;
-                      }).toList();
-                    },
-                    controller: searchController,
-                    keyboardType: TextInputType.visiblePassword,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 10.0,
-                        horizontal: 30.0,
-                      ),
-                      hintText: localization.searchCoin,
-                      focusedBorder: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(50)),
-                          borderSide: BorderSide.none),
-                      border: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(50)),
-                          borderSide: BorderSide.none),
-                      enabledBorder: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(50)),
-                          borderSide: BorderSide.none), // you
-                      filled: true,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextFormField(
+                  controller: searchController,
+                  onChanged: _handleSearch,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: localization.searchCoin,
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 30,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(50),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(50),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ValueListenableBuilder(
-                  valueListenable: blockchains,
-                  builder: (context, value, child) {
-                    final removeCoins = widget.removeCoin;
-                    return Column(
-                      children: [
-                        for (Coin blockchain in blockchains.value) ...[
-                          if (!WalletService.removeCoin(blockchain) ||
-                              !removeCoins)
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(context, blockchain);
-                              },
-                              child: buildRow(
-                                blockchain,
-                                isSelected: false,
-                              ),
-                            )
-                        ],
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              ValueListenableBuilder<List<Coin>>(
+                valueListenable: blockchains,
+                builder: (context, value, _) {
+                  return Column(
+                    children: value.map((coin) {
+                      return InkWell(
+                        onTap: () => Navigator.pop(context, coin),
+                        child: buildRow(coin, isSelected: false),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

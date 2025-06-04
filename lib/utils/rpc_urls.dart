@@ -3510,16 +3510,6 @@ class StructReader {
   int _offset;
 }
 
-class _SolanaSimuRes {
-  final double fee;
-  final List<String> result;
-
-  const _SolanaSimuRes({
-    required this.fee,
-    required this.result,
-  });
-}
-
 Uint8List txDataToUintList(String txData) {
   return isHexString(txData) ? hexToBytes(txData) : ascii.encode(txData);
 }

@@ -112,8 +112,8 @@ class _AddCustomTokenState extends State<AddCustomToken> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              evmOnly: true,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) => coin is EthereumCoin,
                             ),
                           ),
                         );

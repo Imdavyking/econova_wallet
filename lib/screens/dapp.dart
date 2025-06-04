@@ -476,9 +476,9 @@ class _DappState extends State<Dapp> {
                                     Coin? coin = await Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (ctx) =>
-                                            const SelectBlockchain(
-                                          evmOnly: true,
+                                        builder: (ctx) => SelectBlockchain(
+                                          filterFn: (coin) =>
+                                              coin is EthereumCoin,
                                         ),
                                       ),
                                     );

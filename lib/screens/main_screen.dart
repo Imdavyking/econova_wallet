@@ -146,8 +146,8 @@ class _MainScreenState extends State<MainScreen> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              removeCoin: false,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) => true, // removeCoin: false,
                             ),
                           ),
                         );
@@ -210,8 +210,8 @@ class _MainScreenState extends State<MainScreen> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              removeCoin: false,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) => true, // removeCoin: false,
                             ),
                           ),
                         );
