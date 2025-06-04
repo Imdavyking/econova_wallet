@@ -129,8 +129,6 @@ class WalletService {
         return _currentPrivateKey;
       case WalletType.viewKey:
         return _currentViewKey;
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -142,8 +140,6 @@ class WalletService {
         return _privateListKey;
       case WalletType.viewKey:
         return _viewListKey;
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -157,8 +153,6 @@ class WalletService {
         return PrivateKeyParams.fromJson(json.decode(data));
       case WalletType.viewKey:
         return ViewKeyParams.fromJson(json.decode(data));
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -192,8 +186,6 @@ class WalletService {
       case WalletType.viewKey:
         isValidType = currentKey is ViewKeyParams;
         break;
-      default:
-        throw Exception('Invalid wallet type');
     }
     if (!isValidType) {
       throw Exception('Invalid data type for the specified wallet type');
@@ -223,8 +215,6 @@ class WalletService {
         return jsonData.map((item) => PrivateKeyParams.fromJson(item)).toList();
       case WalletType.viewKey:
         return jsonData.map((item) => ViewKeyParams.fromJson(item)).toList();
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
