@@ -105,7 +105,9 @@ class WcConnectorV1 {
                           context,
                           MaterialPageRoute(
                             builder: (ctx) => SelectBlockchain(
-                              filterFn: (coin) => coin is EthereumCoin,
+                              filterFn: (coin) =>
+                                  coin is EthereumCoin &&
+                                  coin.tokenAddress() == null,
                             ),
                           ),
                         );

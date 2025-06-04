@@ -478,7 +478,8 @@ class _DappState extends State<Dapp> {
                                       MaterialPageRoute(
                                         builder: (ctx) => SelectBlockchain(
                                           filterFn: (coin) =>
-                                              coin is EthereumCoin,
+                                              coin is EthereumCoin &&
+                                              coin.tokenAddress() == null,
                                         ),
                                       ),
                                     );
