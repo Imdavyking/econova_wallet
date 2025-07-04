@@ -318,6 +318,24 @@ class SolanaCoin extends Coin {
   }
 
   @override
+  Future<String?> getQuote(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    return '';
+  }
+
+  @override
+  Future<String?> swapTokens(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    return '';
+  }
+
+  @override
   Future<String?> resolveAddress(String address) async {
     if (address.endsWith('.sol')) {
       address = address.substring(0, address.length - 4);
