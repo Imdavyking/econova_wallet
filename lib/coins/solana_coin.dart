@@ -322,7 +322,6 @@ class SolanaCoin extends Coin {
   }
 
   String SWAP_HOST() => 'https://transaction-v1.raydium.io';
-  String TX_VERSION() => "LEGACY"; // or "V0"
   String NATIVE_SOL_ADDRESS = 'So11111111111111111111111111111111111111112';
 
   Future<int> getTokenDecimals(String tokenAddress) async {
@@ -335,8 +334,7 @@ class SolanaCoin extends Coin {
     return mint.decimals;
   }
 
-  @override
-  Future<String?> getQuote(
+  Future<SwapQuote> _getSwapResponse(
     String tokenIn,
     String tokenOut,
     String amount,
@@ -349,10 +347,9 @@ class SolanaCoin extends Coin {
 
     final amountDecimals = amount.toBigIntDec(await getTokenDecimals(tokenIn));
 
-    final tokenOutDecimals = await getTokenDecimals(tokenOut);
     const slippage = 0.05;
     final url = Uri.parse(
-      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=${TX_VERSION()}',
+      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}',
     );
 
     final response = await http.get(url);
@@ -360,11 +357,24 @@ class SolanaCoin extends Coin {
       throw Exception('Failed to fetch quote: ${response.body}');
     }
 
-    final Map<String, dynamic> responseData = jsonDecode(response.body);
+    return SwapQuote.fromJson(jsonDecode(response.body));
+  }
 
+  @override
+  Future<String?> getQuote(
+    String tokenIn,
+    String tokenOut,
+    String amount,
+  ) async {
+    final tokenOutDecimals = await getTokenDecimals(tokenOut);
+    final responseData = await _getSwapResponse(
+      tokenIn,
+      tokenOut,
+      amount,
+    );
     final unit = pow(10, tokenOutDecimals);
 
-    final quoteAmount = num.parse(responseData['data']['outputAmount']) / unit;
+    final quoteAmount = num.parse(responseData.data.outputAmount) / unit;
 
     final quote = UserQuote(quoteAmount);
     return jsonEncode(quote.toJson());
@@ -376,6 +386,43 @@ class SolanaCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    final responseData = await _getSwapResponse(
+      tokenIn,
+      tokenOut,
+      amount,
+    );
+
+    final swapData = responseData.data;
+    final inputMint = swapData.inputMint;
+    final outputMint = swapData.outputMint;
+    final inputAmount = swapData.inputAmount;
+    final isInputSol = inputMint == NATIVE_SOL_ADDRESS;
+    final isOutputSol = outputMint == NATIVE_SOL_ADDRESS;
+    final address = await getAddress();
+    final inputTokenAcc = isInputSol
+        ? null
+        : await getProxy().getAssociatedTokenAccount(
+            mint: Ed25519HDPublicKey.fromBase58(inputMint),
+            owner: Ed25519HDPublicKey.fromBase58(address),
+            commitment: solana.Commitment.finalized,
+          );
+
+    final outputTokenAcc = isOutputSol
+        ? null
+        : await getProxy().getAssociatedTokenAccount(
+            mint: Ed25519HDPublicKey.fromBase58(outputMint),
+            owner: Ed25519HDPublicKey.fromBase58(address),
+            commitment: solana.Commitment.finalized,
+          );
+
+    final url = Uri.parse(
+      '${SWAP_HOST()}/transaction/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$inputAmount&slippageBps=${swapData.slippageBps}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
+    );
+
+    print(
+      '${SWAP_HOST()}/transaction/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$inputAmount&slippageBps=${swapData.slippageBps}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
+    );
+
     // Use 'V0' for versioned transaction, and 'LEGACY' for legacy transaction.
 
 //   const { data: swapTransactions } = await axios.post<{
@@ -545,4 +592,106 @@ Future calculateSolanaKey(SolanaArgs config) async {
     'address': keyPair.address,
     'privateKey': HEX.encode(keyPairData.bytes),
   };
+}
+
+class SwapQuote {
+  final String id;
+  final bool success;
+  final String version;
+  final SwapData data;
+
+  SwapQuote({
+    required this.id,
+    required this.success,
+    required this.version,
+    required this.data,
+  });
+
+  factory SwapQuote.fromJson(Map<String, dynamic> json) {
+    return SwapQuote(
+      id: json['id'],
+      success: json['success'],
+      version: json['version'],
+      data: SwapData.fromJson(json['data']),
+    );
+  }
+}
+
+class SwapData {
+  final String swapType;
+  final String inputMint;
+  final String inputAmount;
+  final String outputMint;
+  final String outputAmount;
+  final String otherAmountThreshold;
+  final int slippageBps;
+  final double priceImpactPct;
+  final String referrerAmount;
+  final List<RoutePlan> routePlan;
+
+  SwapData({
+    required this.swapType,
+    required this.inputMint,
+    required this.inputAmount,
+    required this.outputMint,
+    required this.outputAmount,
+    required this.otherAmountThreshold,
+    required this.slippageBps,
+    required this.priceImpactPct,
+    required this.referrerAmount,
+    required this.routePlan,
+  });
+
+  factory SwapData.fromJson(Map<String, dynamic> json) {
+    return SwapData(
+      swapType: json['swapType'],
+      inputMint: json['inputMint'],
+      inputAmount: json['inputAmount'],
+      outputMint: json['outputMint'],
+      outputAmount: json['outputAmount'],
+      otherAmountThreshold: json['otherAmountThreshold'],
+      slippageBps: json['slippageBps'],
+      priceImpactPct: (json['priceImpactPct'] as num).toDouble(),
+      referrerAmount: json['referrerAmount'],
+      routePlan: (json['routePlan'] as List<dynamic>)
+          .map((e) => RoutePlan.fromJson(e))
+          .toList(),
+    );
+  }
+}
+
+class RoutePlan {
+  final String poolId;
+  final String inputMint;
+  final String outputMint;
+  final String feeMint;
+  final int feeRate;
+  final String feeAmount;
+  final List<String> remainingAccounts;
+  final String lastPoolPriceX64;
+
+  RoutePlan({
+    required this.poolId,
+    required this.inputMint,
+    required this.outputMint,
+    required this.feeMint,
+    required this.feeRate,
+    required this.feeAmount,
+    required this.remainingAccounts,
+    required this.lastPoolPriceX64,
+  });
+
+  factory RoutePlan.fromJson(Map<String, dynamic> json) {
+    return RoutePlan(
+      poolId: json['poolId'],
+      inputMint: json['inputMint'],
+      outputMint: json['outputMint'],
+      feeMint: json['feeMint'],
+      feeRate: json['feeRate'],
+      feeAmount: json['feeAmount'],
+      remainingAccounts:
+          List<String>.from(json['remainingAccounts'] as List<dynamic>),
+      lastPoolPriceX64: json['lastPoolPriceX64'],
+    );
+  }
 }
