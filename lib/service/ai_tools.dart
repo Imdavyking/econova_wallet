@@ -4,6 +4,7 @@ import "package:flutter/foundation.dart";
 import "package:wallet_app/coins/starknet_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
+import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
@@ -361,8 +362,9 @@ class AItools {
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
-          return 'Quote price for $tokenIn => $tokenOut $amount is ${Quote.fromJson(jsonDecode(quote)).quoteAmount}';
+          return 'Quote price for $tokenIn => $tokenOut $amount is ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}';
         } catch (e) {
+          debugPrint('Error getting quote: $e');
           return 'Failed to get quote for $tokenIn => $tokenOut $amount';
         }
       },

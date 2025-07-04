@@ -1,9 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'dart:math';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
 import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/interface/user_quote.dart';
+import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/solana_meme.coin.dart';
 
 import '../extensions/big_int_ext.dart';
@@ -319,8 +322,13 @@ class SolanaCoin extends Coin {
   }
 
   String SWAP_HOST() => 'https://transaction-v1.raydium.io';
+  String TX_VERSION() => "LEGACY"; // or "V0"
+  String NATIVE_SOL_ADDRESS = 'So11111111111111111111111111111111111111112';
 
   Future<int> getTokenDecimals(String tokenAddress) async {
+    if (tokenAddress == NATIVE_SOL_ADDRESS) {
+      return solDecimals;
+    }
     final mint = await getProxy().getMint(
       address: Ed25519HDPublicKey.fromBase58(tokenAddress),
     );
@@ -333,22 +341,33 @@ class SolanaCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
-    final inputMint = tokenIn;
-    final outputMint = tokenOut;
-    final amountDecimals =
-        amount.toBigIntDec(await getTokenDecimals(inputMint));
-    const slippage = 0.05; // 5% slippage
-    const txVersion = 0; // Default transaction version
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = NATIVE_SOL_ADDRESS;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = NATIVE_SOL_ADDRESS;
+    }
+
+    final amountDecimals = amount.toBigIntDec(await getTokenDecimals(tokenIn));
+
+    final tokenOutDecimals = await getTokenDecimals(tokenOut);
+    const slippage = 0.05;
     final url = Uri.parse(
-      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=$txVersion',
+      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=${TX_VERSION()}',
     );
+
     final response = await http.get(url);
     if (response.statusCode >= 400) {
       throw Exception('Failed to fetch quote: ${response.body}');
     }
-    print(response.body);
 
-    return '';
+    final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+    final unit = pow(10, tokenOutDecimals);
+
+    final quoteAmount = num.parse(responseData['data']['outputAmount']) / unit;
+
+    final quote = UserQuote(quoteAmount);
+    return jsonEncode(quote.toJson());
   }
 
   @override
