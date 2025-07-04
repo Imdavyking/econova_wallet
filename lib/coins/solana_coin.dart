@@ -19,6 +19,7 @@ import '../model/seed_phrase_root.dart';
 import 'package:solana/solana.dart' as solana;
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import "package:http/http.dart" as http;
 
 const solDecimals = 9;
 
@@ -317,12 +318,36 @@ class SolanaCoin extends Coin {
     return solDecimals;
   }
 
+  String SWAP_HOST() => 'https://transaction-v1.raydium.io';
+
+  Future<int> getTokenDecimals(String tokenAddress) async {
+    final mint = await getProxy().getMint(
+      address: Ed25519HDPublicKey.fromBase58(tokenAddress),
+    );
+    return mint.decimals;
+  }
+
   @override
   Future<String?> getQuote(
     String tokenIn,
     String tokenOut,
     String amount,
   ) async {
+    final inputMint = tokenIn;
+    final outputMint = tokenOut;
+    final amountDecimals =
+        amount.toBigIntDec(await getTokenDecimals(inputMint));
+    const slippage = 0.05; // 5% slippage
+    const txVersion = 0; // Default transaction version
+    final url = Uri.parse(
+      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=$txVersion',
+    );
+    final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      throw Exception('Failed to fetch quote: ${response.body}');
+    }
+    print(response.body);
+
     return '';
   }
 
