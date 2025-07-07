@@ -12,7 +12,7 @@ import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/rpc_urls.dart' hide wcEthTxToWeb3Tx;
 import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_transaction.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
@@ -423,8 +423,8 @@ class WalletConnectReownService {
       getAccounts() async {
     List<EthereumCoin> ethCoins = [];
     final data = WalletService.getActiveKey(walletImportType)!.data;
-    List<String> accounts = [];
-    List<String> chainIds = [];
+    List<String> accounts = []; //TODO: get from config or settings
+    List<String> chainIds = []; //TODO: get from config or settings
 
     for (String ids in chainIds) {
       final chainID = int.parse(ids.split(':').last);
@@ -558,7 +558,10 @@ class WalletConnectReownService {
                               id: args.id, reason: error);
                           await _walletKit.core.pairing
                               .disconnect(topic: args.params.pairingTopic);
-                          Navigator.pop(_context);
+
+                          if (_context.mounted) {
+                            Navigator.pop(_context);
+                          }
                         },
                         child: Text(localization.reject),
                       ),
@@ -584,15 +587,17 @@ class WalletConnectReownService {
               .invokeMethod('openBrowser', {'packageName': targetPackageName});
         } on PlatformException catch (e) {
           debugPrint("Failed to open browser: '${e.message}'");
-          ScaffoldMessenger.of(_context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.red,
-              content: Text(
-                "Failed to open browser: '${e.message}'",
-                style: const TextStyle(color: Colors.white),
+          if (_context.mounted) {
+            ScaffoldMessenger.of(_context).showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red,
+                content: Text(
+                  "Failed to open browser: '${e.message}'",
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
     }
