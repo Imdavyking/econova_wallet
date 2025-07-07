@@ -8,6 +8,7 @@ import 'package:wallet_app/screens/select_blockchain.dart';
 import 'package:wallet_app/screens/add_custom_token.dart';
 import 'package:wallet_app/screens/token.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_reown/wc_connector_reown.dart';
 import 'package:wallet_app/utils/wallet_connect_v1/wc_connector_v1.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter/material.dart';
@@ -76,6 +77,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
     );
     WcConnectorV1();
     WcConnectorV2();
+    WCConnectorReown();
   }
 
   void initializeBlockchains() {

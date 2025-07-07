@@ -20,13 +20,13 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:http/http.dart' as http;
 
-class WalletConnectReownService {
+class WCConnectorReown {
   late ReownWalletKit _walletKit;
   late BuildContext _context;
   bool _isInitialized = false;
   String? tempScheme;
 
-  WalletConnectReownService() {
+  WCConnectorReown() {
     _context = NavigationService.navigatorKey.currentContext!;
     init();
   }
