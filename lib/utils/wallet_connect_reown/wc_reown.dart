@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:reown_walletkit/reown_walletkit.dart';
@@ -12,12 +13,13 @@ import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-
+import 'package:eth_sig_util/eth_sig_util.dart';
 class WalletConnectReownService {
   late ReownWalletKit _walletKit;
-  BuildContext? _context;
+  late BuildContext _context;
   bool _isInitialized = false;
   String? tempScheme;
 
@@ -114,28 +116,125 @@ class WalletConnectReownService {
     }
   }
 
-  void onSessionRequest(SessionRequestEvent? event) async {
-    if (event == null) return;
+void onSessionRequest(SessionRequestEvent? event) async {
+  if (event == null) return;
 
-    final method = event.method;
-    final params = event.params;
+  final method = event.method;
+  final params = event.params;
+  final topic = event.topic;
+  PairingMetadata? dAppMetadata;
 
-    switch (method) {
-      case 'personal_sign':
-      case 'eth_sign':
-        handleSignMessage(event);
-        break;
-      case 'eth_signTypedData':
-      case 'eth_signTypedData_v4':
-        handleTypedDataSign(event);
-        break;
-      case 'eth_sendTransaction':
-        handleSendTransaction(event);
-        break;
-      default:
-        onHandleErrorReject(event, ErrorCodes.unsupportMethod);
+
+  try {
+   final session = walletKit.sessions.get(topic);
+    if (session != null) {
+      dAppMetadata = session.peer.metadata;
     }
+  } catch (_) {}
+
+  switch (method) {
+    case 'personal_sign':
+    case 'eth_sign':
+    case 'eth_signTypedData':
+    case 'eth_signTypedData_v4':
+      {
+        // Determine message type
+        String messageType = '';
+        WCSignType signType = WCSignType.MESSAGE;
+
+        if (method == ethMethods[Eip155Methods.PERSONAL_SIGN]) {
+          messageType = personalSignKey;
+          signType = WCSignType.PERSONAL_MESSAGE;
+        } else if (method == ethMethods[Eip155Methods.ETH_SIGN]) {
+          messageType = normalSignKey;
+          signType = WCSignType.MESSAGE;
+        } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA]) {
+          messageType = typedMessageSignKey;
+          signType = WCSignType.TYPED_MESSAGE_V4;
+        } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA_V4]) {
+          messageType = typedMessageSignKey;
+          signType = WCSignType.TYPED_MESSAGE_V4;
+        }
+
+        final requestParams = (params["params"] as List).cast<String>();
+        final address = requestParams[0];
+        final message = requestParams[1];
+
+        final iconUrl = dAppMetadata?.icons.isNotEmpty == true
+            ? dAppMetadata!.icons[0]
+            : "";
+
+        await signMessage(
+          messageType: messageType,
+          context: _context,
+          data: message,
+          networkIcon: iconUrl,
+          name: dAppMetadata?.name ?? "Unknown",
+          onConfirm: () async {
+            try {
+              final sessionChainId = event.chainId.split(':').last;
+              int? chainId = int.tryParse(sessionChainId);
+              final coin = chainId == null ? evmFromSymbol('ETH')! : evmFromChainId(chainId)!;
+
+              final walletData = WalletService.getActiveKey(walletImportType)!.data;
+              final response = await coin.importData(walletData);
+              final privateKey = response.privateKey!;
+              final credentials = EthPrivateKey.fromHex(privateKey);
+
+              late String signedDataHex;
+
+              if (signType == WCSignType.TYPED_MESSAGE_V4) {
+                signedDataHex = EthSigUtil.signTypedData(
+                  privateKey: privateKey,
+                  jsonData: message,
+                  version: TypedDataVersion.V4,
+                );
+              } else if (signType == WCSignType.PERSONAL_MESSAGE) {
+                final signedBytes = credentials.signPersonalMessageToUint8List(txDataToUintList(message));
+                signedDataHex = bytesToHex(signedBytes, include0x: true);
+              } else if (signType == WCSignType.MESSAGE) {
+                try {
+                  signedDataHex = EthSigUtil.signMessage(
+                    privateKey: privateKey,
+                    message: txDataToUintList(message),
+                  );
+                } catch (_) {
+                  final fallbackBytes = credentials.signPersonalMessageToUint8List(txDataToUintList(message));
+                  signedDataHex = bytesToHex(fallbackBytes, include0x: true);
+                }
+              }
+
+              await _walletKit.respondSessionRequest(
+            topic: event.topic,
+            response: JsonRpcResponse(
+              id: event.id,
+              jsonrpc: '2.0',
+              result: signedDataHex,
+            ),
+          );
+          handleRedirect(params?["scheme"]);
+              if (_context.mounted) Navigator.pop(_context);
+            } catch (e) {
+                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              if (_context.mounted) Navigator.pop(_context);
+            }
+          },
+          onReject: () {
+               onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+            if (_context.mounted) Navigator.pop(_context);
+          },
+        );
+      }
+      break;
+
+    case 'eth_sendTransaction':
+      handleSendTransaction(event);
+      break;
+
+    default:
+      onHandleErrorReject(event, ErrorCodes.unsupportMethod);
   }
+}
 
   void _logListener(String event) {
     debugPrint('[WalletKit] $event');
@@ -229,12 +328,12 @@ class WalletConnectReownService {
           events: ['accountsChanged', 'chainChanged'],
         ),
       };
-      if (_context!.mounted) {
+      if (_context.mounted) {
       showDialog(
         barrierDismissible: false,
-        context: _context!,
+        context: _context,
         builder: (_) {
-          AppLocalizations localization = AppLocalizations.of(_context!)!;
+          AppLocalizations localization = AppLocalizations.of(_context)!;
           final metadata = proposer.metadata;
           return SimpleDialog(
             title: Column(
@@ -287,7 +386,7 @@ class WalletConnectReownService {
                     child: TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor:
-                            Theme.of(_context!).colorScheme.secondary,
+                            Theme.of(_context).colorScheme.secondary,
                       ),
                       onPressed: () async {
                         try {
@@ -304,8 +403,8 @@ class WalletConnectReownService {
               .disconnect(topic: args.params.pairingTopic);
                           
                         }finally {
-                          if (_context!.mounted) {
-                            Navigator.pop(_context!);
+                          if (_context.mounted) {
+                            Navigator.pop(_context);
                           }
                         }
                       },
@@ -317,14 +416,14 @@ class WalletConnectReownService {
                     child: TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor:
-                            Theme.of(_context!).colorScheme.secondary,
+                            Theme.of(_context).colorScheme.secondary,
                       ),
                       onPressed: ()async {
                      final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
           await _walletKit.rejectSession(id: args.id, reason: error);
           await _walletKit.core.pairing
               .disconnect(topic: args.params.pairingTopic);
-                        Navigator.pop(_context!);
+                        Navigator.pop(_context);
                       },
                       child: Text(localization.reject),
                     ),
@@ -350,7 +449,7 @@ class WalletConnectReownService {
               .invokeMethod('openBrowser', {'packageName': targetPackageName});
         } on PlatformException catch (e) {
           debugPrint("Failed to open browser: '${e.message}'");
-          ScaffoldMessenger.of(_context!).showSnackBar(
+          ScaffoldMessenger.of(_context).showSnackBar(
             SnackBar(
               backgroundColor: Colors.red,
               content: Text(

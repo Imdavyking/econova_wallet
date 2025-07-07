@@ -116,7 +116,7 @@ class WcConnectorV2 {
       database: 'wallet.db',
       logger: Logger(
         filter: ProductionFilter(),
-        level: Level.nothing,
+        level: Level.off,
       ),
     );
 
