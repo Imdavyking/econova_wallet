@@ -692,7 +692,7 @@ class SwapData {
       'slippageBps': slippageBps,
       'priceImpactPct': priceImpactPct,
       'referrerAmount': referrerAmount,
-      'routePlan': routePlan.toJson(),
+      'routePlan': routePlan.map((e) => e.toJson()).toList(),
     };
   }
 }
