@@ -26,7 +26,10 @@ class WalletConnectReownService {
   bool _isInitialized = false;
   String? tempScheme;
 
-  WalletConnectReownService();
+  WalletConnectReownService() {
+    _context = NavigationService.navigatorKey.currentContext!;
+    init();
+  }
 
   ReownWalletKit get walletKit {
     if (!_isInitialized) {
@@ -37,9 +40,6 @@ class WalletConnectReownService {
   }
 
   bool get isInitialized => _isInitialized;
-  void setContext(BuildContext context) async {
-    _context = context;
-  }
 
   void setTempScheme(String? scheme) {
     tempScheme = scheme;
@@ -47,7 +47,6 @@ class WalletConnectReownService {
 
   Future<void> init() async {
     if (_isInitialized) return;
-    setContext(NavigationService.navigatorKey.currentContext!);
     _walletKit = ReownWalletKit(
       core: ReownCore(
         projectId: walletConnectKey,
