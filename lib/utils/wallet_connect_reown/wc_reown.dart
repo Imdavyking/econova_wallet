@@ -314,134 +314,132 @@ class WalletConnectReownService {
   void _onSessionProposal(SessionProposalEvent? args) async {
     debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args?.params)}');
     List<Widget> coinWidgets = [];
-    //   if (args != null && _context != null) {
-    //     final proposer = args.params.proposer;
-    //   (List<String> accounts, List<EthereumCoin> ethCoins) = await getAccounts();
+    if (args != null) {
+      final proposer = args.params.proposer;
+      final (accounts, ethCoins) = await getAccounts();
 
-    //     Map<String, Namespace> defaultNamespaces = {
-    //       'eip155': Namespace(
-    //         accounts: accounts,
-    //         methods: [
-    //           'eth_sendTransaction',
-    //           'eth_signTransaction',
-    //           'personal_sign',
-    //           'eth_sign',
-    //           'eth_signTypedData',
-    //           'eth_signTypedData_v4',
-    //           'wallet_switchEthereumChain',
-    //           'wallet_addEthereumChain',
-    //         ],
-    //         events: ['accountsChanged', 'chainChanged'],
-    //       ),
-    //     };
-    //     if (_context.mounted) {
-    //     showDialog(
-    //       barrierDismissible: false,
-    //       context: _context,
-    //       builder: (_) {
-    //         AppLocalizations localization = AppLocalizations.of(_context)!;
-    //         final metadata = proposer.metadata;
-    //         return SimpleDialog(
-    //           title: Column(
-    //             children: [
-    //               if (metadata.icons.isNotEmpty)
-    //                 Container(
-    //                   height: 100.0,
-    //                   width: 100.0,
-    //                   padding: const EdgeInsets.only(bottom: 8.0),
-    //                   child: CachedNetworkImage(
-    //                     imageUrl: ipfsTohttp(metadata.icons.first),
-    //                     placeholder: (context, url) => const Column(
-    //                       mainAxisAlignment: MainAxisAlignment.center,
-    //                       mainAxisSize: MainAxisSize.min,
-    //                       children: [
-    //                         SizedBox(
-    //                           width: 20,
-    //                           height: 20,
-    //                           child: Loader(
-    //                             color: appPrimaryColor,
-    //                           ),
-    //                         )
-    //                       ],
-    //                     ),
-    //                     errorWidget: (context, url, error) => const Icon(
-    //                       Icons.error,
-    //                       color: Colors.red,
-    //                     ),
-    //                   ),
-    //                 ),
-    //               Text(metadata.name),
-    //             ],
-    //           ),
-    //           contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-    //           children: [
-    //             if (metadata.description.isNotEmpty)
-    //               Padding(
-    //                 padding: const EdgeInsets.only(bottom: 8.0),
-    //                 child: Text(metadata.description),
-    //               ),
-    //             if (metadata.url.isNotEmpty)
-    //               Padding(
-    //                 padding: const EdgeInsets.only(bottom: 8.0),
-    //                 child: Text('${localization.connectedTo} ${metadata.url}'),
-    //               ),
-    //             if (coinWidgets.isNotEmpty) ...coinWidgets,
-    //             Row(
-    //               children: [
-    //                 Expanded(
-    //                   child: TextButton(
-    //                     style: TextButton.styleFrom(
-    //                       backgroundColor:
-    //                           Theme.of(_context).colorScheme.secondary,
-    //                     ),
-    //                     onPressed: () async {
-    //                       try {
-    //                           await _walletKit.approveSession(
-    //             id: args.id,
-    //             namespaces: defaultNamespaces,
-    //             sessionProperties: args.params.sessionProperties,
-    //           );
-
-    //                       } catch (_) {
-    //                          final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
-    //         await _walletKit.rejectSession(id: args.id, reason: error);
-    //         await _walletKit.core.pairing
-    //             .disconnect(topic: args.params.pairingTopic);
-
-    //                       }finally {
-    //                         if (_context.mounted) {
-    //                           Navigator.pop(_context);
-    //                         }
-    //                       }
-    //                     },
-    //                     child: Text(localization.confirm),
-    //                   ),
-    //                 ),
-    //                 const SizedBox(width: 16.0),
-    //                 Expanded(
-    //                   child: TextButton(
-    //                     style: TextButton.styleFrom(
-    //                       backgroundColor:
-    //                           Theme.of(_context).colorScheme.secondary,
-    //                     ),
-    //                     onPressed: ()async {
-    //                    final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
-    //         await _walletKit.rejectSession(id: args.id, reason: error);
-    //         await _walletKit.core.pairing
-    //             .disconnect(topic: args.params.pairingTopic);
-    //                       Navigator.pop(_context);
-    //                     },
-    //                     child: Text(localization.reject),
-    //                   ),
-    //                 ),
-    //               ],
-    //             ),
-    //           ],
-    //         );
-    //       },
-    //     );
-    //   }
-    //   }
+      Map<String, Namespace> defaultNamespaces = {
+        'eip155': Namespace(
+          accounts: accounts,
+          methods: [
+            'eth_sendTransaction',
+            'eth_signTransaction',
+            'personal_sign',
+            'eth_sign',
+            'eth_signTypedData',
+            'eth_signTypedData_v4',
+            'wallet_switchEthereumChain',
+            'wallet_addEthereumChain',
+          ],
+          events: ['accountsChanged', 'chainChanged'],
+        ),
+      };
+      if (_context.mounted) {
+        showDialog(
+          barrierDismissible: false,
+          context: _context,
+          builder: (_) {
+            AppLocalizations localization = AppLocalizations.of(_context)!;
+            final metadata = proposer.metadata;
+            return SimpleDialog(
+              title: Column(
+                children: [
+                  if (metadata.icons.isNotEmpty)
+                    Container(
+                      height: 100.0,
+                      width: 100.0,
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: CachedNetworkImage(
+                        imageUrl: ipfsTohttp(metadata.icons.first),
+                        placeholder: (context, url) => const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Loader(
+                                color: appPrimaryColor,
+                              ),
+                            )
+                          ],
+                        ),
+                        errorWidget: (context, url, error) => const Icon(
+                          Icons.error,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  Text(metadata.name),
+                ],
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+              children: [
+                if (metadata.description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(metadata.description),
+                  ),
+                if (metadata.url.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text('${localization.connectedTo} ${metadata.url}'),
+                  ),
+                if (coinWidgets.isNotEmpty) ...coinWidgets,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(_context).colorScheme.secondary,
+                        ),
+                        onPressed: () async {
+                          try {
+                            await _walletKit.approveSession(
+                              id: args.id,
+                              namespaces: defaultNamespaces,
+                              sessionProperties: args.params.sessionProperties,
+                            );
+                            handleRedirect(tempScheme);
+                          } catch (error) {
+                            debugPrint('showConnectAction===0,$error');
+                          } finally {
+                            if (_context.mounted) {
+                              Navigator.pop(_context);
+                            }
+                          }
+                        },
+                        child: Text(localization.confirm),
+                      ),
+                    ),
+                    const SizedBox(width: 16.0),
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(_context).colorScheme.secondary,
+                        ),
+                        onPressed: () async {
+                          final error = Errors.getSdkError(Errors.USER_REJECTED)
+                              .toSignError();
+                          await _walletKit.rejectSession(
+                              id: args.id, reason: error);
+                          await _walletKit.core.pairing
+                              .disconnect(topic: args.params.pairingTopic);
+                          Navigator.pop(_context);
+                        },
+                        child: Text(localization.reject),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
   }
 
   void handleRedirect(String? scheme) async {
