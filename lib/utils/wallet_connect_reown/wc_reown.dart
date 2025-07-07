@@ -55,7 +55,7 @@ class WalletConnectReownService {
         icons: [walletIconURL],
         redirect: Redirect(
           native: 'econova://',
-          universal: 'https://www.econova.com/links',
+          universal: 'https://econova.app.links',
           linkMode: true,
         ),
       ),
