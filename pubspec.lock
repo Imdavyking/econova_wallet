@@ -1444,10 +1444,10 @@ packages:
     dependency: "direct overridden"
     description:
       name: logger
-      sha256: "496066067d1990c654cdf8cbbb35936e39105d90e8579495cd1daa506cded2e7"
+      sha256: "2621da01aabaf223f8f961e751f2c943dbb374dc3559b982f200ccedadaa6999"
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.0"
+    version: "2.6.0"
   logging:
     dependency: transitive
     description:
@@ -2629,10 +2629,9 @@ packages:
   wallet_connect_dart_v2:
     dependency: "direct main"
     description:
-      name: wallet_connect_dart_v2
-      sha256: "5724429355abafac2018d67572fb6720ad4473335b8e6f6a65d2cb489b9ecca3"
-      url: "https://pub.dev"
-    source: hosted
+      path: wallet_connect_dart_v2
+      relative: true
+    source: path
     version: "0.0.1"
   watcher:
     dependency: transitive
