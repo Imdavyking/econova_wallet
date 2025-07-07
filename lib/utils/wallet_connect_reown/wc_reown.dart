@@ -17,6 +17,7 @@ import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_s
 import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
+
 class WalletConnectReownService {
   late ReownWalletKit _walletKit;
   late BuildContext _context;
@@ -116,125 +117,130 @@ class WalletConnectReownService {
     }
   }
 
-void onSessionRequest(SessionRequestEvent? event) async {
-  if (event == null) return;
+  void onSessionRequest(SessionRequestEvent? event) async {
+    if (event == null) return;
 
-  final method = event.method;
-  final params = event.params;
-  final topic = event.topic;
-  PairingMetadata? dAppMetadata;
-
-
-  try {
-   final session = walletKit.sessions.get(topic);
-    if (session != null) {
-      dAppMetadata = session.peer.metadata;
-    }
-  } catch (_) {}
-
-  switch (method) {
-    case 'personal_sign':
-    case 'eth_sign':
-    case 'eth_signTypedData':
-    case 'eth_signTypedData_v4':
-      {
-        // Determine message type
-        String messageType = '';
-        WCSignType signType = WCSignType.MESSAGE;
-
-        if (method == ethMethods[Eip155Methods.PERSONAL_SIGN]) {
-          messageType = personalSignKey;
-          signType = WCSignType.PERSONAL_MESSAGE;
-        } else if (method == ethMethods[Eip155Methods.ETH_SIGN]) {
-          messageType = normalSignKey;
-          signType = WCSignType.MESSAGE;
-        } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA]) {
-          messageType = typedMessageSignKey;
-          signType = WCSignType.TYPED_MESSAGE_V4;
-        } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA_V4]) {
-          messageType = typedMessageSignKey;
-          signType = WCSignType.TYPED_MESSAGE_V4;
-        }
-
-        final requestParams = (params["params"] as List).cast<String>();
-        final address = requestParams[0];
-        final message = requestParams[1];
-
-        final iconUrl = dAppMetadata?.icons.isNotEmpty == true
-            ? dAppMetadata!.icons[0]
-            : "";
-
-        await signMessage(
-          messageType: messageType,
-          context: _context,
-          data: message,
-          networkIcon: iconUrl,
-          name: dAppMetadata?.name ?? "Unknown",
-          onConfirm: () async {
-            try {
-              final sessionChainId = event.chainId.split(':').last;
-              int? chainId = int.tryParse(sessionChainId);
-              final coin = chainId == null ? evmFromSymbol('ETH')! : evmFromChainId(chainId)!;
-
-              final walletData = WalletService.getActiveKey(walletImportType)!.data;
-              final response = await coin.importData(walletData);
-              final privateKey = response.privateKey!;
-              final credentials = EthPrivateKey.fromHex(privateKey);
-
-              late String signedDataHex;
-
-              if (signType == WCSignType.TYPED_MESSAGE_V4) {
-                signedDataHex = EthSigUtil.signTypedData(
-                  privateKey: privateKey,
-                  jsonData: message,
-                  version: TypedDataVersion.V4,
-                );
-              } else if (signType == WCSignType.PERSONAL_MESSAGE) {
-                final signedBytes = credentials.signPersonalMessageToUint8List(txDataToUintList(message));
-                signedDataHex = bytesToHex(signedBytes, include0x: true);
-              } else if (signType == WCSignType.MESSAGE) {
-                try {
-                  signedDataHex = EthSigUtil.signMessage(
-                    privateKey: privateKey,
-                    message: txDataToUintList(message),
-                  );
-                } catch (_) {
-                  final fallbackBytes = credentials.signPersonalMessageToUint8List(txDataToUintList(message));
-                  signedDataHex = bytesToHex(fallbackBytes, include0x: true);
-                }
-              }
-
-              await _walletKit.respondSessionRequest(
-            topic: event.topic,
-            response: JsonRpcResponse(
-              id: event.id,
-              jsonrpc: '2.0',
-              result: signedDataHex,
-            ),
-          );
-          handleRedirect(params?["scheme"]);
-              if (_context.mounted) Navigator.pop(_context);
-            } catch (e) {
-                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-              if (_context.mounted) Navigator.pop(_context);
-            }
-          },
-          onReject: () {
-               onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-            if (_context.mounted) Navigator.pop(_context);
-          },
-        );
+    final method = event.method;
+    final params = event.params;
+    final topic = event.topic;
+    PairingMetadata? dAppMetadata;
+    try {
+      final session = walletKit.sessions.get(topic);
+      if (session != null) {
+        dAppMetadata = session.peer.metadata;
       }
-      break;
+    } catch (_) {}
 
-    case 'eth_sendTransaction':
-      handleSendTransaction(event);
-      break;
+    switch (method) {
+      case 'personal_sign':
+      case 'eth_sign':
+      case 'eth_signTypedData':
+      case 'eth_signTypedData_v4':
+        {
+          String messageType = '';
+          WCSignType signType = WCSignType.MESSAGE;
 
-    default:
-      onHandleErrorReject(event, ErrorCodes.unsupportMethod);
+          if (method == ethMethods[Eip155Methods.PERSONAL_SIGN]) {
+            messageType = personalSignKey;
+            signType = WCSignType.PERSONAL_MESSAGE;
+          } else if (method == ethMethods[Eip155Methods.ETH_SIGN]) {
+            messageType = normalSignKey;
+            signType = WCSignType.MESSAGE;
+          } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA]) {
+            messageType = typedMessageSignKey;
+            signType = WCSignType.TYPED_MESSAGE_V4;
+          } else if (method ==
+              ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA_V4]) {
+            messageType = typedMessageSignKey;
+            signType = WCSignType.TYPED_MESSAGE_V4;
+          }
+
+          final requestParams = (params["params"] as List).cast<String>();
+          final message = requestParams[1];
+
+          final iconUrl = dAppMetadata?.icons.isNotEmpty == true
+              ? dAppMetadata!.icons[0]
+              : "";
+
+          await signMessage(
+            messageType: messageType,
+            context: _context,
+            data: message,
+            networkIcon: iconUrl,
+            name: dAppMetadata?.name ?? "Unknown",
+            onConfirm: () async {
+              try {
+                final sessionChainId = event.chainId.split(':').last;
+                int? chainId = int.tryParse(sessionChainId);
+                final coin = chainId == null
+                    ? evmFromSymbol('ETH')!
+                    : evmFromChainId(chainId)!;
+
+                final walletData =
+                    WalletService.getActiveKey(walletImportType)!.data;
+                final response = await coin.importData(walletData);
+                final privateKey = response.privateKey!;
+                final credentials = EthPrivateKey.fromHex(privateKey);
+
+                late String signedDataHex;
+
+                if (signType == WCSignType.TYPED_MESSAGE_V4) {
+                  signedDataHex = EthSigUtil.signTypedData(
+                    privateKey: privateKey,
+                    jsonData: message,
+                    version: TypedDataVersion.V4,
+                  );
+                } else if (signType == WCSignType.PERSONAL_MESSAGE) {
+                  final signedBytes =
+                      credentials.signPersonalMessageToUint8List(
+                          txDataToUintList(message));
+                  signedDataHex = bytesToHex(signedBytes, include0x: true);
+                } else if (signType == WCSignType.MESSAGE) {
+                  try {
+                    signedDataHex = EthSigUtil.signMessage(
+                      privateKey: privateKey,
+                      message: txDataToUintList(message),
+                    );
+                  } catch (_) {
+                    final fallbackBytes =
+                        credentials.signPersonalMessageToUint8List(
+                            txDataToUintList(message));
+                    signedDataHex = bytesToHex(fallbackBytes, include0x: true);
+                  }
+                }
+
+                await _walletKit.respondSessionRequest(
+                  topic: event.topic,
+                  response: JsonRpcResponse(
+                    id: event.id,
+                    jsonrpc: '2.0',
+                    result: signedDataHex,
+                  ),
+                );
+                handleRedirect(params?["scheme"]);
+                if (_context.mounted) Navigator.pop(_context);
+              } catch (e) {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                if (_context.mounted) Navigator.pop(_context);
+              }
+            },
+            onReject: () {
+              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              if (_context.mounted) Navigator.pop(_context);
+            },
+          );
+        }
+        break;
+
+      case 'eth_sendTransaction':
+        //TODO: Implement eth_sendTransaction handling
+        // handleSendTransaction(event);
+        break;
+
+      default:
+        onHandleErrorReject(event, ErrorCodes.unsupportMethod);
+    }
   }
-}
 
   void _logListener(String event) {
     debugPrint('[WalletKit] $event');
@@ -307,135 +313,135 @@ void onSessionRequest(SessionRequestEvent? event) async {
 
   void _onSessionProposal(SessionProposalEvent? args) async {
     debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args?.params)}');
-  List<Widget> coinWidgets = [];
-    if (args != null && _context != null) {
-      final proposer = args.params.proposer;
-    (List<String> accounts, List<EthereumCoin> ethCoins) = await getAccounts();
+    List<Widget> coinWidgets = [];
+    //   if (args != null && _context != null) {
+    //     final proposer = args.params.proposer;
+    //   (List<String> accounts, List<EthereumCoin> ethCoins) = await getAccounts();
 
-      Map<String, Namespace> defaultNamespaces = {
-        'eip155': Namespace(
-          accounts: accounts,
-          methods: [
-            'eth_sendTransaction',
-            'eth_signTransaction',
-            'personal_sign',
-            'eth_sign',
-            'eth_signTypedData',
-            'eth_signTypedData_v4',
-            'wallet_switchEthereumChain',
-            'wallet_addEthereumChain',
-          ],
-          events: ['accountsChanged', 'chainChanged'],
-        ),
-      };
-      if (_context.mounted) {
-      showDialog(
-        barrierDismissible: false,
-        context: _context,
-        builder: (_) {
-          AppLocalizations localization = AppLocalizations.of(_context)!;
-          final metadata = proposer.metadata;
-          return SimpleDialog(
-            title: Column(
-              children: [
-                if (metadata.icons.isNotEmpty)
-                  Container(
-                    height: 100.0,
-                    width: 100.0,
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: CachedNetworkImage(
-                      imageUrl: ipfsTohttp(metadata.icons.first),
-                      placeholder: (context, url) => const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Loader(
-                              color: appPrimaryColor,
-                            ),
-                          )
-                        ],
-                      ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.error,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ),
-                Text(metadata.name),
-              ],
-            ),
-            contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-            children: [
-              if (metadata.description.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Text(metadata.description),
-                ),
-              if (metadata.url.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Text('${localization.connectedTo} ${metadata.url}'),
-                ),
-              if (coinWidgets.isNotEmpty) ...coinWidgets,
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(_context).colorScheme.secondary,
-                      ),
-                      onPressed: () async {
-                        try {
-                            await _walletKit.approveSession(
-              id: args.id,
-              namespaces: defaultNamespaces,
-              sessionProperties: args.params.sessionProperties,
-            );
-                   
-                        } catch (_) {
-                           final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
-          await _walletKit.rejectSession(id: args.id, reason: error);
-          await _walletKit.core.pairing
-              .disconnect(topic: args.params.pairingTopic);
-                          
-                        }finally {
-                          if (_context.mounted) {
-                            Navigator.pop(_context);
-                          }
-                        }
-                      },
-                      child: Text(localization.confirm),
-                    ),
-                  ),
-                  const SizedBox(width: 16.0),
-                  Expanded(
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(_context).colorScheme.secondary,
-                      ),
-                      onPressed: ()async {
-                     final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
-          await _walletKit.rejectSession(id: args.id, reason: error);
-          await _walletKit.core.pairing
-              .disconnect(topic: args.params.pairingTopic);
-                        Navigator.pop(_context);
-                      },
-                      child: Text(localization.reject),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      );
-    } 
-    } 
+    //     Map<String, Namespace> defaultNamespaces = {
+    //       'eip155': Namespace(
+    //         accounts: accounts,
+    //         methods: [
+    //           'eth_sendTransaction',
+    //           'eth_signTransaction',
+    //           'personal_sign',
+    //           'eth_sign',
+    //           'eth_signTypedData',
+    //           'eth_signTypedData_v4',
+    //           'wallet_switchEthereumChain',
+    //           'wallet_addEthereumChain',
+    //         ],
+    //         events: ['accountsChanged', 'chainChanged'],
+    //       ),
+    //     };
+    //     if (_context.mounted) {
+    //     showDialog(
+    //       barrierDismissible: false,
+    //       context: _context,
+    //       builder: (_) {
+    //         AppLocalizations localization = AppLocalizations.of(_context)!;
+    //         final metadata = proposer.metadata;
+    //         return SimpleDialog(
+    //           title: Column(
+    //             children: [
+    //               if (metadata.icons.isNotEmpty)
+    //                 Container(
+    //                   height: 100.0,
+    //                   width: 100.0,
+    //                   padding: const EdgeInsets.only(bottom: 8.0),
+    //                   child: CachedNetworkImage(
+    //                     imageUrl: ipfsTohttp(metadata.icons.first),
+    //                     placeholder: (context, url) => const Column(
+    //                       mainAxisAlignment: MainAxisAlignment.center,
+    //                       mainAxisSize: MainAxisSize.min,
+    //                       children: [
+    //                         SizedBox(
+    //                           width: 20,
+    //                           height: 20,
+    //                           child: Loader(
+    //                             color: appPrimaryColor,
+    //                           ),
+    //                         )
+    //                       ],
+    //                     ),
+    //                     errorWidget: (context, url, error) => const Icon(
+    //                       Icons.error,
+    //                       color: Colors.red,
+    //                     ),
+    //                   ),
+    //                 ),
+    //               Text(metadata.name),
+    //             ],
+    //           ),
+    //           contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+    //           children: [
+    //             if (metadata.description.isNotEmpty)
+    //               Padding(
+    //                 padding: const EdgeInsets.only(bottom: 8.0),
+    //                 child: Text(metadata.description),
+    //               ),
+    //             if (metadata.url.isNotEmpty)
+    //               Padding(
+    //                 padding: const EdgeInsets.only(bottom: 8.0),
+    //                 child: Text('${localization.connectedTo} ${metadata.url}'),
+    //               ),
+    //             if (coinWidgets.isNotEmpty) ...coinWidgets,
+    //             Row(
+    //               children: [
+    //                 Expanded(
+    //                   child: TextButton(
+    //                     style: TextButton.styleFrom(
+    //                       backgroundColor:
+    //                           Theme.of(_context).colorScheme.secondary,
+    //                     ),
+    //                     onPressed: () async {
+    //                       try {
+    //                           await _walletKit.approveSession(
+    //             id: args.id,
+    //             namespaces: defaultNamespaces,
+    //             sessionProperties: args.params.sessionProperties,
+    //           );
+
+    //                       } catch (_) {
+    //                          final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
+    //         await _walletKit.rejectSession(id: args.id, reason: error);
+    //         await _walletKit.core.pairing
+    //             .disconnect(topic: args.params.pairingTopic);
+
+    //                       }finally {
+    //                         if (_context.mounted) {
+    //                           Navigator.pop(_context);
+    //                         }
+    //                       }
+    //                     },
+    //                     child: Text(localization.confirm),
+    //                   ),
+    //                 ),
+    //                 const SizedBox(width: 16.0),
+    //                 Expanded(
+    //                   child: TextButton(
+    //                     style: TextButton.styleFrom(
+    //                       backgroundColor:
+    //                           Theme.of(_context).colorScheme.secondary,
+    //                     ),
+    //                     onPressed: ()async {
+    //                    final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
+    //         await _walletKit.rejectSession(id: args.id, reason: error);
+    //         await _walletKit.core.pairing
+    //             .disconnect(topic: args.params.pairingTopic);
+    //                       Navigator.pop(_context);
+    //                     },
+    //                     child: Text(localization.reject),
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ],
+    //         );
+    //       },
+    //     );
+    //   }
+    //   }
   }
 
   void handleRedirect(String? scheme) async {
