@@ -8,7 +8,8 @@ const walletURL = "https://econova.vercel.app";
 const walletIconURL = "$walletURL/img/logo.png";
 const walletDexProviderUrl =
     'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
-
+const String fallbackMessage =
+    "Unspecified error message. This is a bug, please report it.";
 const stakeDexProviderUrl =
     'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
 const fiatDexProviderUrl = 'https://paxful.com/';
