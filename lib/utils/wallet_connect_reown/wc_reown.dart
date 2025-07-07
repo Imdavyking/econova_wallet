@@ -41,13 +41,13 @@ class WalletConnectReownService {
         logLevel: LogLevel.nothing,
       ),
       metadata: const PairingMetadata(
-        name: 'Auro Wallet',
-        description: 'Auro Wallet, Mina Protocol',
-        url: 'https://www.aurowallet.com/',
-        icons: ['https://www.aurowallet.com/imgs/auro.png'],
+        name: walletName,
+        url: walletURL,
+        description: walletAbbr,
+        icons: [walletIconURL],
         redirect: Redirect(
-          native: 'aurowallet://',
-          universal: 'https://www.aurowallet.com/applinks',
+          native: 'econova://',
+          universal: 'https://www.econova.com/links',
           linkMode: true,
         ),
       ),
@@ -55,15 +55,14 @@ class WalletConnectReownService {
 
     _setupListeners();
     await _walletKit.init();
-    debugPrint("[aurowallet] _walletKit init success");
+    debugPrint("[econova] _walletKit init success");
     _isInitialized = true;
     getAllPairedLinks();
   }
 
   List<String> getAllSupportChains() {
     List<String> currentSupportChainList = [];
-    debugPrint(
-        "[aurowallet] currentSupportChainList: $currentSupportChainList");
+    debugPrint("[econova] currentSupportChainList: $currentSupportChainList");
     return currentSupportChainList;
   }
 
@@ -282,120 +281,28 @@ class WalletConnectReownService {
     }
   }
 
+  
+
   void onSessionRequest(SessionRequestEvent? event) async {
-    if (event != null) {
-      final method = event.method;
-      if (method == "wallet_info") {
-        _walletKit.respondSessionRequest(
-          topic: event.topic,
-          response: JsonRpcResponse(
-            id: event.id,
-            jsonrpc: '2.0',
-            result: {
-              "version": app_version,
-              "init": true,
-            },
-          ),
-        );
-        return;
-      }
+    if (event == null) return;
 
-      final params = event.params as Map;
-      final fromAddress = params['from'];
-      PairingMetadata? dAppMetadata;
-      try {
-        final session = walletKit.sessions.get(event.topic);
-        if (session != null) {
-          dAppMetadata = session.peer.metadata;
-        }
-      } catch (e) {}
-      try {
-        if (!getAllSupportChains().contains(event.chainId)) {
-          onHandleErrorReject(event, ErrorCodes.notSupportChain);
-          return;
-        }
+    final method = event.method;
+    final params = event.params;
 
-        List<String> localAccountKeys =
-            appStore.wallet!.accountListAll.map((acc) => acc.pubKey).toList();
-        if (!localAccountKeys.contains(params['from'])) {
-          onHandleErrorReject(event, ErrorCodes.addressNotExist);
-          return;
-        }
-
-        WalletData? signWallet;
-        if (appStore.wallet!.currentAddress != params['from']) {
-          signWallet = appStore.wallet!.walletList.firstWhere((w) =>
-              w.accounts
-                  .indexWhere((account) => account.pubKey == fromAddress) >=
-              0);
-        }
-
-        switch (method) {
-          case 'mina_signMessage':
-          case 'mina_sign_JsonMessage':
-          case 'mina_signFields':
-          case 'mina_createNullifier':
-            onHandleSignMessageDialog(event,
-                signWallet: signWallet, dAppMetadata: dAppMetadata);
-            break;
-          case 'mina_sendPayment':
-          case 'mina_sendStakeDelegation':
-          case 'mina_sendTransaction':
-            onHandleSignTransactionDialog(event,
-                signWallet: signWallet, dAppMetadata: dAppMetadata);
-            break;
-          case "mina_verifyMessage":
-          case "mina_verify_JsonMessage":
-            Map verifyData = {
-              "network": event.chainId == networkIDMap['mainnet']
-                  ? "mainnet"
-                  : "testnet",
-              "publicKey": params["from"],
-              "signature": params['signature'],
-              "verifyMessage": params["data"],
-            };
-            bool res = await webApi.account.verifyMessage(
-              verifyData,
-              context: _context!,
-            );
-            _walletKit.respondSessionRequest(
-              topic: event.topic,
-              response: JsonRpcResponse(
-                id: event.id,
-                jsonrpc: '2.0',
-                result: res,
-              ),
-            );
-            break;
-          case "mina_verifyFields":
-            Map verifyData = {
-              "network": event.chainId == networkIDMap['mainnet']
-                  ? "mainnet"
-                  : "testnet",
-              "publicKey": params["from"],
-              "signature": params['signature'],
-              "fields": params["data"],
-            };
-            bool res = await webApi.account.verifyFields(
-              verifyData,
-              context: _context!,
-            );
-            _walletKit.respondSessionRequest(
-              topic: event.topic,
-              response: JsonRpcResponse(
-                id: event.id,
-                jsonrpc: '2.0',
-                result: res,
-              ),
-            );
-            break;
-          default:
-        }
-        return;
-      } catch (e) {
-        print("[aurowallet] onSessionRequest failed, event:  $event");
-        print("[aurowallet] onSessionRequest failed, error: $e");
-      }
+    switch (method) {
+      case 'personal_sign':
+      case 'eth_sign':
+        handleSignMessage(event);
+        break;
+      case 'eth_signTypedData':
+      case 'eth_signTypedData_v4':
+        handleTypedDataSign(event);
+        break;
+      case 'eth_sendTransaction':
+        handleSendTransaction(event);
+        break;
+      default:
+        onHandleErrorReject(event, ErrorCodes.unsupportMethod);
     }
   }
 
@@ -456,22 +363,19 @@ class WalletConnectReownService {
           .toList();
 
       Map<String, Namespace> defaultNamespaces = {
-        'mina': Namespace(
-          accounts: accountsNs,
+        'eip155': Namespace(
+          accounts: ['eip155:1:$ethAddress'], // Replace with current address
           methods: [
-            "mina_sendPayment",
-            "mina_sendStakeDelegation",
-            "mina_sendTransaction",
-            "mina_signMessage",
-            "mina_sign_JsonMessage",
-            "mina_signFields",
-            "mina_createNullifier",
-            "mina_verifyMessage",
-            "mina_verify_JsonMessage",
-            "mina_verifyFields",
-            "wallet_info"
+            'eth_sendTransaction',
+            'eth_signTransaction',
+            'personal_sign',
+            'eth_sign',
+            'eth_signTypedData',
+            'eth_signTypedData_v4',
+            'wallet_switchEthereumChain',
+            'wallet_addEthereumChain',
           ],
-          events: ["accountsChanged", "chainChanged"],
+          events: ['accountsChanged', 'chainChanged'],
         ),
       };
       UI.showConnectAction(
