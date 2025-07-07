@@ -589,6 +589,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.9"
+  event:
+    dependency: transitive
+    description:
+      name: event
+      sha256: "5809a742e6274146a23d9cba63c24caf2f4c87a9a781fdf16ef07f052becaf72"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   event_bus:
     dependency: "direct main"
     description:
@@ -1433,13 +1441,13 @@ packages:
     source: hosted
     version: "1.0.11"
   logger:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: logger
-      sha256: "7ad7215c15420a102ec687bb320a7312afd449bac63bfb1c60d9787c27b9767f"
+      sha256: "2621da01aabaf223f8f961e751f2c943dbb374dc3559b982f200ccedadaa6999"
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.0"
+    version: "2.6.0"
   logging:
     dependency: transitive
     description:
@@ -1488,6 +1496,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.6"
+  msgpack_dart:
+    dependency: transitive
+    description:
+      name: msgpack_dart
+      sha256: c2d235ed01f364719b5296aecf43ac330f0d7bc865fa134d0d7910a40454dffb
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   multiversx_sdk:
     dependency: "direct main"
     description:
@@ -1882,10 +1898,34 @@ packages:
     dependency: "direct main"
     description:
       name: rename
-      sha256: "2e3f2800712e00c66fee8eb6285d290c418e99fe3f69ca794d9fa09654bb005e"
+      sha256: de41a188910744a8b4984525adc936f8d06d6748ca79f6661500b108912784f2
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.1"
+    version: "3.0.0"
+  reown_core:
+    dependency: transitive
+    description:
+      name: reown_core
+      sha256: bd7ce8f3a34bed195efbb8fd862d7ca446f69adcb999913bc1bc4e15ec36a9df
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.6+1"
+  reown_sign:
+    dependency: transitive
+    description:
+      name: reown_sign
+      sha256: "39dfceedb9122a0d31303f9d2fbfe05cf3967c3096c2a26553cb66021fa29478"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.7+1"
+  reown_walletkit:
+    dependency: "direct main"
+    description:
+      name: reown_walletkit
+      sha256: d5173b0712b757cfd02b452a0e080abd52526646e602cc0fce9038f420c3d790
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.3"
   retrofit:
     dependency: transitive
     description:
