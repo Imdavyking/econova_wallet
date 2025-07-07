@@ -1,11 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:reown_walletkit/reown_walletkit.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class WalletConnectReownService {
   late ReownWalletKit _walletKit;
@@ -175,19 +183,39 @@ class WalletConnectReownService {
     }
   }
 
+  Future<(List<String> accounts, List<EthereumCoin> ethCoins)>
+      getAccounts() async {
+    List<EthereumCoin> ethCoins = [];
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    List<String> accounts = [];
+    List<String> chainIds = [];
+
+    for (String ids in chainIds) {
+      final chainID = int.parse(ids.split(':').last);
+
+      EthereumCoin? ethCoin = evmFromChainId(chainID);
+      if (ethCoin == null) continue;
+      final response = await ethCoin.importData(data);
+
+      accounts.add(
+        '${EIP155WC.name}:${ethCoin.chainId}:${response.address}',
+      );
+
+      ethCoins.add(ethCoin);
+    }
+    return (accounts, ethCoins);
+  }
+
   void _onSessionProposal(SessionProposalEvent? args) async {
     debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args?.params)}');
-
+  List<Widget> coinWidgets = [];
     if (args != null && _context != null) {
       final proposer = args.params.proposer;
-      List<String> supportChains = getAllSupportChains();
-      List<String> accountsNs = supportChains
-          .map((chain) => '$chain:${appStore.wallet!.currentAddress}')
-          .toList();
+    (List<String> accounts, List<EthereumCoin> ethCoins) = await getAccounts();
 
       Map<String, Namespace> defaultNamespaces = {
         'eip155': Namespace(
-          accounts: ['eip155:1:$ethAddress'], // Replace with current address
+          accounts: accounts,
           methods: [
             'eth_sendTransaction',
             'eth_signTransaction',
@@ -201,32 +229,114 @@ class WalletConnectReownService {
           events: ['accountsChanged', 'chainChanged'],
         ),
       };
-      UI.showConnectAction(
+      if (_context!.mounted) {
+      showDialog(
+        barrierDismissible: false,
         context: _context!,
-        url: proposer.metadata.url,
-        iconUrl: proposer.metadata.icons.isNotEmpty
-            ? proposer.metadata.icons.first
-            : "",
-        onConfirm: () async {
-          try {
-            await _walletKit.approveSession(
+        builder: (_) {
+          AppLocalizations localization = AppLocalizations.of(_context!)!;
+          final metadata = proposer.metadata;
+          return SimpleDialog(
+            title: Column(
+              children: [
+                if (metadata.icons.isNotEmpty)
+                  Container(
+                    height: 100.0,
+                    width: 100.0,
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: CachedNetworkImage(
+                      imageUrl: ipfsTohttp(metadata.icons.first),
+                      placeholder: (context, url) => const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Loader(
+                              color: appPrimaryColor,
+                            ),
+                          )
+                        ],
+                      ),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.error,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                Text(metadata.name),
+              ],
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+            children: [
+              if (metadata.description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(metadata.description),
+                ),
+              if (metadata.url.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text('${localization.connectedTo} ${metadata.url}'),
+                ),
+              if (coinWidgets.isNotEmpty) ...coinWidgets,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(_context!).colorScheme.secondary,
+                      ),
+                      onPressed: () async {
+                        try {
+                            await _walletKit.approveSession(
               id: args.id,
               namespaces: defaultNamespaces,
               sessionProperties: args.params.sessionProperties,
             );
-            handleRedirect(tempScheme);
-          } catch (error) {
-            debugPrint('showConnectAction===0,$error');
-          }
-        },
-        onCancel: () async {
-          final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
+                   
+                        } catch (_) {
+                           final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
           await _walletKit.rejectSession(id: args.id, reason: error);
           await _walletKit.core.pairing
               .disconnect(topic: args.params.pairingTopic);
+                          
+                        }finally {
+                          if (_context!.mounted) {
+                            Navigator.pop(_context!);
+                          }
+                        }
+                      },
+                      child: Text(localization.confirm),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(_context!).colorScheme.secondary,
+                      ),
+                      onPressed: ()async {
+                     final error = Errors.getSdkError(Errors.USER_REJECTED).toSignError();
+          await _walletKit.rejectSession(id: args.id, reason: error);
+          await _walletKit.core.pairing
+              .disconnect(topic: args.params.pairingTopic);
+                        Navigator.pop(_context!);
+                      },
+                      child: Text(localization.reject),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
         },
       );
-    }
+    } 
+    } 
   }
 
   void handleRedirect(String? scheme) async {
