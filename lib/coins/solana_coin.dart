@@ -349,7 +349,7 @@ class SolanaCoin extends Coin {
 
     const slippage = 0.05;
     final url = Uri.parse(
-      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}',
+      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=LEGACY',
     );
 
     final response = await http.get(url);
@@ -366,12 +366,20 @@ class SolanaCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = NATIVE_SOL_ADDRESS;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = NATIVE_SOL_ADDRESS;
+    }
+
     final tokenOutDecimals = await getTokenDecimals(tokenOut);
+
     final responseData = await _getSwapResponse(
       tokenIn,
       tokenOut,
       amount,
     );
+
     final unit = pow(10, tokenOutDecimals);
 
     final quoteAmount = num.parse(responseData.data.outputAmount) / unit;
@@ -386,11 +394,20 @@ class SolanaCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
+    debugPrint(
+      'Swapping $amount of $tokenIn to $tokenOut',
+    );
     final responseData = await _getSwapResponse(
       tokenIn,
       tokenOut,
       amount,
     );
+
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = NATIVE_SOL_ADDRESS;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = NATIVE_SOL_ADDRESS;
+    }
 
     final swapData = responseData.data;
     final inputMint = swapData.inputMint;

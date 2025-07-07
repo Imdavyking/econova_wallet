@@ -7,6 +7,7 @@ import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/contact_service.dart";
+import "package:wallet_app/utils/ai_agent_utils.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
@@ -35,6 +36,7 @@ class AItools {
   }
 
   List<Tool> getTools() {
+    Constants.user.profileImage = coin.getImage();
     final currentCoin = "${coin.getName().split('(')[0]} (${coin.getSymbol()})";
     final addressTool = Tool.fromFunction<_GetAddressInput, String>(
       name: 'QRY_getAddress',
@@ -595,6 +597,8 @@ class AItools {
             (Coin value) =>
                 value.getSymbol() == default_ && coin.tokenAddress() == null,
           );
+
+          Constants.user.profileImage = coin.getImage();
 
           return 'Switched to $name $default_';
         } catch (e) {
