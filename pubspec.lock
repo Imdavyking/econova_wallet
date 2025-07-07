@@ -1974,6 +1974,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.27.7"
+  safe_device:
+    dependency: "direct main"
+    description:
+      name: safe_device
+      sha256: a78baac59d3bcc2664d87da9096910cf361ed00fcbaadb49df6e871b928e939a
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.3"
   scan:
     dependency: "direct main"
     description:

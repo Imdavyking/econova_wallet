@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
@@ -283,6 +284,27 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+Future<bool> _detectDanger() async {
+  if (kDebugMode) {
+    return false;
+  }
+  bool isJailBroken = false;
+  bool isRealDevice = true;
+  try {
+    isJailBroken = await SafeDevice.isJailBroken;
+    isRealDevice = await SafeDevice.isRealDevice;
+  } catch (e) {
+    isJailBroken = true;
+  }
+  if (isJailBroken || !isRealDevice) {
+    if (kDebugMode) {
+      print('Device is jailbroken or not a real device');
+    }
+    return true;
+  }
+  return false;
+}
+
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
@@ -307,6 +329,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
           if (hasWallet) {
             isAuthenticated = await authenticate(context);
+          }
+
+          bool isDangerous = await _detectDanger();
+
+          if (isDangerous) {
+            return const Text(
+              'Device is jailbroken or not real can not use app',
+            );
           }
 
           if (hasWallet && !isAuthenticated) return const OpenAppPinFailed();
