@@ -433,11 +433,7 @@ class SolanaCoin extends Coin {
           );
 
     final url = Uri.parse(
-      '${SWAP_HOST()}/transaction/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$inputAmount&slippageBps=${swapData.slippageBps}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
-    );
-
-    print(
-      '${SWAP_HOST()}/transaction/swap-base-in?inputMint=$inputMint&outputMint=$outputMint&amount=$inputAmount&slippageBps=${swapData.slippageBps}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
+      '${SWAP_HOST()}/transaction/swap-base-in?swapResponse=${responseData.toJson()}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&txVersion=LEGACY&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
     );
 
     // Use 'V0' for versioned transaction, and 'LEGACY' for legacy transaction.
@@ -632,6 +628,15 @@ class SwapQuote {
       data: SwapData.fromJson(json['data']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'success': success,
+      'version': version,
+      'data': data.toJson()
+    };
+  }
 }
 
 class SwapData {
@@ -675,6 +680,21 @@ class SwapData {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'swapType': swapType,
+      'inputMint': inputMint,
+      'inputAmount': inputAmount,
+      'outputMint': outputMint,
+      'outputAmount': outputAmount,
+      'otherAmountThreshold': otherAmountThreshold,
+      'slippageBps': slippageBps,
+      'priceImpactPct': priceImpactPct,
+      'referrerAmount': referrerAmount,
+      'routePlan': routePlan.toJson(),
+    };
+  }
 }
 
 class RoutePlan {
@@ -710,5 +730,18 @@ class RoutePlan {
           List<String>.from(json['remainingAccounts'] as List<dynamic>),
       lastPoolPriceX64: json['lastPoolPriceX64'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'poolId': poolId,
+      'inputMint': inputMint,
+      'outputMint': outputMint,
+      'feeMint': feeMint,
+      'feeRate': feeRate,
+      'feeAmount': feeAmount,
+      'remainingAccounts': remainingAccounts,
+      'lastPoolPriceX64': lastPoolPriceX64,
+    };
   }
 }
