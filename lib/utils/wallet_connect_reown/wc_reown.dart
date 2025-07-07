@@ -14,9 +14,11 @@ import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
+import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_transaction.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
+import 'package:http/http.dart' as http;
 
 class WalletConnectReownService {
   late ReownWalletKit _walletKit;
@@ -124,12 +126,15 @@ class WalletConnectReownService {
     final params = event.params;
     final topic = event.topic;
     PairingMetadata? dAppMetadata;
+    final session = walletKit.sessions.get(topic);
     try {
-      final session = walletKit.sessions.get(topic);
       if (session != null) {
         dAppMetadata = session.peer.metadata;
       }
     } catch (_) {}
+
+    final sessionChainId = event.chainId.split(':').last;
+    int? chainId = int.tryParse(sessionChainId);
 
     switch (method) {
       case 'personal_sign':
@@ -170,8 +175,6 @@ class WalletConnectReownService {
             name: dAppMetadata?.name ?? "Unknown",
             onConfirm: () async {
               try {
-                final sessionChainId = event.chainId.split(':').last;
-                int? chainId = int.tryParse(sessionChainId);
                 final coin = chainId == null
                     ? evmFromSymbol('ETH')!
                     : evmFromChainId(chainId)!;
@@ -232,14 +235,142 @@ class WalletConnectReownService {
         }
         break;
 
+      case 'eth_signTransaction':
+        AppLocalizations localization = AppLocalizations.of(_context)!;
+        final ethereumTransaction =
+            WCEthereumTransaction.fromJson(event.params);
+        _onTransaction(
+          session: session,
+          ethereumTransaction: ethereumTransaction,
+          title: localization.signTransaction,
+          chainId: chainId!,
+          onConfirm: () async {
+            try {
+              EthereumCoin coin = evmFromChainId(chainId)!;
+              final walletData =
+                  WalletService.getActiveKey(walletImportType)!.data;
+              final response = await coin.importData(walletData);
+              String privateKey = response.privateKey!;
+              Web3Client web3client = Web3Client(
+                coin.rpc,
+                http.Client(),
+              );
+              final creds = EthPrivateKey.fromHex(privateKey);
+              final tx = await web3client.signTransaction(
+                creds,
+                wcEthTxToWeb3Tx(ethereumTransaction),
+                chainId: chainId,
+              );
+
+              _walletKit.respondSessionRequest(
+                topic: event.topic,
+                response: JsonRpcResponse(
+                  id: event.id,
+                  jsonrpc: '2.0',
+                  result: tx,
+                ),
+              );
+              handleRedirect(params?["scheme"]);
+            } catch (e) {
+              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+            } finally {
+              if (_context.mounted) {
+                Navigator.pop(_context);
+              }
+            }
+          },
+          onReject: () {
+            onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+            Navigator.pop(_context);
+          },
+        );
+
+        break;
+
       case 'eth_sendTransaction':
-        //TODO: Implement eth_sendTransaction handling
-        // handleSendTransaction(event);
+        AppLocalizations localization = AppLocalizations.of(_context)!;
+        final ethereumTransaction =
+            WCEthereumTransaction.fromJson(event.params);
+        _onTransaction(
+          session: session,
+          ethereumTransaction: ethereumTransaction,
+          title: localization.sendTransaction,
+          onConfirm: () async {
+            try {
+              EthereumCoin coin = evmFromChainId(chainId!)!;
+              final walletData =
+                  WalletService.getActiveKey(walletImportType)!.data;
+              final response = await coin.importData(walletData);
+              String privateKey = response.privateKey!;
+              final creds = EthPrivateKey.fromHex(privateKey);
+              Web3Client web3client = Web3Client(
+                coin.rpc,
+                http.Client(),
+              );
+              final txhash = await web3client.sendTransaction(
+                creds,
+                wcEthTxToWeb3Tx(ethereumTransaction),
+                chainId: chainId,
+              );
+              debugPrint('txhash $txhash');
+
+              _walletKit.respondSessionRequest(
+                topic: event.topic,
+                response: JsonRpcResponse(
+                  id: event.id,
+                  jsonrpc: '2.0',
+                  result: txhash,
+                ),
+              );
+              handleRedirect(params?["scheme"]);
+            } catch (e) {
+              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+            } finally {
+              if (_context.mounted) {
+                Navigator.pop(_context);
+              }
+            }
+          },
+          onReject: () {
+            onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+            Navigator.pop(_context);
+          },
+          chainId: chainId!,
+        );
+
         break;
 
       default:
         onHandleErrorReject(event, ErrorCodes.unsupportMethod);
     }
+  }
+
+  _onTransaction({
+    required SessionData? session,
+    required WCEthereumTransaction ethereumTransaction,
+    required String title,
+    required int chainId,
+    required VoidCallback onConfirm,
+    required VoidCallback onReject,
+  }) async {
+    List icons = session != null ? session.peer.metadata.icons : [];
+
+    await signEVMTransaction(
+      gasPriceInWei_: ethereumTransaction.gasPrice,
+      to: ethereumTransaction.to,
+      from: ethereumTransaction.from,
+      txData: ethereumTransaction.data,
+      valueInWei_: ethereumTransaction.value,
+      gasInWei_: ethereumTransaction.gas,
+      networkIcon: icons.isNotEmpty ? icons[0] : null,
+      context: _context,
+      symbol: evmFromChainId(chainId)?.getSymbol(),
+      name: session != null ? session.peer.metadata.name : '',
+      onConfirm: onConfirm,
+      onReject: onReject,
+      title: title,
+      chainId: chainId,
+    );
   }
 
   void _logListener(String event) {
