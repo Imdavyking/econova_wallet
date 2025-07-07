@@ -296,7 +296,7 @@ class WalletConnectReownService {
           title: localization.sendTransaction,
           onConfirm: () async {
             try {
-              EthereumCoin coin = evmFromChainId(chainId!)!;
+              EthereumCoin coin = evmFromChainId(chainId)!;
               final walletData =
                   WalletService.getActiveKey(walletImportType)!.data;
               final response = await coin.importData(walletData);
