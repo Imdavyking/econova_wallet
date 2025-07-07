@@ -105,7 +105,7 @@ dependencies:
   on_chain: ^6.6.0
   borsh_annotation: ^0.3.1+5
   laksadart: ^0.2.1+1
-  wallet_connect_dart_v2: ^0.0.1
+
   fuse_wallet_sdk: ^0.3.5
   starknet: ^0.1.2+1
   flutter_dotenv: ^5.0.2
@@ -136,6 +136,8 @@ dependencies:
   video_player: 2.9.5
   pointycastle: 3.9.1
   image: 4.3.0
+  wallet_connect_dart_v2:
+    path: ./wallet_connect_dart_v2
   jazzicon:
     path: ./jazzicon
   near_api_flutter:
@@ -174,7 +176,7 @@ dependency_overrides:
   ffi: 2.0.0
   pinenacl: ^0.6.0
   pointycastle: ^3.4.0
-  logger: ^1.1.0
+  logger: ^2.5.0
   starknet:
     git:
       url: https://github.com/focustree/starknet.dart
