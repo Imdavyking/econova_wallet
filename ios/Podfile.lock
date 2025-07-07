@@ -3,6 +3,7 @@ PODS:
     - Flutter
   - device_info_plus (0.0.1):
     - Flutter
+  - DTTJailbreakDetection (0.4.0)
   - Flutter (1.0.0)
   - flutter_downloader (0.0.1):
     - Flutter
@@ -35,6 +36,9 @@ PODS:
     - Flutter
     - MTBBarcodeScanner
   - rive_common (0.0.1):
+    - Flutter
+  - safe_device (1.0.0):
+    - DTTJailbreakDetection
     - Flutter
   - scan (0.0.1):
     - Flutter
@@ -78,6 +82,7 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - qr_code_scanner (from `.symlinks/plugins/qr_code_scanner/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
+  - safe_device (from `.symlinks/plugins/safe_device/ios`)
   - scan (from `.symlinks/plugins/scan/ios`)
   - screenshot_callback (from `.symlinks/plugins/screenshot_callback/ios`)
   - share (from `.symlinks/plugins/share/ios`)
@@ -91,6 +96,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - DTTJailbreakDetection
     - MTBBarcodeScanner
     - OrderedSet
     - Try
@@ -124,6 +130,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/qr_code_scanner/ios"
   rive_common:
     :path: ".symlinks/plugins/rive_common/ios"
+  safe_device:
+    :path: ".symlinks/plugins/safe_device/ios"
   scan:
     :path: ".symlinks/plugins/scan/ios"
   screenshot_callback:
@@ -148,6 +156,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
+  DTTJailbreakDetection: 5e356c5badc17995f65a83ed9483f787a0057b71
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_downloader: 78da0da1084e709cbfd3b723c7ea349c71681f09
   flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
@@ -162,6 +171,7 @@ SPEC CHECKSUMS:
   permission_handler_apple: 3787117e48f80715ff04a3830ca039283d6a4f29
   qr_code_scanner: d77f94ecc9abf96d9b9b8fc04ef13f611e5a147a
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
+  safe_device: 205ad04de30f4512ca889418d4783e1b6fdf8cfe
   scan: 28e4f67b9b0d63ccd5c649acc3d6aaf94c0a7a81
   screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
   share: a34936589f3090d59481bcdc5c30cc9dd47c75f6
