@@ -372,6 +372,10 @@ class SolanaCoin extends Coin {
       tokenOut = NATIVE_SOL_ADDRESS;
     }
 
+    debugPrint(
+      'Getting quote for $tokenIn => $tokenOut $amount',
+    );
+
     final tokenOutDecimals = await getTokenDecimals(tokenOut);
 
     final responseData = await _getSwapResponse(
