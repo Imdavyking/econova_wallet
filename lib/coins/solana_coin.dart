@@ -412,7 +412,6 @@ class SolanaCoin extends Coin {
     final swapData = responseData.data;
     final inputMint = swapData.inputMint;
     final outputMint = swapData.outputMint;
-    final inputAmount = swapData.inputAmount;
     final isInputSol = inputMint == NATIVE_SOL_ADDRESS;
     final isOutputSol = outputMint == NATIVE_SOL_ADDRESS;
     final address = await getAddress();
@@ -432,9 +431,29 @@ class SolanaCoin extends Coin {
             commitment: solana.Commitment.finalized,
           );
 
-    final url = Uri.parse(
-      '${SWAP_HOST()}/transaction/swap-base-in?swapResponse=${responseData.toJson()}&wallet=$address&wrapSol=$isInputSol&unwrapSol=$isOutputSol&txVersion=LEGACY&inputAccount=${inputTokenAcc?.pubkey ?? ''}&outputAccount=${outputTokenAcc?.pubkey ?? ''}',
+    final url = Uri.parse('${SWAP_HOST()}/transaction/swap-base-in');
+
+    final body = {
+      'swapResponse': responseData.toJson(),
+      'wallet': address,
+      'wrapSol': isInputSol,
+      'unwrapSol': isOutputSol,
+      'txVersion': 'LEGACY',
+      'inputAccount': inputTokenAcc?.pubkey ?? '',
+      'outputAccount': outputTokenAcc?.pubkey ?? '',
+    };
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
     );
+
+    if (response.statusCode >= 400) {
+      throw Exception('Failed to swap tokens: ${response.body}');
+    }
+
+    print('Swap response: ${response.body}');
 
     // Use 'V0' for versioned transaction, and 'LEGACY' for legacy transaction.
 

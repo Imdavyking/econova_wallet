@@ -415,7 +415,7 @@ class AItools {
                   : tokenOut;
 
           final message =
-              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${Quote.fromJson(jsonDecode(quote)).quoteAmount}.';
+              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}.';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
