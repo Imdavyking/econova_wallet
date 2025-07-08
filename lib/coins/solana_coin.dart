@@ -322,6 +322,7 @@ class SolanaCoin extends Coin {
   }
 
   String SWAP_HOST() => 'https://transaction-v1.raydium.io';
+  String BASE_HOST() => 'https://api-v3.raydium.io';
   String NATIVE_SOL_ADDRESS = 'So11111111111111111111111111111111111111112';
 
   Future<int> getTokenDecimals(String tokenAddress) async {
@@ -392,6 +393,16 @@ class SolanaCoin extends Coin {
     return jsonEncode(quote.toJson());
   }
 
+  Future<PriorityFeeResponse> _priorityFee() async {
+    final url = '${BASE_HOST()}/main/auto-fee';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode >= 400) {
+      throw Exception('Failed to fetch priority fee: ${response.body}');
+    }
+    final data = PriorityFeeResponse.fromJson(jsonDecode(response.body));
+    return data;
+  }
+
   @override
   Future<String?> swapTokens(
     String tokenIn,
@@ -436,7 +447,10 @@ class SolanaCoin extends Coin {
 
     final url = Uri.parse('${SWAP_HOST()}/transaction/swap-base-in');
 
+    final priorityFee = await _priorityFee();
+
     final body = {
+      'computeUnitPriceMicroLamports': priorityFee.data.priorityFee.h,
       'swapResponse': responseData.toJson(),
       'wallet': address,
       'wrapSol': isInputSol,
@@ -764,6 +778,80 @@ class RoutePlan {
       'feeAmount': feeAmount,
       'remainingAccounts': remainingAccounts,
       'lastPoolPriceX64': lastPoolPriceX64,
+    };
+  }
+}
+
+class PriorityFeeResponse {
+  final String id;
+  final bool success;
+  final PriorityFeeData data;
+
+  PriorityFeeResponse({
+    required this.id,
+    required this.success,
+    required this.data,
+  });
+
+  factory PriorityFeeResponse.fromJson(Map<String, dynamic> json) {
+    return PriorityFeeResponse(
+      id: json['id'],
+      success: json['success'],
+      data: PriorityFeeData.fromJson(json['data']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'success': success,
+      'data': data.toJson(),
+    };
+  }
+}
+
+class PriorityFeeData {
+  final PriorityFee priorityFee;
+
+  PriorityFeeData({required this.priorityFee});
+
+  factory PriorityFeeData.fromJson(Map<String, dynamic> json) {
+    return PriorityFeeData(
+      priorityFee: PriorityFee.fromJson(json['default']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'default': priorityFee.toJson(),
+    };
+  }
+}
+
+class PriorityFee {
+  final int vh;
+  final int h;
+  final int m;
+
+  PriorityFee({
+    required this.vh,
+    required this.h,
+    required this.m,
+  });
+
+  factory PriorityFee.fromJson(Map<String, dynamic> json) {
+    return PriorityFee(
+      vh: json['vh'],
+      h: json['h'],
+      m: json['m'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'vh': vh,
+      'h': h,
+      'm': m,
     };
   }
 }
