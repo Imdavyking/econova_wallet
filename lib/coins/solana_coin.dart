@@ -394,21 +394,20 @@ class SolanaCoin extends Coin {
     String tokenOut,
     String amount,
   ) async {
-    debugPrint(
-      'Swapping $amount of $tokenIn to $tokenOut',
-    );
+    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
+      tokenIn = NATIVE_SOL_ADDRESS;
+    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
+      tokenOut = NATIVE_SOL_ADDRESS;
+    }
     final responseData = await _getSwapResponse(
       tokenIn,
       tokenOut,
       amount,
     );
 
-    if (tokenIn == AIAgentService.defaultCoinTokenAddress) {
-      tokenIn = NATIVE_SOL_ADDRESS;
-    } else if (tokenOut == AIAgentService.defaultCoinTokenAddress) {
-      tokenOut = NATIVE_SOL_ADDRESS;
-    }
-
+    debugPrint(
+      'Swapping $amount of $tokenIn to $tokenOut',
+    );
     final swapData = responseData.data;
     final inputMint = swapData.inputMint;
     final outputMint = swapData.outputMint;
