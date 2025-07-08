@@ -450,7 +450,8 @@ class SolanaCoin extends Coin {
     final priorityFee = await _priorityFee();
 
     final body = {
-      'computeUnitPriceMicroLamports': priorityFee.data.priorityFee.h,
+      'computeUnitPriceMicroLamports':
+          priorityFee.data.priorityFee.h.toString(),
       'swapResponse': responseData.toJson(),
       'wallet': address,
       'wrapSol': isInputSol,
@@ -469,6 +470,8 @@ class SolanaCoin extends Coin {
     if (response.statusCode >= 400) {
       throw Exception('Failed to swap tokens: ${response.body}');
     }
+
+    //  Swap response: {"id":"9626bc98-2d1c-4d6f-b64f-bd1c7c5f1c3f","success":false,"version":"V1","msg":"REQ_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS_ERROR"}
 
     print('Swap response: ${response.body}');
 
