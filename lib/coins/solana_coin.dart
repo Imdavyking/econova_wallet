@@ -429,13 +429,14 @@ class SolanaCoin extends Coin {
     final isInputSol = inputMint == NATIVE_SOL_ADDRESS;
     final isOutputSol = outputMint == NATIVE_SOL_ADDRESS;
     final address = await getAddress();
+    print("input is sol: $isInputSol, output is sol: $isOutputSol");
     final inputTokenAcc = isInputSol
         ? null
         : await getProxy().getAssociatedTokenAccount(
             mint: Ed25519HDPublicKey.fromBase58(inputMint),
             owner: Ed25519HDPublicKey.fromBase58(address),
             commitment: solana.Commitment.finalized,
-          );
+          ); //TODO: giving empty when input is usdc (not meant to be like that)
 
     final outputTokenAcc = isOutputSol
         ? null
@@ -447,19 +448,23 @@ class SolanaCoin extends Coin {
 
     final url = Uri.parse('${SWAP_HOST()}/transaction/swap-base-in');
 
+    debugPrint('Swapping tokens with URL: $url');
+
     final priorityFee = await _priorityFee();
 
     final body = {
-      'computeUnitPriceMicroLamports':
-          priorityFee.data.priorityFee.h.toString(),
-      'swapResponse': responseData.toJson(),
-      'wallet': address,
-      'wrapSol': isInputSol,
-      'unwrapSol': isOutputSol,
       'txVersion': 'LEGACY',
       'inputAccount': inputTokenAcc?.pubkey ?? '',
       'outputAccount': outputTokenAcc?.pubkey ?? '',
+      'computeUnitPriceMicroLamports':
+          priorityFee.data.priorityFee.h.toString(),
+      'wallet': address,
+      'wrapSol': isInputSol,
+      'unwrapSol': isOutputSol,
+      'swapResponse': responseData.toJson(),
     };
+
+    print('Swapping tokens with body: $body');
 
     final response = await http.post(
       url,
@@ -531,7 +536,7 @@ class SolanaCoin extends Coin {
 //       )
 //       console.log(`${idx} transaction confirmed`)
 // };
-    return '';
+    return null;
   }
 
   @override
