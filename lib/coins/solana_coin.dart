@@ -335,34 +335,37 @@ class SolanaCoin extends Coin {
     return mint.decimals;
   }
 
-  Future<ProgramAccount?> findOrCreateTokenAccount({
+  Future<ProgramAccount> findOrCreateTokenAccount({
     required Ed25519HDPublicKey owner,
     required Ed25519HDPublicKey mintKey,
     required Ed25519HDKeyPair funder,
   }) async {
-    final associatedRecipientAccount =
-        await getProxy().getAssociatedTokenAccount(
+    final account = await getProxy().getAssociatedTokenAccount(
       owner: owner,
       mint: mintKey,
       commitment: solana.Commitment.finalized,
     );
 
-    if (associatedRecipientAccount == null) {
-      await getProxy().createAssociatedTokenAccount(
-        mint: mintKey,
-        funder: funder,
-        owner: owner,
-        commitment: solana.Commitment.finalized,
-      );
-    } else {
-      return associatedRecipientAccount;
+    if (account != null) return account;
+
+    await getProxy().createAssociatedTokenAccount(
+      mint: mintKey,
+      funder: funder,
+      owner: owner,
+      commitment: solana.Commitment.finalized,
+    );
+
+    final createdAccount = await getProxy().getAssociatedTokenAccount(
+      owner: owner,
+      mint: mintKey,
+      commitment: solana.Commitment.finalized,
+    );
+
+    if (createdAccount == null) {
+      throw Exception("Failed to create associated token account.");
     }
 
-    return await getProxy().getAssociatedTokenAccount(
-      owner: owner,
-      mint: mintKey,
-      commitment: solana.Commitment.finalized,
-    );
+    return createdAccount;
   }
 
   Future<SwapQuote> _getSwapResponse(
