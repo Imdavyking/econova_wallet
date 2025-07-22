@@ -533,19 +533,24 @@ class SolanaCoin extends Coin {
 
     String? lastTxSig;
     int idx = 0;
+    final solanaClient = getProxy().rpcClient;
     for (final tx in transactions) {
       final txBytes = base64Decode(tx.transaction);
-      final message = Message.fromBytes(txBytes);
-      final legacyTx = SignedTx(message: message, signatures: []);
-
-      // Sign the transaction
-      final signedTx = await legacyTx.sign([solanaKeyPair]);
+      final bh = await solanaClient.getLatestBlockhash(
+        commitment: Commitment.finalized,
+      );
+      SignedTx newCompiledMessage = await SignedTx.fromBytes(txBytes).resign(
+        wallet: solanaKeyPair,
+        blockhash: bh.value.blockhash,
+      );
 
       // Send and confirm transaction
-      final txSig = await client.sendAndConfirmTransaction(signedTx.encode());
-      lastTxSig = txSig;
+      final transactionHash = await solanaClient.sendTransaction(
+        base64.encode(newCompiledMessage.toByteArray().toList()),
+      );
+      lastTxSig = transactionHash;
 
-      debugPrint('Transaction ${++idx} sent and confirmed: $txSig');
+      debugPrint('Transaction ${++idx} sent and confirmed: $transactionHash');
     }
 
     return lastTxSig;
