@@ -511,8 +511,6 @@ class SolanaCoin extends Coin {
       'swapResponse': responseData.toJson(),
     };
 
-    print('Swapping tokens with body: $body');
-
     final rpcCall = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -523,9 +521,34 @@ class SolanaCoin extends Coin {
       throw Exception('Failed to swap tokens: ${rpcCall.body}');
     }
 
-    //  Swap response: {"id":"9626bc98-2d1c-4d6f-b64f-bd1c7c5f1c3f","success":false,"version":"V1","msg":"REQ_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS_ERROR"}
+    final swapResponse = SwapResponse.fromJson(jsonDecode(rpcCall.body));
+    if (!swapResponse.success) {
+      throw Exception('Swap failed: ${swapResponse.msg}');
+    }
 
-    print('Swap response: ${rpcCall.body}');
+    final transactions = swapResponse.data;
+    if (transactions.isEmpty) {
+      throw Exception('No transactions returned from swap response');
+    }
+
+    String? lastTxSig;
+    int idx = 0;
+    for (final tx in transactions) {
+      final txBytes = base64Decode(tx.transaction);
+      final message = Message.fromBytes(txBytes);
+      final legacyTx = SignedTx(message: message, signatures: []);
+
+      // Sign the transaction
+      final signedTx = await legacyTx.sign([solanaKeyPair]);
+
+      // Send and confirm transaction
+      final txSig = await client.sendAndConfirmTransaction(signedTx.encode());
+      lastTxSig = txSig;
+
+      debugPrint('Transaction ${++idx} sent and confirmed: $txSig');
+    }
+
+    return lastTxSig;
 
     // Use 'V0' for versioned transaction, and 'LEGACY' for legacy transaction.
 
@@ -907,6 +930,63 @@ class PriorityFee {
       'vh': vh,
       'h': h,
       'm': m,
+    };
+  }
+}
+
+class SwapResponse {
+  final String id;
+  final bool success;
+  final String version;
+  final String? msg;
+  final List<SwapTransaction> data;
+
+  SwapResponse({
+    required this.id,
+    required this.success,
+    required this.version,
+    this.msg,
+    required this.data,
+  });
+
+  factory SwapResponse.fromJson(Map<String, dynamic> json) {
+    return SwapResponse(
+      id: json['id'],
+      success: json['success'],
+      version: json['version'],
+      msg: json['msg'],
+      data: (json['data'] as List<dynamic>?)
+              ?.map((item) => SwapTransaction.fromJson(item))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'success': success,
+      'version': version,
+      'msg': msg,
+      'data': data.map((tx) => tx.toJson()).toList(),
+    };
+  }
+}
+
+class SwapTransaction {
+  final String transaction;
+
+  SwapTransaction({required this.transaction});
+
+  factory SwapTransaction.fromJson(Map<String, dynamic> json) {
+    return SwapTransaction(
+      transaction: json['transaction'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'transaction': transaction,
     };
   }
 }
