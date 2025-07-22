@@ -140,21 +140,11 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     final mintKey = solana.Ed25519HDPublicKey.fromBase58(mint);
     final toKey = solana.Ed25519HDPublicKey.fromBase58(to);
 
-    final associatedRecipientAccount =
-        await getProxy().getAssociatedTokenAccount(
+    await findOrCreateTokenAccount(
+      funder: solanaKeyPair,
       owner: toKey,
-      mint: mintKey,
-      commitment: solana.Commitment.finalized,
+      mintKey: mintKey,
     );
-
-    if (associatedRecipientAccount == null) {
-      await getProxy().createAssociatedTokenAccount(
-        mint: mintKey,
-        funder: solanaKeyPair,
-        owner: toKey,
-        commitment: solana.Commitment.finalized,
-      );
-    }
 
     final signature = await getProxy().transferSplToken(
       mint: mintKey,

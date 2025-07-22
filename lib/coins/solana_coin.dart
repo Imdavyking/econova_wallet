@@ -335,6 +335,36 @@ class SolanaCoin extends Coin {
     return mint.decimals;
   }
 
+  Future<ProgramAccount?> findOrCreateTokenAccount({
+    required Ed25519HDPublicKey owner,
+    required Ed25519HDPublicKey mintKey,
+    required Ed25519HDKeyPair funder,
+  }) async {
+    final associatedRecipientAccount =
+        await getProxy().getAssociatedTokenAccount(
+      owner: owner,
+      mint: mintKey,
+      commitment: solana.Commitment.finalized,
+    );
+
+    if (associatedRecipientAccount == null) {
+      await getProxy().createAssociatedTokenAccount(
+        mint: mintKey,
+        funder: funder,
+        owner: owner,
+        commitment: solana.Commitment.finalized,
+      );
+    } else {
+      return associatedRecipientAccount;
+    }
+
+    return await getProxy().getAssociatedTokenAccount(
+      owner: owner,
+      mint: mintKey,
+      commitment: solana.Commitment.finalized,
+    );
+  }
+
   Future<SwapQuote> _getSwapResponse(
     String tokenIn,
     String tokenOut,
@@ -429,21 +459,35 @@ class SolanaCoin extends Coin {
     final isInputSol = inputMint == NATIVE_SOL_ADDRESS;
     final isOutputSol = outputMint == NATIVE_SOL_ADDRESS;
     final address = await getAddress();
-    print("input is sol: $isInputSol, output is sol: $isOutputSol");
+
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+
+    final privateKeyBytes = HEX.decode(response.privateKey!);
+
+    final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+      privateKey: privateKeyBytes,
+    );
+    solana.Ed25519HDKeyPair solanaKeyPair = keyPair;
+
     final inputTokenAcc = isInputSol
         ? null
-        : await getProxy().getAssociatedTokenAccount(
-            mint: Ed25519HDPublicKey.fromBase58(inputMint),
+        : await findOrCreateTokenAccount(
+            funder: solanaKeyPair,
             owner: Ed25519HDPublicKey.fromBase58(address),
-            commitment: solana.Commitment.finalized,
-          ); //TODO: giving empty when input is usdc (not meant to be like that)
+            mintKey: Ed25519HDPublicKey.fromBase58(
+              inputMint,
+            ),
+          );
 
     final outputTokenAcc = isOutputSol
         ? null
-        : await getProxy().getAssociatedTokenAccount(
-            mint: Ed25519HDPublicKey.fromBase58(outputMint),
+        : await findOrCreateTokenAccount(
+            funder: solanaKeyPair,
             owner: Ed25519HDPublicKey.fromBase58(address),
-            commitment: solana.Commitment.finalized,
+            mintKey: Ed25519HDPublicKey.fromBase58(
+              outputMint,
+            ),
           );
 
     final url = Uri.parse('${SWAP_HOST()}/transaction/swap-base-in');
@@ -466,19 +510,19 @@ class SolanaCoin extends Coin {
 
     print('Swapping tokens with body: $body');
 
-    final response = await http.post(
+    final rpcCall = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
 
-    if (response.statusCode >= 400) {
-      throw Exception('Failed to swap tokens: ${response.body}');
+    if (rpcCall.statusCode >= 400) {
+      throw Exception('Failed to swap tokens: ${rpcCall.body}');
     }
 
     //  Swap response: {"id":"9626bc98-2d1c-4d6f-b64f-bd1c7c5f1c3f","success":false,"version":"V1","msg":"REQ_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS_ERROR"}
 
-    print('Swap response: ${response.body}');
+    print('Swap response: ${rpcCall.body}');
 
     // Use 'V0' for versioned transaction, and 'LEGACY' for legacy transaction.
 
