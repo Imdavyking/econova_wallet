@@ -383,7 +383,7 @@ class SolanaCoin extends Coin {
 
     const slippage = 0.05;
     final url = Uri.parse(
-      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=LEGACY',
+      '${SWAP_HOST()}/compute/swap-base-in?inputMint=$tokenIn&outputMint=$tokenOut&amount=$amountDecimals&slippageBps=${(slippage * 100).toInt()}&txVersion=V0',
     );
 
     final response = await http.get(url);
@@ -500,7 +500,7 @@ class SolanaCoin extends Coin {
     final priorityFee = await _priorityFee();
 
     final body = {
-      'txVersion': 'LEGACY',
+      'txVersion': 'V0',
       'inputAccount': inputTokenAcc?.pubkey ?? '',
       'outputAccount': outputTokenAcc?.pubkey ?? '',
       'computeUnitPriceMicroLamports':
