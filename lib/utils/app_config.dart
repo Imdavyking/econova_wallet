@@ -13,10 +13,9 @@ const String fallbackMessage =
 const stakeDexProviderUrl =
     'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
 const fiatDexProviderUrl = 'https://paxful.com/';
-// const browserUrl = 'http://10.0.2.2:5500/lib/screens/demo.html';
-const browserUrl =
-    'https://sepolia.voyager.online/contract/0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b#readContract';
-// const browserUrl = 'https://duckduckgo.com/';
+// const browserUrl =
+//     'https://sepolia.voyager.online/contract/0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b#readContract';
+const browserUrl = 'https://10.0.2.2:5173';
 const oneInchApi = "https://api.1inch.dev";
 const oneInceApiKey = 'cc7YbgSI5NA9t5KGLa00uNdklhGFxJhi';
 
