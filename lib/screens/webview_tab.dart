@@ -8,6 +8,7 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
+import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/utils/slide_up_panel.dart';
 import "../utils/starknet_call.dart";
 import '../model/near_message_borsh.dart';
@@ -1616,23 +1617,37 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             final version = data.version;
                             debugPrint('solana trx version: $version');
                             print('solana data: ${data.data}');
+                            final Map<String, dynamic> decodedData =
+                                json.decode(data.data);
 
-                            final SolanaTransactionLegacy solanaWeb3Res =
-                                SolanaTransactionLegacy.fromJson(
-                              json.decode(data.data),
-                            );
+                            late solana.Ed25519HDPublicKey from;
+                            late SolanaSimuRes simulationResult;
 
-                            final from = solana.Ed25519HDPublicKey.fromBase58(
-                              solanaWeb3Res.feePayer,
-                            );
+                            if (decodedData.containsKey('message')) {
+                              final SolanaTransactionVersioned solanaWeb3Res =
+                                  SolanaTransactionVersioned.fromJson(
+                                decodedData,
+                              );
+                              from = solana.Ed25519HDPublicKey.fromBase58(
+                                solanaWeb3Res.message.staticAccountKeys.first,
+                              );
+                              simulationResult =
+                                  const SolanaSimuRes(fee: 0.2, result: []);
+                            } else {
+                              final SolanaTransactionLegacy solanaWeb3Res =
+                                  SolanaTransactionLegacy.fromJson(decodedData);
+                              from = solana.Ed25519HDPublicKey.fromBase58(
+                                solanaWeb3Res.feePayer,
+                              );
+                              simulationResult = await dappSimulateTrx(
+                                solanaWeb3Res,
+                                solanaKeyPair,
+                                coin,
+                                coin.getSymbol(),
+                                solDecimals,
+                              );
+                            }
 
-                            final simulationResult = await dappSimulateTrx(
-                              solanaWeb3Res,
-                              solanaKeyPair,
-                              coin,
-                              coin.getSymbol(),
-                              solDecimals,
-                            );
                             ValueNotifier<bool> isSigning =
                                 ValueNotifier<bool>(false);
                             if (context.mounted) {
@@ -1651,11 +1666,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                     name: '',
                                     onConfirm: () async {
                                       try {
-                                        if (solanaWeb3Res.feePayer !=
-                                            sendingAddress) {
-                                          throw Exception('Invalid fee payer');
-                                        }
-
                                         final signature =
                                             await solanaKeyPair.sign(
                                           base58.decode(data.raw),
