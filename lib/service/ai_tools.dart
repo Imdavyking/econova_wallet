@@ -17,6 +17,7 @@ import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
   static Coin coin = starkNetCoins.first;
+
   AItools();
 
   Future<String?> confirmTransaction(String message) async {
