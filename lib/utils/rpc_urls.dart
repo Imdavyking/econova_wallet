@@ -825,6 +825,7 @@ Future setupWebViewWalletBridge(
                 window.keplr = trustwallet.cosmos;
                 window.aptos = trustwallet.aptos;
                 window.ton = trustwallet.ton;
+                window.solana = trustwallet.solana;
 
                 const getDefaultCosmosProvider = (chainId) => {
                   return trustwallet.cosmos.getOfflineSigner(chainId);
