@@ -2276,279 +2276,197 @@ signEVMTransaction({
             child: TabBarView(
               children: [
                 // first tab bar view widget
-                FutureBuilder(future: () async {
-                  final bal =
-                      await wcClient.getBalance(EthereumAddress.fromHex(from));
-                  userBalance = bal.getInWei.toDouble();
+                FutureBuilder(
+                  future: () async {
+                    final bal = await wcClient
+                        .getBalance(EthereumAddress.fromHex(from));
+                    userBalance = bal.getInWei.toDouble();
 
-                  transactionFee = await getEtherTransactionFee(
-                    coin.rpc,
-                    trxDataList,
-                    web3.EthereumAddress.fromHex(from),
-                    to == null ? null : web3.EthereumAddress.fromHex(to),
-                    value: value,
-                    gasPrice: web3.EtherAmount.inWei(
-                      BigInt.from(
-                        gasPrice,
+                    transactionFee = await getEtherTransactionFee(
+                      coin.rpc,
+                      trxDataList,
+                      web3.EthereumAddress.fromHex(from),
+                      to == null ? null : web3.EthereumAddress.fromHex(to),
+                      value: value,
+                      gasPrice: web3.EtherAmount.inWei(
+                        BigInt.from(
+                          gasPrice,
+                        ),
                       ),
-                    ),
-                  );
-                  if (decodedFunction == null) return true;
+                    );
+                    if (decodedFunction == null) return true;
 
-                  final List decodedResult = decodedFunction.decodedInputs;
+                    final List decodedResult = decodedFunction.decodedInputs;
 
-                  if (decodedName == 'safeBatchTransferFrom') {
-                    String sender = '${decodedResult[0]}';
-                    String receiver = '${decodedResult[1]}';
+                    if (decodedName == 'safeBatchTransferFrom') {
+                      String sender = '${decodedResult[0]}';
+                      String receiver = '${decodedResult[1]}';
 
-                    List<dynamic> nftIds = decodedResult[2];
-                    List<dynamic> nftAmounts = decodedResult[3];
+                      List<dynamic> nftIds = decodedResult[2];
+                      List<dynamic> nftAmounts = decodedResult[3];
 
-                    BigInt totalAmount = BigInt.zero;
-                    for (var amount in nftAmounts) {
-                      totalAmount += amount;
+                      BigInt totalAmount = BigInt.zero;
+                      for (var amount in nftAmounts) {
+                        totalAmount += amount;
+                      }
+
+                      String nftOrNfts =
+                          totalAmount == BigInt.one ? 'NFT' : 'NFTs';
+
+                      // Prepare token IDs string
+                      String tokenIdsString = nftIds.join(', ');
+
+                      message =
+                          "$totalAmount $nftOrNfts (IDs: $tokenIdsString) would be sent from $sender to $receiver.";
+                    } else if (decodedName == 'safeTransferFrom') {
+                      String sender = '${decodedResult[0]}';
+                      String receiver = '${decodedResult[1]}';
+                      String tokenId = '${decodedResult[2]}';
+
+                      message =
+                          "Transfer NFT $tokenId ($to) from $sender to $receiver";
+                    } else if (decodedName == 'approve') {
+                      String spender = '${decodedResult[0]}';
+                      BigInt tokenAmt = decodedResult[1];
+                      final ftCoin = ERCFungibleCoin(
+                        contractAddress_: to!,
+                        geckoID: '',
+                        rpc: coin.rpc,
+                        blockExplorer: coin.blockExplorer,
+                        chainId: coin.chainId,
+                        coinType: coin.coinType,
+                        image: '',
+                        default_: coin.default_,
+                        mintDecimals: 18,
+                        name: '',
+                        symbol: '',
+                      );
+                      final tokenDetails = await ftCoin.getERC20Meta();
+                      final decimals = tokenDetails!.decimals;
+
+                      final amount0 = tokenAmt / BigInt.from(pow(10, decimals));
+
+                      message =
+                          "Allow $spender to spend $amount0 ${tokenDetails.symbol} ($to)";
+                    } else if (decodedName == 'transfer') {
+                      String recipient = '${decodedResult[0]}';
+                      BigInt tokenAmt = decodedResult[1];
+                      final ftCoin = ERCFungibleCoin(
+                        contractAddress_: to!,
+                        rpc: coin.rpc,
+                        blockExplorer: coin.blockExplorer,
+                        chainId: coin.chainId,
+                        coinType: coin.coinType,
+                        image: '',
+                        default_: coin.default_,
+                        mintDecimals: 18,
+                        name: '',
+                        symbol: '',
+                        geckoID: '',
+                      );
+                      final tokenDetails = await ftCoin.getERC20Meta();
+                      final decimals = tokenDetails!.decimals;
+                      final amount = tokenAmt / BigInt.from(pow(10, decimals));
+                      message =
+                          "Transfer $amount ${tokenDetails.symbol} ($to) to $recipient";
+                    } else if (decodedName == 'transferFrom') {
+                      String sender = '${decodedResult[0]}';
+                      String recipient = '${decodedResult[1]}';
+                      BigInt tokenAmt = decodedResult[2];
+
+                      final ftCoin = ERCFungibleCoin(
+                        contractAddress_: to!,
+                        geckoID: '',
+                        rpc: coin.rpc,
+                        blockExplorer: coin.blockExplorer,
+                        chainId: coin.chainId,
+                        coinType: coin.coinType,
+                        image: '',
+                        default_: coin.default_,
+                        mintDecimals: 18,
+                        name: '',
+                        symbol: '',
+                      );
+                      final tokenDetails = await ftCoin.getERC20Meta();
+                      final decimals = tokenDetails!.decimals;
+                      final amount = tokenAmt / BigInt.from(pow(10, decimals));
+                      message =
+                          "Transfer $amount ${tokenDetails.symbol} ($to) from $sender to $recipient";
                     }
 
-                    String nftOrNfts =
-                        totalAmount == BigInt.one ? 'NFT' : 'NFTs';
-
-                    // Prepare token IDs string
-                    String tokenIdsString = nftIds.join(', ');
-
-                    message =
-                        "$totalAmount $nftOrNfts (IDs: $tokenIdsString) would be sent from $sender to $receiver.";
-                  } else if (decodedName == 'safeTransferFrom') {
-                    String sender = '${decodedResult[0]}';
-                    String receiver = '${decodedResult[1]}';
-                    String tokenId = '${decodedResult[2]}';
-
-                    message =
-                        "Transfer NFT $tokenId ($to) from $sender to $receiver";
-                  } else if (decodedName == 'approve') {
-                    String spender = '${decodedResult[0]}';
-                    BigInt tokenAmt = decodedResult[1];
-                    final ftCoin = ERCFungibleCoin(
-                      contractAddress_: to!,
-                      geckoID: '',
-                      rpc: coin.rpc,
-                      blockExplorer: coin.blockExplorer,
-                      chainId: coin.chainId,
-                      coinType: coin.coinType,
-                      image: '',
-                      default_: coin.default_,
-                      mintDecimals: 18,
-                      name: '',
-                      symbol: '',
-                    );
-                    final tokenDetails = await ftCoin.getERC20Meta();
-                    final decimals = tokenDetails!.decimals;
-
-                    final amount0 = tokenAmt / BigInt.from(pow(10, decimals));
-
-                    message =
-                        "Allow $spender to spend $amount0 ${tokenDetails.symbol} ($to)";
-                  } else if (decodedName == 'transfer') {
-                    String recipient = '${decodedResult[0]}';
-                    BigInt tokenAmt = decodedResult[1];
-                    final ftCoin = ERCFungibleCoin(
-                      contractAddress_: to!,
-                      rpc: coin.rpc,
-                      blockExplorer: coin.blockExplorer,
-                      chainId: coin.chainId,
-                      coinType: coin.coinType,
-                      image: '',
-                      default_: coin.default_,
-                      mintDecimals: 18,
-                      name: '',
-                      symbol: '',
-                      geckoID: '',
-                    );
-                    final tokenDetails = await ftCoin.getERC20Meta();
-                    final decimals = tokenDetails!.decimals;
-                    final amount = tokenAmt / BigInt.from(pow(10, decimals));
-                    message =
-                        "Transfer $amount ${tokenDetails.symbol} ($to) to $recipient";
-                  } else if (decodedName == 'transferFrom') {
-                    String sender = '${decodedResult[0]}';
-                    String recipient = '${decodedResult[1]}';
-                    BigInt tokenAmt = decodedResult[2];
-
-                    final ftCoin = ERCFungibleCoin(
-                      contractAddress_: to!,
-                      geckoID: '',
-                      rpc: coin.rpc,
-                      blockExplorer: coin.blockExplorer,
-                      chainId: coin.chainId,
-                      coinType: coin.coinType,
-                      image: '',
-                      default_: coin.default_,
-                      mintDecimals: 18,
-                      name: '',
-                      symbol: '',
-                    );
-                    final tokenDetails = await ftCoin.getERC20Meta();
-                    final decimals = tokenDetails!.decimals;
-                    final amount = tokenAmt / BigInt.from(pow(10, decimals));
-                    message =
-                        "Transfer $amount ${tokenDetails.symbol} ($to) from $sender to $recipient";
-                  }
-
-                  return true;
-                }(), builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          localization.couldNotFetchData,
-                          style: const TextStyle(fontSize: 16.0),
-                        )
-                      ],
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Loader(),
-                      ],
-                    );
-                  }
-                  return SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 25.0, right: 25, bottom: 25),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    return true;
+                  }(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (networkIcon != null)
-                            Container(
-                              height: 50.0,
-                              width: 50.0,
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: CachedNetworkImage(
-                                imageUrl: ipfsTohttp(networkIcon),
-                                placeholder: (context, url) => const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: Loader(
-                                        color: appPrimaryColor,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(
-                                  Icons.error,
-                                  color: Colors.red,
+                          Text(
+                            localization.couldNotFetchData,
+                            style: const TextStyle(fontSize: 16.0),
+                          )
+                        ],
+                      );
+                    }
+                    if (!snapshot.hasData) {
+                      return const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Loader(),
+                        ],
+                      );
+                    }
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                            left: 25.0, right: 25, bottom: 25),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (networkIcon != null)
+                              Container(
+                                height: 50.0,
+                                width: 50.0,
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: CachedNetworkImage(
+                                  imageUrl: ipfsTohttp(networkIcon),
+                                  placeholder: (context, url) => const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: Loader(
+                                          color: appPrimaryColor,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                  ),
                                 ),
                               ),
-                            ),
-                          if (name != null)
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.normal,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                          if (message != '')
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    info,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8.0),
-                                  Text(
-                                    message,
-                                    style: const TextStyle(fontSize: 16.0),
-                                  )
-                                ],
-                              ),
-                            ),
-                          if (to != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    localization.receipientAddress,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8.0),
-                                  Text(
-                                    to,
-                                    style: const TextStyle(fontSize: 16.0),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  localization.balance,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16.0,
-                                  ),
+                            if (name != null)
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                  fontSize: 16.0,
                                 ),
-                                const SizedBox(height: 8.0),
-                                Text(
-                                  '${userBalance / pow(10, etherDecimals)} $symbol',
-                                  style: const TextStyle(fontSize: 16.0),
-                                )
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  localization.transactionAmount,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 8.0),
-                                Text(
-                                  '${value / pow(10, etherDecimals)} $symbol',
-                                  style: const TextStyle(fontSize: 16.0),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                              ),
+                            if (message != '')
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      localization.transactionFee,
+                                      info,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16.0,
@@ -2556,13 +2474,76 @@ signEVMTransaction({
                                     ),
                                     const SizedBox(height: 8.0),
                                     Text(
-                                      '${transactionFee / pow(10, etherDecimals)} $symbol',
+                                      message,
                                       style: const TextStyle(fontSize: 16.0),
                                     )
                                   ],
                                 ),
                               ),
-                              if (transactionFee + value > userBalance)
+                            if (to != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      localization.receipientAddress,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8.0),
+                                    Text(
+                                      to,
+                                      style: const TextStyle(fontSize: 16.0),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    localization.balance,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8.0),
+                                  Text(
+                                    '${userBalance / pow(10, etherDecimals)} $symbol',
+                                    style: const TextStyle(fontSize: 16.0),
+                                  )
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    localization.transactionAmount,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8.0),
+                                  Text(
+                                    '${value / pow(10, etherDecimals)} $symbol',
+                                    style: const TextStyle(fontSize: 16.0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8.0),
                                   child: Column(
@@ -2570,83 +2551,105 @@ signEVMTransaction({
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        localization.insufficientBalance,
+                                        localization.transactionFee,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: red,
                                           fontSize: 16.0,
                                         ),
                                       ),
+                                      const SizedBox(height: 8.0),
+                                      Text(
+                                        '${transactionFee / pow(10, etherDecimals)} $symbol',
+                                        style: const TextStyle(fontSize: 16.0),
+                                      )
                                     ],
                                   ),
                                 ),
-                            ],
-                          ),
-                          ValueListenableBuilder<bool>(
-                              valueListenable: isSigning,
-                              builder: (_, isSigning_, __) {
-                                if (isSigning_) {
-                                  return const Row(
+                                if (transactionFee + value > userBalance)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          localization.insufficientBalance,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: red,
+                                            fontSize: 16.0,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            ValueListenableBuilder<bool>(
+                                valueListenable: isSigning,
+                                builder: (_, isSigning_, __) {
+                                  if (isSigning_) {
+                                    return const Row(
+                                      children: [
+                                        Loader(),
+                                      ],
+                                    );
+                                  }
+                                  return Row(
                                     children: [
-                                      Loader(),
+                                      Expanded(
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            backgroundColor: appBackgroundblue,
+                                          ),
+                                          onPressed: () async {
+                                            if (await authenticate(context)) {
+                                              isSigning.value = true;
+                                              try {
+                                                await onConfirm();
+                                              } catch (_) {}
+                                              isSigning.value = false;
+                                            } else {
+                                              onReject!();
+                                            }
+                                          },
+                                          child: Text(
+                                            localization.confirm,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16.0),
+                                      Expanded(
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            backgroundColor: appBackgroundblue,
+                                          ),
+                                          onPressed: onReject,
+                                          child: Text(
+                                            localization.reject,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   );
-                                }
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextButton(
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.black,
-                                          backgroundColor: appBackgroundblue,
-                                        ),
-                                        onPressed: () async {
-                                          if (await authenticate(context)) {
-                                            isSigning.value = true;
-                                            try {
-                                              await onConfirm();
-                                            } catch (_) {}
-                                            isSigning.value = false;
-                                          } else {
-                                            onReject!();
-                                          }
-                                        },
-                                        child: Text(
-                                          localization.confirm,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16.0),
-                                    Expanded(
-                                      child: TextButton(
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.black,
-                                          backgroundColor: appBackgroundblue,
-                                        ),
-                                        onPressed: onReject,
-                                        child: Text(
-                                          localization.reject,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }),
-                        ],
+                                }),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
 
-                // second tab bar viiew widget
                 if (decodedFunction != null)
                   SingleChildScrollView(
                     child: Padding(
@@ -2675,30 +2678,6 @@ signEVMTransaction({
                           const SizedBox(
                             height: 20,
                           ),
-                          // for (var key in decodedFunction.decodedInputs)
-                          //   Column(
-                          //     mainAxisAlignment: MainAxisAlignment.start,
-                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                          //     children: [
-                          //       Text(
-                          //         key,
-                          //         style: const TextStyle(
-                          //           fontSize: 16.0,
-                          //           fontWeight: FontWeight.bold,
-                          //         ),
-                          //       ),
-                          //       const SizedBox(height: 5.0),
-                          //       Text(
-                          //         '$key',
-                          //         style: const TextStyle(
-                          //           fontSize: 16.0,
-                          //         ),
-                          //       ),
-                          //       const SizedBox(
-                          //         height: 10,
-                          //       )
-                          //     ],
-                          //   ),
                         ],
                       ),
                     ),
