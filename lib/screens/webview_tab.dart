@@ -38,7 +38,7 @@ import '../model/multix_sign_model.dart' hide Transaction;
 import '../utils/app_config.dart';
 import '../utils/json_model_callback.dart';
 import '../utils/web_notifications.dart';
-import 'package:wallet_app/model/solana_web3_res.dart';
+import 'package:wallet_app/model/solana_transaction_legacy.dart';
 import 'package:solana/solana.dart' hide signTransaction;
 import 'package:wallet_app/coins/solana_coin.dart';
 import 'package:solana/solana.dart' as solana;
@@ -1609,16 +1609,16 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           }
                         case "signRawTransaction":
                           {
-                            print('solana object: ${jsData.object}');
                             final data = JsSolanaTransactionObject.fromJson(
                               jsData.object ?? {},
                             );
 
                             final version = data.version;
                             debugPrint('solana trx version: $version');
+                            print('solana data: ${data.data}');
 
-                            final SolanaWeb3Res solanaWeb3Res =
-                                SolanaWeb3Res.fromJson(
+                            final SolanaTransactionLegacy solanaWeb3Res =
+                                SolanaTransactionLegacy.fromJson(
                               json.decode(data.data),
                             );
 

@@ -11,7 +11,7 @@ import 'package:solana/solana.dart' as solana;
 import 'package:wallet_app/coins/solana_coin.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/model/sol_token_info.dart';
-import 'package:wallet_app/model/solana_web3_res.dart';
+import 'package:wallet_app/model/solana_transaction_legacy.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -29,7 +29,7 @@ class SolanaSimuRes {
 }
 
 Future<SolanaSimuRes> dappSimulateTrx(
-  SolanaWeb3Res solanaWeb3Res,
+  SolanaTransactionLegacy solanaWeb3Res,
   solana.Ed25519HDKeyPair solanaKeyPair,
   SolanaCoin coin,
   String symbol,
