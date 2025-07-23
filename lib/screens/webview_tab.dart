@@ -1614,9 +1614,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               jsData.object ?? {},
                             );
 
-                            final version = data.version;
-                            debugPrint('solana trx version: $version');
-                            print('solana data: ${data.data}');
                             final Map<String, dynamic> decodedData =
                                 json.decode(data.data);
 
