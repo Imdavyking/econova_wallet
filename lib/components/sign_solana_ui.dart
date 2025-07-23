@@ -224,7 +224,17 @@ Widget buildSignTransactionUI({
               symbol: symbol,
               simulationResult: simulationResult,
               isSigning: isSigning,
-              onConfirm: onConfirm,
+              onConfirm: () async {
+                if (await authenticate(context)) {
+                  isSigning.value = true;
+                  try {
+                    onConfirm();
+                  } catch (_) {}
+                  isSigning.value = false;
+                } else {
+                  onReject();
+                }
+              },
               onReject: onReject,
               localization: localization,
             ),
