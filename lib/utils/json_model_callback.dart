@@ -81,7 +81,7 @@ class JsSolanaMessageObject {
 class JsSolanaTransactionObject {
   String data;
   String raw;
-  String version;
+  int version;
   String? rawMessage;
 
   JsSolanaTransactionObject({

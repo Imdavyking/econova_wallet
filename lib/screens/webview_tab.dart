@@ -1609,6 +1609,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                           }
                         case "signRawTransaction":
                           {
+                            print('solana object: ${jsData.object}');
                             final data = JsSolanaTransactionObject.fromJson(
                               jsData.object ?? {},
                             );
