@@ -502,8 +502,6 @@ class SolanaCoin extends Coin {
 
     final body = {
       'txVersion': 'V0',
-      'inputAccount': inputTokenAcc?.pubkey ?? '',
-      'outputAccount': outputTokenAcc?.pubkey ?? '',
       'computeUnitPriceMicroLamports':
           priorityFee.data.priorityFee.h.toString(),
       'wallet': address,
@@ -511,6 +509,14 @@ class SolanaCoin extends Coin {
       'unwrapSol': isOutputSol,
       'swapResponse': responseData.toJson(),
     };
+
+    if (inputTokenAcc != null) {
+      body['inputAccount'] = inputTokenAcc.pubkey;
+    }
+
+    if (outputTokenAcc != null) {
+      body['outputAccount'] = outputTokenAcc.pubkey;
+    }
 
     final rpcCall = await http.post(
       url,
@@ -521,6 +527,8 @@ class SolanaCoin extends Coin {
     if (rpcCall.statusCode >= 400) {
       throw Exception('Failed to swap tokens: ${rpcCall.body}');
     }
+
+    print(rpcCall.body);
 
     final swapResponse = SwapResponse.fromJson(jsonDecode(rpcCall.body));
     if (!swapResponse.success) {
