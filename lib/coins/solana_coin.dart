@@ -461,7 +461,8 @@ class SolanaCoin extends Coin {
     final outputMint = swapData.outputMint;
     final isInputSol = inputMint == NATIVE_SOL_ADDRESS;
     final isOutputSol = outputMint == NATIVE_SOL_ADDRESS;
-    final address = await getAddress();
+    final address = '54XhyKRs55mLEBcCip8VLRCmZpKFZg7k1JbWRbDpLoph';
+    // final address = await getAddress();
 
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
