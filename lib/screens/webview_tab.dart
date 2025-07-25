@@ -1632,44 +1632,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
                             final fee = await coin.getFeeForMessage(messageB64);
 
-                            // final compactSigArray =
-                            //     ByteArray(base58.decode(signature.toBase58()));
+                            final SignedTx signedTx = SignedTx(
+                              signatures: [signature],
+                              compiledMessage: CompiledMessage(
+                                ByteArray(
+                                  base58.decode(data.raw),
+                                ),
+                              ),
+                            );
 
-                            // // Merge: signatures + message
-                            // final versionedTxBytes = ByteArray.merge([
-                            //   compactSigArray,
-                            //   ByteArray(base64.decode(messageB64)),
-                            // ]);
+                            // 5. Now simulate the full versioned transaction
+                            final txResult = await coin.simulateTransaction(
+                              signedTx.encode(),
+                            );
 
-                            // final txResult = await coin.simulateTransaction(
-                            //     base64.encode(versionedTxBytes.toList()));
-
-                            // print('txResult: $txResult');
-
-                            // final message = MessageV0.deserialize(
-                            //     messageBytes); // Or however you're constructing MessageV0
-
-// 2. Sign the message hash
-//                             final messageHash = message
-//                                 .compile()
-//                                 .toLegacyMessage()
-//                                 .serialize(); // or the correct hash format
-//                             final signature =
-//                                 await solanaKeyPair.sign(messageHash);
-
-// // 3. Create the full VersionedTransaction
-//                             final versionedTx = VersionedTransaction(
-//                               signatures: [signature], // List<Signature>
-//                               message: message,
-//                             );
-
-// // 4. Serialize and base64 encode the full transaction
-//                             final serializedTx = versionedTx.serialize();
-//                             final base64Tx = base64Encode(serializedTx);
-
-// // 5. Now simulate the full versioned transaction
-//                             final txResult =
-//                                 await coin.simulateTransaction(base64Tx);
+                            print('txResult: $txResult');
 
                             if (decodedData.containsKey('message')) {
                               final SolanaTransactionVersioned solanaWeb3Res =
