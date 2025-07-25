@@ -436,6 +436,20 @@ class SolanaCoin extends Coin {
     return data;
   }
 
+  Future<int> getFeeForMessage(String base64Message) async {
+    try {
+      final client = getProxy().rpcClient;
+      final fee = await client.getFeeForMessage(base64Message);
+      if (fee == null) {
+        return 0;
+      }
+      return fee;
+    } catch (e) {
+      debugPrint('Error getting fee for message: $e');
+      return 0; // Return 0 if there's an error
+    }
+  }
+
   @override
   Future<String?> swapTokens(
     String tokenIn,
@@ -540,6 +554,7 @@ class SolanaCoin extends Coin {
     String? lastTxSig;
     int idx = 0;
     final solanaClient = getProxy().rpcClient;
+
     for (final tx in transactions) {
       final txBytes = base64Decode(tx.transaction);
       final bh = await solanaClient.getLatestBlockhash(

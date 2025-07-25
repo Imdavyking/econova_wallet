@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:math';
 import 'package:wallet_app/coins/near_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/components/sign_solana_ui.dart';
@@ -1620,6 +1621,12 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             late solana.Ed25519HDPublicKey from;
                             late SolanaSimuRes simulationResult;
 
+                            final fee = await coin.getFeeForMessage(
+                              base64.encode(
+                                base58.decode(data.raw),
+                              ),
+                            );
+
                             if (decodedData.containsKey('message')) {
                               final SolanaTransactionVersioned solanaWeb3Res =
                                   SolanaTransactionVersioned.fromJson(
@@ -1628,8 +1635,10 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               from = solana.Ed25519HDPublicKey.fromBase58(
                                 solanaWeb3Res.message.staticAccountKeys.first,
                               );
-                              simulationResult =
-                                  const SolanaSimuRes(fee: 0.5, result: []);
+                              simulationResult = SolanaSimuRes(
+                                fee: fee / pow(10, solDecimals),
+                                result: [],
+                              );
                             } else {
                               final SolanaTransactionLegacy solanaWeb3Res =
                                   SolanaTransactionLegacy.fromJson(decodedData);
