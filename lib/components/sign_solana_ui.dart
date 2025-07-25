@@ -311,6 +311,7 @@ Widget _buildDetailsTab({
   required VoidCallback onReject,
   required AppLocalizations localization,
 }) {
+  print('resutl: ${simulationResult.result}');
   return SingleChildScrollView(
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),

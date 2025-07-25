@@ -195,8 +195,8 @@ class SolanaCoin extends Coin {
       final programIdIndex = ix.programIdIndex;
       final programId = staticKeys[programIdIndex];
       final data = ix.data.data; // Byte array
-      if (data == null) return [];
-      if (programId == "11111111111111111111111111111111") {
+      if (data == null) return trxResults;
+      if (programId == SystemProgram.programId) {
         if (data.length >= 4 &&
             data[0] == 2 &&
             data[1] == 0 &&
@@ -213,8 +213,7 @@ class SolanaCoin extends Coin {
           trxResults
               .add("SOL transfer from $fromAddress to $toAddress $amount SOL");
         }
-      } else if (programId == "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" &&
-          data[0] == 3) {
+      } else if (programId == TokenProgram.programId && data[0] == 3) {
         if (ix.accountKeyIndexes.length >= 3) {
           final sourceIndex = ix.accountKeyIndexes[0];
           final destIndex = ix.accountKeyIndexes[1];
@@ -233,7 +232,7 @@ class SolanaCoin extends Coin {
         }
       }
     }
-    return [];
+    return trxResults;
   }
 
   double extractLamportsFromSystemTransfer(List<int> data) {
