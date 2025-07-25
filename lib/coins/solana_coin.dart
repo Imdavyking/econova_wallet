@@ -439,6 +439,7 @@ class SolanaCoin extends Coin {
   Future<int> getFeeForMessage(String base64Message) async {
     try {
       final client = getProxy().rpcClient;
+
       final fee = await client.getFeeForMessage(base64Message);
       if (fee == null) {
         return 0;
@@ -447,6 +448,20 @@ class SolanaCoin extends Coin {
     } catch (e) {
       debugPrint('Error getting fee for message: $e');
       return 0; // Return 0 if there's an error
+    }
+  }
+
+  Future<TransactionStatusResult?> simulateTransaction(
+      String base64Message) async {
+    try {
+      final client = getProxy().rpcClient;
+
+      final result = await client.simulateTransaction(base64Message);
+
+      return result;
+    } catch (e) {
+      debugPrint('Error getting fee for message: $e');
+      return null; // Return 0 if there's an error
     }
   }
 
