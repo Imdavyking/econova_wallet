@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
+import 'package:solana/dto.dart';
 import 'package:solana/encoder.dart';
 import 'package:wallet_app/coins/near_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
@@ -10,6 +11,7 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
+import 'package:wallet_app/model/sol_token_info.dart';
 import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/utils/slide_up_panel.dart';
 import "../utils/starknet_call.dart";
@@ -1657,9 +1659,18 @@ if (typeof trustwallet !== "undefined" &&
                             print(
                                 'sjson: ${simulation?.toJson()}'); // null also
                             print(
-                                'data: ${simulation?.value.returnData}'); // null
+                                'simaccounts: ${simulation?.value.accounts}'); // null
 
-                            //                         inal postBalance = simulation.value.accounts?.first.data?.parseTokenBalance();
+                            // final postBalance = SolTokenInfo .first.data
+                            //     .;
+
+                            //
+
+                            for (Account acc in simulation?.value?.accounts) {
+                              if (acc is BinaryAccountData) {
+                                final info = SolTokenInfo.decode(acc as dynamic);
+                              }
+                            }
                             // final preBalance = await rpcClient
                             //     .getAccountInfo(
                             //       tokenAddress.toBase58(),

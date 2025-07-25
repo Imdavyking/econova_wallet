@@ -175,14 +175,7 @@ class SolanaCoin extends Coin {
     final address = await getAddress();
     final subscription = getProxy().createSubscriptionClient();
 
-    subscription.accountSubscribe(address).listen((Account event) {
-      // CryptoNotificationsEventBus.instance.fire(
-      //   CryptoNotificationEvent(
-      //     body: 'ok ',
-      //     title: 'cool',
-      //   ),
-      // );
-    });
+    subscription.accountSubscribe(address).listen((Account event) {});
   }
 
   List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
