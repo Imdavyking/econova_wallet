@@ -1654,7 +1654,10 @@ if (typeof trustwallet !== "undefined" &&
                               signedTx.encode(),
                             );
 
-                            print('accounts: ${simulation?.value.accounts}');
+                            print(
+                                'sjson: ${simulation?.toJson()}'); // null also
+                            print(
+                                'data: ${simulation?.value.returnData}'); // null
 
                             //                         inal postBalance = simulation.value.accounts?.first.data?.parseTokenBalance();
                             // final preBalance = await rpcClient
@@ -1672,12 +1675,14 @@ if (typeof trustwallet !== "undefined" &&
                                   SolanaTransactionVersioned.fromJson(
                                 decodedData,
                               );
+
                               from = solana.Ed25519HDPublicKey.fromBase58(
                                 solanaWeb3Res.message.staticAccountKeys.first,
                               );
                               simulationResult = SolanaSimuRes(
                                 fee: fee / pow(10, solDecimals),
-                                result: [],
+                                result:
+                                    coin.dappTrxVersionedResult(solanaWeb3Res),
                               );
                             } else {
                               final SolanaTransactionLegacy solanaWeb3Res =

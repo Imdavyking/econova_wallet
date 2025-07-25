@@ -6,6 +6,7 @@ import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
+import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/solana_meme.coin.dart';
 
@@ -182,6 +183,71 @@ class SolanaCoin extends Coin {
       //   ),
       // );
     });
+  }
+
+  List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
+    final instructions = simulation.message.compiledInstructions;
+    final staticKeys = simulation.message.staticAccountKeys;
+
+    List<String> trxResults = [];
+
+    for (final ix in instructions) {
+      final programIdIndex = ix.programIdIndex;
+      final programId = staticKeys[programIdIndex];
+      final data = ix.data.data; // Byte array
+      if (data == null) return [];
+      if (programId == "11111111111111111111111111111111") {
+        if (data.length >= 4 &&
+            data[0] == 2 &&
+            data[1] == 0 &&
+            data[2] == 0 &&
+            data[3] == 0) {
+          final fromIndex = ix.accountKeyIndexes[0];
+          final toIndex = ix.accountKeyIndexes[1];
+          final fromAddress = staticKeys[fromIndex];
+          final toAddress = staticKeys[toIndex];
+          final amount = extractLamportsFromSystemTransfer(data);
+          debugPrint(
+              "🔔 Detected SOL transfer from $fromAddress to $toAddress $amount SOL");
+
+          trxResults
+              .add("SOL transfer from $fromAddress to $toAddress $amount SOL");
+        }
+      } else if (programId == "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" &&
+          data[0] == 3) {
+        if (ix.accountKeyIndexes.length >= 3) {
+          final sourceIndex = ix.accountKeyIndexes[0];
+          final destIndex = ix.accountKeyIndexes[1];
+          final authorityIndex = ix.accountKeyIndexes[2];
+
+          final fromAddress = staticKeys[sourceIndex];
+          final toAddress = staticKeys[destIndex];
+          final authority = staticKeys[authorityIndex];
+
+          final amount = extractAmountFromSplTransfer(data);
+
+          debugPrint(
+              "💸 Detected SPL transfer of $amount tokens from $fromAddress to $toAddress (authority: $authority)");
+          trxResults.add(
+              "💸 SPL Token transfer from $fromAddress to $toAddress — $amount tokens");
+        }
+      }
+    }
+    return [];
+  }
+
+  double extractLamportsFromSystemTransfer(List<int> data) {
+    if (data.length < 12 || data[0] != 2) return 0;
+    final amountBytes = Uint8List.fromList(data.sublist(4, 12));
+    final byteData = ByteData.sublistView(amountBytes);
+    return byteData.getUint64(0, Endian.little) / pow(10, solDecimals);
+  }
+
+  int extractAmountFromSplTransfer(List<int> data) {
+    if (data.length < 9 || data[0] != 3) return 0;
+    final amountBytes = Uint8List.fromList(data.sublist(1, 9));
+    final byteData = ByteData.sublistView(amountBytes);
+    return byteData.getUint64(0, Endian.little);
   }
 
   @override
