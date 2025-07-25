@@ -1629,7 +1629,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                 solanaWeb3Res.message.staticAccountKeys.first,
                               );
                               simulationResult =
-                                  const SolanaSimuRes(fee: 0.2, result: []);
+                                  const SolanaSimuRes(fee: 0.5, result: []);
                             } else {
                               final SolanaTransactionLegacy solanaWeb3Res =
                                   SolanaTransactionLegacy.fromJson(decodedData);

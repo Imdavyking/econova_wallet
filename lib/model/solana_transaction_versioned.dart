@@ -114,8 +114,8 @@ class CompiledInstruction {
 }
 
 class BufferData {
-  final String type;
-  final List<int> data;
+  final String? type;
+  final List<int>? data;
 
   BufferData({
     required this.type,
@@ -124,7 +124,7 @@ class BufferData {
 
   factory BufferData.fromJson(Map<String, dynamic> json) => BufferData(
         type: json['type'],
-        data: List<int>.from(json['data']),
+        data: json['data'] == null ? null : List<int>.from(json['data']),
       );
 
   Map<String, dynamic> toJson() => {
