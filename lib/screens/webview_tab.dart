@@ -365,7 +365,15 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   Future _setSolanaAddress(id, sendingAddress) async {
-    final setAddress = "trustwallet.solana.setAddress(\"$sendingAddress\");";
+    final setAddress = '''
+if (typeof trustwallet !== "undefined" && 
+    typeof trustwallet.solana !== "undefined" && 
+    typeof trustwallet.solana.setAddress === "function") {
+  trustwallet.solana.setAddress("$sendingAddress");
+} else {
+  console.warn("trustwallet.solana.setAddress is not defined");
+}
+''';
 
     String callback =
         "trustwallet.solana.sendResponse($id, [\"$sendingAddress\"])";
@@ -1642,11 +1650,22 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                             );
 
                             // 5. Now simulate the full versioned transaction
-                            final txResult = await coin.simulateTransaction(
+                            final simulation = await coin.simulateTransaction(
                               signedTx.encode(),
                             );
 
-                            print('txResult: $txResult');
+                            print('accounts: ${simulation?.value.accounts}');
+
+                            //                         inal postBalance = simulation.value.accounts?.first.data?.parseTokenBalance();
+                            // final preBalance = await rpcClient
+                            //     .getAccountInfo(
+                            //       tokenAddress.toBase58(),
+                            //       commitment: Commitment.confirmed,
+                            //       encoding: Encoding.base64,
+                            //     )
+                            //     .then((e) => e.value?.data?.parseTokenBalance());
+
+                            print('simulation: $simulation');
 
                             if (decodedData.containsKey('message')) {
                               final SolanaTransactionVersioned solanaWeb3Res =
