@@ -527,8 +527,6 @@ class SolanaCoin extends Coin {
       throw Exception('Failed to swap tokens: ${rpcCall.body}');
     }
 
-    print(rpcCall.body);
-
     final swapResponse = SwapResponse.fromJson(jsonDecode(rpcCall.body));
     if (!swapResponse.success) {
       throw Exception('Swap failed: ${swapResponse.msg}');
