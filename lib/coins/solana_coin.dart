@@ -197,49 +197,60 @@ class SolanaCoin extends Coin {
       final data = ix.data.data; // Byte array
       if (data == null) return trxResults;
       if (programId == SystemProgram.programId) {
-        if (data.length >= 4 &&
-            data[0] == 2 &&
-            data[1] == 0 &&
-            data[2] == 0 &&
-            data[3] == 0) {
-          final fromIndex = ix.accountKeyIndexes[0];
-          final toIndex = ix.accountKeyIndexes[1];
-          final fromAddress = staticKeys[fromIndex];
-          final toAddress = staticKeys[toIndex];
-          final amount = extractLamportsFromSystemTransfer(data);
-          debugPrint(
-              "🔔 Detected SOL transfer from $fromAddress to $toAddress $amount SOL");
-
-          trxResults
-              .add("SOL transfer from $fromAddress to $toAddress $amount SOL");
+        final instructionType = data[0];
+        if (instructionType == 2 && data.length >= 12) {
+          // Transfer
+          final fromAddress = staticKeys[ix.accountKeyIndexes[0]];
+          final toAddress = staticKeys[ix.accountKeyIndexes[1]];
+          final amountLamports = extractLamportsFromSystemTransfer(data);
+          trxResults.add(
+            "SOL Transfer: from $fromAddress to $toAddress amount: ${amountLamports / 1e9} SOL",
+          );
+        } else if (instructionType == 0) {
+          // Create Account
+          final fromAddress = staticKeys[ix.accountKeyIndexes[0]];
+          final newAccountAddress = staticKeys[ix.accountKeyIndexes[1]];
+          trxResults.add(
+              "Create Account: from $fromAddress new account $newAccountAddress");
         }
       } else if (programId == TokenProgram.programId && data[0] == 3) {
-        if (ix.accountKeyIndexes.length >= 3) {
-          final sourceIndex = ix.accountKeyIndexes[0];
-          final destIndex = ix.accountKeyIndexes[1];
-          final authorityIndex = ix.accountKeyIndexes[2];
-
-          final fromAddress = staticKeys[sourceIndex];
-          final toAddress = staticKeys[destIndex];
-          final authority = staticKeys[authorityIndex];
-
+        final instructionType = data[0];
+        if (instructionType == 3) {
+          // Transfer SPL Token
+          final source = staticKeys[ix.accountKeyIndexes[0]];
+          final destination = staticKeys[ix.accountKeyIndexes[1]];
+          final authority = staticKeys[ix.accountKeyIndexes[2]];
           final amount = extractAmountFromSplTransfer(data);
-
-          debugPrint(
-              "💸 Detected SPL transfer of $amount tokens from $fromAddress to $toAddress (authority: $authority)");
           trxResults.add(
-              "💸 SPL Token transfer from $fromAddress to $toAddress — $amount tokens");
+              "SPL Token Transfer: from $source to $destination amount: $amount tokens");
+        } else if (instructionType == 4) {
+          // Approve SPL Token
+          final source = staticKeys[ix.accountKeyIndexes[0]];
+          final delegate = staticKeys[ix.accountKeyIndexes[1]];
+          final owner = staticKeys[ix.accountKeyIndexes[2]];
+          final amount = extractAmountFromSplTransfer(data);
+          trxResults.add(
+              "SPL Token Approve: owner $owner delegate $delegate amount: $amount tokens");
+        } else if (instructionType == 6) {
+          // Revoke SPL Token
+          final source = staticKeys[ix.accountKeyIndexes[0]];
+          final owner = staticKeys[ix.accountKeyIndexes[1]];
+          trxResults.add("SPL Token Revoke: owner $owner");
+        } else if (instructionType == 7) {
+          // Set Authority
+          final account = staticKeys[ix.accountKeyIndexes[0]];
+          trxResults.add("SPL Token Set Authority for $account");
         }
       }
     }
     return trxResults;
   }
 
-  double extractLamportsFromSystemTransfer(List<int> data) {
+  int extractLamportsFromSystemTransfer(List<int> data) {
     if (data.length < 12 || data[0] != 2) return 0;
     final amountBytes = Uint8List.fromList(data.sublist(4, 12));
     final byteData = ByteData.sublistView(amountBytes);
-    return byteData.getUint64(0, Endian.little) / pow(10, solDecimals);
+    return byteData.getUint64(0, Endian.little);
   }
 
   int extractAmountFromSplTransfer(List<int> data) {
