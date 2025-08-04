@@ -19,6 +19,17 @@ With **voice commands**, **natural language understanding**, and support for **3
 - 💸 **Token Transfers & Swaps**
   Send, receive, and swap SPL tokens like **SOL, USDC, BONK, JUP**—via UI or chat-style commands.
 
+- 🐶 **BONK Support on Solana**
+  Store, send, and swap **BONK** (on Solana mainnet) directly from your wallet. Use natural language or tap-based UI to:
+
+  - ✅ Check BONK balances
+
+  - ✅ Send BONK to `.sol` usernames
+
+  - ✅ Swap BONK ↔ USDC or SOL using Raydium
+
+  > _“Swap 10,000 BONK to USDC”_ > _“Send 5,000 BONK to foundation.sol”_
+
 - 📈 **Portfolio Overview**
   Track your total crypto holdings across Solana and 30+ other networks.
 
@@ -32,7 +43,7 @@ With **voice commands**, **natural language understanding**, and support for **3
   Connect to Solana DeFi, NFT marketplaces, and ecosystem tools through a built-in browser.
 
 - 🌐 **Domain Name Resolution**
-  Use `.sol` names instead of long addresses. Send to usernames like `vitalik.sol` or `meowbonk.sol`.
+  Use `.sol` names instead of long addresses. Send to usernames like `vitalik.sol` or `foundation.sol`.
 
 - 🐸 **Meme Coin Deployment (Coming Soon)**
   Deploy your own Solana meme token in minutes—no coding required.
@@ -50,7 +61,9 @@ With **voice commands**, **natural language understanding**, and support for **3
 
 - 🤖 **AI Wallet Assistant**
   Talk to your wallet like a friend.
-  _“Swap \$20 USDC to SOL”_, _“What’s my SOL balance?”_, or _“Show my last 3 Solana transactions.”_
+  _“Swap \$20 USDC to SOL”_,
+  _“What’s my SOL balance?”_,
+  _“Show my last 3 Solana transactions.”_
 
 - 🌐 **Multichain Support**
   Solana comes first—but Econova works with Starknet, Ethereum, NEAR, and many others.
@@ -118,6 +131,7 @@ Econova is built around Solana but extends your reach across the entire crypto s
 - **Speed & Scalability**: Solana processes up to 65,000 transactions per second at near-zero cost.
 - **Massive Ecosystem**: Home to DeFi (Jupiter, Orca), NFTs (Magic Eden), and meme coins (BONK, WIF).
 - **Low Fees**: Transactions cost fractions of a cent—ideal for on-chain actions and AI automation.
+- **Meme Coin Support**: Full native support for Solana memecoins like **BONK**, including swaps, transfers, and storage.
 - **Voice & AI Use Cases**: Perfect for Econova’s real-time interactions with fast finality.
 
 ---
