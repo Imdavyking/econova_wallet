@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
-import 'package:solana/dto.dart';
 import 'package:solana/encoder.dart';
 import 'package:wallet_app/coins/near_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
@@ -36,7 +35,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 import 'package:web3dart/crypto.dart';
-import 'package:web3dart/web3dart.dart';
+import 'package:web3dart/web3dart.dart' as web3dart;
 import '../coins/ethereum_coin.dart';
 import '../main.dart';
 import '../model/multix_sign_model.dart' hide Transaction;
@@ -1661,16 +1660,24 @@ if (typeof trustwallet !== "undefined" &&
                             print(
                                 'simaccounts: ${simulation?.value.accounts}'); // null
 
-                            // final postBalance = SolTokenInfo .first.data
-                            //     .;
+                            final simAccounts = simulation?.value.accounts;
 
-                            //
-
-                            for (Account acc in simulation?.value?.accounts) {
-                              if (acc is BinaryAccountData) {
-                                final info = SolTokenInfo.decode(acc as dynamic);
+                            if (simAccounts != null) {
+                              for (final simAccount in simAccounts) {
+                                try {
+                                  final info = SolTokenInfo.decode(simAccount);
+                                  print('balance: ${info.balance}');
+                                } catch (e) {
+                                  print(e);
+                                }
                               }
                             }
+
+                            // for (List<Account>? acc in ) {
+                            //   if (acc is BinaryAccountData) {
+                            //     final info = SolTokenInfo.decode(acc as dynamic);
+                            //   }
+                            // }
                             // final preBalance = await rpcClient
                             //     .getAccountInfo(
                             //       tokenAddress.toBase58(),
@@ -1772,7 +1779,8 @@ if (typeof trustwallet !== "undefined" &&
                       final web3Response = await coin.importData(data);
 
                       final privateKey = web3Response.privateKey!;
-                      final credentials = EthPrivateKey.fromHex(privateKey);
+                      final credentials =
+                          web3dart.EthPrivateKey.fromHex(privateKey);
 
                       final sendingAddress = web3Response.address;
 
@@ -1796,7 +1804,7 @@ if (typeof trustwallet !== "undefined" &&
                                 name: '',
                                 onConfirm: () async {
                                   try {
-                                    final client = Web3Client(
+                                    final client = web3dart.Web3Client(
                                       coin.rpc,
                                       Client(),
                                     );
@@ -1804,12 +1812,13 @@ if (typeof trustwallet !== "undefined" &&
                                     final signedTransaction =
                                         await client.signTransaction(
                                       credentials,
-                                      Transaction(
+                                      web3dart.Transaction(
                                         to: data.to != null
-                                            ? EthereumAddress.fromHex(data.to!)
+                                            ? web3dart.EthereumAddress.fromHex(
+                                                data.to!)
                                             : null,
                                         value: data.value != null
-                                            ? EtherAmount.inWei(
+                                            ? web3dart.EtherAmount.inWei(
                                                 BigInt.parse(data.value!),
                                               )
                                             : null,
@@ -1820,7 +1829,7 @@ if (typeof trustwallet !== "undefined" &&
                                             ? null
                                             : txDataToUintList(data.data!),
                                         gasPrice: data.gasPrice != null
-                                            ? EtherAmount.inWei(
+                                            ? web3dart.EtherAmount.inWei(
                                                 BigInt.parse(
                                                   data.gasPrice!,
                                                 ),
