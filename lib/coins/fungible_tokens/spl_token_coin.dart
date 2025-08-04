@@ -176,7 +176,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
 List<SplTokenCoin> getSplTokens() {
   List<SplTokenCoin> blockChains = [];
   if (enableTestNet) {
-    blockChains.add(
+    blockChains.addAll([
       SplTokenCoin(
         name: 'USDC (Devnet)',
         symbol: 'USDC',
@@ -186,11 +186,11 @@ List<SplTokenCoin> getSplTokens() {
         image: 'assets/wusd.png',
         rpc: 'https://api.devnet.solana.com',
         ws: 'wss://api.devnet.solana.com',
-        mint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+        mint: 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT',
         mintDecimals: 6,
         geckoID: 'usd-coin',
       ),
-    );
+    ]);
   } else {
     //    export const MINTS: { [key in TokenID]: PublicKey } = {
 //   [TokenID.APT]: new PublicKey('APTtJyaRX5yGTsJU522N4VYWg3vCvSb65eam5GrPT5Rt'),
