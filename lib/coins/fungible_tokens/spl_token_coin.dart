@@ -206,6 +206,19 @@ List<SplTokenCoin> getSplTokens() {
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       ),
+      SplTokenCoin(
+        name: 'Bonk',
+        symbol: 'Bonk',
+        image: 'assets/bonk.png',
+        mintDecimals: 6,
+        geckoID: 'bonk',
+        default_: 'SOL',
+        blockExplorer:
+            'https://explorer.solana.com/tx/$blockExplorerPlaceholder',
+        rpc: 'https://api.mainnet-beta.solana.com',
+        ws: 'wss://solana-api.projectserum.com',
+        mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      ),
     ]);
   }
   return blockChains;
