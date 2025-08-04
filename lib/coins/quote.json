@@ -1,0 +1,36 @@
+{
+  "id": "652ccbc1-7028-46b0-b0ab-b376bb61558b",
+  "success": true,
+  "version": "V1",
+  "data": {
+    "swapType": "BaseIn",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "inputAmount": "118700000",
+    "outputMint": "USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT",
+    "outputAmount": "194519041",
+    "otherAmountThreshold": "194421781",
+    "slippageBps": 5,
+    "priceImpactPct": 36.62,
+    "referrerAmount": "0",
+    "routePlan": [
+      {
+        "poolId": "Bw9gaeKqQy5aTpi1BiSdV2p21REATtVXDdhjPUFjgq6N",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1",
+        "feeMint": "So11111111111111111111111111111111111111112",
+        "feeRate": 25,
+        "feeAmount": "296750",
+        "remainingAccounts": []
+      },
+      {
+        "poolId": "2zUxF7NQ3sB3rtWrZEzNu7sQzMwcFfP3WLtvABNc48SU",
+        "inputMint": "9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1",
+        "outputMint": "USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT",
+        "feeMint": "9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1",
+        "feeRate": 25,
+        "feeAmount": "588458793",
+        "remainingAccounts": []
+      }
+    ]
+  }
+}

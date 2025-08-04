@@ -877,7 +877,7 @@ class RoutePlan {
   final int feeRate;
   final String feeAmount;
   final List<String> remainingAccounts;
-  final String lastPoolPriceX64;
+  final String? lastPoolPriceX64;
 
   RoutePlan({
     required this.poolId,
