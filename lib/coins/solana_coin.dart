@@ -461,6 +461,7 @@ class SolanaCoin extends Coin {
     );
 
     final response = await http.get(url);
+
     if (response.statusCode >= 400) {
       throw Exception('Failed to fetch quote: ${response.body}');
     }

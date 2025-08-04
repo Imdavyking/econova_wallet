@@ -240,6 +240,8 @@ class AIAgentService {
         other coins are $otherCoins.
         """;
 
+      print(prompt);
+
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
         tools: AItools().getTools(),
