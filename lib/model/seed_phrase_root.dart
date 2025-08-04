@@ -6,10 +6,7 @@ import 'package:bip32/bip32.dart' as bip32;
 class SeedPhraseRoot {
   late Uint8List seed;
   late bip32.BIP32 root;
-  SeedPhraseRoot(Uint8List seed, bip32.BIP32 root) {
-    seed = seed;
-    root = root;
-  }
+  SeedPhraseRoot(this.seed, this.root);
 }
 
 SeedPhraseRoot seedFromMnemonic(seedPhrase) {

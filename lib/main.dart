@@ -187,6 +187,7 @@ void main() async {
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
+    print('Reinstantiated seed root');
   }
   supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
