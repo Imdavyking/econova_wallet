@@ -234,6 +234,8 @@ class AIAgentService {
           .join(',');
 
       final prompt = """
+        ⚠️ Use the token address shown above as the **true source of identity** for this coin, especially in testnet or non-standard environments.  
+        Do **not** rely on known token maps or CoinGecko IDs for address resolution — the address given here is authoritative.
         $botPrompt
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
