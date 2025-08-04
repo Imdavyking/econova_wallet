@@ -209,7 +209,7 @@ List<SplTokenCoin> getSplTokens() {
       SplTokenCoin(
         name: 'Bonk',
         symbol: 'Bonk',
-        image: 'assets/bonk.png',
+        image: 'assets/bonk-logo.png',
         mintDecimals: 6,
         geckoID: 'bonk',
         default_: 'SOL',

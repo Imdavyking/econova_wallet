@@ -138,7 +138,7 @@ const appUnlockTime = 'applockksksietimeal382';
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
 // enable
-bool enableTestNet = true;
+bool enableTestNet = false;
 const orange1 = Color.fromARGB(255, 233, 183, 9);
 
 // app theme
