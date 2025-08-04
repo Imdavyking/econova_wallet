@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import '../service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -12,7 +14,7 @@ import '../main.dart';
 import '../utils/blockie_widget.dart';
 
 class ChangeIdenticon extends StatefulWidget {
-  const ChangeIdenticon({Key? key}) : super(key: key);
+  const ChangeIdenticon({super.key});
 
   @override
   _ChangeIdenticonState createState() => _ChangeIdenticonState();
@@ -100,12 +102,6 @@ class _ChangeIdenticonState extends State<ChangeIdenticon> {
                                           child: ValueListenableBuilder<String>(
                                             valueListenable: ethAddr,
                                             builder: (_, ___, __) => Container(
-                                              child: Jazzicon.getIconWidget(
-                                                Jazzicon.getJazziconData(
-                                                  40,
-                                                  address: ethAddr.value,
-                                                ),
-                                              ),
                                               decoration: BoxDecoration(
                                                 color: isBlockie
                                                     ? null
@@ -117,6 +113,12 @@ class _ChangeIdenticonState extends State<ChangeIdenticon> {
                                                 ),
                                               ),
                                               padding: const EdgeInsets.all(2),
+                                              child: Jazzicon.getIconWidget(
+                                                Jazzicon.getJazziconData(
+                                                  40,
+                                                  address: ethAddr.value,
+                                                ),
+                                              ),
                                             ),
                                           )),
                                       const SizedBox(
@@ -152,6 +154,17 @@ class _ChangeIdenticonState extends State<ChangeIdenticon> {
                                           ),
                                           padding: const EdgeInsets.all(2),
                                           child: Container(
+                                            decoration: BoxDecoration(
+                                              color: isBlockie
+                                                  ? Theme.of(context)
+                                                      .scaffoldBackgroundColor
+                                                  : null,
+                                              borderRadius:
+                                                  const BorderRadius.all(
+                                                Radius.circular(22),
+                                              ),
+                                            ),
+                                            padding: const EdgeInsets.all(2),
                                             child:
                                                 ValueListenableBuilder<String>(
                                               valueListenable: ethAddr,
@@ -168,17 +181,6 @@ class _ChangeIdenticonState extends State<ChangeIdenticon> {
                                                 ),
                                               ),
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: isBlockie
-                                                  ? Theme.of(context)
-                                                      .scaffoldBackgroundColor
-                                                  : null,
-                                              borderRadius:
-                                                  const BorderRadius.all(
-                                                Radius.circular(22),
-                                              ),
-                                            ),
-                                            padding: const EdgeInsets.all(2),
                                           ),
                                         ),
                                         const SizedBox(

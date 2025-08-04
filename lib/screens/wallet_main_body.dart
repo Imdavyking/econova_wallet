@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'package:wallet_app/components/portfolio.dart';
 import 'package:wallet_app/components/user_balance.dart';
@@ -6,6 +8,7 @@ import 'package:wallet_app/screens/select_blockchain.dart';
 import 'package:wallet_app/screens/add_custom_token.dart';
 import 'package:wallet_app/screens/token.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_connect_reown/wc_connector_reown.dart';
 import 'package:wallet_app/utils/wallet_connect_v1/wc_connector_v1.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +24,7 @@ import '../utils/get_blockchain_widget.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class WalletMainBody extends StatefulWidget {
-  const WalletMainBody({Key? key}) : super(key: key);
+  const WalletMainBody({super.key});
 
   @override
   _WalletMainBodyState createState() => _WalletMainBodyState();
@@ -74,6 +77,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
     );
     WcConnectorV1();
     WcConnectorV2();
+    WCConnectorReown();
   }
 
   void initializeBlockchains() {
@@ -230,7 +234,9 @@ class _WalletMainBodyState extends State<WalletMainBody>
                       Coin? coin = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (ctx) => const SelectBlockchain(),
+                          builder: (ctx) => SelectBlockchain(
+                            filterFn: (coin) => true,
+                          ),
                         ),
                       );
 

@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:aptos/aptos.dart';
+
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
@@ -178,18 +180,16 @@ class CosmosCoin extends Coin {
       }
     }
 
-    final address = cosmosPrivateKeyToAddress(
+    final keys = cosmosPrivateKeyToAddress(
       privateKey,
       getNetworkInfo(),
     );
 
-    final keys = address.toJson();
-
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

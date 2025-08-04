@@ -13,7 +13,7 @@ class CustomImage extends StatelessWidget {
   final Uri url;
 
   const CustomImage({
-    Key? key,
+    super.key,
     required this.url,
     this.width,
     this.height,
@@ -21,7 +21,7 @@ class CustomImage extends StatelessWidget {
     this.maxHeight = double.infinity,
     this.minWidth = 0.0,
     this.minHeight = 0.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -22,9 +22,9 @@ import '../utils/qr_scan_view.dart';
 class EnterPrivateKey extends StatefulWidget {
   final Coin coin;
   const EnterPrivateKey({
-    Key? key,
+    super.key,
     required this.coin,
-  }) : super(key: key);
+  });
   @override
   State<EnterPrivateKey> createState() => _EnterPrivateKeyState();
 }

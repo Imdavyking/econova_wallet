@@ -81,7 +81,7 @@ class JsSolanaMessageObject {
 class JsSolanaTransactionObject {
   String data;
   String raw;
-  String version;
+  int version;
   String? rawMessage;
 
   JsSolanaTransactionObject({
@@ -420,25 +420,25 @@ class CosmosDirectSignDoc {
   });
 
   factory CosmosDirectSignDoc.fromJson(Map<String, dynamic> json) {
-    String? _body_bytes;
-    String? _auth_info_bytes;
+    String? body_bytes;
+    String? auth_info_bytes;
     if (json['bodyBytes'] is Map) {
       Map bodyBytes = json['bodyBytes'];
-      _body_bytes = HEX.encode(List<int>.from(bodyBytes.values));
+      body_bytes = HEX.encode(List<int>.from(bodyBytes.values));
     } else {
-      _body_bytes = json['body_bytes'];
+      body_bytes = json['body_bytes'];
     }
     if (json['authInfoBytes'] is Map) {
       Map authInfoBytes = json['authInfoBytes'];
 
-      _auth_info_bytes = HEX.encode(List<int>.from(authInfoBytes.values));
+      auth_info_bytes = HEX.encode(List<int>.from(authInfoBytes.values));
     } else {
-      _auth_info_bytes = json['auth_info_bytes'];
+      auth_info_bytes = json['auth_info_bytes'];
     }
 
     return CosmosDirectSignDoc(
-      body_bytes: _body_bytes!,
-      auth_info_bytes: _auth_info_bytes!,
+      body_bytes: body_bytes!,
+      auth_info_bytes: auth_info_bytes!,
     );
   }
 
@@ -471,16 +471,16 @@ class CosmosRequestObject {
   });
 
   factory CosmosRequestObject.fromJson(Map<String, dynamic> json) {
-    CosmosDirectSignDoc? _signDoc;
+    CosmosDirectSignDoc? signDoc;
     if (json['sign_doc'] != null) {
-      _signDoc = CosmosDirectSignDoc.fromJson(json['sign_doc']);
+      signDoc = CosmosDirectSignDoc.fromJson(json['sign_doc']);
     }
     return CosmosRequestObject(
       chainId: json['chainId'],
       data: json['data'],
       raw: json['raw'],
       mode: json['mode'],
-      signDoc: _signDoc,
+      signDoc: signDoc,
     );
   }
 

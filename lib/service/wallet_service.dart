@@ -44,16 +44,11 @@ abstract class WalletParams {
 
 class PrivateKeyParams extends WalletParams {
   PrivateKeyParams({
-    required String data,
-    String? defaultCoin,
-    required String name,
-    String? coinName,
-  }) : super(
-          data: data,
-          defaultCoin: defaultCoin,
-          coinName: coinName,
-          name: name,
-        );
+    required super.data,
+    super.defaultCoin,
+    required super.name,
+    super.coinName,
+  });
 
   @override
   Map<String, dynamic> toJson() {
@@ -76,12 +71,10 @@ class PrivateKeyParams extends WalletParams {
 }
 
 class SeedPhraseParams extends WalletParams {
-  SeedPhraseParams({required String data, required String name})
+  SeedPhraseParams({required super.data, required super.name})
       : super(
-          data: data,
           defaultCoin: null,
           coinName: null,
-          name: name,
         );
 
   @override
@@ -102,16 +95,11 @@ class SeedPhraseParams extends WalletParams {
 
 class ViewKeyParams extends WalletParams {
   ViewKeyParams({
-    required String data,
-    String? defaultCoin,
-    required String name,
-    String? coinName,
-  }) : super(
-          data: data,
-          defaultCoin: defaultCoin,
-          coinName: coinName,
-          name: name,
-        );
+    required super.data,
+    super.defaultCoin,
+    required super.name,
+    super.coinName,
+  });
   @override
   Map<String, dynamic> toJson() {
     return {
@@ -141,8 +129,6 @@ class WalletService {
         return _currentPrivateKey;
       case WalletType.viewKey:
         return _currentViewKey;
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -154,8 +140,6 @@ class WalletService {
         return _privateListKey;
       case WalletType.viewKey:
         return _viewListKey;
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -169,8 +153,6 @@ class WalletService {
         return PrivateKeyParams.fromJson(json.decode(data));
       case WalletType.viewKey:
         return ViewKeyParams.fromJson(json.decode(data));
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 
@@ -204,8 +186,6 @@ class WalletService {
       case WalletType.viewKey:
         isValidType = currentKey is ViewKeyParams;
         break;
-      default:
-        throw Exception('Invalid wallet type');
     }
     if (!isValidType) {
       throw Exception('Invalid data type for the specified wallet type');
@@ -235,8 +215,6 @@ class WalletService {
         return jsonData.map((item) => PrivateKeyParams.fromJson(item)).toList();
       case WalletType.viewKey:
         return jsonData.map((item) => ViewKeyParams.fromJson(item)).toList();
-      default:
-        throw Exception('Invalid wallet type');
     }
   }
 

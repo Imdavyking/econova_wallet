@@ -11,7 +11,7 @@ import '../service/wallet_service.dart';
 import '../utils/rpc_urls.dart';
 
 class AllWallets extends StatefulWidget {
-  const AllWallets({Key? key}) : super(key: key);
+  const AllWallets({super.key});
   @override
   State<AllWallets> createState() => _AllWalletsState();
 }
@@ -87,9 +87,32 @@ class _AllWalletsState extends State<AllWallets> {
                         seedParams,
                       );
                     },
+                    secondaryBackground: Container(
+                      color: Colors.red,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerRight,
+                      child: const Padding(
+                        padding: EdgeInsets.only(right: 10),
+                        child: Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    background: Container(
+                      color: Colors.blue,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerLeft,
+                      child: const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                     child: GestureDetector(
                       onTap: () async {
-                        print('getting wallet: $currentPhrase');
                         if (currentPhrase == seedParams &&
                             WalletService.getType() ==
                                 WalletType.secretPhrase) {
@@ -103,14 +126,10 @@ class _AllWalletsState extends State<AllWallets> {
 
                         currentPhrase = data as SeedPhraseParams;
 
-                        print('currentPhrase: $currentPhrase');
-
                         seedPhraseRoot = await compute(
                           seedFromMnemonic,
                           seedParams.data,
                         );
-
-                        print('gtt: $seedPhraseRoot');
 
                         await WalletService.setActiveKey(
                           WalletType.secretPhrase,
@@ -122,7 +141,7 @@ class _AllWalletsState extends State<AllWallets> {
                         );
 
                         if (!mounted) return;
-
+                        if (!context.mounted || !mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (ctx) => const Wallet()),
@@ -178,30 +197,6 @@ class _AllWalletsState extends State<AllWallets> {
                         ),
                       ),
                     ),
-                    secondaryBackground: Container(
-                      color: Colors.red,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerRight,
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 10),
-                        child: Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    background: Container(
-                      color: Colors.blue,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerLeft,
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
                   ),
                 ],
                 if (mnemonics.isNotEmpty)
@@ -233,6 +228,30 @@ class _AllWalletsState extends State<AllWallets> {
                         privateParams,
                       );
                     },
+                    secondaryBackground: Container(
+                      color: Colors.red,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerRight,
+                      child: const Padding(
+                        padding: EdgeInsets.only(right: 10),
+                        child: Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    background: Container(
+                      color: Colors.blue,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerLeft,
+                      child: const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                     child: GestureDetector(
                       onTap: () async {
                         if (currentPrivate == privateParams &&
@@ -255,6 +274,7 @@ class _AllWalletsState extends State<AllWallets> {
                           privateParams.name,
                         );
 
+                        if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (ctx) => const Wallet()),
@@ -310,30 +330,6 @@ class _AllWalletsState extends State<AllWallets> {
                         ),
                       ),
                     ),
-                    secondaryBackground: Container(
-                      color: Colors.red,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerRight,
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 10),
-                        child: Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    background: Container(
-                      color: Colors.blue,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerLeft,
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
                   ),
                 ],
                 if (privateKeyWallets.isNotEmpty)
@@ -365,6 +361,30 @@ class _AllWalletsState extends State<AllWallets> {
                         viewParams,
                       );
                     },
+                    secondaryBackground: Container(
+                      color: Colors.red,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerRight,
+                      child: const Padding(
+                        padding: EdgeInsets.only(right: 10),
+                        child: Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    background: Container(
+                      color: Colors.blue,
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.centerLeft,
+                      child: const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                     child: GestureDetector(
                       onTap: () async {
                         if (currentView == viewParams &&
@@ -381,7 +401,7 @@ class _AllWalletsState extends State<AllWallets> {
                           currentUserWalletNameKey,
                           viewParams.name,
                         );
-
+                        if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (ctx) => const Wallet()),
@@ -434,30 +454,6 @@ class _AllWalletsState extends State<AllWallets> {
                               ],
                             ),
                           )),
-                        ),
-                      ),
-                    ),
-                    secondaryBackground: Container(
-                      color: Colors.red,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerRight,
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 10),
-                        child: Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    background: Container(
-                      color: Colors.blue,
-                      margin: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.centerLeft,
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Icon(
-                          Icons.edit,
-                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -556,7 +552,7 @@ class _AllWalletsState extends State<AllWallets> {
 
                 mnemonics = WalletService.getActiveKeys(WalletType.secretPhrase)
                     as List<SeedPhraseParams>;
-
+                if (!context.mounted || !mounted) return;
                 Navigator.pop(context, true);
               },
             )
@@ -621,9 +617,10 @@ class _AllWalletsState extends State<AllWallets> {
           }
 
           params.removeWhere((element) => element == anyKey);
-
+          if (!context.mounted || !mounted) return;
           Navigator.pop(context, true);
         } else {
+          if (!context.mounted || !mounted) return;
           Navigator.pop(context, false);
         }
       },

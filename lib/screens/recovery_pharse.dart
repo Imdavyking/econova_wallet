@@ -13,10 +13,10 @@ class RecoveryPhrase extends StatefulWidget {
   final bool viewOnly;
 
   const RecoveryPhrase({
-    Key? key,
+    super.key,
     required this.data,
     this.viewOnly = true,
-  }) : super(key: key);
+  });
 
   @override
   _RecoveryPhraseState createState() => _RecoveryPhraseState();
@@ -200,6 +200,7 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                                 text: widget.data,
                               ),
                             );
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(

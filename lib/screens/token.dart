@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'dart:math';
 import 'package:wallet_app/components/user_balance.dart';
@@ -25,7 +27,7 @@ import 'launch_url.dart';
 
 class Token extends StatefulWidget {
   final Coin coin;
-  const Token({required this.coin, Key? key}) : super(key: key);
+  const Token({required this.coin, super.key});
 
   @override
   _TokenState createState() => _TokenState();
@@ -712,13 +714,13 @@ class _TokenState extends State<Token> {
                                                   width: 5,
                                                 ),
                                                 Transform.rotate(
+                                                  angle: isOpen
+                                                      ? 90 * pi / 180
+                                                      : 270 * pi / 180,
                                                   child: const Icon(
                                                     Icons.arrow_back_ios_new,
                                                     size: 15,
                                                   ),
-                                                  angle: isOpen
-                                                      ? 90 * pi / 180
-                                                      : 270 * pi / 180,
                                                 )
                                               ],
                                             ),

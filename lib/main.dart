@@ -1,10 +1,12 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, library_private_types_in_public_api
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
+import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
@@ -114,6 +116,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
+    ...getStarknetFungibleCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   return blockchains;
@@ -184,6 +187,7 @@ void main() async {
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
+    print('Reinstantiated seed root');
   }
   supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
@@ -219,8 +223,7 @@ class MyApp extends StatefulWidget {
   final bool userDarkMode;
   final Locale locale;
 
-  const MyApp({Key? key, required this.userDarkMode, required this.locale})
-      : super(key: key);
+  const MyApp({super.key, required this.userDarkMode, required this.locale});
   static _MyAppState of(BuildContext context) =>
       context.findAncestorStateOfType<_MyAppState>()!;
 
@@ -276,10 +279,31 @@ class _MyAppState extends State<MyApp> {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key}) : super(key: key);
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
+}
+
+Future<bool> _detectDanger() async {
+  if (kDebugMode) {
+    return false;
+  }
+  bool isJailBroken = false;
+  bool isRealDevice = true;
+  try {
+    isJailBroken = await SafeDevice.isJailBroken;
+    isRealDevice = await SafeDevice.isRealDevice;
+  } catch (e) {
+    isJailBroken = true;
+  }
+  if (isJailBroken || !isRealDevice) {
+    if (kDebugMode) {
+      print('Device is jailbroken or not a real device');
+    }
+    return true;
+  }
+  return false;
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -306,6 +330,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
           if (hasWallet) {
             isAuthenticated = await authenticate(context);
+          }
+
+          bool isDangerous = await _detectDanger();
+
+          if (isDangerous) {
+            return const Text(
+              'Device is jailbroken or not real can not use app',
+            );
           }
 
           if (hasWallet && !isAuthenticated) return const OpenAppPinFailed();

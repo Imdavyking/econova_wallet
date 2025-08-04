@@ -660,6 +660,7 @@ class _SettingsState extends State<Settings>
                                     .data;
 
                                 if (await authenticate(context)) {
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context)
                                       .hideCurrentSnackBar();
 
@@ -672,6 +673,7 @@ class _SettingsState extends State<Settings>
                                     ),
                                   );
                                 } else {
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       backgroundColor: Colors.red,
@@ -734,6 +736,7 @@ class _SettingsState extends State<Settings>
                                     .data;
 
                                 if (await authenticate(context)) {
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context)
                                       .hideCurrentSnackBar();
                                   Navigator.push(
@@ -746,6 +749,7 @@ class _SettingsState extends State<Settings>
                                     ),
                                   );
                                 } else {
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       backgroundColor: Colors.red,
@@ -805,6 +809,7 @@ class _SettingsState extends State<Settings>
                                 context,
                                 useLocalAuth: false,
                               )) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context)
                                     .hideCurrentSnackBar();
                                 Navigator.push(
@@ -816,6 +821,7 @@ class _SettingsState extends State<Settings>
                                   ),
                                 );
                               } else {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     backgroundColor: Colors.red,

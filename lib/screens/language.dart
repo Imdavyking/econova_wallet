@@ -6,7 +6,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../utils/app_config.dart';
 
 class Language extends StatefulWidget {
-  const Language({Key? key}) : super(key: key);
+  const Language({super.key});
 
   @override
   State<Language> createState() => _LanguageState();
@@ -59,6 +59,7 @@ class _LanguageState extends State<Language> {
                             MyApp.of(context).setLocale(locale);
                             await pref.put(languageKey, locale.languageCode);
                           } catch (e) {
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 backgroundColor: Colors.red,

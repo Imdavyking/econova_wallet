@@ -1,4 +1,5 @@
 import "dart:convert";
+import "dart:io";
 import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
@@ -31,6 +32,21 @@ class AIAgentService {
   static const historyKey = '33221-93d0-8007-8a0f-cd31191';
   static final logger = Logger();
   static const defaultCoinTokenAddress = '0xdefault';
+  final botPrompt = '''You are $walletName,
+        a smart wallet that allows users to perform transactions,
+        and query the blockchain using natural language.
+        With your intuitive interface,
+        users can seamlessly interact with the blockchain,
+        making transactions, checking balances,
+        check the current coin is correct or ask the user to switch to the coin needed,
+        and querying smart contracts—all through simple, conversational commands.
+        for sending,always use memo if available.''';
+  final llm = ChatOpenAI(
+    apiKey: dotenv.env['OPENAI_API_KEY'],
+    defaultOptions: const ChatOpenAIOptions(
+      temperature: 0,
+    ),
+  );
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -55,9 +71,63 @@ class AIAgentService {
           ).toList(),
         );
       case 'HumanChatMessage':
-        return lang_chain.HumanChatMessage(
-          content: lang_chain.ChatMessageContent.text(json['content']),
+        final List<Map<String, dynamic>> contents =
+            (json['content'] as List).cast<Map<String, dynamic>>();
+
+        final List<lang_chain.ChatMessageContent> chatContents = [];
+
+        for (final content in contents) {
+          switch (content['type']) {
+            case 'text':
+              chatContents.add(
+                lang_chain.ChatMessageContent.text(content['data'] as String),
+              );
+              break;
+            case 'image':
+              chatContents.add(
+                lang_chain.ChatMessageContent.image(
+                  data: content['data'] as String,
+                  mimeType: content['mimeType'] as String? ?? 'image/jpeg',
+                ),
+              );
+              break;
+            case 'multi-modal':
+              final List<Map<String, dynamic>> parts =
+                  (content['data'] as List).cast<Map<String, dynamic>>();
+
+              final parsedParts = parts.map((part) {
+                switch (part['type']) {
+                  case 'text':
+                    return lang_chain.ChatMessageContent.text(
+                        part['data'] as String);
+                  case 'image':
+                    return lang_chain.ChatMessageContent.image(
+                      data: part['data'] as String,
+                      mimeType: part['mimeType'] as String? ?? 'image/jpeg',
+                    );
+                  default:
+                    return lang_chain.ChatMessageContent.text('Unknown part');
+                }
+              }).toList();
+
+              chatContents.add(
+                lang_chain.ChatMessageContent.multiModal(parsedParts),
+              );
+              break;
+
+            default:
+              chatContents.add(
+                lang_chain.ChatMessageContent.text('Unsupported content type'),
+              );
+          }
+        }
+
+        return lang_chain.ChatMessage.human(
+          chatContents.length == 1
+              ? chatContents.first
+              : lang_chain.ChatMessageContent.multiModal(chatContents),
         );
+
       case 'ToolChatMessage':
         return lang_chain.ToolChatMessage(
           content: json['content'],
@@ -76,7 +146,6 @@ class AIAgentService {
   static Future<void> saveHistory() async {
     List<lang_chain.ChatMessage> histories =
         await memory.chatHistory.getChatMessages();
-
     histories = histories.reversed.toList();
 
     List chatHistoryStore = [];
@@ -129,15 +198,8 @@ class AIAgentService {
     try {
       final coin = AItools.coin;
 
-      final openaiApiKey = dotenv.env['OPENAI_API_KEY'];
       final currentCoin =
           "name: ${coin.getName().split('(')[0]},symbol: (${coin.getSymbol()}),coinGeckoId: ${coin.getGeckoId()}) default_: ${coin.getDefault()}";
-      final llm = ChatOpenAI(
-        apiKey: openaiApiKey,
-        defaultOptions: const ChatOpenAIOptions(
-          temperature: 0,
-        ),
-      );
 
       final List<String> listFungibleToken = [];
 
@@ -171,21 +233,14 @@ class AIAgentService {
           .toList()
           .join(',');
 
-      final prompt = """You are $walletName,
-        a smart wallet that allows users to perform transactions,
-        and query the blockchain using natural language.
-        With your intuitive interface,
-        users can seamlessly interact with the blockchain,
-        making transactions, checking balances,
-        check the current coin is correct or ask the user to switch to the coin needed,
-        and querying smart contracts—all through simple, conversational commands.
-        for sending,always use memo if available.
+      final prompt = """
+        ⚠️ Use the token address shown above as the **true source of identity** for this coin, especially in testnet or non-standard environments.  
+        Do **not** rely on known token maps or CoinGecko IDs for address resolution — the address given here is authoritative.
+        $botPrompt
         current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
         ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
         other coins are $otherCoins.
         """;
-
-      debugPrint(prompt);
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
@@ -214,6 +269,76 @@ class AIAgentService {
       );
     } on Exception catch (error, stackTrace) {
       debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
+
+      if (error is OpenAIClientException) {
+        await loadSavedMessages();
+        return Left(error.message);
+      }
+
+      return const Left("Something went wrong. Try again Later.");
+    }
+  }
+
+  Future<Either<String, DashChatMessage>> sendImageMessage(
+    DashChatMessage chatMessage,
+  ) async {
+    final medias = chatMessage.medias ?? <DashChatMedia>[];
+
+    final mediaContents = <ChatMessageContent>[];
+
+    try {
+      if (medias.isNotEmpty) {
+        for (final DashChatMedia(:url, :customProperties) in medias) {
+          final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
+
+          final data =
+              isExternal ? url : base64Encode(File(url).readAsBytesSync());
+
+          mediaContents.add(
+            ChatMessageContent.image(
+              mimeType: customProperties?["mimeType"] ?? "image/jpeg",
+              data: data,
+            ),
+          );
+        }
+      }
+
+      final history = await memory.loadMemoryVariables();
+      final humanMessage = chatMessage.text;
+      final info = ChatMessage.human(
+        ChatMessageContent.multiModal([
+          ChatMessageContent.text(humanMessage),
+          ...mediaContents,
+        ]),
+      );
+      final prompt = PromptValue.chat([
+        ChatMessage.system(
+          """
+          $botPrompt
+          $history
+          """,
+        ),
+        info,
+      ]);
+
+      final chain = llm.pipe(const StringOutputParser());
+
+      final response = await chain.invoke(prompt);
+
+      await memory.chatHistory.addChatMessage(info);
+      await memory.chatHistory.addAIChatMessage(response);
+      await saveHistory();
+
+      return Right(
+        DashChatMessage(
+          isMarkdown: true,
+          user: Constants.ai,
+          createdAt: DateTime.now(),
+          text: response,
+        ),
+      );
+    } on Exception catch (error, stackTrace) {
+      debugPrint("sendImageMessage error: $error, stackTrace: $stackTrace");
 
       if (error is OpenAIClientException) {
         await loadSavedMessages();

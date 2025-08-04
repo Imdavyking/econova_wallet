@@ -89,18 +89,16 @@ class PolkadotCoin extends Coin {
       }
     }
 
-    final results = await _PolkadotDerive.fromPrivateKey(
+    final keys = await _PolkadotDerive.fromPrivateKey(
       privateKey: HEX.decode(privateKey),
       ss58Prefix: ss58Prefix,
     );
 
-    final keys = results.toJson();
-
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

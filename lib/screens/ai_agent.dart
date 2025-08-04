@@ -1,5 +1,10 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
@@ -11,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:pinput/pinput.dart';
 import "../utils/ai_agent_utils.dart";
+import 'package:image/image.dart' as img;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import "package:langchain/langchain.dart" as lang_chain;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -38,6 +44,7 @@ class _AIAgent extends State<AIAgent>
   late Animation<double> _micScaleAnimation;
   TextEditingController chatController = TextEditingController();
   ValueNotifier<bool> isListening = ValueNotifier(false);
+  final ImagePicker _picker = ImagePicker();
 
   @override
   initState() {
@@ -59,7 +66,7 @@ class _AIAgent extends State<AIAgent>
       isListening.value = status == 'listening';
     }, onError: (error) {
       isListening.value = false;
-      debugPrint('${error.errorMsg} - ${error.permanent}');
+      debugPrint('Speech init error: ${error.errorMsg}');
     });
     setState(() {});
   }
@@ -90,6 +97,29 @@ class _AIAgent extends State<AIAgent>
   @override
   bool get wantKeepAlive => true;
 
+  Future<ChatMedia> createImageMedia(String data, String? mimeType) async {
+    final isExternal = Uri.tryParse(data)?.hasScheme ?? false;
+
+    String imageUrl;
+    if (isExternal) {
+      imageUrl = data;
+    } else {
+      final bytes = base64Decode(data);
+      final tempDir = await getTemporaryDirectory();
+      final filePath =
+          '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = await File(filePath).writeAsBytes(bytes);
+      imageUrl = file.path;
+    }
+
+    return ChatMedia(
+      url: imageUrl,
+      fileName: 'image.jpg',
+      type: MediaType.image,
+      customProperties: {'mimeType': mimeType},
+    );
+  }
+
   Future<void> loadHistory() async {
     if (messages.isNotEmpty) return;
     final List<ChatMessageWithDate> savedMessages =
@@ -99,11 +129,31 @@ class _AIAgent extends State<AIAgent>
       for (final savedMessage in savedMessages) {
         final message = savedMessage.message;
         if (message.runtimeType == lang_chain.HumanChatMessage) {
+          final content = (message as lang_chain.HumanChatMessage).content;
+
+          List<ChatMedia> medias = [];
+          String text = '';
+
+          if (content is lang_chain.ChatMessageContentText) {
+            text = content.text;
+          } else if (content is lang_chain.ChatMessageContentImage) {
+            medias.add(await createImageMedia(content.data, content.mimeType));
+          } else if (content is lang_chain.ChatMessageContentMultiModal) {
+            for (final part in content.parts) {
+              if (part is lang_chain.ChatMessageContentText) {
+                text += part.text;
+              } else if (part is lang_chain.ChatMessageContentImage) {
+                medias.add(await createImageMedia(part.data, part.mimeType));
+              }
+            }
+          }
+
           messages.add(
             ChatMessage(
               user: Constants.user,
-              text: message.contentAsString,
-              createdAt: savedMessage.date,
+              createdAt: DateTime.now(),
+              text: text,
+              medias: medias,
             ),
           );
         } else if (message.runtimeType == lang_chain.AIChatMessage) {
@@ -180,6 +230,60 @@ class _AIAgent extends State<AIAgent>
           textController: chatController,
           trailing: [
             if (isMobiletPlatform)
+              Theme(
+                data: Theme.of(context).copyWith(
+                  popupMenuTheme: PopupMenuThemeData(
+                    color: Theme.of(context).cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                child: PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.add_a_photo,
+                    color: appPrimaryColor,
+                  ),
+                  onSelected: (String value) {
+                    if (typingUsers.isEmpty) {
+                      if (value == 'camera') {
+                        _pickAndShowImageDialog(source: ImageSource.camera);
+                      } else if (value == 'gallery') {
+                        _pickAndShowImageDialog();
+                      }
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem<String>(
+                      value: 'camera',
+                      child: Row(
+                        children: [
+                          Icon(Icons.camera_alt, color: appPrimaryColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Camera',
+                            style: TextStyle(color: appPrimaryColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'gallery',
+                      child: Row(
+                        children: [
+                          Icon(Icons.image, color: appPrimaryColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Gallery',
+                            style: TextStyle(color: appPrimaryColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (isMobiletPlatform)
               ValueListenableBuilder(
                 valueListenable: isListening,
                 builder: (context, value, child) {
@@ -219,9 +323,89 @@ class _AIAgent extends State<AIAgent>
           inputDisabled: typingUsers.isNotEmpty,
           sendOnEnter: true,
           alwaysShowSend: true,
+          showTraillingBeforeSend: true,
         ),
         onSend: _handleOnSendPressed,
         messages: messages,
+      ),
+    );
+  }
+
+  Future<void> _pickAndShowImageDialog({
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    final XFile? image = await _picker.pickImage(source: source);
+
+    if (image != null) {
+      if (!mounted) return;
+
+      final result = await context.showImageCaptionDialog(image);
+
+      result.fold<void>(
+        (error) => context.showErrorMessage(error),
+        (right) async {
+          await _sendImageMessage(image: right.image, caption: right.caption);
+        },
+      );
+    }
+  }
+
+  Future<void> _sendImageMessage({
+    required XFile image,
+    required String caption,
+  }) async {
+    final XFile(:mimeType, :name, :path) = image;
+
+    // Read image file bytes
+    final fileBytes = await File(path).readAsBytes();
+
+    // Decode image
+    final originalImage = img.decodeImage(fileBytes);
+    if (originalImage == null) {
+      throw Exception("Invalid image file");
+    }
+
+    // Resize image (adjust width as needed)
+    final resizedImage = img.copyResize(originalImage, height: 500);
+
+    // Compress image to JPEG with quality 70
+    final compressedBytes = img.encodeJpg(resizedImage, quality: 70);
+
+    final tempDir = await getTemporaryDirectory();
+    final compressedPath =
+        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_compressed.jpg';
+    final compressedFile =
+        await File(compressedPath).writeAsBytes(compressedBytes);
+
+    final userMessage = ChatMessage(
+      user: Constants.user,
+      createdAt: DateTime.now(),
+      text: caption,
+      medias: [
+        ChatMedia(
+          url: compressedFile.path,
+          fileName: name,
+          type: MediaType.image,
+          customProperties: {
+            "mimeType": mimeType,
+          },
+        ),
+      ],
+    );
+
+    _addUserMessage(userMessage);
+
+    final response = await _chatRepository.sendImageMessage(userMessage);
+
+    setState(() {
+      typingUsers.remove(Constants.ai);
+    });
+
+    response.fold<void>(
+      (error) => _handleSendError(error: error, userMessage: userMessage),
+      (chatMessage) => _handleSendSuccess(
+        userMessage: userMessage,
+        aiMessage: chatMessage,
       ),
     );
   }

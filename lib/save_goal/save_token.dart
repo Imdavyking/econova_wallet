@@ -8,7 +8,7 @@ import 'package:web3dart/web3dart.dart';
 class CreateGoal extends StatefulWidget {
   final FuseCoin coin;
 
-  const CreateGoal({Key? key, required this.coin}) : super(key: key);
+  const CreateGoal({super.key, required this.coin});
 
   @override
   State<CreateGoal> createState() => _CreateGoalState();
@@ -17,7 +17,7 @@ class CreateGoal extends StatefulWidget {
 class _CreateGoalState extends State<CreateGoal> {
   final TextEditingController _goalNameController = TextEditingController();
 
-  final TextEditingController _AmountController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
 
@@ -69,7 +69,7 @@ class _CreateGoalState extends State<CreateGoal> {
                   return null;
                 }
               },
-              controller: _AmountController,
+              controller: _amountController,
               decoration: InputDecoration(
                 suffixIconConstraints: const BoxConstraints(minWidth: 100),
                 // suffixIcon: IconButton(
@@ -129,10 +129,11 @@ class _CreateGoalState extends State<CreateGoal> {
                     onPressed: () async {
                       try {
                         final goalName = _goalNameController.text;
-                        final tokenAddress = _AmountController.text;
+                        final tokenAddress = _amountController.text;
                         EthereumAddress.fromHex(tokenAddress);
                         isLoading.value = true;
                         await widget.coin.saveTokens(goalName, tokenAddress);
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Colors.green,

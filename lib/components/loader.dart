@@ -4,10 +4,10 @@ class Loader extends StatelessWidget {
   final Color? color;
   final double? size;
   const Loader({
-    Key? key,
+    super.key,
     this.color,
     this.size,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

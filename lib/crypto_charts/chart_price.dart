@@ -8,9 +8,9 @@ class ChartPriceParam {
 class ChartPrice extends StatelessWidget {
   final ChartPriceParam chartPriceData;
   const ChartPrice({
-    Key? key,
+    super.key,
     required this.chartPriceData,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

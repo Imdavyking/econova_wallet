@@ -11,9 +11,9 @@ import '../utils/qr_scan_view.dart';
 class AddContact extends StatefulWidget {
   final ContactParams params;
   const AddContact({
-    Key? key,
+    super.key,
     required this.params,
-  }) : super(key: key);
+  });
 
   @override
   State<AddContact> createState() => _AddContactState();

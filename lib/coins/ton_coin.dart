@@ -102,16 +102,15 @@ class TonCoin extends Coin {
       }
     }
 
-    final results = await _TonDerive.fromPrivateKey(
+    final keys = await _TonDerive.fromPrivateKey(
       privateKey: HEX.decode(privateKey),
     );
 
-    final keys = results.toJson();
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

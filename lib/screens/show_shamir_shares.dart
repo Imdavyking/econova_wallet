@@ -10,7 +10,7 @@ import '../utils/app_config.dart';
 class ShowShamirShares extends StatefulWidget {
   final String data;
 
-  const ShowShamirShares({Key? key, required this.data}) : super(key: key);
+  const ShowShamirShares({super.key, required this.data});
 
   @override
   State<ShowShamirShares> createState() => _ShowShamirSharesState();

@@ -6,7 +6,7 @@ import '../main.dart';
 import '../utils/rpc_urls.dart';
 
 class UnlockWithBiometrics extends StatefulWidget {
-  const UnlockWithBiometrics({Key? key}) : super(key: key);
+  const UnlockWithBiometrics({super.key});
 
   @override
   State<UnlockWithBiometrics> createState() => _UnlockWithBiometricsState();
@@ -31,11 +31,13 @@ class _UnlockWithBiometricsState extends State<UnlockWithBiometrics> {
         activeColor: appBackgroundblue,
         onChanged: (bool value) async {
           if (await authenticate(context)) {
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             allowedBiometrics = !allowedBiometrics;
             setState(() {});
             await pref.put(biometricsKey, allowedBiometrics);
           } else {
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: Colors.red,

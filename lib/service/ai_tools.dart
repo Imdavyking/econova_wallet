@@ -1,11 +1,12 @@
 import "dart:convert";
 
 import "package:flutter/foundation.dart";
-import "package:wallet_app/coins/starknet_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
+import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/contact_service.dart";
+import "package:wallet_app/utils/ai_agent_utils.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
@@ -15,7 +16,8 @@ import "./ai_agent_service.dart";
 import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
-  static Coin coin = starkNetCoins.first;
+  static Coin coin = solanaChains.first;
+
   AItools();
 
   Future<String?> confirmTransaction(String message) async {
@@ -34,6 +36,7 @@ class AItools {
   }
 
   List<Tool> getTools() {
+    Constants.user.profileImage = coin.getImage();
     final currentCoin = "${coin.getName().split('(')[0]} (${coin.getSymbol()})";
     final addressTool = Tool.fromFunction<_GetAddressInput, String>(
       name: 'QRY_getAddress',
@@ -291,7 +294,7 @@ class AItools {
         String message =
             'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
 
-        if (memo != null && memo.isNotEmpty) {
+        if (memo != null && memo.isNotEmpty && coin.requireMemo()) {
           message += '\n\nMemo: $memo';
         }
         try {
@@ -361,8 +364,9 @@ class AItools {
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
-          return 'Quote price for $tokenIn => $tokenOut $amount is ${Quote.fromJson(jsonDecode(quote)).quoteAmount}';
+          return 'Quote price for $tokenIn => $tokenOut $amount is ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}';
         } catch (e) {
+          debugPrint('Error getting quote: $e');
           return 'Failed to get quote for $tokenIn => $tokenOut $amount';
         }
       },
@@ -411,7 +415,7 @@ class AItools {
                   : tokenOut;
 
           final message =
-              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${Quote.fromJson(jsonDecode(quote)).quoteAmount}.';
+              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}.';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) {
             return confirmation;
@@ -589,8 +593,12 @@ class AItools {
           if (confirmation != null) {
             return confirmation;
           }
-          coin = supportedChains
-              .firstWhere((Coin value) => value.getSymbol() == default_);
+          coin = supportedChains.firstWhere(
+            (Coin value) =>
+                value.getSymbol() == default_ && coin.tokenAddress() == null,
+          );
+
+          Constants.user.profileImage = coin.getImage();
 
           return 'Switched to $name $default_';
         } catch (e) {

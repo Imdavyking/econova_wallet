@@ -149,6 +149,7 @@ class _SavedUrlsState extends State<SavedUrls> {
                   if (mounted) {
                     setState(() {});
                   }
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                 },
               ).show();

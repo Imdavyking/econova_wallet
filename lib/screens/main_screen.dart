@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/screens/enter_phrase.dart';
 import 'package:wallet_app/screens/recovery_pharse.dart';
 import 'package:wallet_app/screens/select_blockchain.dart';
@@ -12,8 +14,8 @@ import '../interface/coin.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
   @override
   _MainScreenState createState() => _MainScreenState();
 }
@@ -144,13 +146,14 @@ class _MainScreenState extends State<MainScreen> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              removeCoin: false,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) => true, // removeCoin: false,
                             ),
                           ),
                         );
 
                         if (coin == null) return;
+                        if (!context.mounted) return;
                         if (!coin.supportKeystore && !coin.supportPrivateKey) {
                           ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -207,13 +210,14 @@ class _MainScreenState extends State<MainScreen> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              removeCoin: false,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) => true, // removeCoin: false,
                             ),
                           ),
                         );
 
                         if (coin == null) return;
+                        if (!context.mounted) return;
                         Navigator.push(
                           context,
                           MaterialPageRoute(

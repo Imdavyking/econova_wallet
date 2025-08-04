@@ -47,7 +47,9 @@ class _ContactState extends State<Contact> {
                   Coin? coin = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (ctx) => const SelectBlockchain(),
+                      builder: (ctx) => SelectBlockchain(
+                        filterFn: (coin) => coin.tokenAddress() == null,
+                      ),
                     ),
                   );
 

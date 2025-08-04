@@ -11,7 +11,7 @@ import 'package:solana/solana.dart' as solana;
 import 'package:wallet_app/coins/solana_coin.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/model/sol_token_info.dart';
-import 'package:wallet_app/model/solana_web3_res.dart';
+import 'package:wallet_app/model/solana_transaction_legacy.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -29,7 +29,7 @@ class SolanaSimuRes {
 }
 
 Future<SolanaSimuRes> dappSimulateTrx(
-  SolanaWeb3Res solanaWeb3Res,
+  SolanaTransactionLegacy solanaWeb3Res,
   solana.Ed25519HDKeyPair solanaKeyPair,
   SolanaCoin coin,
   String symbol,
@@ -224,7 +224,17 @@ Widget buildSignTransactionUI({
               symbol: symbol,
               simulationResult: simulationResult,
               isSigning: isSigning,
-              onConfirm: onConfirm,
+              onConfirm: () async {
+                if (await authenticate(context)) {
+                  isSigning.value = true;
+                  try {
+                    onConfirm();
+                  } catch (_) {}
+                  isSigning.value = false;
+                } else {
+                  onReject();
+                }
+              },
               onReject: onReject,
               localization: localization,
             ),
@@ -301,6 +311,7 @@ Widget _buildDetailsTab({
   required VoidCallback onReject,
   required AppLocalizations localization,
 }) {
+  print('resutl: ${simulationResult.result}');
   return SingleChildScrollView(
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),
@@ -360,27 +371,40 @@ Widget _buildDetailsTab({
               return Row(
                 children: [
                   Expanded(
-                    child: TextButton(
-                      onPressed: onReject,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.red,
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: appBackgroundblue,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15)),
                       ),
-                      child: Text(localization.reject),
+                      child: Text(
+                        localization.confirm,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.0,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: onConfirm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: orangTxt,
+                    child: TextButton(
+                      onPressed: onReject,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: appBackgroundblue,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15)),
                       ),
-                      child: Text(localization.confirm),
+                      child: Text(
+                        localization.reject,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.0,
+                        ),
+                      ),
                     ),
                   ),
                 ],

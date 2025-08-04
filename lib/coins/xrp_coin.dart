@@ -11,7 +11,6 @@ import 'package:hash/hash.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart';
 import 'package:crypto/crypto.dart';
-
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';

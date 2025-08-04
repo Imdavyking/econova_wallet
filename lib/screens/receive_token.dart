@@ -32,7 +32,7 @@ class ReceivePayParams {
 class ReceiveToken extends StatefulWidget {
   final Coin coin;
 
-  const ReceiveToken({Key? key, required this.coin}) : super(key: key);
+  const ReceiveToken({super.key, required this.coin});
 
   @override
   _ReceiveTokenState createState() => _ReceiveTokenState();
@@ -125,7 +125,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
           IconButton(
             onPressed: () async {
               final addressUrl = await coin.addressExplorer();
-
+              if (!context.mounted) return;
               await launchPageUrl(context: context, url: addressUrl);
 
               InAppWebView;
@@ -147,7 +147,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
 
                 return ValueListenableBuilder(
                   valueListenable: receiveParams,
-                  builder: (context, ReceivePayParams _, child) {
+                  builder: (context, ReceivePayParams payParams, child) {
                     return Column(
                       children: [
                         SizedBox(
@@ -161,7 +161,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                               alignment: Alignment.center,
                               child: QrImageView(
                                 padding: const EdgeInsets.all(10),
-                                data: _.requestUrl ?? userAddress,
+                                data: payParams.requestUrl ?? userAddress,
                                 version: QrVersions.auto,
                                 size: 250,
                               ),
@@ -177,7 +177,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                             await Clipboard.setData(ClipboardData(
                               text: userAddress,
                             ));
-
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -210,7 +210,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                             ),
                           ),
                         ),
-                        Text(_.amount ?? ''),
+                        Text(payParams.amount ?? ''),
                         const SizedBox(
                           height: 40,
                         ),
@@ -238,6 +238,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                     await Clipboard.setData(ClipboardData(
                                       text: userAddress,
                                     ));
+                                    if (!context.mounted) return;
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(

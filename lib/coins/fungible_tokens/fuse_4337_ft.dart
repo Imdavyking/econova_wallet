@@ -9,33 +9,19 @@ import 'package:wallet_app/utils/app_config.dart';
 class FuseFungibleCoin extends FuseCoin implements FTExplorer {
   int mintDecimals;
   FuseFungibleCoin(
-      {required String blockExplorer,
-      required String symbol,
-      required String default_,
-      required String image,
-      required int coinType,
-      required String rpc,
-      required int chainId,
-      required String name,
-      required String geckoID,
-      required String rampID,
-      required String contractAddress,
+      {required super.blockExplorer,
+      required super.symbol,
+      required super.default_,
+      required super.image,
+      required super.coinType,
+      required super.rpc,
+      required super.chainId,
+      required super.name,
+      required super.geckoID,
+      required super.rampID,
+      required super.contractAddress,
       required this.mintDecimals,
-      required String payScheme})
-      : super(
-          blockExplorer: blockExplorer,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          coinType: coinType,
-          rpc: rpc,
-          chainId: chainId,
-          name: name,
-          geckoID: geckoID,
-          rampID: rampID,
-          contractAddress: contractAddress,
-          payScheme: payScheme,
-        );
+      required super.payScheme});
   @override
   String tokenAddress() => contractAddress;
 

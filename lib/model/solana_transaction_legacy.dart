@@ -1,17 +1,18 @@
-class SolanaWeb3Res {
+class SolanaTransactionLegacy {
   List<dynamic>? signatures;
   String feePayer;
   List<SolanaInstructionData>? instructions;
   String recentBlockhash;
 
-  SolanaWeb3Res({
+  SolanaTransactionLegacy({
     this.signatures,
     required this.feePayer,
     this.instructions,
     required this.recentBlockhash,
   });
 
-  factory SolanaWeb3Res.fromJson(Map<String, dynamic> json) => SolanaWeb3Res(
+  factory SolanaTransactionLegacy.fromJson(Map<String, dynamic> json) =>
+      SolanaTransactionLegacy(
         signatures: json["signatures"] == null
             ? []
             : List<dynamic>.from(json["signatures"].map((x) => x)),

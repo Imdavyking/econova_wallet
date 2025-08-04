@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/select_blockchain.dart';
 import 'package:wallet_app/screens/wallet.dart';
@@ -13,7 +15,7 @@ import '../utils/app_config.dart';
 import '../utils/qr_scan_view.dart';
 
 class AddCustomToken extends StatefulWidget {
-  const AddCustomToken({Key? key}) : super(key: key);
+  const AddCustomToken({super.key});
 
   @override
   _AddCustomTokenState createState() => _AddCustomTokenState();
@@ -110,8 +112,10 @@ class _AddCustomTokenState extends State<AddCustomToken> {
                         Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (ctx) => const SelectBlockchain(
-                              evmOnly: true,
+                            builder: (ctx) => SelectBlockchain(
+                              filterFn: (coin) =>
+                                  coin is EthereumCoin &&
+                                  coin.tokenAddress() == null,
                             ),
                           ),
                         );
@@ -403,6 +407,8 @@ class _AddCustomTokenState extends State<AddCustomToken> {
                       );
 
                       bool added = await ethToken.addCoinToStore();
+
+                      if (!context.mounted) return;
 
                       if (!added) {
                         ScaffoldMessenger.of(context).showSnackBar(

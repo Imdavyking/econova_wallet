@@ -4,7 +4,6 @@ import 'package:http/http.dart';
 import 'package:convert/convert.dart';
 import 'package:sha3/sha3.dart';
 import 'package:web3dart/web3dart.dart' as web3;
-
 import '../coins/ethereum_coin.dart';
 import 'abis.dart';
 
@@ -19,6 +18,7 @@ Future<Map> udResolver({
       "0x1BDc0fD4fbABeed3E611fd6195fCd5d41dcEF393": "Ethereum",
       "0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f": "Polygon Matic",
     };
+    // TODO: make this run all at once
     for (String contractAddr in udResolvers.keys) {
       final web3.EthereumAddress proxyReader =
           web3.EthereumAddress.fromHex(contractAddr);

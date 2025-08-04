@@ -9,6 +9,7 @@
  */
 
 import 'package:event_bus/event_bus.dart';
+import 'package:wallet_app/interface/coin.dart';
 
 abstract class EventBusService {
   static final instance = EventBus();
@@ -21,5 +22,13 @@ class CryptoNotificationEvent {
   CryptoNotificationEvent({
     required this.title,
     required this.body,
+  });
+}
+
+class SeedPharseInitializationEvent {
+  final Coin coin;
+
+  SeedPharseInitializationEvent({
+    required this.coin,
   });
 }

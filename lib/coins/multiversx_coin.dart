@@ -148,13 +148,13 @@ class MultiversxCoin extends Coin {
     final keys = AccountData(
       address: address,
       privateKey: privateKey,
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

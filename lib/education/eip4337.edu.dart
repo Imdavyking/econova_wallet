@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class EIP4337Education extends StatelessWidget {
-  const EIP4337Education({Key? key}) : super(key: key);
+  const EIP4337Education({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +13,7 @@ class EIP4337Education extends StatelessWidget {
 }
 
 class EducationStepper extends StatefulWidget {
-  const EducationStepper({Key? key}) : super(key: key);
+  const EducationStepper({super.key});
 
   @override
   State<EducationStepper> createState() => _EducationStepperState();

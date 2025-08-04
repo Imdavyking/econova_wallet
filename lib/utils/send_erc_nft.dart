@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/screens/contact.dart';
@@ -11,8 +13,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
-// import 'package:cardano_wallet_sdk/cardano_wallet_sdk.dart' as cardano;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:pinput/pinput.dart';
 

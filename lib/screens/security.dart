@@ -13,11 +13,11 @@ class Security extends StatefulWidget {
   final bool? isChangingPin;
   final bool? useLocalAuth;
   const Security({
-    Key? key,
+    super.key,
     this.isEnterPin,
     this.isChangingPin,
     this.useLocalAuth,
-  }) : super(key: key);
+  });
 
   @override
   State<Security> createState() => _SecurityState();
@@ -74,6 +74,7 @@ class _SecurityState extends State<Security> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
+            padding: const EdgeInsets.fromLTRB(45, 25, 45, 25),
             child: Container(
               height: MediaQuery.of(context).size.height * .8,
               color: Colors.transparent,
@@ -150,11 +151,12 @@ class _SecurityState extends State<Security> {
 
                           if (widget.isChangingPin != null &&
                               widget.isChangingPin == true) {
-                            if (Navigator.canPop(context)) {
+                            if (context.mounted && Navigator.canPop(context)) {
                               Navigator.pop(context);
                             }
                             return;
                           }
+                          if (!context.mounted) return;
 
                           Navigator.pushAndRemoveUntil(
                               context,
@@ -397,7 +399,7 @@ class _SecurityState extends State<Security> {
                           onTap: () async {
                             bool localAuthConfirmed =
                                 await localAuthentication();
-                            if (localAuthConfirmed) {
+                            if (localAuthConfirmed && context.mounted) {
                               Navigator.pop(context, localAuthConfirmed);
                             }
                           },
@@ -453,7 +455,6 @@ class _SecurityState extends State<Security> {
                 ],
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(45, 25, 45, 25),
           ),
         ),
       ),

@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/screens/contact.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -24,10 +26,10 @@ class SendMultiversxNFT extends StatefulWidget {
   final String? recipient;
   const SendMultiversxNFT({
     required this.coin,
-    Key? key,
+    super.key,
     this.amount,
     this.recipient,
-  }) : super(key: key);
+  });
 
   @override
   _SendMultiversxNFTState createState() => _SendMultiversxNFTState();
@@ -320,6 +322,8 @@ class _SendMultiversxNFTState extends State<SendMultiversxNFT> {
                         if (kDebugMode) {
                           print(e);
                         }
+                        if (!context.mounted || !mounted) return;
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.red,
@@ -337,8 +341,11 @@ class _SendMultiversxNFTState extends State<SendMultiversxNFT> {
                         return;
                       }
 
+                      if (!context.mounted || !mounted) return;
+
                       ScaffoldMessenger.of(context).clearSnackBars();
                       await reInstianteSeedRoot();
+                      if (!context.mounted || !mounted) return;
                       await Navigator.push(
                         context,
                         MaterialPageRoute(

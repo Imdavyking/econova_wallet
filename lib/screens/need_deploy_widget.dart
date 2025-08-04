@@ -6,7 +6,7 @@ import 'package:wallet_app/config/colors.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class NeedDeploymentWidget extends StatelessWidget {
-  NeedDeploymentWidget({Key? key, required this.coin}) : super(key: key);
+  NeedDeploymentWidget({super.key, required this.coin});
   final ValueNotifier<bool> needDeployment = ValueNotifier(false);
   final ValueNotifier<bool> isDeploying = ValueNotifier(false);
   final Coin coin;
@@ -78,6 +78,7 @@ class NeedDeploymentWidget extends StatelessWidget {
                             needDeployment.value = !isDeployed;
                           } catch (e) {
                             debugPrint(e.toString());
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 backgroundColor: Colors.red,

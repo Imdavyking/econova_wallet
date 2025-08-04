@@ -14,7 +14,7 @@ class ViewOnlyWallet extends StatelessWidget {
   final addressController = TextEditingController();
   final Coin coin;
 
-  ViewOnlyWallet({Key? key, required this.coin}) : super(key: key);
+  ViewOnlyWallet({super.key, required this.coin});
   late final AppLocalizations localization;
   @override
   Widget build(BuildContext context) {

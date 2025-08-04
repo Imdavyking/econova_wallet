@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -26,10 +28,10 @@ class SendToken extends StatefulWidget {
   final String? recipient;
   const SendToken({
     required this.tokenData,
-    Key? key,
+    super.key,
     this.amount,
     this.recipient,
-  }) : super(key: key);
+  });
 
   @override
   _SendTokenState createState() => _SendTokenState();
@@ -354,6 +356,7 @@ class _SendTokenState extends State<SendToken> {
                         if (kDebugMode) {
                           print(e);
                         }
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.red,
@@ -373,6 +376,7 @@ class _SendTokenState extends State<SendToken> {
                         });
                         return;
                       }
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).clearSnackBars();
                       if (WalletService.isPharseKey()) {
                         await reInstianteSeedRoot();
@@ -381,6 +385,7 @@ class _SendTokenState extends State<SendToken> {
                       setState(() {
                         isLoading = false;
                       });
+                      if (!context.mounted) return;
                       await Navigator.push(
                         context,
                         MaterialPageRoute(

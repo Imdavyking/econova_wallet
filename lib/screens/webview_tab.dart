@@ -1,6 +1,8 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:math';
+import 'package:solana/encoder.dart';
 import 'package:wallet_app/coins/near_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/components/sign_solana_ui.dart';
@@ -8,6 +10,8 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:hex/hex.dart';
 import 'package:starknet/starknet.dart';
 import 'package:sui/utils/sha.dart';
+import 'package:wallet_app/model/sol_token_info.dart';
+import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/utils/slide_up_panel.dart';
 import "../utils/starknet_call.dart";
 import '../model/near_message_borsh.dart';
@@ -31,14 +35,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 import 'package:web3dart/crypto.dart';
-import 'package:web3dart/web3dart.dart';
+import 'package:web3dart/web3dart.dart' as web3dart;
 import '../coins/ethereum_coin.dart';
 import '../main.dart';
 import '../model/multix_sign_model.dart' hide Transaction;
 import '../utils/app_config.dart';
 import '../utils/json_model_callback.dart';
 import '../utils/web_notifications.dart';
-import 'package:wallet_app/model/solana_web3_res.dart';
+import 'package:wallet_app/model/solana_transaction_legacy.dart';
 import 'package:solana/solana.dart' hide signTransaction;
 import 'package:wallet_app/coins/solana_coin.dart';
 import 'package:solana/solana.dart' as solana;
@@ -362,7 +366,15 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   Future _setSolanaAddress(id, sendingAddress) async {
-    final setAddress = "trustwallet.solana.setAddress(\"$sendingAddress\");";
+    final setAddress = '''
+if (typeof trustwallet !== "undefined" && 
+    typeof trustwallet.solana !== "undefined" && 
+    typeof trustwallet.solana.setAddress === "function") {
+  trustwallet.solana.setAddress("$sendingAddress");
+} else {
+  console.warn("trustwallet.solana.setAddress is not defined");
+}
+''';
 
     String callback =
         "trustwallet.solana.sendResponse($id, [\"$sendingAddress\"])";
@@ -1613,25 +1625,98 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                               jsData.object ?? {},
                             );
 
-                            final version = data.version;
-                            debugPrint('solana trx version: $version');
+                            final Map<String, dynamic> decodedData =
+                                json.decode(data.data);
 
-                            final SolanaWeb3Res solanaWeb3Res =
-                                SolanaWeb3Res.fromJson(
-                              json.decode(data.data),
+                            late solana.Ed25519HDPublicKey from;
+                            late SolanaSimuRes simulationResult;
+
+                            final messageB64 = base64.encode(
+                              base58.decode(data.raw),
                             );
 
-                            final from = solana.Ed25519HDPublicKey.fromBase58(
-                              solanaWeb3Res.feePayer,
+                            final signature = await solanaKeyPair.sign(
+                              base58.decode(data.raw),
                             );
 
-                            final simulationResult = await dappSimulateTrx(
-                              solanaWeb3Res,
-                              solanaKeyPair,
-                              coin,
-                              coin.getSymbol(),
-                              solDecimals,
+                            final fee = await coin.getFeeForMessage(messageB64);
+
+                            final SignedTx signedTx = SignedTx(
+                              signatures: [signature],
+                              compiledMessage: CompiledMessage(
+                                ByteArray(
+                                  base58.decode(data.raw),
+                                ),
+                              ),
                             );
+
+                            // 5. Now simulate the full versioned transaction
+                            final simulation = await coin.simulateTransaction(
+                              signedTx.encode(),
+                            );
+
+                            print(
+                                'sjson: ${simulation?.toJson()}'); // null also
+                            print(
+                                'simaccounts: ${simulation?.value.accounts}'); // null
+
+                            final simAccounts = simulation?.value.accounts;
+
+                            if (simAccounts != null) {
+                              for (final simAccount in simAccounts) {
+                                try {
+                                  final info = SolTokenInfo.decode(simAccount);
+                                  print('balance: ${info.balance}');
+                                } catch (e) {
+                                  print(e);
+                                }
+                              }
+                            }
+
+                            // for (List<Account>? acc in ) {
+                            //   if (acc is BinaryAccountData) {
+                            //     final info = SolTokenInfo.decode(acc as dynamic);
+                            //   }
+                            // }
+                            // final preBalance = await rpcClient
+                            //     .getAccountInfo(
+                            //       tokenAddress.toBase58(),
+                            //       commitment: Commitment.confirmed,
+                            //       encoding: Encoding.base64,
+                            //     )
+                            //     .then((e) => e.value?.data?.parseTokenBalance());
+
+                            print('simulation: $simulation');
+
+                            if (decodedData.containsKey('message')) {
+                              final SolanaTransactionVersioned solanaWeb3Res =
+                                  SolanaTransactionVersioned.fromJson(
+                                decodedData,
+                              );
+
+                              from = solana.Ed25519HDPublicKey.fromBase58(
+                                solanaWeb3Res.message.staticAccountKeys.first,
+                              );
+                              simulationResult = SolanaSimuRes(
+                                fee: fee / pow(10, solDecimals),
+                                result:
+                                    coin.dappTrxVersionedResult(solanaWeb3Res),
+                              );
+                            } else {
+                              final SolanaTransactionLegacy solanaWeb3Res =
+                                  SolanaTransactionLegacy.fromJson(decodedData);
+                              from = solana.Ed25519HDPublicKey.fromBase58(
+                                solanaWeb3Res.feePayer,
+                              );
+                              simulationResult = await dappSimulateTrx(
+                                solanaWeb3Res,
+                                solanaKeyPair,
+                                coin,
+                                coin.getSymbol(),
+                                solDecimals,
+                              );
+                            }
+
                             ValueNotifier<bool> isSigning =
                                 ValueNotifier<bool>(false);
                             if (context.mounted) {
@@ -1650,16 +1735,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                     name: '',
                                     onConfirm: () async {
                                       try {
-                                        if (solanaWeb3Res.feePayer !=
-                                            sendingAddress) {
-                                          throw Exception('Invalid fee payer');
-                                        }
-
-                                        final signature =
-                                            await solanaKeyPair.sign(
-                                          base58.decode(data.raw),
-                                        );
-
                                         _sendResult(
                                           "solana",
                                           signature.toBase58(),
@@ -1704,7 +1779,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                       final web3Response = await coin.importData(data);
 
                       final privateKey = web3Response.privateKey!;
-                      final credentials = EthPrivateKey.fromHex(privateKey);
+                      final credentials =
+                          web3dart.EthPrivateKey.fromHex(privateKey);
 
                       final sendingAddress = web3Response.address;
 
@@ -1728,7 +1804,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                 name: '',
                                 onConfirm: () async {
                                   try {
-                                    final client = Web3Client(
+                                    final client = web3dart.Web3Client(
                                       coin.rpc,
                                       Client(),
                                     );
@@ -1736,12 +1812,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                     final signedTransaction =
                                         await client.signTransaction(
                                       credentials,
-                                      Transaction(
+                                      web3dart.Transaction(
                                         to: data.to != null
-                                            ? EthereumAddress.fromHex(data.to!)
+                                            ? web3dart.EthereumAddress.fromHex(
+                                                data.to!)
                                             : null,
                                         value: data.value != null
-                                            ? EtherAmount.inWei(
+                                            ? web3dart.EtherAmount.inWei(
                                                 BigInt.parse(data.value!),
                                               )
                                             : null,
@@ -1752,7 +1829,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
                                             ? null
                                             : txDataToUintList(data.data!),
                                         gasPrice: data.gasPrice != null
-                                            ? EtherAmount.inWei(
+                                            ? web3dart.EtherAmount.inWei(
                                                 BigInt.parse(
                                                   data.gasPrice!,
                                                 ),

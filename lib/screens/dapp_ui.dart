@@ -5,7 +5,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 class DappUI extends StatefulWidget {
-  const DappUI({Key? key}) : super(key: key);
+  const DappUI({super.key});
 
   @override
   State<DappUI> createState() => _DappUIState();

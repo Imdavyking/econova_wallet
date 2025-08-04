@@ -114,13 +114,13 @@ class SuiCoin extends Coin {
       address: keyPair.getAddress(),
       privateKey: privateKey,
       publicKey: HEX.encode(keyPair.getPublicKey()),
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

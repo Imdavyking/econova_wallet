@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/import_shamir_secret.dart';
 import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -34,10 +38,18 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   bool securitydialogOpen = false;
 
   final _prediction = ValueNotifier<List<String>>([]);
+  late StreamSubscription<dynamic> _streamSubscription;
 
   @override
   void initState() {
     super.initState();
+    _streamSubscription =
+        EventBusService.instance.on<SeedPharseInitializationEvent>().listen(
+      (event) async {
+        debugPrint(
+            'Notification: ${event.coin.getName()} - ${event.coin.getSymbol()}');
+      },
+    );
     screenshotCallback.addListener(() {
       showDialogWithMessage(
         context: context,
@@ -83,6 +95,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   @override
   void dispose() {
     enableScreenShot();
+    _streamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     mnemonicController.dispose();
     walletNameController.dispose();
@@ -439,17 +452,9 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                             child: Padding(
                               padding: const EdgeInsets.all(15),
                               child: isLoading
-                                  ? Text(
-                                      localization.loading,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  ? const Loader(
+                                      color: Colors.black,
                                     )
-                                  // const Loader(
-                                  //     color: Colors.black,
-                                  //   )
                                   : Text(
                                       localization.confirm,
                                       style: const TextStyle(

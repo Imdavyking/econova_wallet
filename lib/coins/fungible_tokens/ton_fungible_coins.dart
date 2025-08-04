@@ -15,25 +15,18 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   int mintDecimals;
 
   TonFungibleCoin({
-    required String blockExplorer,
-    required String symbol,
-    required String default_,
-    required String image,
-    required String name,
-    required String api,
+    required super.blockExplorer,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.name,
+    required super.api,
     required this.mintDecimals,
     required this.tokenID,
-    required String geckoID,
+    required super.geckoID,
   }) : super(
           rampID: '',
           payScheme: '',
-          blockExplorer: blockExplorer,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          api: api,
-          name: name,
-          geckoID: geckoID,
         );
 
   factory TonFungibleCoin.fromJson(Map<String, dynamic> json) {

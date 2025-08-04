@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:convert';
 
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -9,7 +11,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../main.dart';
 
 class SetCurrency extends StatefulWidget {
-  const SetCurrency({Key? key}) : super(key: key);
+  const SetCurrency({super.key});
 
   @override
   _SetCurrencyState createState() => _SetCurrencyState();
@@ -62,15 +64,16 @@ class _SetCurrencyState extends State<SetCurrency> {
                                         Uri.parse(
                                             coinGeckoSupportedCurrencies)))
                                     .body) as List;
-
                                 if (responseBody.contains(
                                     currency.toString().toLowerCase())) {
                                   await pref.put(
                                     'defaultCurrency',
                                     currency,
                                   );
+                                  if (!context.mounted) return;
                                   Navigator.pop(context);
                                 } else {
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(SnackBar(
                                     backgroundColor: Colors.red,

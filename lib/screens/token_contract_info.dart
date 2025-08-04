@@ -11,7 +11,7 @@ import 'launch_url.dart';
 class TokenContractInfo extends StatelessWidget {
   final Coin coin;
 
-  const TokenContractInfo({Key? key, required this.coin}) : super(key: key);
+  const TokenContractInfo({super.key, required this.coin});
   @override
   Widget build(BuildContext context) {
     AppLocalizations localization = AppLocalizations.of(context)!;
@@ -87,7 +87,7 @@ class TokenContractInfo extends StatelessWidget {
                               await Clipboard.setData(ClipboardData(
                                 text: coin.tokenAddress()!,
                               ));
-
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(localization.copiedToClipboard),

@@ -129,13 +129,13 @@ class HarmonyCoin extends Coin {
       address: _ethAddrToOne(address),
       hex_address: address,
       privateKey: privateKey,
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override

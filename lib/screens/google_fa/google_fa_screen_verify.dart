@@ -13,9 +13,9 @@ class GoogleFAScreenVerify extends StatefulWidget {
   final FADetails faDetails;
 
   const GoogleFAScreenVerify({
-    Key? key,
+    super.key,
     required this.faDetails,
-  }) : super(key: key);
+  });
 
   @override
   State<GoogleFAScreenVerify> createState() => _GoogleFAScreenVerifyState();
@@ -63,6 +63,7 @@ class _GoogleFAScreenVerifyState extends State<GoogleFAScreenVerify> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
+            padding: const EdgeInsets.all(15),
             child: Container(
               height: MediaQuery.of(context).size.height * .8,
               color: Colors.transparent,
@@ -124,13 +125,6 @@ class _GoogleFAScreenVerifyState extends State<GoogleFAScreenVerify> {
                             (states) => const TextStyle(color: Colors.white),
                           ),
                         ),
-                        child: Text(
-                          localizations.confirm,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
                         onPressed: isComplete.value
                             ? () async {
                                 ScaffoldMessenger.of(context).clearSnackBars();
@@ -149,6 +143,7 @@ class _GoogleFAScreenVerifyState extends State<GoogleFAScreenVerify> {
                                   );
                                   await Future.delayed(
                                       const Duration(seconds: 2));
+                                  if (!context.mounted) return;
                                   Navigator.pop(context, false);
                                   return;
                                 }
@@ -174,13 +169,19 @@ class _GoogleFAScreenVerifyState extends State<GoogleFAScreenVerify> {
                                 }
                               }
                             : null,
+                        child: Text(
+                          localizations.confirm,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            padding: const EdgeInsets.all(15),
           ),
         ),
       ),

@@ -304,13 +304,13 @@ class FuseCoin extends Coin {
     final keys = AccountData(
       address: address,
       privateKey: privateKey,
-    ).toJson();
+    );
 
-    privateKeyMap[privateKey] = keys;
+    privateKeyMap[privateKey] = keys.toJson();
 
     await pref.put(saveKey, jsonEncode(privateKeyMap));
 
-    return AccountData.fromJson(keys);
+    return keys;
   }
 
   @override
@@ -401,8 +401,9 @@ class FuseCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    final _dio = Dio(
+    final dio = Dio(
       BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
         baseUrl: Uri.https(Variables.BASE_URL, '/api').toString(),
         headers: {
           'Content-Type': 'application/json',
@@ -413,7 +414,7 @@ class FuseCoin extends Coin {
       ),
     );
 
-    final response = await _dio.get(
+    final response = await dio.get(
       '/v0/balances/assets/$address',
     );
 

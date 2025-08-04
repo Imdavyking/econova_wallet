@@ -60,6 +60,8 @@
 	<string>This identifier will be used to deliver personalized ads to you.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

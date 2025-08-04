@@ -95,6 +95,7 @@ class _DappState extends State<Dapp> {
     final historyTitle = localize.history;
     final historyEmpty = localize.noHistory;
     return PreferredSize(
+      preferredSize: const Size.fromHeight(100),
       child: SafeArea(
         child: SizedBox(
           height: 75,
@@ -213,6 +214,7 @@ class _DappState extends State<Dapp> {
                               child: InkWell(
                                 onTap: () async {
                                   await _goForward();
+                                  if (!mounted) return;
                                   Navigator.pop(context);
                                 },
                                 child: Padding(
@@ -239,6 +241,7 @@ class _DappState extends State<Dapp> {
                               child: InkWell(
                                 onTap: () async {
                                   await _goBack();
+                                  if (!mounted) return;
                                   Navigator.pop(context);
                                 },
                                 child: Padding(
@@ -268,6 +271,7 @@ class _DappState extends State<Dapp> {
                                       null) {
                                     await webViewTabs[currentTabIndex]
                                         .readloadWeb3_();
+                                    if (!mounted) return;
                                     Navigator.pop(context);
                                   }
                                 },
@@ -297,6 +301,7 @@ class _DappState extends State<Dapp> {
                                   if (webViewTabs[currentTabIndex].controller !=
                                       null) {
                                     await Share.share(url);
+                                    if (!mounted) return;
                                     Navigator.pop(context);
                                   }
                                 },
@@ -346,6 +351,7 @@ class _DappState extends State<Dapp> {
                                         savedBookMarks,
                                       ),
                                     );
+                                    if (!mounted) return;
                                     Navigator.pop(context);
                                   },
                                   child: Padding(
@@ -379,7 +385,7 @@ class _DappState extends State<Dapp> {
                                         null) {
                                       await InAppWebViewController
                                           .clearAllCache();
-
+                                      if (!mounted) return;
                                       if (Navigator.canPop(context)) {
                                         Navigator.pop(context);
                                       }
@@ -470,9 +476,10 @@ class _DappState extends State<Dapp> {
                                     Coin? coin = await Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (ctx) =>
-                                            const SelectBlockchain(
-                                          evmOnly: true,
+                                        builder: (ctx) => SelectBlockchain(
+                                          filterFn: (coin) =>
+                                              coin is EthereumCoin &&
+                                              coin.tokenAddress() == null,
                                         ),
                                       ),
                                     );
@@ -525,7 +532,6 @@ class _DappState extends State<Dapp> {
           ),
         ),
       ),
-      preferredSize: const Size.fromHeight(100),
     );
   }
 
@@ -535,6 +541,7 @@ class _DappState extends State<Dapp> {
 
   PreferredSize? _buildWebViewTabViewerAppBar() {
     return PreferredSize(
+        preferredSize: const Size.fromHeight(150),
         child: SafeArea(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -570,8 +577,7 @@ class _DappState extends State<Dapp> {
               )
             ],
           ),
-        ),
-        preferredSize: const Size.fromHeight(150));
+        ));
   }
 
   Widget _buildWebViewTabsViewer() {

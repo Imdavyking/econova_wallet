@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:wallet_app/screens/dapp_ui.dart';
 import 'package:wallet_app/screens/settings.dart';
 import 'package:wallet_app/screens/ai_agent.dart';
@@ -9,7 +11,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class Wallet extends StatefulWidget {
-  const Wallet({Key? key}) : super(key: key);
+  const Wallet({super.key});
 
   @override
   _WalletState createState() => _WalletState();
