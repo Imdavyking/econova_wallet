@@ -1,87 +1,74 @@
 # 🌿 Econova Wallet
 
-**Econova Wallet** is your all-in-one **AI-powered crypto sidekick**—built for **Starknet** and beyond. Whether you're **talking to your wallet** or **deploying the next viral meme coin** Econova puts the future of Web3 in your pocket.
+**Econova Wallet** is your all-in-one **AI-powered Solana wallet**—built for the **SPL ecosystem** and beyond. Whether you're **talking to your wallet**, **swapping SPL tokens**, or **minting your own meme coin**, Econova makes Web3 on **Solana** seamless, smart, and fast.
 
-Seamlessly manage your assets, stake tokens, dive into DeFi, and interact with dApps across **30+ blockchains**—all with voice commands, natural language, and a sleek, intuitive interface.
+With **voice commands**, **natural language understanding**, and support for **30+ blockchains**, Econova puts the entire crypto world in your pocket—starting with the speed and scalability of Solana.
 
 ---
 
 ## 🚀 Features
 
-- 📬 **Multi-Network Wallet & Balance Display**  
-  View and manage your wallet across supported blockchains.
+- 🔥 **Solana-First Experience**
+  Manage SPL tokens, interact with Solana dApps, and view real-time SOL balances and NFTs.
 
-- 🎙️ **Voice Recognition**  
-  Use your voice to execute wallet actions like "Send 10 STRK to 0x...", "Swap ETH to USDC", or "Show my transaction history."
+- 🎙️ **Voice Recognition**
+  Use voice to send SOL, swap tokens, stake assets, or query your transaction history.
 
-- 💸 **Token Transfers & Swaps**  
-  Send, receive, and swap tokens easily—via a traditional UI or natural language commands.
+  > _“Swap 10 USDC for SOL”_ > _“Send 0.1 SOL to Wisdom”_ > _“Show my Solana NFTs”_
 
-- 📈 **Portfolio Overview**  
-  Track your total holdings across all assets and networks in real-time.
+- 💸 **Token Transfers & Swaps**
+  Send, receive, and swap SPL tokens like **SOL, USDC, BONK, JUP**—via UI or chat-style commands.
 
-- 📜 **Transaction History**  
-  Review past transactions on Starknet and other supported chains.
+- 📈 **Portfolio Overview**
+  Track your total crypto holdings across Solana and 30+ other networks.
 
-- ⛓️ **Staking**  
-  Stake your tokens and earn rewards through integrated staking protocols.
+- 📜 **Transaction History**
+  View your full transaction history, with **fast sync** for Solana activity.
 
-- 🌐 **Domain Name Resolution**  
-  Replace long, complex addresses with simple, memorable names like fricoben.stark, vitalik.eth, or foundation.sol—making transactions easier and reducing errors.
+- ⛓️ **Staking**
+  Stake SOL and other supported tokens natively or via integrated protocols.
 
-- 🐸 **Meme Coin Deployment**  
-  Deploy your own meme token on Starknet in minutes—no coding required.
+- 🧩 **Solana dApp Integration**
+  Connect to Solana DeFi, NFT marketplaces, and ecosystem tools through a built-in browser.
 
-- 💧 **Liquidity Management**  
-  Add or remove liquidity and manage DeFi pools effortlessly.
+- 🌐 **Domain Name Resolution**
+  Use `.sol` names instead of long addresses. Send to usernames like `vitalik.sol` or `meowbonk.sol`.
 
-- 📚 **Blockchain Documentation Search**  
-  Instantly search Starknet documentation and developer references from within the app.
+- 🐸 **Meme Coin Deployment (Coming Soon)**
+  Deploy your own Solana meme token in minutes—no coding required.
 
-- 🧭 **Dapp Browser**  
-  Access and interact with dApps directly.  
-  **Supports:** Starknet, EVM chains (e.g. Ethereum, BNB Chain), Solana, NEAR, and MultiversX.
+- 💧 **Liquidity Management**
+  Add/remove liquidity across Solana protocols (Jupiter, Raydium, Orca) and more.
 
-* 👥 **Send to Saved Contacts**
-  Save trusted addresses with nicknames and send crypto using friendly commands like
-  _“Send \$20 ETH to Wisdom”_ or _“Send STRK to Mom”_—no need to remember long wallet addresses.
+- 📚 **Blockchain Documentation Search**
+  Ask questions about Solana dev tools, SPL tokens, and smart contract docs directly in the app.
 
-* 🤖 **AI Chatbot Assistant**
-  Use natural language to manage your wallet:
-  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, or even
-  _“Send \$10 USDC to Wisdom”_ using your **saved contacts**.
-  The AI understands your intent, parses your command, and handles transactions across supported chains.
+- 👥 **Send to Contacts**
+  Send tokens to saved contacts by name:
+  _“Send \$5 USDC to Mom”_
+  _“Transfer 0.5 SOL to my dev wallet”_
 
-- 🧩 **All Chains. One Wallet.**  
-  No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
+- 🤖 **AI Wallet Assistant**
+  Talk to your wallet like a friend.
+  _“Swap \$20 USDC to SOL”_, _“What’s my SOL balance?”_, or _“Show my last 3 Solana transactions.”_
+
+- 🌐 **Multichain Support**
+  Solana comes first—but Econova works with Starknet, Ethereum, NEAR, and many others.
 
 ---
 
 ## 🌐 Supported Blockchains
 
-Econova Wallet brings **true multichain magic** to your fingertips. No more hopping between wallets—**all your assets, all your tokens, all your chains, in one place.**
+Econova is built around Solana but extends your reach across the entire crypto space:
 
-Here's what you get out of the box:
+- ⚡ **Solana** – Priority network with full SPL token, NFT, DeFi, and staking support
+- 🌀 **Starknet** – Layer 2 zk-rollup with dApp and token support
+- 🔥 **EVM Chains** – Ethereum, Polygon, BNB Chain, Avalanche, Arbitrum, Optimism, Base
+- 📡 **TON** – Telegram-native blockchain
+- 🌍 **MultiversX (Elrond)** – Smart contract support
+- 🪐 **Polkadot & Kusama**, **Sui & Aptos**, **NEAR**, **Cosmos**, **TRON**, **Ronin**, and more
 
-- 🌀 **Starknet** – Native L2 support with zero-knowledge security and blazing performance
-- 🔥 **EVM Chains** – Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base, and more (~15 major EVM networks)
-- ⚡ **Solana** – Speed meets scalability (includes SPL token support)
-- 🌍 **MultiversX (Elrond)** – For the next-gen scalable blockchain experience
-- 📡 **TON** – Fully integrated support for the Telegram-native blockchain
-- 🪙 **TRON** – Send, receive, and track TRC tokens with ease
-- 🌉 **NEAR** – Seamless support for NEAR and its ecosystem of fungible tokens
-- 💧 **Cosmos** – Dive into the IBC universe with support for multiple Cosmos chains
-- 🪐 **Polkadot & Kusama** – Connect to the DOT & KSM parachain ecosystem
-- ✨ **Sui & Aptos** – Move-based L1 chains with modern architecture
-- 🌕 **Harmony, IOTEX, Zilliqa, Stellar, Filecoin** – Extended layer of support for niche and innovative chains
-- 🔗 **Ronin** – Perfect for Web3 gamers and Axie Infinity fans
-- 🔋 **FUSE** – Native support for FUSE tokens and smart wallet tools
-- 💼 **XRP (Ledger-based)** – Connect to the Ripple ecosystem
-- 📊 **ESDT, FUSEFT, EVM tokens, SPL tokens, ERC20s, TRC20s, NEP-141s** – All major token standards supported
-
-> 💡 **Over 30+ blockchain networks and token ecosystems. One wallet. No compromise.**
-
-Econova Wallet is built to grow with the ecosystem—supporting new chains as they emerge and keeping your crypto experience unified, elegant, and powerful.
+> 💡 One wallet. 30+ blockchains. Powered by Solana.
 
 ---
 
@@ -103,20 +90,19 @@ Econova Wallet is built to grow with the ecosystem—supporting new chains as th
 3. Configure your environment:
 
    - Copy `.env.example` to `.env`
-   - Add your OPENAI_API_KEY keys.
-  ```
-   OPENAI_API_KEY=your_openai_api_key_here
+   - Add your `OPENAI_API_KEY`:
+
+     ```bash
+     OPENAI_API_KEY=your_openai_api_key_here
+     ```
+
+4. Launch the app:
+
+   Make sure you're using the correct Flutter version:
+
    ```
-
-4. Launch the App:
-
-   Ensure you're using the correct Flutter version:
-
-   ```
-   Flutter 3.24.1 • channel stable • https://github.com/flutter/flutter.git
-   Framework • revision 5874a72aa4 (2024-08-20)
-   Engine • revision c9b9d5780d
-   Tools • Dart 3.5.1 • DevTools 2.37.2
+   Flutter 3.24.1 • channel stable
+   Dart 3.5.1 • DevTools 2.37.2
    ```
 
    Run the app:
@@ -127,55 +113,37 @@ Econova Wallet is built to grow with the ecosystem—supporting new chains as th
 
 ---
 
-## 📈 Market Opportunity
+## 📈 Why Solana First?
 
-The combination of Layer 2 growth, multi-chain fragmentation, and increasing demand for simpler crypto tools makes **Econova Wallet** a high-potential product.
-
-### 💰 Wallet Market
-
-- The global **crypto wallet market** is expected to grow from **\$8.4B (2022)** to **\$48.2B by 2030**
-- Driven by: DeFi, NFTs, Web3 gaming, and mainstream crypto adoption
-
-### 🌐 Starknet Ecosystem
-
-- Starknet is one of the most promising ZK-rollup Layer 2s
-- Lack of user-friendly wallets creates a **first-mover advantage**
-
-### 🤖 AI Integration
-
-- Econova’s AI-powered wallet assistant fills a gap in the market
-- Natural language UX helps onboard non-technical users
-
-### 🔗 Multi-Chain Simplification
-
-- Most users juggle multiple wallets (MetaMask, Phantom, etc.)
-- Econova's “**All chains. One wallet.**” philosophy solves this problem
-
-### 🌱 Eco-Friendly Branding
-
-- The _Econova_ name appeals to sustainability-minded users
-- Aligns with Starknet's low-energy, zero-knowledge architecture
+- **Speed & Scalability**: Solana processes up to 65,000 transactions per second at near-zero cost.
+- **Massive Ecosystem**: Home to DeFi (Jupiter, Orca), NFTs (Magic Eden), and meme coins (BONK, WIF).
+- **Low Fees**: Transactions cost fractions of a cent—ideal for on-chain actions and AI automation.
+- **Voice & AI Use Cases**: Perfect for Econova’s real-time interactions with fast finality.
 
 ---
 
-### 📊 Opportunity Breakdown
+## 💰 Market Opportunity
 
-| Segment                 | Opportunity Size                           |
-| ----------------------- | ------------------------------------------ |
-| Crypto Wallets          | \$48B market by 2030                       |
-| Starknet Ecosystem      | First-mover advantage in L2-native UX      |
-| AI-Powered Interfaces   | Early-stage, high-demand UX differentiator |
-| Multi-Chain Integration | Solving wallet fragmentation problem       |
-| Retail Onboarding       | Growing demand for simplified crypto apps  |
+### 🪙 Solana Ecosystem
+
+- Over **\$3B+ TVL** and **thousands of dApps**
+- Ideal for **AI automation** with fast, cheap transactions
+- Growing interest in Solana-native tools and wallets
+
+### 📊 Wallet Landscape
+
+- The global crypto wallet market is projected to grow to **\$48B by 2030**
+- Most wallets still lack strong **AI features** or **Solana-native UX**
+- Econova positions itself as **Solana-first**, with true multichain flexibility
 
 ---
 
 ## 🤝 Contributing & Feedback
 
-We welcome contributions from developers, designers, and crypto enthusiasts!
+We welcome contributions from developers, designers, and Solana enthusiasts:
 
 - Found a bug? [Open an issue](#)
-- Have a suggestion or feature request? Submit a PR
-- Want to help us prioritize features like **voice control**, **multi-chain support**, or **AI improvements**? Share your feedback!
+- Have a feature idea? Submit a PR
+- Want better support for Jupiter, BONK, NFTs, or staking pools? Let us know!
 
 ---
