@@ -390,8 +390,13 @@ class SolanaCoin extends Coin {
     return solDecimals;
   }
 
-  String SWAP_HOST() => 'https://transaction-v1.raydium.io';
-  String BASE_HOST() => 'https://api-v3.raydium.io';
+  String SWAP_HOST() => enableTestNet
+      ? 'https://transaction-v1-devnet.raydium.io'
+      : 'https://transaction-v1.raydium.io';
+
+  String BASE_HOST() => enableTestNet
+      ? 'https://api-v3-devnet.raydium.io'
+      : 'https://api-v3.raydium.io';
   String NATIVE_SOL_ADDRESS = 'So11111111111111111111111111111111111111112';
 
   Future<int> getTokenDecimals(String tokenAddress) async {
