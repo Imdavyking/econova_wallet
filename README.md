@@ -45,7 +45,7 @@ With **voice commands**, **natural language understanding**, and support for **3
 - 🌐 **Domain Name Resolution**
   Use `.sol` names instead of long addresses. Send to usernames like `vitalik.sol` or `foundation.sol`.
 
-- 🐸 **Meme Coin Deployment (Coming Soon)**
+- 🐸 **Meme Coin Deployment (on Pump.fun)**
   Deploy your own Solana meme token in minutes—no coding required.
 
 - 💧 **Liquidity Management**
