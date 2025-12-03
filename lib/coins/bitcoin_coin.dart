@@ -391,7 +391,7 @@ List<BitcoinCoin> getBitCoinPOSBlockchains() {
   List<BitcoinCoin> blockChains = [];
 
   if (enableTestNet) {
-    blockChains.add(
+    blockChains.addAll([
       BitcoinCoin(
         name: 'Bitcoin(Test)',
         symbol: 'BTC',
@@ -406,7 +406,21 @@ List<BitcoinCoin> getBitCoinPOSBlockchains() {
         rampID: 'BTC_BTC',
         payScheme: 'bitcoin',
       ),
-    );
+      BitcoinCoin(
+        name: 'ZCash(Test)',
+        symbol: 'ZEC',
+        default_: 'ZEC',
+        blockExplorer:
+            'https://zcashblockexplorer.com/transactions/$blockExplorerPlaceholder',
+        image: 'assets/zcash.png',
+        POSNetwork: zcash,
+        P2WPKH: false,
+        derivationPath: "m/44'/133'/0'/0/0",
+        geckoID: 'zcash',
+        rampID: '',
+        payScheme: 'zcash',
+      ),
+    ]);
   } else {
     blockChains.addAll([
       BitcoinCoin(
