@@ -1,181 +1,83 @@
-# 🌿 Econova Wallet
+# Econova
 
-**Econova Wallet** is your all-in-one **AI-powered crypto sidekick**—built for **Starknet** and beyond. Whether you're **talking to your wallet** or **deploying the next viral meme coin** Econova puts the future of Web3 in your pocket.
+**Next‑Generation Privacy-first Mobile Wallet & Self‑Custody SDK**
 
-Seamlessly manage your assets, stake tokens, dive into DeFi, and interact with dApps across **30+ blockchains**—all with voice commands, natural language, and a sleek, intuitive interface.
-
----
-
-## 🚀 Features
-
-- 📬 **Multi-Network Wallet & Balance Display**  
-  View and manage your wallet across supported blockchains.
-
-- 🎙️ **Voice Recognition**  
-  Use your voice to execute wallet actions like "Send 10 STRK to 0x...", "Swap ETH to USDC", or "Show my transaction history."
-
-- 💸 **Token Transfers & Swaps**  
-  Send, receive, and swap tokens easily—via a traditional UI or natural language commands.
-
-- 📈 **Portfolio Overview**  
-  Track your total holdings across all assets and networks in real-time.
-
-- 📜 **Transaction History**  
-  Review past transactions on Starknet and other supported chains.
-
-- ⛓️ **Staking**  
-  Stake your tokens and earn rewards through integrated staking protocols.
-
-- 🌐 **Domain Name Resolution**  
-  Replace long, complex addresses with simple, memorable names like fricoben.stark, vitalik.eth, or foundation.sol—making transactions easier and reducing errors.
-
-- 🐸 **Meme Coin Deployment**  
-  Deploy your own meme token on Starknet in minutes—no coding required.
-
-- 💧 **Liquidity Management**  
-  Add or remove liquidity and manage DeFi pools effortlessly.
-
-- 📚 **Blockchain Documentation Search**  
-  Instantly search Starknet documentation and developer references from within the app.
-
-- 🧭 **Dapp Browser**  
-  Access and interact with dApps directly.  
-  **Supports:** Starknet, EVM chains (e.g. Ethereum, BNB Chain), Solana, NEAR, and MultiversX.
-
-* 👥 **Send to Saved Contacts**
-  Save trusted addresses with nicknames and send crypto using friendly commands like
-  _“Send \$20 ETH to Wisdom”_ or _“Send STRK to Mom”_—no need to remember long wallet addresses.
-
-* 🤖 **AI Chatbot Assistant**
-  Use natural language to manage your wallet:
-  _“Swap \$20 STRK to ETH”_, _“Stake 50 STRK”_, _“Send 0.1 ETH to 0x…”_, or even
-  _“Send \$10 USDC to Wisdom”_ using your **saved contacts**.
-  The AI understands your intent, parses your command, and handles transactions across supported chains.
-
-- 🧩 **All Chains. One Wallet.**  
-  No more switching between MetaMask, Phantom, or Argent X. Econova unifies your multichain experience—**transact with any token from a single wallet**.
+**Tagline:** _Private by design. Portable by default._
 
 ---
 
-## 🌐 Supported Blockchains
+## Overview
 
-Econova Wallet brings **true multichain magic** to your fingertips. No more hopping between wallets—**all your assets, all your tokens, all your chains, in one place.**
+Econova is a next‑generation self‑custody wallet and mobile SDK focused on privacy, discreet UX, and powerful tooling for managing private assets across chains. Built for developers and end users, Econova blends advanced on‑device key management, wallet‑hiding workflows, and privacy‑preserving features to minimize surface area for tracking and abuse while maintaining a smooth UX.
 
-Here's what you get out of the box:
-
-- 🌀 **Starknet** – Native L2 support with zero-knowledge security and blazing performance
-- 🔥 **EVM Chains** – Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base, and more (~15 major EVM networks)
-- ⚡ **Solana** – Speed meets scalability (includes SPL token support)
-- 🌍 **MultiversX (Elrond)** – For the next-gen scalable blockchain experience
-- 📡 **TON** – Fully integrated support for the Telegram-native blockchain
-- 🪙 **TRON** – Send, receive, and track TRC tokens with ease
-- 🌉 **NEAR** – Seamless support for NEAR and its ecosystem of fungible tokens
-- 💧 **Cosmos** – Dive into the IBC universe with support for multiple Cosmos chains
-- 🪐 **Polkadot & Kusama** – Connect to the DOT & KSM parachain ecosystem
-- ✨ **Sui & Aptos** – Move-based L1 chains with modern architecture
-- 🌕 **Harmony, IOTEX, Zilliqa, Stellar, Filecoin** – Extended layer of support for niche and innovative chains
-- 🔗 **Ronin** – Perfect for Web3 gamers and Axie Infinity fans
-- 🔋 **FUSE** – Native support for FUSE tokens and smart wallet tools
-- 💼 **XRP (Ledger-based)** – Connect to the Ripple ecosystem
-- 📊 **ESDT, FUSEFT, EVM tokens, SPL tokens, ERC20s, TRC20s, NEP-141s** – All major token standards supported
-
-> 💡 **Over 30+ blockchain networks and token ecosystems. One wallet. No compromise.**
-
-Econova Wallet is built to grow with the ecosystem—supporting new chains as they emerge and keeping your crypto experience unified, elegant, and powerful.
+Econova is ideal for teams building wallets, dApps with embedded custody, or privacy-first financial experiences. Submissions implementing Econova for the Osmosis bounty should highlight self‑custody innovations and wallet privacy options.
 
 ---
 
-## 🛠 Getting Started
+## Key features
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Imdavyking/econova_wallet
-   cd econova_wallet
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   flutter pub get
-   ```
-
-3. Configure your environment:
-
-   - Copy `.env.example` to `.env`
-   - Add your OPENAI_API_KEY keys.
-  ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
-
-4. Launch the App:
-
-   Ensure you're using the correct Flutter version:
-
-   ```
-   Flutter 3.24.1 • channel stable • https://github.com/flutter/flutter.git
-   Framework • revision 5874a72aa4 (2024-08-20)
-   Engine • revision c9b9d5780d
-   Tools • Dart 3.5.1 • DevTools 2.37.2
-   ```
-
-   Run the app:
-
-   ```bash
-   flutter run
-   ```
+- **Mobile-first SDKs** (iOS / Android / React Native / Flutter) for quick wallet integration.
+- **On‑device secure key storage** using platform keystores + optional E2EE encrypted backups.
+- **Wallet Hiding / Camouflage Mode**: discretely hide wallet UI, obfuscate app icon, stealth access gestures, and decoy modes.
+- **Privacy‑first UX patterns**: ephemeral QR codes, burner wallet creation, and minimal telemetry.
+- **Account abstraction support**: plug in social recovery or smart‑account flows while preserving self‑custody guarantees.
+- **Transaction privacy options**: batched broadcasts, relay routing, and optional coin‑control privacy primitives.
+- **Cross‑chain asset management** with modular adapters (EVM, Cosmos/IBC, Sui, Solana experimental).
+- **Plug‑in MCP / AI context adapters** (for private on‑device assistants) — optional, privacy constrained.
+- **Auditable security**: deterministic key derivation, secure signing flows, and easy audit hooks.
 
 ---
 
-## 📈 Market Opportunity
+## Architecture (high level)
 
-The combination of Layer 2 growth, multi-chain fragmentation, and increasing demand for simpler crypto tools makes **Econova Wallet** a high-potential product.
+1. **Econova SDK (mobile)**
 
-### 💰 Wallet Market
+   - Key management layer (KML): handles generation, storage (keystore/secure enclave), derivation, and signing.
+   - Privacy middleware: implements hiding, decoys, ephemeral sessions, and telemetry controls.
+   - Network adapters: modular adapters for RPC, relayers, and IBC/bridge connectors.
 
-- The global **crypto wallet market** is expected to grow from **\$8.4B (2022)** to **\$48.2B by 2030**
-- Driven by: DeFi, NFTs, Web3 gaming, and mainstream crypto adoption
+2. **Econova Core (server, optional)**
 
-### 🌐 Starknet Ecosystem
+   - Backup & recovery relay (E2EE): stores encrypted blobs with zero‑knowledge attestation of integrity.
+   - Push relayer (opt‑in): broadcast helper for poor‑connectivity devices.
 
-- Starknet is one of the most promising ZK-rollup Layer 2s
-- Lack of user-friendly wallets creates a **first-mover advantage**
+3. **dApp Integration Layer**
 
-### 🤖 AI Integration
-
-- Econova’s AI-powered wallet assistant fills a gap in the market
-- Natural language UX helps onboard non-technical users
-
-### 🔗 Multi-Chain Simplification
-
-- Most users juggle multiple wallets (MetaMask, Phantom, etc.)
-- Econova's “**All chains. One wallet.**” philosophy solves this problem
-
-### 🌱 Eco-Friendly Branding
-
-- The _Econova_ name appeals to sustainability-minded users
-- Aligns with Starknet's low-energy, zero-knowledge architecture
+   - Web and mobile connectors (WalletConnect+, custom Mobile SDK APIs).
 
 ---
 
-### 📊 Opportunity Breakdown
+## Wallet Hiding & Privacy Modes
 
-| Segment                 | Opportunity Size                           |
-| ----------------------- | ------------------------------------------ |
-| Crypto Wallets          | \$48B market by 2030                       |
-| Starknet Ecosystem      | First-mover advantage in L2-native UX      |
-| AI-Powered Interfaces   | Early-stage, high-demand UX differentiator |
-| Multi-Chain Integration | Solving wallet fragmentation problem       |
-| Retail Onboarding       | Growing demand for simplified crypto apps  |
+Econova provides multiple privacy modes a user can enable depending on threat model:
+
+### 1. Camouflage App Mode
+
+- Replace app icon and name with a neutral utility (settings, notes) — reversible by PIN/gesture.
+- Optional stealth entry: double‑tap pattern or long‑press the notification to unlock wallet UI.
+
+### 2. Decoy Wallets
+
+- Create one or more decoy wallets with fake balances and dummy transaction history.
+- Primary wallet accessible only via hidden gesture or passphrase.
+
+### 3. Burners & Ephemeral Sessions
+
+- Create ephemeral short‑lived wallets for on‑the‑fly micro‑transactions.
+- Ephemeral private keys not backed up — perfect for single‑use activities.
+
+### 4. Minimal Telemetry & Offline Mode
+
+- Default telemetry: **off**. All analytics are opt‑in and strictly differential/private.
+- Offline signing with QR handshake and manual transaction broadcasting.
 
 ---
 
-## 🤝 Contributing & Feedback
+## Security model
 
-We welcome contributions from developers, designers, and crypto enthusiasts!
-
-- Found a bug? [Open an issue](#)
-- Have a suggestion or feature request? Submit a PR
-- Want to help us prioritize features like **voice control**, **multi-chain support**, or **AI improvements**? Share your feedback!
+- Keys are never exported in plaintext. Use platform secure enclaves (Secure Enclave, Keystore) + optional software fallback with PBKDF2/Argon2 and E2EE backup.
+- All backup blobs are end‑to‑end encrypted; encryption keys are derived from user secrets (seed/pin + optional MFA device).
+- Signing UX verifies the purpose, destination, and amount in two steps (compact view + full view) to prevent UX attacks.
+- Support for hardware wallet integration (via BLE / USB) for high‑value accounts.
 
 ---

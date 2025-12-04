@@ -538,18 +538,16 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    return null;
-
-    // final txHash = await fundingAccount.send(
-    //   recipient: Felt.fromHexString(to),
-    //   amount: Uint256(
-    //     low: Felt(
-    //       wei,
-    //     ),
-    //     high: Felt.zero,
-    //   ),
-    //   useSTRKtoken: useStarkToken,
-    // );
+    final txHash = await fundingAccount.send(
+      recipient: Felt.fromHexString(to),
+      amount: Uint256(
+        low: Felt(
+          wei,
+        ),
+        high: Felt.zero,
+      ),
+      useSTRKtoken: useStarkToken,
+    );
 
     // return txHash;
   }
@@ -1842,7 +1840,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -1865,7 +1863,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
