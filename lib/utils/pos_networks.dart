@@ -17,6 +17,16 @@ NetworkType zcash = NetworkType(
   bech32: 't1',
   wif: 0x80,
 );
+
+
+NetworkType zcashTestnet = NetworkType(
+  messagePrefix: '\x18ZCash Signed Message:\n',
+  bip32: Bip32Type(public: 0x043587CF, private: 0x04358394), // tpub/tprv
+  pubKeyHash: 0x1D25, // tm... addresses
+  scriptHash: 0x1CBA,
+  bech32: 't1', // still t1 prefix on testnet for transparent
+  wif: 0xEF,
+);
 NetworkType namecoin = NetworkType(
   messagePrefix: '\x18Namecoin Signed Message:\n',
   bech32: 'nc',

@@ -413,7 +413,7 @@ List<BitcoinCoin> getBitCoinPOSBlockchains() {
         blockExplorer:
             'https://zcashblockexplorer.com/transactions/$blockExplorerPlaceholder',
         image: 'assets/zcash.png',
-        POSNetwork: zcash,
+        POSNetwork: zcashTestnet,
         P2WPKH: false,
         derivationPath: "m/44'/133'/0'/0/0",
         geckoID: 'zcash',
