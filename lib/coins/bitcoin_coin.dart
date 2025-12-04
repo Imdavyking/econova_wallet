@@ -150,8 +150,12 @@ class BitcoinCoin extends Coin {
       final addressDetails = await bitbox.Address.details(address);
       return addressDetails['balance'];
     } else {
-      final url = '${sochainApi}get_address_balance/$symbol/$address';
-      final response = await get(Uri.parse(url));
+      final url =
+          'https://rest.cryptoapis.io/addresses-latest/utxo/$symbol/${enableTestNet ? 'testnet' : 'mainnet'}/$address/balance';
+      final response = await get(Uri.parse(url), headers: {
+        'x-api-key': utxoApiKey,
+        'Content-Type': 'application/json',
+      });
       final data = response.body;
       return double.parse(jsonDecode(data)['data']['confirmed_balance']);
     }

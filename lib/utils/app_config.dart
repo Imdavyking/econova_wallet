@@ -134,6 +134,7 @@ const coinMarketCapApiKey = "c354e715-9e18-4fee-806d-ae32d38d5d5c";
 const newEVMChainKey = '5500a-8077-420a-a1cf-9aa7';
 const blastApiProjectId = '2f6ccf07-7b89-4bf4-be14-7a26f2eae72d';
 const appUnlockTime = 'applockksksietimeal382';
+const utxoApiKey = '07ddba0bd184344993fbc2a4a3d7059213e13469';
 // template tags
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
