@@ -590,7 +590,7 @@ class CosmosCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    return 0.001;
+    return 0.01;
   }
 
   cosmos.NetworkInfo getNetworkInfo() {
@@ -692,7 +692,7 @@ List<CosmosCoin> getCosmosBlockChains() {
         coinDecimals: 6,
         chainId: "osmo-test-5",
         denom: 'uosmo',
-        grpcPort: 9090,
+        grpcPort: 443,
         geckoID: 'osmosis',
         pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
         payScheme: 'osmosis',
