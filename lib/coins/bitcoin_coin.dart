@@ -411,7 +411,7 @@ List<BitcoinCoin> getBitCoinPOSBlockchains() {
         symbol: 'ZEC',
         default_: 'ZEC',
         blockExplorer:
-            'https://zcashblockexplorer.com/transactions/$blockExplorerPlaceholder',
+            'https://blockexplorer.one/zcash/testnet/tx/$blockExplorerPlaceholder',
         image: 'assets/zcash.png',
         POSNetwork: zcashTestnet,
         P2WPKH: false,
@@ -484,7 +484,7 @@ List<BitcoinCoin> getBitCoinPOSBlockchains() {
         symbol: 'ZEC',
         default_: 'ZEC',
         blockExplorer:
-            'https://zcashblockexplorer.com/transactions/$blockExplorerPlaceholder',
+            'https://blockexplorer.one/zcash/mainnet/tx/$blockExplorerPlaceholder',
         image: 'assets/zcash.png',
         POSNetwork: zcash,
         P2WPKH: false,
