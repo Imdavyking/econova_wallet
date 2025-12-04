@@ -538,18 +538,20 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    final txHash = await fundingAccount.send(
-      recipient: Felt.fromHexString(to),
-      amount: Uint256(
-        low: Felt(
-          wei,
-        ),
-        high: Felt.zero,
-      ),
-      useSTRKtoken: useStarkToken,
-    );
+    return null;
 
-    return txHash;
+    // final txHash = await fundingAccount.send(
+    //   recipient: Felt.fromHexString(to),
+    //   amount: Uint256(
+    //     low: Felt(
+    //       wei,
+    //     ),
+    //     high: Felt.zero,
+    //   ),
+    //   useSTRKtoken: useStarkToken,
+    // );
+
+    // return txHash;
   }
 
   Future<int> getTokenDecimals(String tokenAddress) async {
