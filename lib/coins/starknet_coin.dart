@@ -529,6 +529,19 @@ class StarknetCoin extends Coin {
     final signer = StarkAccountSigner(
       signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
     );
+    final wei = amount.toBigIntDec(decimals());
+
+    final transferCall = FunctionCall(
+      contractAddress: useStarkToken ? strkAddress : ethAddress,
+      entryPointSelector: getSelectorByName("transfer"),
+      calldata: [
+        Felt.fromHexString(to),
+        Felt(
+          wei,
+        ),
+        Felt.zero
+      ],
+    );
 
     final fundingAccount = Account(
       provider: provider,
@@ -537,26 +550,20 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
-    final wei = amount.toBigIntDec(decimals());
+    // final feeEstimate = await fundingAccount.getEstimateMaxFeeForInvokeTx(
+    //   functionCalls: [transferCall],
+    //   useSTRKFee: true,
+    // );
+
+    // print(feeEstimate);
 
     final trx = await fundingAccount.execute(
-      functionCalls: [
-        FunctionCall(
-          contractAddress: useStarkToken ? strkAddress : ethAddress,
-          entryPointSelector: getSelectorByName("transfer"),
-          calldata: [
-            Felt.fromHexString(to),
-            Felt(
-              wei,
-            ),
-            Felt.zero
-          ],
-        ),
-      ],
-      l1MaxAmount:
-          Felt(BigInt.from(100000000000000)), // 0.0001 STRK worth of gas units
-      l1MaxPricePerUnit: Felt(BigInt.from(100000000000)),
+      functionCalls: [transferCall],
       useSTRKFee: true,
+      l1MaxAmount: Felt(BigInt.from(0xFFFFFFFFFFFF)),
+      l1MaxPricePerUnit: Felt(BigInt.from(0xFFFFFFFFFFFF)),
+      l2MaxAmount: Felt(BigInt.from(0xFFFFFFFFFFFF)),
+      l2MaxPricePerUnit: Felt(BigInt.from(0xFFFFFFFFFFFF)),
     );
 
     return trx.when(
