@@ -10,6 +10,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:pointycastle/export.dart' as pc;
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:web3dart/crypto.dart' as w3;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -310,7 +311,6 @@ class StacksCoin extends Coin {
   }
 
   // ─── Transaction building + signing ─────────────────────────────────────────
-
   Uint8List _buildSignedTx({
     required Uint8List privKey,
     required Uint8List senderHash160,
@@ -321,46 +321,43 @@ class StacksCoin extends Coin {
     required BigInt fee,
     required String memo,
   }) {
-    // 1. Serialize with a zeroed 65-byte signature placeholder
+    // ✅ Zero nonce AND fee (not just signature) for the initial hash,
+    //    matching makeSigHashPreSign() in @stacks/transactions
     final unsigned = _serialize(
       senderHash160: senderHash160,
       recipientVersion: recipientVersion,
       recipientHash160: recipientHash160,
       amount: amount,
-      nonce: nonce,
-      fee: fee,
+      nonce: BigInt.zero, // ← was: nonce
+      fee: BigInt.zero, // ← was: fee
       memo: memo,
       signature: Uint8List(65),
     );
 
-    // 2. Initial hash: SHA-512/256(tx bytes)
     final initialHash = _sha512_256(unsigned);
 
-    // 3. Pre-sign hash: SHA-512/256(initial_hash ‖ auth_type ‖ fee ‖ nonce)
-    //    Mirrors makeSigHashPreSign() in @stacks/transactions
     final preSignInput = (BytesBuilder()
           ..add(initialHash)
           ..addByte(_authTypeStandard)
-          ..add(_u64BE(fee))
-          ..add(_u64BE(nonce)))
+          ..add(_u64BE(fee)) // actual fee folded in here
+          ..add(_u64BE(nonce))) // actual nonce folded in here
         .toBytes();
     final presignHash = _sha512_256(preSignInput);
 
-    // 4. secp256k1 sign → {recovery_id (1 byte) ‖ r (32 bytes) ‖ s (32 bytes)}
     final (sig, recoveryId) = _secp256k1Sign(privKey, presignHash);
     final sigBytes = Uint8List(65)
       ..[0] = recoveryId
       ..setRange(1, 33, _bigIntTo32Bytes(sig.r))
       ..setRange(33, 65, _bigIntTo32Bytes(sig.s));
 
-    // 5. Re-serialize with the real signature
+    // Final serialization uses the REAL nonce and fee
     return _serialize(
       senderHash160: senderHash160,
       recipientVersion: recipientVersion,
       recipientHash160: recipientHash160,
       amount: amount,
-      nonce: nonce,
-      fee: fee,
+      nonce: nonce, // ← real value
+      fee: fee, // ← real value
       memo: memo,
       signature: sigBytes,
     );
@@ -425,9 +422,9 @@ class StacksCoin extends Coin {
 
   static Uint8List _memoBytes(String memo) {
     final src = utf8.encode(memo);
-    final buf = Uint8List(_memoMaxBytes); // 34 zero bytes
-    final len = src.length.clamp(0, _memoMaxBytes);
-    buf.setRange(0, len, src);
+    final buf = Uint8List(_memoMaxBytes); // 34 bytes, zero-initialized
+    final contentLen = src.length.clamp(0, _memoMaxBytes); // max 34
+    buf.setRange(0, contentLen, src); // ← content at offset 0, no length prefix
     return buf;
   }
 
@@ -544,8 +541,8 @@ class StacksCoin extends Coin {
     // RFC6979 deterministic k — no pc.HMac used
     final k = _rfc6979(privKey, hash, n);
 
-    final R = (params.G * k)!;
-    final r = R.x!.toBigInteger()! % n;
+    final Renc = (params.G * k)!.getEncoded(false); // 04 || x(32) || y(32)
+    final r = (BigInt.parse(HEX.encode(Renc.sublist(1, 33)), radix: 16)) % n;
     if (r == BigInt.zero) throw Exception('Invalid r (0)');
 
     final e = _hashToInt(hash, params);
