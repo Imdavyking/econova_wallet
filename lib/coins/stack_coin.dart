@@ -235,6 +235,9 @@ class StacksCoin extends Coin {
     }
   }
 
+  @override
+  bool requireMemo() => false;
+
   // ─── Fees ───────────────────────────────────────────────────────────────────
 
   @override
@@ -276,11 +279,13 @@ class StacksCoin extends Coin {
     final microStx =
         BigInt.from((double.parse(amount) * _microStxPerStx).toInt());
 
-    // Decode recipient c32check address → version byte + hash160
     final decoded = c32checkDecode(to.substring(1));
     final recipientVersion = decoded[0] as int;
     final recipientHash160 =
         Uint8List.fromList(HEX.decode(decoded[1] as String));
+
+    // Normalize memo — null and empty string both become empty
+    final memoStr = (memo ?? '').trim();
 
     final txBytes = _buildSignedTx(
       privKey: privBytes,
@@ -290,8 +295,10 @@ class StacksCoin extends Coin {
       amount: microStx,
       nonce: BigInt.from(nonce),
       fee: fee,
-      memo: memo ?? '',
+      memo: memoStr,
     );
+
+    print(txBytes);
 
     final res = await http.post(
       Uri.parse('$_api/v2/transactions'),
@@ -304,9 +311,8 @@ class StacksCoin extends Coin {
       throw Exception('STX broadcast failed: ${res.body}');
     }
 
-    return jsonDecode(res.body) as String; // txid
+    return jsonDecode(res.body) as String;
   }
-
   // ─── Transaction building + signing ─────────────────────────────────────────
 
   Uint8List _buildSignedTx({
@@ -428,6 +434,17 @@ class StacksCoin extends Coin {
     return buf;
   }
 
+//   static Uint8List _memoBytes(String memo) {
+//   final src = utf8.encode(memo);
+//   // Stacks memo: 2-byte BE length prefix + content, zero-padded to 34 bytes
+//   final contentLen = src.length.clamp(0, 32); // max 32 bytes of content
+//   final buf = Uint8List(_memoMaxBytes); // 34 bytes total
+//   buf[0] = (contentLen >> 8) & 0xFF; // high byte of length
+//   buf[1] = contentLen & 0xFF;         // low byte of length
+//   buf.setRange(2, 2 + contentLen, src);
+//   return buf;
+// }
+
   static Uint8List _u32BE(int value) => Uint8List(4)
     ..[0] = (value >> 24) & 0xFF
     ..[1] = (value >> 16) & 0xFF
@@ -483,7 +500,7 @@ class StacksCoin extends Coin {
     final params = pc.ECDomainParameters('secp256k1');
     final d = BigInt.parse(HEX.encode(privKey), radix: 16);
 
-    final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 64))
+    final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 32))
       ..init(true, pc.PrivateKeyParameter(pc.ECPrivateKey(d, params)));
 
     final raw = signer.generateSignature(hash) as pc.ECSignature;
