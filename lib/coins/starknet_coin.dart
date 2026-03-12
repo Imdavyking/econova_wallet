@@ -539,7 +539,7 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    final txHash = await fundingAccount.execute(
+    final trx = await fundingAccount.execute(
       functionCalls: [
         FunctionCall(
           contractAddress: useStarkToken ? strkAddress : ethAddress,
@@ -556,7 +556,12 @@ class StarknetCoin extends Coin {
       useSTRKFee: true,
     );
 
-    return '';
+    return trx.when(
+      result: (result) => result.transaction_hash,
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
   }
 
   Future<int> getTokenDecimals(String tokenAddress) async {
