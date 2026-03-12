@@ -65,9 +65,18 @@ abstract class BaseAccountSigner {
         (l2GasMaxAmount << 128) +
         l2GasMaxPricePerUnit;
 
-    final l1DataGasBounds = (Felt.fromString('L1_DATA_GAS') << (128 + 64)) +
-        (l1DataGasMaxAmount << 128) +
-        l1DataGasMaxPricePerUnit;
+    final elementToHash = [
+      tip.toBigInt(),
+      l1GasBounds.toBigInt(),
+      l2GasBounds.toBigInt(),
+    ];
+
+    if (resourceBounds.containsKey('l1_data_gas')) {
+      final l1DataGasBounds = (Felt.fromString('L1_DATA') << (128 + 64)) +
+          (l1DataGasMaxAmount << 128) +
+          l1DataGasMaxPricePerUnit;
+      elementToHash.add(l1DataGasBounds.toBigInt());
+    }
 
     final dataAvailabilityMode =
         (Felt.fromInt(nonceDataAvailabilityMode == 'L1' ? 0 : 1) << 32) +
@@ -77,14 +86,7 @@ abstract class BaseAccountSigner {
       TransactionHashPrefix.invoke.toBigInt(),
       BigInt.from(3), // version
       senderAddress.toBigInt(),
-      poseidonHasher.hashMany(
-        [
-          tip.toBigInt(),
-          l1GasBounds.toBigInt(),
-          l2GasBounds.toBigInt(),
-          l1DataGasBounds.toBigInt()
-        ],
-      ),
+      poseidonHasher.hashMany(elementToHash),
       poseidonHasher.hashMany(paymasterData.map((e) => e.toBigInt()).toList()),
       chainId.toBigInt(),
       nonce.toBigInt(),
