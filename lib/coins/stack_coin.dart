@@ -1,5 +1,5 @@
 // coins/stacks_coin.dart
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, unused_element
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:web3dart/crypto.dart' as w3;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
