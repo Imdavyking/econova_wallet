@@ -529,19 +529,6 @@ class StarknetCoin extends Coin {
     final signer = StarkAccountSigner(
       signer: StarkSigner(privateKey: Felt.fromHexString(response.privateKey!)),
     );
-    final wei = amount.toBigIntDec(decimals());
-
-    final transferCall = FunctionCall(
-      contractAddress: useStarkToken ? strkAddress : ethAddress,
-      entryPointSelector: getSelectorByName("transfer"),
-      calldata: [
-        Felt.fromHexString(to),
-        Felt(
-          wei,
-        ),
-        Felt.zero
-      ],
-    );
 
     final fundingAccount = Account(
       provider: provider,
@@ -550,11 +537,23 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
+    final wei = amount.toBigIntDec(decimals());
+
     final trx = await fundingAccount.execute(
-      functionCalls: [transferCall],
+      functionCalls: [
+        FunctionCall(
+          contractAddress: useStarkToken ? strkAddress : ethAddress,
+          entryPointSelector: getSelectorByName("transfer"),
+          calldata: [
+            Felt.fromHexString(to),
+            Felt(
+              wei,
+            ),
+            Felt.zero
+          ],
+        ),
+      ],
       useSTRKFee: true,
-      l1MaxAmount: Felt(BigInt.from(0xFFFFFFFFFFFF)),
-      l1MaxPricePerUnit: Felt(BigInt.from(0xFFFFFFFFFFFF)),
     );
 
     return trx.when(

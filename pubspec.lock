@@ -1814,6 +1814,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.1"
+  poseidon:
+    dependency: "direct main"
+    description:
+      name: poseidon
+      sha256: b5c65711e8ed2b86770f7a752aa9865de9abc9394fa7ae9b270f5e895eb26e55
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   process:
     dependency: transitive
     description:

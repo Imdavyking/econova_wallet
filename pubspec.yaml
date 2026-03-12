@@ -135,6 +135,7 @@ dependencies:
   pinenacl: 0.6.0
   video_player: 2.9.5
   pointycastle: 3.9.1
+  poseidon: ^0.0.1
   image: 4.3.0
   wallet_connect_dart_v2:
     path: ./wallet_connect_dart_v2
