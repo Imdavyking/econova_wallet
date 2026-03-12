@@ -1,5 +1,6 @@
 const coinGeckoIDs = [
   'starknet',
+  'blockstack',
   'bittorrent',
   'bittorrent-old',
   'liquid-staked-fuse',
