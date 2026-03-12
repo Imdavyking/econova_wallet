@@ -2229,18 +2229,16 @@ packages:
   starknet:
     dependency: "direct main"
     description:
-      name: starknet
-      sha256: "34e52595db3b7fd942e5d163e7f32f96b4e1f6448bb711cda2a4aa8313ed0fc6"
-      url: "https://pub.dev"
-    source: hosted
+      path: "starknet-0.2.0"
+      relative: true
+    source: path
     version: "0.2.0"
   starknet_provider:
     dependency: "direct main"
     description:
-      name: starknet_provider
-      sha256: b331395cd44e675d8d4c72ea27a5a88f9b5f437c0fdfc8768b27d9b0b8aae038
-      url: "https://pub.dev"
-    source: hosted
+      path: "starknet_provider-0.2.0"
+      relative: true
+    source: path
     version: "0.2.0"
   state_notifier:
     dependency: transitive
@@ -2752,5 +2750,5 @@ packages:
     source: hosted
     version: "0.1.2"
 sdks:
-  dart: ">=3.5.3 <4.0.0"
+  dart: ">=3.5.1 <4.0.0"
   flutter: ">=3.24.0"
