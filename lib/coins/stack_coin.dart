@@ -94,6 +94,8 @@ class StacksCoin extends Coin {
   @override
   bool get supportPrivateKey => true;
   @override
+  bool requireMemo() => true;
+  @override
   int decimals() => _stacksDecimals;
   @override
   String getName() => name;
@@ -111,8 +113,6 @@ class StacksCoin extends Coin {
   String getRampID() => rampID;
   @override
   String getPayScheme() => payScheme;
-  @override
-  bool requireMemo() => true;
 
   @override
   Map<String, dynamic> toJson() => {
@@ -198,8 +198,7 @@ class StacksCoin extends Coin {
     final privBytes = txDataToUintList(privateKey);
     final pubBytes = _compressedPubKey(privBytes);
     final address =
-        'S${c32checkEncode(_addrVersion, HEX.encode(_hash160(pubBytes)))}'; // ← add 'S'
-
+        'S${c32checkEncode(_addrVersion, HEX.encode(_hash160(pubBytes)))}';
     return AccountData(
       address: address,
       privateKey: privateKey,
@@ -283,7 +282,6 @@ class StacksCoin extends Coin {
     final recipientHash160 =
         Uint8List.fromList(HEX.decode(decoded[1] as String));
 
-    // Normalize memo — null and empty string both become empty
     final memoStr = (memo ?? '').trim();
 
     final txBytes = _buildSignedTx(
@@ -296,8 +294,6 @@ class StacksCoin extends Coin {
       fee: fee,
       memo: memoStr,
     );
-
-    print(txBytes);
 
     final res = await http.post(
       Uri.parse('$_api/v2/transactions'),
@@ -312,6 +308,7 @@ class StacksCoin extends Coin {
 
     return jsonDecode(res.body) as String;
   }
+
   // ─── Transaction building + signing ─────────────────────────────────────────
 
   Uint8List _buildSignedTx({
@@ -424,25 +421,18 @@ class StacksCoin extends Coin {
         .toBytes();
   }
 
-  // ─── Serialization helpers ──────────────────────────────────────────────────
+  // ─── Serialization helpers ───────────────────────────────────────────────────
 
   static Uint8List _memoBytes(String memo) {
     final src = utf8.encode(memo);
+    // Stacks memo: 2-byte BE length prefix + content, zero-padded to 34 bytes
+    final contentLen = src.length.clamp(0, 32);
     final buf = Uint8List(_memoMaxBytes);
-    buf.setRange(0, src.length.clamp(0, _memoMaxBytes), src);
+    buf[0] = (contentLen >> 8) & 0xFF;
+    buf[1] = contentLen & 0xFF;
+    buf.setRange(2, 2 + contentLen, src);
     return buf;
   }
-
-//   static Uint8List _memoBytes(String memo) {
-//   final src = utf8.encode(memo);
-//   // Stacks memo: 2-byte BE length prefix + content, zero-padded to 34 bytes
-//   final contentLen = src.length.clamp(0, 32); // max 32 bytes of content
-//   final buf = Uint8List(_memoMaxBytes); // 34 bytes total
-//   buf[0] = (contentLen >> 8) & 0xFF; // high byte of length
-//   buf[1] = contentLen & 0xFF;         // low byte of length
-//   buf.setRange(2, 2 + contentLen, src);
-//   return buf;
-// }
 
   static Uint8List _u32BE(int value) => Uint8List(4)
     ..[0] = (value >> 24) & 0xFF
@@ -463,9 +453,9 @@ class StacksCoin extends Coin {
   static Uint8List _bigIntTo32Bytes(BigInt v) =>
       Uint8List.fromList(HEX.decode(v.toRadixString(16).padLeft(64, '0')));
 
-  // ─── Cryptographic helpers ──────────────────────────────────────────────────
+  // ─── Cryptographic helpers ───────────────────────────────────────────────────
 
-  /// SHA-512/256 (FIPS 180-4 truncated variant, not SHA-512 + truncate)
+  /// SHA-512/256 (FIPS 180-4 truncated variant — distinct IV from SHA-512)
   static Uint8List _sha512_256(Uint8List data) {
     final d = pc.SHA512tDigest(256)..update(data, 0, data.length);
     final out = Uint8List(32);
@@ -473,19 +463,73 @@ class StacksCoin extends Coin {
     return out;
   }
 
+  /// SHA-256 via pointycastle digest — no HMac involved
+  static Uint8List _sha256(Uint8List data) {
+    final d = pc.SHA256Digest()..update(data, 0, data.length);
+    final out = Uint8List(32);
+    d.doFinal(out, 0);
+    return out;
+  }
+
+  /// Manual HMAC-SHA256 — avoids pc.HMac entirely (which asserts digestSize*8 < 512)
+  static Uint8List _hmacSha256(Uint8List key, Uint8List data) {
+    const blockSize = 64;
+
+    // Hash key down if longer than block size
+    Uint8List k = key.length > blockSize ? _sha256(key) : key;
+
+    // Zero-pad to block size
+    if (k.length < blockSize) {
+      final padded = Uint8List(blockSize);
+      padded.setRange(0, k.length, k);
+      k = padded;
+    }
+
+    final ipad = Uint8List(blockSize + data.length);
+    final opad = Uint8List(blockSize + 32);
+
+    for (int i = 0; i < blockSize; i++) {
+      ipad[i] = k[i] ^ 0x36;
+      opad[i] = k[i] ^ 0x5C;
+    }
+    ipad.setRange(blockSize, blockSize + data.length, data);
+
+    final inner = _sha256(ipad);
+    opad.setRange(blockSize, blockSize + 32, inner);
+
+    return _sha256(opad);
+  }
+
+  /// RFC 6979 §2.3 — deterministic k using HMAC-SHA256
+  static BigInt _rfc6979(Uint8List privKey, Uint8List hash, BigInt n) {
+    var v = Uint8List(32)..fillRange(0, 32, 0x01);
+    var k = Uint8List(32)..fillRange(0, 32, 0x00);
+
+    k = _hmacSha256(k, Uint8List.fromList([...v, 0x00, ...privKey, ...hash]));
+    v = _hmacSha256(k, v);
+    k = _hmacSha256(k, Uint8List.fromList([...v, 0x01, ...privKey, ...hash]));
+    v = _hmacSha256(k, v);
+
+    while (true) {
+      v = _hmacSha256(k, v);
+      final candidate = BigInt.parse(HEX.encode(v), radix: 16);
+      if (candidate >= BigInt.one && candidate < n) return candidate;
+      // Retry
+      k = _hmacSha256(k, Uint8List.fromList([...v, 0x00]));
+      v = _hmacSha256(k, v);
+    }
+  }
+
   /// RIPEMD-160(SHA-256(pubKey))
   static Uint8List _hash160(Uint8List pubKey) {
-    final sha = pc.SHA256Digest()..update(pubKey, 0, pubKey.length);
-    final shaOut = Uint8List(32);
-    sha.doFinal(shaOut, 0);
-
+    final shaOut = _sha256(pubKey);
     final rmd = pc.RIPEMD160Digest()..update(shaOut, 0, shaOut.length);
     final out = Uint8List(20);
     rmd.doFinal(out, 0);
     return out;
   }
 
-  /// Derives the compressed SEC-encoded public key from a raw private key
+  /// Compressed SEC-encoded public key from raw private key bytes
   static Uint8List _compressedPubKey(Uint8List privKey) {
     final params = pc.ECDomainParameters('secp256k1');
     final d = BigInt.parse(HEX.encode(privKey), radix: 16);
@@ -497,17 +541,24 @@ class StacksCoin extends Coin {
   static (pc.ECSignature, int) _secp256k1Sign(
       Uint8List privKey, Uint8List hash) {
     final params = pc.ECDomainParameters('secp256k1');
+    final n = params.n;
     final d = BigInt.parse(HEX.encode(privKey), radix: 16);
 
-    final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 32))
-      ..init(true, pc.PrivateKeyParameter(pc.ECPrivateKey(d, params)));
+    // RFC6979 deterministic k — no pc.HMac used
+    final k = _rfc6979(privKey, hash, n);
 
-    final raw = signer.generateSignature(hash) as pc.ECSignature;
+    final R = (params.G * k)!;
+    final r = R.x!.toBigInteger()! % n;
+    if (r == BigInt.zero) throw Exception('Invalid r (0)');
 
-    // Normalise to low-S
-    final halfN = params.n >> 1;
-    final sig = raw.s > halfN ? pc.ECSignature(raw.r, params.n - raw.s) : raw;
+    final e = _hashToInt(hash, params);
+    var s = (k.modInverse(n) * (e + d * r)) % n;
+    if (s == BigInt.zero) throw Exception('Invalid s (0)');
 
+    // Low-S normalisation
+    if (s > (n >> 1)) s = n - s;
+
+    final sig = pc.ECSignature(r, s);
     final pubKey = (params.G * d)!;
     final recoveryId = _computeRecoveryId(pubKey, sig, hash, params);
 
@@ -538,7 +589,6 @@ class StacksCoin extends Coin {
     final e = _hashToInt(hash, params);
     final x = sig.r + BigInt.from(recId ~/ 2) * n;
 
-    // x must be within the field
     if (x >= _secp256k1P) return null;
 
     final R = _decompressPoint(x, recId & 1 == 1, params);
@@ -594,20 +644,20 @@ class StacksDeriveArgs {
   });
 }
 
-/// Top-level function so `compute()` can spawn it in an isolate
+/// Top-level function so compute() can spawn it in an isolate
 Map<String, dynamic> calculateStacksKey(StacksDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
 
-  // Derive compressed public key via pointycastle (no platform channels)
   final params = pc.ECDomainParameters('secp256k1');
   final d = BigInt.parse(HEX.encode(node.privateKey!), radix: 16);
   final pubKeyBytes = (params.G * d)!.getEncoded(true);
 
-  // hash160 of compressed pubkey
+  // SHA-256 of pubkey
   final sha = pc.SHA256Digest()..update(pubKeyBytes, 0, pubKeyBytes.length);
   final shaOut = Uint8List(32);
   sha.doFinal(shaOut, 0);
 
+  // RIPEMD-160 of SHA-256
   final rmd = pc.RIPEMD160Digest()..update(shaOut, 0, shaOut.length);
   final hash160 = Uint8List(20);
   rmd.doFinal(hash160, 0);
