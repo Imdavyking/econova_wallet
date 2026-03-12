@@ -94,3 +94,23 @@ NetworkType bitcoincashtestnet = NetworkType(
   scriptHash: 0xc4,
   wif: 0xef,
 );
+
+// pos_networks.dart
+
+NetworkType stacks = NetworkType(
+  messagePrefix: '\x18Stacks Signed Message:\n',
+  bech32: 'sp',
+  bip32: Bip32Type(public: 0x0488B21E, private: 0x0488ADE4),
+  pubKeyHash: 0x16, // 22 decimal — mainnet single-sig (SP...)
+  scriptHash: 0x14, // 20 decimal — mainnet multi-sig (SM...)
+  wif: 0x80,
+);
+
+NetworkType stacksTestnet = NetworkType(
+  messagePrefix: '\x18Stacks Signed Message:\n',
+  bech32: 'tp',
+  bip32: Bip32Type(public: 0x043587CF, private: 0x04358394),
+  pubKeyHash: 0x1A, // 26 decimal — testnet single-sig (ST...)
+  scriptHash: 0x15, // 21 decimal — testnet multi-sig (SN...)
+  wif: 0xEF,
+);

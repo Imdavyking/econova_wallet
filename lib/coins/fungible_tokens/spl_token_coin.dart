@@ -176,7 +176,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
 List<SplTokenCoin> getSplTokens() {
   List<SplTokenCoin> blockChains = [];
   if (enableTestNet) {
-    blockChains.addAll([
+  blockChains.addAll([
       SplTokenCoin(
         name: 'USDC (Devnet)',
         symbol: 'USDC',
