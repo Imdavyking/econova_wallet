@@ -95,8 +95,14 @@ class Account {
     String? nonceDataAvailabilityMode = 'L1',
   }) async {
     nonce = nonce ?? await getNonce();
-    final resourceBounds =
-        getResourceBounds(Felt.zero, Felt.zero, Felt.zero, Felt.zero);
+    final resourceBounds = getResourceBounds(
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+    );
 
     if (useSTRKFee!) {
       supportedTxVersion = AccountSupportedTxVersion.v3;
@@ -203,8 +209,14 @@ class Account {
     BroadcastedTxn broadcastedTxn;
 
     nonce = nonce ?? await getNonce();
-    final resourceBounds =
-        getResourceBounds(Felt.zero, Felt.zero, Felt.zero, Felt.zero);
+    final resourceBounds = getResourceBounds(
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+    );
 
     if (useSTRKFee!) {
       // These values are for future use (until then they are empty or zero)
@@ -312,8 +324,14 @@ class Account {
     BroadcastedTxn broadcastedTxn;
     nonce = nonce ?? defaultNonce;
     contractAddressSalt = contractAddressSalt ?? accountSigner.publicKey;
-    final resourceBounds =
-        getResourceBounds(Felt.zero, Felt.zero, Felt.zero, Felt.zero);
+    final resourceBounds = getResourceBounds(
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+      Felt.zero,
+    );
 
     if (useSTRKFee!) {
       contractAddress = contractAddress ?? Felt.zero;
@@ -470,6 +488,8 @@ class Account {
     Felt? nonce,
     // needed for v3
     bool? useSTRKFee,
+    Felt? l1DataMaxAmount,
+    Felt? l1DataMaxPricePerUnit,
     Felt? l1MaxAmount,
     Felt? l1MaxPricePerUnit,
     Felt? l2MaxAmount,
@@ -492,11 +512,15 @@ class Account {
     l1MaxPricePerUnit ??= Felt.zero;
     l2MaxAmount ??= Felt.zero;
     l2MaxPricePerUnit ??= Felt.zero;
+    l1DataMaxAmount ??= Felt.zero;
+    l1DataMaxPricePerUnit ??= Felt.zero;
     final resourceBounds = getResourceBounds(
       l1MaxAmount,
       l1MaxPricePerUnit,
       l2MaxAmount,
       l2MaxPricePerUnit,
+      l1DataMaxAmount,
+      l1DataMaxPricePerUnit,
     );
 
     if (useSTRKFee) {
@@ -648,6 +672,8 @@ class Account {
     Felt? l1MaxPricePerUnit,
     Felt? l2MaxAmount,
     Felt? l2MaxPricePerUnit,
+    Felt? l1DataMaxAmount,
+    Felt? l1DataMaxPricePerUnit,
     // These values are for future use (until then they are empty or zero)
     List<Felt>? accountDeploymentData,
     List<Felt>? paymasterData,
@@ -666,11 +692,15 @@ class Account {
       l1MaxPricePerUnit ??= Felt.zero;
       l2MaxAmount ??= Felt.zero;
       l2MaxPricePerUnit ??= Felt.zero;
+      l1DataMaxAmount ??= Felt.zero;
+      l1DataMaxPricePerUnit ??= Felt.zero;
       final resourceBounds = getResourceBounds(
         l1MaxAmount,
         l1MaxPricePerUnit,
         l2MaxAmount,
         l2MaxPricePerUnit,
+        l1DataMaxAmount,
+        l1DataMaxPricePerUnit,
       );
 
       final signature = await signer.signDeclareTransactionV3(
@@ -865,6 +895,8 @@ class Account {
     Felt? l1MaxPricePerUnit,
     Felt? l2MaxAmount,
     Felt? l2MaxPricePerUnit,
+    Felt? l1DataMaxAmount,
+    Felt? l1DataMaxPricePerUnit,
     Felt? contractAddress,
     // These values are for future use (until then they are empty or zero)
     List<Felt>? accountDeploymentData,
@@ -888,6 +920,8 @@ class Account {
       l1MaxPricePerUnit ??= Felt.zero;
       l2MaxAmount ??= Felt.zero;
       l2MaxPricePerUnit ??= Felt.zero;
+      l1DataMaxAmount ??= Felt.zero;
+      l1DataMaxPricePerUnit ??= Felt.zero;
       accountDeploymentData ??= [];
       paymasterData ??= [];
       tip ??= Felt.zero;
@@ -896,6 +930,8 @@ class Account {
         l1MaxPricePerUnit,
         l2MaxAmount,
         l2MaxPricePerUnit,
+        l1DataMaxAmount,
+        l1DataMaxPricePerUnit,
       );
 
       final signature = await accountSigner.signDeployAccountTransactionV3(
@@ -986,6 +1022,8 @@ class Account {
     Felt l1MaxPricePerUnit,
     Felt l2MaxAmount,
     Felt l2MaxPricePerUnit,
+    Felt l1DataMaxAmount,
+    Felt l1DataMaxPricePerUnit,
   ) {
     return {
       'l1_gas': ResourceBounds(
@@ -997,8 +1035,8 @@ class Account {
         maxPricePerUnit: l2MaxPricePerUnit.toHexString(),
       ),
       'l1_data_gas': ResourceBounds(
-        maxAmount: l1MaxAmount.toHexString(),
-        maxPricePerUnit: l1MaxPricePerUnit.toHexString(),
+        maxAmount: l1DataMaxAmount.toHexString(),
+        maxPricePerUnit: l1DataMaxPricePerUnit.toHexString(),
       ),
     };
   }
