@@ -169,7 +169,7 @@ class StacksCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'stackscDetails$default_${walletImportType.name}';
+    final cacheKey = 'stackscDetail$default_${walletImportType.name}';
     Map<String, dynamic> cached = {};
 
     if (pref.containsKey(cacheKey)) {
@@ -425,12 +425,9 @@ class StacksCoin extends Coin {
 
   static Uint8List _memoBytes(String memo) {
     final src = utf8.encode(memo);
-    // Stacks memo: 2-byte BE length prefix + content, zero-padded to 34 bytes
-    final contentLen = src.length.clamp(0, 32);
-    final buf = Uint8List(_memoMaxBytes);
-    buf[0] = (contentLen >> 8) & 0xFF;
-    buf[1] = contentLen & 0xFF;
-    buf.setRange(2, 2 + contentLen, src);
+    final buf = Uint8List(_memoMaxBytes); // 34 zero bytes
+    final len = src.length.clamp(0, _memoMaxBytes);
+    buf.setRange(0, len, src);
     return buf;
   }
 
@@ -457,7 +454,7 @@ class StacksCoin extends Coin {
 
   /// SHA-512/256 (FIPS 180-4 truncated variant — distinct IV from SHA-512)
   static Uint8List _sha512_256(Uint8List data) {
-    final d = pc.SHA512tDigest(256)..update(data, 0, data.length);
+    final d = pc.SHA512tDigest(32)..update(data, 0, data.length);
     final out = Uint8List(32);
     d.doFinal(out, 0);
     return out;
@@ -565,18 +562,31 @@ class StacksCoin extends Coin {
     return (sig, recoveryId);
   }
 
-  /// Tries recovery IDs 0 and 1; returns whichever reconstructs our public key
+  /// Tries recovery IDs 0 and 1; returns whichever reconstructs our public key.
+  /// Uses compressed-byte comparison instead of ECPoint.== (which compares
+  /// object identity in pointycastle, not point equality).
   static int _computeRecoveryId(
     pc.ECPoint pubKey,
     pc.ECSignature sig,
     Uint8List hash,
     pc.ECDomainParameters params,
   ) {
+    final expectedBytes = pubKey.getEncoded(true);
     for (int id = 0; id <= 1; id++) {
       final candidate = _recoverPubKey(id, sig, hash, params);
-      if (candidate != null && candidate == pubKey) return id;
+      if (candidate == null) continue;
+      final candidateBytes = candidate.getEncoded(true);
+      if (_bytesEqual(candidateBytes, expectedBytes)) return id;
     }
     throw Exception('Failed to compute secp256k1 recovery ID');
+  }
+
+  static bool _bytesEqual(Uint8List a, Uint8List b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   static pc.ECPoint? _recoverPubKey(
