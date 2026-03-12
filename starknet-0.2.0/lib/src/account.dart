@@ -482,8 +482,6 @@ class Account {
     String? nonceDataAvailabilityMode,
   }) async {
     nonce = nonce ?? await getNonce();
-    print('nonce');
-    print(nonce);
     useSTRKFee ??= false;
     accountDeploymentData ??= [];
     paymasterData ??= [];
@@ -500,8 +498,6 @@ class Account {
       l2MaxAmount,
       l2MaxPricePerUnit,
     );
-    print('resourceBounds');
-    print(resourceBounds);
 
     if (useSTRKFee) {
       supportedTxVersion = AccountSupportedTxVersion.v3;
@@ -519,11 +515,7 @@ class Account {
               .maxFee;
     }
 
-    print('signing tx');
-
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      print(
-          'signing tx $attempt ${supportedTxVersion == AccountSupportedTxVersion.v3 ? 3 : supportedTxVersion == AccountSupportedTxVersion.v1 ? 1 : 0}');
       final signature = await signer.signTransactions(
         transactions: functionCalls,
         contractAddress: accountAddress,
@@ -544,8 +536,6 @@ class Account {
         feeDataAvailabilityMode: feeDataAvailabilityMode,
         nonceDataAvailabilityMode: nonceDataAvailabilityMode,
       );
-
-      print(signature);
 
       InvokeTransactionResponse response;
       switch (supportedTxVersion) {

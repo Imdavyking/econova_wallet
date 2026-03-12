@@ -550,20 +550,11 @@ class StarknetCoin extends Coin {
       chainId: chainId,
     );
 
-    // final feeEstimate = await fundingAccount.getEstimateMaxFeeForInvokeTx(
-    //   functionCalls: [transferCall],
-    //   useSTRKFee: true,
-    // );
-
-    // print(feeEstimate);
-
     final trx = await fundingAccount.execute(
       functionCalls: [transferCall],
       useSTRKFee: true,
       l1MaxAmount: Felt(BigInt.from(0xFFFFFFFFFFFF)),
       l1MaxPricePerUnit: Felt(BigInt.from(0xFFFFFFFFFFFF)),
-      l2MaxAmount: Felt(BigInt.from(0xFFFFFFFFFFFF)),
-      l2MaxPricePerUnit: Felt(BigInt.from(0xFFFFFFFFFFFF)),
     );
 
     return trx.when(
