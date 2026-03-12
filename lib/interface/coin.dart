@@ -209,3 +209,15 @@ class AccountData {
     );
   }
 }
+
+class DeployMeme {
+  final String? liquidityTx;
+  final String? tokenAddress;
+  final String? deployTokenTx;
+
+  const DeployMeme({
+    required this.liquidityTx,
+    required this.tokenAddress,
+    required this.deployTokenTx,
+  });
+}
