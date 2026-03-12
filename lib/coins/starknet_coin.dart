@@ -290,6 +290,7 @@ class StarknetCoin extends Coin {
     );
 
     final tx = await fundingAccount.execute(
+      useSTRKFee: true,
       functionCalls: calls
           .map(
             (call) => FunctionCall(
@@ -538,18 +539,24 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    final txHash = await fundingAccount.send(
-      recipient: Felt.fromHexString(to),
-      amount: Uint256(
-        low: Felt(
-          wei,
+    final txHash = await fundingAccount.execute(
+      functionCalls: [
+        FunctionCall(
+          contractAddress: useStarkToken ? strkAddress : ethAddress,
+          entryPointSelector: getSelectorByName("transfer"),
+          calldata: [
+            Felt.fromHexString(to),
+            Felt(
+              wei,
+            ),
+            Felt.zero
+          ],
         ),
-        high: Felt.zero,
-      ),
-      useSTRKtoken: useStarkToken,
+      ],
+      useSTRKFee: true,
     );
 
-    return txHash;
+    return '';
   }
 
   Future<int> getTokenDecimals(String tokenAddress) async {
@@ -672,7 +679,10 @@ class StarknetCoin extends Coin {
       entryPointSelector: getSelectorByName('exit_delegation_pool_action'),
       calldata: [account.accountAddress],
     );
-    final result = await account.execute(functionCalls: [unstakeCall]);
+    final result = await account.execute(
+      functionCalls: [unstakeCall],
+      useSTRKFee: true,
+    );
     return result.when(
       result: (result) {
         return result.transaction_hash;
@@ -705,7 +715,10 @@ class StarknetCoin extends Coin {
       entryPointSelector: getSelectorByName('claim_rewards'),
       calldata: [account.accountAddress],
     );
-    final rsult = await account.execute(functionCalls: [claimCall]);
+    final rsult = await account.execute(
+      functionCalls: [claimCall],
+      useSTRKFee: true,
+    );
     return rsult.when(
       result: (result) {
         return result.transaction_hash;
@@ -741,7 +754,10 @@ class StarknetCoin extends Coin {
       entryPointSelector: getSelectorByName('exit_delegation_pool_intent'),
       calldata: [Felt(wei)],
     );
-    final rsult = await account.execute(functionCalls: [unstakeCall]);
+    final rsult = await account.execute(
+      functionCalls: [unstakeCall],
+      useSTRKFee: true,
+    );
     return rsult.when(
       result: (result) {
         return result.transaction_hash;
@@ -805,7 +821,10 @@ class StarknetCoin extends Coin {
       ]);
     }
 
-    final rsult = await account.execute(functionCalls: calls);
+    final rsult = await account.execute(
+      functionCalls: calls,
+      useSTRKFee: true,
+    );
 
     return rsult.when(
       result: (result) {
@@ -959,7 +978,10 @@ class StarknetCoin extends Coin {
         chainId: chainId,
       );
 
-      final rsult = await fundingAccount.execute(functionCalls: functionCalls);
+      final rsult = await fundingAccount.execute(
+        functionCalls: functionCalls,
+        useSTRKFee: true,
+      );
 
       return rsult.when(
         result: (result) {
@@ -1198,7 +1220,10 @@ class StarknetCoin extends Coin {
       calldata: constructorCalldata,
     );
 
-    final tx = await fundingAccount.execute(functionCalls: [dployTx]);
+    final tx = await fundingAccount.execute(
+      functionCalls: [dployTx],
+      useSTRKFee: true,
+    );
 
     final deployTokenTx = tx.when(
       result: (result) {
@@ -1327,7 +1352,10 @@ class StarknetCoin extends Coin {
 
     List<FunctionCall> calls = await getEkuboLaunchCalldata(memecoin, data);
 
-    final res = await params.starknetAccount.execute(functionCalls: calls);
+    final res = await params.starknetAccount.execute(
+      functionCalls: calls,
+      useSTRKFee: true,
+    );
     final txHash = res.when(
       result: (result) {
         debugPrint(
