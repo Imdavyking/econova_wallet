@@ -212,13 +212,11 @@ class SolanaCoin extends Coin {
           // Transfer SPL Token
           final source = staticKeys[ix.accountKeyIndexes[0]];
           final destination = staticKeys[ix.accountKeyIndexes[1]];
-          final authority = staticKeys[ix.accountKeyIndexes[2]];
           final amount = extractAmountFromSplTransfer(data);
           trxResults.add(
               "SPL Token Transfer: from $source to $destination amount: $amount tokens");
         } else if (instructionType == 4) {
           // Approve SPL Token
-          final source = staticKeys[ix.accountKeyIndexes[0]];
           final delegate = staticKeys[ix.accountKeyIndexes[1]];
           final owner = staticKeys[ix.accountKeyIndexes[2]];
           final amount = extractAmountFromSplTransfer(data);
@@ -226,7 +224,6 @@ class SolanaCoin extends Coin {
               "SPL Token Approve: owner $owner delegate $delegate amount: $amount tokens");
         } else if (instructionType == 6) {
           // Revoke SPL Token
-          final source = staticKeys[ix.accountKeyIndexes[0]];
           final owner = staticKeys[ix.accountKeyIndexes[1]];
           trxResults.add("SPL Token Revoke: owner $owner");
         } else if (instructionType == 7) {
