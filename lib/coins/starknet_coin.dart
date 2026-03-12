@@ -553,6 +553,9 @@ class StarknetCoin extends Coin {
           ],
         ),
       ],
+      l1MaxAmount:
+          Felt(BigInt.from(100000000000000)), // 0.0001 STRK worth of gas units
+      l1MaxPricePerUnit: Felt(BigInt.from(100000000000)),
       useSTRKFee: true,
     );
 
