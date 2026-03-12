@@ -111,6 +111,8 @@ class StacksCoin extends Coin {
   String getRampID() => rampID;
   @override
   String getPayScheme() => payScheme;
+  @override
+  bool requireMemo() => false;
 
   @override
   Map<String, dynamic> toJson() => {
@@ -234,9 +236,6 @@ class StacksCoin extends Coin {
       return stored ?? 0.0;
     }
   }
-
-  @override
-  bool requireMemo() => false;
 
   // ─── Fees ───────────────────────────────────────────────────────────────────
 
