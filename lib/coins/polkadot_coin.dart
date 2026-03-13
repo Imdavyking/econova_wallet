@@ -161,7 +161,7 @@ class PolkadotCoin extends Coin {
       String storageData = storageResult!['result'];
       storageData = storageData.replaceFirst('0x', '');
 
-      final input = Input.fromHex(storageData.substring(0, 0 + 4));
+      final input = Input.fromHex(storageData.substring(0, 8));
 
       return U16Codec.codec.decode(input);
     } catch (_) {
@@ -393,12 +393,12 @@ class PolkadotCoin extends Coin {
 
     txSubmission += '00';
     txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
+    txSubmission += '00';
     if (checkMetaHash) {
       txSubmission += HEX.encode(
         signables['CheckMetadataHash']!.encode('Disabled'),
       );
     }
-    txSubmission += '00';
     txSubmission += encodedData;
 
     int txLength = HEX.decode(txSubmission).length;
@@ -436,13 +436,12 @@ class PolkadotCoin extends Coin {
 
     payload += '00';
     payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
-
+    payload += '00';
     if (checkMetaHash) {
       final mode = signables['CheckMetadataHash']!.encode('Disabled');
       payload += HEX.encode(mode);
     }
 
-    payload += '00';
     payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
     payload +=
         HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
