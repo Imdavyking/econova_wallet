@@ -538,18 +538,28 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    final txHash = await fundingAccount.send(
-      recipient: Felt.fromHexString(to),
-      amount: Uint256(
-        low: Felt(
-          wei,
+    final trx = await fundingAccount.execute(
+      functionCalls: [
+        FunctionCall(
+          contractAddress: useStarkToken ? strkAddress : ethAddress,
+          entryPointSelector: getSelectorByName("transfer"),
+          calldata: [
+            Felt.fromHexString(to),
+            Felt(
+              wei,
+            ),
+            Felt.zero
+          ],
         ),
-        high: Felt.zero,
-      ),
-      useSTRKtoken: useStarkToken,
+      ],
     );
 
-    return txHash;
+    return trx.when(
+      result: (result) => result.transaction_hash,
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
   }
 
   Future<int> getTokenDecimals(String tokenAddress) async {
