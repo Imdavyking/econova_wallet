@@ -3108,7 +3108,7 @@
     "id": "polygon",
     "name": "Polygon",
     "coinId": 966,
-    "symbol": "MATIC",
+    "symbol": "POL",
     "decimals": 18,
     "blockchain": "Ethereum",
     "derivation": [
