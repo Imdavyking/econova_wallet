@@ -106,6 +106,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...tronChains,
     ...solanaChains,
     ...multiversXchains,
+    ...stackCoins,
     ...getNearFungibles(),
     ...getFUSEBlockchains(),
     ...getZilliqaBlockChains(),
