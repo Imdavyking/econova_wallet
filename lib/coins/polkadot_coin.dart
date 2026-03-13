@@ -306,6 +306,7 @@ class PolkadotCoin extends Coin {
       );
 
       final responseBody = response.body;
+      print(responseBody);
       if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
         throw Exception(responseBody);
       }
@@ -405,10 +406,17 @@ class PolkadotCoin extends Coin {
     txSubmission =
         HEX.encode(CompactCodec.codec.encode(txLength)) + txSubmission;
 
-    final submitResult =
-        await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
-
-    return submitResult!['result'];
+    try {
+      final submitResult =
+          await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
+      return submitResult!['result'];
+    } catch (e) {
+      return null;
+    } finally {
+      runTimeResult = null;
+      genesisHash = null;
+      rpcMethods = null;
+    }
   }
 
   Future<String> _signaturePayload(_SigParams param) async {
@@ -514,7 +522,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
       ),
       PolkadotCoin(
         blockExplorer:
-            'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
+            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
         symbol: 'WND',
         name: 'Westend Asset Hub',
         default_: 'WND',
