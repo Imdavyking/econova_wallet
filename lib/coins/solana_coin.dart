@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
-import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
 import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';

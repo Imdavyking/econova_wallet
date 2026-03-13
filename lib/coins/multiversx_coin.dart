@@ -220,11 +220,9 @@ class MultiversxCoin extends Coin {
     }
   }
 
-  Future<String> trnsTok(_TrxCoinParams config) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
+  Future<String> trnsTok(TrxCoinParams config) async {
     multiversx.UserSecretKey signer =
-        multiversx.UserSecretKey(HEX.decode(response.privateKey!));
+        multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
 
     await wallet.synchronize(getProxy());
@@ -257,12 +255,11 @@ class MultiversxCoin extends Coin {
   @override
   Future<String?> transferToken(String amount, String to,
       {String? memo}) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
     final sendTransaction = await compute(
       trnsTok,
-      _TrxCoinParams(
-        to: to,
-        amount: amount,
-      ),
+      TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
     return sendTransaction;
@@ -382,11 +379,13 @@ Future calculateMultiversXKey(MultiversXDeriveArgs config) async {
   };
 }
 
-class _TrxCoinParams {
+class TrxCoinParams {
   final String amount;
   final String to;
-  const _TrxCoinParams({
+  final String privateKey;
+  const TrxCoinParams({
     required this.amount,
     required this.to,
+    required this.privateKey,
   });
 }
