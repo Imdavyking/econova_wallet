@@ -392,12 +392,15 @@ class Account {
     tip ??= Felt.zero;
     feeDataAvailabilityMode ??= 'L1';
     nonceDataAvailabilityMode ??= 'L1';
-    l1GasConsumed ??= Felt.zero;
-    l1GasPrice ??= Felt.zero;
-    l1DataGasConsumed ??= Felt.zero;
-    l1DataGasPrice ??= Felt.zero;
-    l2GasConsumed ??= Felt.zero;
-    l2GasPrice ??= Felt.zero;
+    final maxFee =
+        await getEstimateMaxFeeForInvokeTx(functionCalls: functionCalls);
+    l1GasConsumed ??= maxFee.l1GasConsumed;
+    l1GasPrice ??= maxFee.l1GasPrice;
+    l1DataGasConsumed ??= maxFee.l1DataGasConsumed;
+    l1DataGasPrice ??= maxFee.l1DataGasPrice;
+    l2GasConsumed ??= maxFee.l2GasConsumed;
+    l2GasPrice ??= maxFee.l2GasPrice;
+
     final resourceBounds = _getResourceBounds(
       l1GasConsumed,
       l1GasPrice,
