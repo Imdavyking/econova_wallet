@@ -23,7 +23,6 @@ import '../../main.dart';
 import '../../service/wallet_service.dart';
 import '../../utils/app_config.dart';
 import '../../utils/c32check.dart';
-import '../../utils/pos_networks.dart';
 import '../../utils/rpc_urls.dart';
 import '../../utils/stack_tx_utils.dart';
 
@@ -41,7 +40,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 
   SIP010Coin({
     required super.isTestnet,
-    required super.POSNetwork,
     required super.derivationPath,
     required super.blockExplorer,
     required super.symbol,
@@ -83,33 +81,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
   @override
   String savedTransKey() => '${tokenAddress()}${_api}Details';
 
-  // ─── Persistent store (mirrors ERCFungibleCoin pattern) ──────────────────────
-
-  static String get _storeKey => 'stacksSIP010Store$enableTestNet';
-
-  static List<SIP010Coin> getCoinsInStore() {
-    final raw = pref.get(_storeKey);
-    if (raw == null || !WalletService.isPharseKey()) return [];
-    return Map<String, dynamic>.from(jsonDecode(raw))
-        .values
-        .map((e) => SIP010Coin.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
-  }
-
-  Future<bool> addCoinToStore() async {
-    final raw = pref.get(_storeKey);
-    final store = raw != null
-        ? Map<String, dynamic>.from(jsonDecode(raw))
-        : <String, dynamic>{};
-
-    final key = tokenAddress();
-    if (store.containsKey(key)) return false;
-
-    store[key] = toJson();
-    await pref.put(_storeKey, jsonEncode(store));
-    return true;
-  }
-
   // ─── Serialization ───────────────────────────────────────────────────────────
 
   @override
@@ -130,7 +101,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
         geckoID: json['geckoID'],
         rampID: json['rampID'] ?? '',
         payScheme: json['payScheme'] ?? 'stacks',
-        POSNetwork: json['isTestnet'] ? stacksTestnet : stacks,
         derivationPath: json['derivationPath'],
         contractAddress: json['contractAddress'],
         contractName: json['contractName'],
@@ -373,88 +343,76 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
-
 List<SIP010Coin> getSIP010Coins() {
-  if (enableTestNet) return [];
+  if (enableTestNet) {
+    return [
+      SIP010Coin(
+        name: 'USDX',
+        symbol: 'USDX',
+        default_: 'STX',
+        isTestnet: true,
+        blockExplorer:
+            'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=testnet',
+        image: 'assets/wusd.png',
+        derivationPath: "m/44'/5757'/0'/0/0",
+        geckoID: '',
+        rampID: '',
+        payScheme: 'stacks',
+        contractAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+        contractName: 'usdcx-v1',
+        mintDecimals: 6,
+      ),
+      SIP010Coin(
+        name: 'sBTC',
+        symbol: 'sBTC',
+        default_: 'STX',
+        isTestnet: true,
+        blockExplorer:
+            'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=testnet',
+        image: 'assets/bitcoin.jpg',
+        derivationPath: "m/44'/5757'/0'/0/0",
+        geckoID: 'bitcoin',
+        rampID: '',
+        payScheme: 'stacks',
+        contractAddress: 'SM3VDXK9PGZJZFQ3GFKDNV4XZGKXNFY5M7XS1Q6D',
+        contractName: 'sbtc-token',
+        mintDecimals: 8,
+      ),
+    ];
+  }
 
   return [
-    // ── ALEX ────────────────────────────────────────────────────────────────
     SIP010Coin(
-      name: 'ALEX',
-      symbol: 'ALEX',
+      name: 'USDX',
+      symbol: 'USDX',
       default_: 'STX',
       isTestnet: false,
       blockExplorer:
           'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
-      image: 'assets/alex.png',
-      POSNetwork: stacks,
+      image: 'assets/wusd.png',
       derivationPath: "m/44'/5757'/0'/0/0",
-      geckoID: 'alexgo',
+      geckoID: '',
       rampID: '',
       payScheme: 'stacks',
-      contractAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
-      contractName: 'age000-governance-token',
-      mintDecimals: 8,
-    ),
-
-    // ── USDA ────────────────────────────────────────────────────────────────
-    SIP010Coin(
-      name: 'USDA',
-      symbol: 'USDA',
-      default_: 'STX',
-      isTestnet: false,
-      blockExplorer:
-          'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
-      image: 'assets/usda.png',
-      POSNetwork: stacks,
-      derivationPath: "m/44'/5757'/0'/0/0",
-      geckoID: 'usda',
-      rampID: '',
-      payScheme: 'stacks',
-      contractAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
-      contractName: 'usda-token',
+      contractAddress: 'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE',
+      contractName: 'usdcx',
       mintDecimals: 6,
     ),
-
-    // ── xBTC ─────────────────────────────────────────────────────────────────
     SIP010Coin(
-      name: 'xBTC',
-      symbol: 'xBTC',
+      name: 'sBTC',
+      symbol: 'sBTC',
       default_: 'STX',
       isTestnet: false,
       blockExplorer:
           'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
-      image: 'assets/xbtc.png',
-      POSNetwork: stacks,
+      image: 'assets/bitcoin.jpg',
       derivationPath: "m/44'/5757'/0'/0/0",
-      geckoID: 'xbtc',
+      geckoID: 'bitcoin',
       rampID: '',
       payScheme: 'stacks',
-      contractAddress: 'SP3DX3H4FEYZJZ586MFBS25ZW3HZDMEW92260R2PR',
-      contractName: 'Wrapped-Bitcoin',
+      contractAddress: 'SM3VDXK9PGZJZFQ3GFKDNV4XZGKXNFY5M7XS1Q6D',
+      contractName: 'sbtc-token',
       mintDecimals: 8,
     ),
-
-    // ── WELSH ────────────────────────────────────────────────────────────────
-    SIP010Coin(
-      name: 'Welsh Corgi Coin',
-      symbol: 'WELSH',
-      default_: 'STX',
-      isTestnet: false,
-      blockExplorer:
-          'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
-      image: 'assets/welsh.png',
-      POSNetwork: stacks,
-      derivationPath: "m/44'/5757'/0'/0/0",
-      geckoID: 'welshcorgicoin',
-      rampID: '',
-      payScheme: 'stacks',
-      contractAddress: 'SP3NE50GEXFG9SZGTT51P40X2CKYSZ5CC4ZTZ7A2G',
-      contractName: 'welshcorgicoin-token',
-      mintDecimals: 6,
-    ),
-
-    // ── User-imported tokens ─────────────────────────────────────────────────
-    ...SIP010Coin.getCoinsInStore(),
   ];
 }

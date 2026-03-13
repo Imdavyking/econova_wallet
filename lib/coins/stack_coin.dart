@@ -3,8 +3,6 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-
-import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +12,6 @@ import '../main.dart';
 import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
-import '../utils/pos_networks.dart';
 import '../utils/c32check.dart';
 import '../utils/stack_tx_utils.dart';
 
@@ -36,7 +33,6 @@ const int _chainIdTestnet = 0x80000000;
 
 class StacksCoin extends Coin {
   final bool isTestnet;
-  final NetworkType POSNetwork;
   final String derivationPath;
   final String blockExplorer;
   final String symbol;
@@ -49,7 +45,6 @@ class StacksCoin extends Coin {
 
   StacksCoin({
     required this.isTestnet,
-    required this.POSNetwork,
     required this.derivationPath,
     required this.blockExplorer,
     required this.symbol,
@@ -125,7 +120,6 @@ class StacksCoin extends Coin {
         geckoID: json['geckoID'],
         rampID: json['rampID'],
         payScheme: json['payScheme'],
-        POSNetwork: json['isTestnet'] ? stacksTestnet : stacks,
         derivationPath: json['derivationPath'],
       );
 
@@ -169,7 +163,6 @@ class StacksCoin extends Coin {
     final args = StacksDeriveArgs(
       seedRoot: seedPhraseRoot,
       derivationPath: derivationPath,
-      POSNetwork: POSNetwork,
       addressVersion: _addrVersion,
     );
 
@@ -337,13 +330,11 @@ class StacksCoin extends Coin {
 class StacksDeriveArgs {
   final SeedPhraseRoot seedRoot;
   final String derivationPath;
-  final NetworkType POSNetwork;
   final int addressVersion;
 
   const StacksDeriveArgs({
     required this.seedRoot,
     required this.derivationPath,
-    required this.POSNetwork,
     required this.addressVersion,
   });
 }
@@ -375,7 +366,6 @@ List<StacksCoin> getStacksBlockchains() {
         blockExplorer:
             'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=testnet',
         image: 'assets/stacks.png',
-        POSNetwork: stacksTestnet,
         derivationPath: "m/44'/5757'/0'/0/0",
         geckoID: 'blockstack',
         rampID: '',
@@ -393,7 +383,6 @@ List<StacksCoin> getStacksBlockchains() {
       blockExplorer:
           'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
       image: 'assets/stacks.png',
-      POSNetwork: stacks,
       derivationPath: "m/44'/5757'/0'/0/0",
       geckoID: 'blockstack',
       rampID: '',
