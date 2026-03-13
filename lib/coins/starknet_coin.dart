@@ -1843,7 +1843,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         multiCallAddress:
             '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
         blockExplorer:
-            'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
+            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet (Testnet)',
         default_: 'STRK',
@@ -1866,7 +1866,7 @@ List<StarknetCoin> getStarknetBlockchains() {
       StarknetCoin(
         multiCallAddress:
             '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
+        blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',
         default_: 'STRK',
