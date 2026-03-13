@@ -29,7 +29,7 @@ const coinGeckoIDs = [
   "avalanche-2",
   "fantom",
   "huobi-token",
-  "matic-network",
+  "polygon-ecosystem-token",
   "near",
   "kucoin-shares",
   "elrond-erd-2",

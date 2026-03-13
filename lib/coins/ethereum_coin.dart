@@ -358,7 +358,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: "MATIC",
         image: "assets/polygon.png",
         coinType: 60,
-        geckoID: "matic-network",
+        geckoID: "polygon-ecosystem-token",
         payScheme: 'polygon',
         rampID: 'MATIC_MATIC',
       )
@@ -413,7 +413,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'MATIC',
         image: 'assets/polygon.png',
         coinType: 60,
-        geckoID: "matic-network",
+        geckoID: "polygon-ecosystem-token",
         payScheme: 'polygon',
         rampID: 'MATIC_MATIC',
       ),
