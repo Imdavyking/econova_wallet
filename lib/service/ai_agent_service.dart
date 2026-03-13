@@ -41,10 +41,19 @@ class AIAgentService {
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
         for sending,always use memo if available.''';
+  // final llm = ChatOpenAI(
+  //   apiKey: dotenv.env['OPENAI_API_KEY'],
+  //   defaultOptions: const ChatOpenAIOptions(
+  //     temperature: 0,
+  //   ),
+  // );
+
   final llm = ChatOpenAI(
-    apiKey: dotenv.env['OPENAI_API_KEY'],
+    apiKey: dotenv.env['OPENROUTER_API_KEY'],
+    baseUrl: 'https://openrouter.ai/api/v1',
     defaultOptions: const ChatOpenAIOptions(
       temperature: 0,
+      model: 'openai/gpt-4o', // or any model OpenRouter supports
     ),
   );
 
