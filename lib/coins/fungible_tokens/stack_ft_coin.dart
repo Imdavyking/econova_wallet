@@ -347,8 +347,8 @@ List<SIP010Coin> getSIP010Coins() {
   if (enableTestNet) {
     return [
       SIP010Coin(
-        name: 'USDX',
-        symbol: 'USDX',
+        name: 'USDCX',
+        symbol: 'USDCX',
         default_: 'STX',
         isTestnet: true,
         blockExplorer:
@@ -367,8 +367,8 @@ List<SIP010Coin> getSIP010Coins() {
 
   return [
     SIP010Coin(
-      name: 'USDX',
-      symbol: 'USDX',
+      name: 'USDCX',
+      symbol: 'USDCX',
       default_: 'STX',
       isTestnet: false,
       blockExplorer:
