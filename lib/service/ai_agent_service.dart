@@ -53,7 +53,7 @@ class AIAgentService {
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultOptions: const ChatOpenAIOptions(
       temperature: 0,
-      model: 'openai/gpt-4o', // or any model OpenRouter supports
+      model: 'openai/gpt-4o-mini',
     ),
   );
 
