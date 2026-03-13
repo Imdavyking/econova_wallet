@@ -362,22 +362,6 @@ List<SIP010Coin> getSIP010Coins() {
         contractName: 'usdcx-v1',
         mintDecimals: 6,
       ),
-      SIP010Coin(
-        name: 'sBTC',
-        symbol: 'sBTC',
-        default_: 'STX',
-        isTestnet: true,
-        blockExplorer:
-            'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=testnet',
-        image: 'assets/sbtc.webp',
-        derivationPath: "m/44'/5757'/0'/0/0",
-        geckoID: 'bitcoin',
-        rampID: '',
-        payScheme: 'stacks',
-        contractAddress: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4',
-        contractName: 'sbtc-token',
-        mintDecimals: 8,
-      ),
     ];
   }
 

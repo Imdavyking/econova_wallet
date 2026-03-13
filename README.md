@@ -6,6 +6,8 @@
 
 ---
 
+<table><thead><tr><th width="125.3046875">Network</th><th>USDCx token contract</th><th>USDC xReserve protocol (entrypoint)</th></tr></thead><tbody><tr><td>Mainnet</td><td><a href="https://explorer.hiro.so/txid/0x07ea0a8d7262acd0cb094006969527351883281e08ebb6535843c5dbbde31ce9?chain=mainnet">SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx</a></td><td><a href="https://explorer.hiro.so/txid/0xb5f29114ecdbaf199887433cdd4ca46d177d60875141e1dfb67304b53bf2df11?chain=mainnet">SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1</a></td></tr><tr><td>Testnet</td><td><a href="https://explorer.hiro.so/txid/ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx?chain=testnet">ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx</a></td><td><a href="https://explorer.hiro.so/txid/ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx-v1?chain=testnet">ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx-v1</a></td></tr></tbody></table>
+
 ## Overview
 
 Econova is a next‑generation self‑custody wallet and mobile SDK focused on privacy, discreet UX, and powerful tooling for managing private assets across chains. Built for developers and end users, Econova blends advanced on‑device key management, wallet‑hiding workflows, and privacy‑preserving features to minimize surface area for tracking and abuse while maintaining a smooth UX.
