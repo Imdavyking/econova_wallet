@@ -15,17 +15,78 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 FeeEstimate _$FeeEstimateFromJson(Map<String, dynamic> json) {
-  return _FeeEstimate.fromJson(json);
+  return FeeEstimatev0_8.fromJson(json);
 }
 
 /// @nodoc
 mixin _$FeeEstimate {
-  String get gasConsumed => throw _privateConstructorUsedError;
-  String get dataGasConsumed => throw _privateConstructorUsedError;
-  String get gasPrice => throw _privateConstructorUsedError;
-  String get dataGasPrice => throw _privateConstructorUsedError;
-  String get overallFee => throw _privateConstructorUsedError;
+  Felt get l1GasConsumed => throw _privateConstructorUsedError;
+  Felt get l1GasPrice => throw _privateConstructorUsedError;
+  Felt get l2GasConsumed => throw _privateConstructorUsedError;
+  Felt get l2GasPrice => throw _privateConstructorUsedError;
+  Felt get l1DataGasConsumed => throw _privateConstructorUsedError;
+  Felt get l1DataGasPrice => throw _privateConstructorUsedError;
+  Felt get overallFee => throw _privateConstructorUsedError;
   String get unit => throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)
+        v0_8,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)?
+        v0_8,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)?
+        v0_8,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(FeeEstimatev0_8 value) v0_8,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(FeeEstimatev0_8 value)? v0_8,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(FeeEstimatev0_8 value)? v0_8,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this FeeEstimate to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -44,11 +105,13 @@ abstract class $FeeEstimateCopyWith<$Res> {
       _$FeeEstimateCopyWithImpl<$Res, FeeEstimate>;
   @useResult
   $Res call(
-      {String gasConsumed,
-      String dataGasConsumed,
-      String gasPrice,
-      String dataGasPrice,
-      String overallFee,
+      {Felt l1GasConsumed,
+      Felt l1GasPrice,
+      Felt l2GasConsumed,
+      Felt l2GasPrice,
+      Felt l1DataGasConsumed,
+      Felt l1DataGasPrice,
+      Felt overallFee,
       String unit});
 }
 
@@ -67,34 +130,44 @@ class _$FeeEstimateCopyWithImpl<$Res, $Val extends FeeEstimate>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? gasConsumed = null,
-    Object? dataGasConsumed = null,
-    Object? gasPrice = null,
-    Object? dataGasPrice = null,
+    Object? l1GasConsumed = null,
+    Object? l1GasPrice = null,
+    Object? l2GasConsumed = null,
+    Object? l2GasPrice = null,
+    Object? l1DataGasConsumed = null,
+    Object? l1DataGasPrice = null,
     Object? overallFee = null,
     Object? unit = null,
   }) {
     return _then(_value.copyWith(
-      gasConsumed: null == gasConsumed
-          ? _value.gasConsumed
-          : gasConsumed // ignore: cast_nullable_to_non_nullable
-              as String,
-      dataGasConsumed: null == dataGasConsumed
-          ? _value.dataGasConsumed
-          : dataGasConsumed // ignore: cast_nullable_to_non_nullable
-              as String,
-      gasPrice: null == gasPrice
-          ? _value.gasPrice
-          : gasPrice // ignore: cast_nullable_to_non_nullable
-              as String,
-      dataGasPrice: null == dataGasPrice
-          ? _value.dataGasPrice
-          : dataGasPrice // ignore: cast_nullable_to_non_nullable
-              as String,
+      l1GasConsumed: null == l1GasConsumed
+          ? _value.l1GasConsumed
+          : l1GasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1GasPrice: null == l1GasPrice
+          ? _value.l1GasPrice
+          : l1GasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l2GasConsumed: null == l2GasConsumed
+          ? _value.l2GasConsumed
+          : l2GasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l2GasPrice: null == l2GasPrice
+          ? _value.l2GasPrice
+          : l2GasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1DataGasConsumed: null == l1DataGasConsumed
+          ? _value.l1DataGasConsumed
+          : l1DataGasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1DataGasPrice: null == l1DataGasPrice
+          ? _value.l1DataGasPrice
+          : l1DataGasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
       overallFee: null == overallFee
           ? _value.overallFee
           : overallFee // ignore: cast_nullable_to_non_nullable
-              as String,
+              as Felt,
       unit: null == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
@@ -104,28 +177,30 @@ class _$FeeEstimateCopyWithImpl<$Res, $Val extends FeeEstimate>
 }
 
 /// @nodoc
-abstract class _$$FeeEstimateImplCopyWith<$Res>
+abstract class _$$FeeEstimatev0_8ImplCopyWith<$Res>
     implements $FeeEstimateCopyWith<$Res> {
-  factory _$$FeeEstimateImplCopyWith(
-          _$FeeEstimateImpl value, $Res Function(_$FeeEstimateImpl) then) =
-      __$$FeeEstimateImplCopyWithImpl<$Res>;
+  factory _$$FeeEstimatev0_8ImplCopyWith(_$FeeEstimatev0_8Impl value,
+          $Res Function(_$FeeEstimatev0_8Impl) then) =
+      __$$FeeEstimatev0_8ImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call(
-      {String gasConsumed,
-      String dataGasConsumed,
-      String gasPrice,
-      String dataGasPrice,
-      String overallFee,
+      {Felt l1GasConsumed,
+      Felt l1GasPrice,
+      Felt l2GasConsumed,
+      Felt l2GasPrice,
+      Felt l1DataGasConsumed,
+      Felt l1DataGasPrice,
+      Felt overallFee,
       String unit});
 }
 
 /// @nodoc
-class __$$FeeEstimateImplCopyWithImpl<$Res>
-    extends _$FeeEstimateCopyWithImpl<$Res, _$FeeEstimateImpl>
-    implements _$$FeeEstimateImplCopyWith<$Res> {
-  __$$FeeEstimateImplCopyWithImpl(
-      _$FeeEstimateImpl _value, $Res Function(_$FeeEstimateImpl) _then)
+class __$$FeeEstimatev0_8ImplCopyWithImpl<$Res>
+    extends _$FeeEstimateCopyWithImpl<$Res, _$FeeEstimatev0_8Impl>
+    implements _$$FeeEstimatev0_8ImplCopyWith<$Res> {
+  __$$FeeEstimatev0_8ImplCopyWithImpl(
+      _$FeeEstimatev0_8Impl _value, $Res Function(_$FeeEstimatev0_8Impl) _then)
       : super(_value, _then);
 
   /// Create a copy of FeeEstimate
@@ -133,34 +208,44 @@ class __$$FeeEstimateImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? gasConsumed = null,
-    Object? dataGasConsumed = null,
-    Object? gasPrice = null,
-    Object? dataGasPrice = null,
+    Object? l1GasConsumed = null,
+    Object? l1GasPrice = null,
+    Object? l2GasConsumed = null,
+    Object? l2GasPrice = null,
+    Object? l1DataGasConsumed = null,
+    Object? l1DataGasPrice = null,
     Object? overallFee = null,
     Object? unit = null,
   }) {
-    return _then(_$FeeEstimateImpl(
-      gasConsumed: null == gasConsumed
-          ? _value.gasConsumed
-          : gasConsumed // ignore: cast_nullable_to_non_nullable
-              as String,
-      dataGasConsumed: null == dataGasConsumed
-          ? _value.dataGasConsumed
-          : dataGasConsumed // ignore: cast_nullable_to_non_nullable
-              as String,
-      gasPrice: null == gasPrice
-          ? _value.gasPrice
-          : gasPrice // ignore: cast_nullable_to_non_nullable
-              as String,
-      dataGasPrice: null == dataGasPrice
-          ? _value.dataGasPrice
-          : dataGasPrice // ignore: cast_nullable_to_non_nullable
-              as String,
+    return _then(_$FeeEstimatev0_8Impl(
+      l1GasConsumed: null == l1GasConsumed
+          ? _value.l1GasConsumed
+          : l1GasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1GasPrice: null == l1GasPrice
+          ? _value.l1GasPrice
+          : l1GasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l2GasConsumed: null == l2GasConsumed
+          ? _value.l2GasConsumed
+          : l2GasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l2GasPrice: null == l2GasPrice
+          ? _value.l2GasPrice
+          : l2GasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1DataGasConsumed: null == l1DataGasConsumed
+          ? _value.l1DataGasConsumed
+          : l1DataGasConsumed // ignore: cast_nullable_to_non_nullable
+              as Felt,
+      l1DataGasPrice: null == l1DataGasPrice
+          ? _value.l1DataGasPrice
+          : l1DataGasPrice // ignore: cast_nullable_to_non_nullable
+              as Felt,
       overallFee: null == overallFee
           ? _value.overallFee
           : overallFee // ignore: cast_nullable_to_non_nullable
-              as String,
+              as Felt,
       unit: null == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
@@ -171,49 +256,61 @@ class __$$FeeEstimateImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$FeeEstimateImpl implements _FeeEstimate {
-  const _$FeeEstimateImpl(
-      {required this.gasConsumed,
-      required this.dataGasConsumed,
-      required this.gasPrice,
-      required this.dataGasPrice,
+class _$FeeEstimatev0_8Impl
+    with FeeEstimateMethods_v0_8
+    implements FeeEstimatev0_8 {
+  const _$FeeEstimatev0_8Impl(
+      {required this.l1GasConsumed,
+      required this.l1GasPrice,
+      required this.l2GasConsumed,
+      required this.l2GasPrice,
+      required this.l1DataGasConsumed,
+      required this.l1DataGasPrice,
       required this.overallFee,
       required this.unit});
 
-  factory _$FeeEstimateImpl.fromJson(Map<String, dynamic> json) =>
-      _$$FeeEstimateImplFromJson(json);
+  factory _$FeeEstimatev0_8Impl.fromJson(Map<String, dynamic> json) =>
+      _$$FeeEstimatev0_8ImplFromJson(json);
 
   @override
-  final String gasConsumed;
+  final Felt l1GasConsumed;
   @override
-  final String dataGasConsumed;
+  final Felt l1GasPrice;
   @override
-  final String gasPrice;
+  final Felt l2GasConsumed;
   @override
-  final String dataGasPrice;
+  final Felt l2GasPrice;
   @override
-  final String overallFee;
+  final Felt l1DataGasConsumed;
+  @override
+  final Felt l1DataGasPrice;
+  @override
+  final Felt overallFee;
   @override
   final String unit;
 
   @override
   String toString() {
-    return 'FeeEstimate(gasConsumed: $gasConsumed, dataGasConsumed: $dataGasConsumed, gasPrice: $gasPrice, dataGasPrice: $dataGasPrice, overallFee: $overallFee, unit: $unit)';
+    return 'FeeEstimate.v0_8(l1GasConsumed: $l1GasConsumed, l1GasPrice: $l1GasPrice, l2GasConsumed: $l2GasConsumed, l2GasPrice: $l2GasPrice, l1DataGasConsumed: $l1DataGasConsumed, l1DataGasPrice: $l1DataGasPrice, overallFee: $overallFee, unit: $unit)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$FeeEstimateImpl &&
-            (identical(other.gasConsumed, gasConsumed) ||
-                other.gasConsumed == gasConsumed) &&
-            (identical(other.dataGasConsumed, dataGasConsumed) ||
-                other.dataGasConsumed == dataGasConsumed) &&
-            (identical(other.gasPrice, gasPrice) ||
-                other.gasPrice == gasPrice) &&
-            (identical(other.dataGasPrice, dataGasPrice) ||
-                other.dataGasPrice == dataGasPrice) &&
+            other is _$FeeEstimatev0_8Impl &&
+            (identical(other.l1GasConsumed, l1GasConsumed) ||
+                other.l1GasConsumed == l1GasConsumed) &&
+            (identical(other.l1GasPrice, l1GasPrice) ||
+                other.l1GasPrice == l1GasPrice) &&
+            (identical(other.l2GasConsumed, l2GasConsumed) ||
+                other.l2GasConsumed == l2GasConsumed) &&
+            (identical(other.l2GasPrice, l2GasPrice) ||
+                other.l2GasPrice == l2GasPrice) &&
+            (identical(other.l1DataGasConsumed, l1DataGasConsumed) ||
+                other.l1DataGasConsumed == l1DataGasConsumed) &&
+            (identical(other.l1DataGasPrice, l1DataGasPrice) ||
+                other.l1DataGasPrice == l1DataGasPrice) &&
             (identical(other.overallFee, overallFee) ||
                 other.overallFee == overallFee) &&
             (identical(other.unit, unit) || other.unit == unit));
@@ -221,47 +318,148 @@ class _$FeeEstimateImpl implements _FeeEstimate {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, gasConsumed, dataGasConsumed,
-      gasPrice, dataGasPrice, overallFee, unit);
+  int get hashCode => Object.hash(
+      runtimeType,
+      l1GasConsumed,
+      l1GasPrice,
+      l2GasConsumed,
+      l2GasPrice,
+      l1DataGasConsumed,
+      l1DataGasPrice,
+      overallFee,
+      unit);
 
   /// Create a copy of FeeEstimate
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$FeeEstimateImplCopyWith<_$FeeEstimateImpl> get copyWith =>
-      __$$FeeEstimateImplCopyWithImpl<_$FeeEstimateImpl>(this, _$identity);
+  _$$FeeEstimatev0_8ImplCopyWith<_$FeeEstimatev0_8Impl> get copyWith =>
+      __$$FeeEstimatev0_8ImplCopyWithImpl<_$FeeEstimatev0_8Impl>(
+          this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)
+        v0_8,
+  }) {
+    return v0_8(l1GasConsumed, l1GasPrice, l2GasConsumed, l2GasPrice,
+        l1DataGasConsumed, l1DataGasPrice, overallFee, unit);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)?
+        v0_8,
+  }) {
+    return v0_8?.call(l1GasConsumed, l1GasPrice, l2GasConsumed, l2GasPrice,
+        l1DataGasConsumed, l1DataGasPrice, overallFee, unit);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(
+            Felt l1GasConsumed,
+            Felt l1GasPrice,
+            Felt l2GasConsumed,
+            Felt l2GasPrice,
+            Felt l1DataGasConsumed,
+            Felt l1DataGasPrice,
+            Felt overallFee,
+            String unit)?
+        v0_8,
+    required TResult orElse(),
+  }) {
+    if (v0_8 != null) {
+      return v0_8(l1GasConsumed, l1GasPrice, l2GasConsumed, l2GasPrice,
+          l1DataGasConsumed, l1DataGasPrice, overallFee, unit);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(FeeEstimatev0_8 value) v0_8,
+  }) {
+    return v0_8(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(FeeEstimatev0_8 value)? v0_8,
+  }) {
+    return v0_8?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(FeeEstimatev0_8 value)? v0_8,
+    required TResult orElse(),
+  }) {
+    if (v0_8 != null) {
+      return v0_8(this);
+    }
+    return orElse();
+  }
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$FeeEstimateImplToJson(
+    return _$$FeeEstimatev0_8ImplToJson(
       this,
     );
   }
 }
 
-abstract class _FeeEstimate implements FeeEstimate {
-  const factory _FeeEstimate(
-      {required final String gasConsumed,
-      required final String dataGasConsumed,
-      required final String gasPrice,
-      required final String dataGasPrice,
-      required final String overallFee,
-      required final String unit}) = _$FeeEstimateImpl;
+abstract class FeeEstimatev0_8 implements FeeEstimate, FeeEstimateMethods_v0_8 {
+  const factory FeeEstimatev0_8(
+      {required final Felt l1GasConsumed,
+      required final Felt l1GasPrice,
+      required final Felt l2GasConsumed,
+      required final Felt l2GasPrice,
+      required final Felt l1DataGasConsumed,
+      required final Felt l1DataGasPrice,
+      required final Felt overallFee,
+      required final String unit}) = _$FeeEstimatev0_8Impl;
 
-  factory _FeeEstimate.fromJson(Map<String, dynamic> json) =
-      _$FeeEstimateImpl.fromJson;
+  factory FeeEstimatev0_8.fromJson(Map<String, dynamic> json) =
+      _$FeeEstimatev0_8Impl.fromJson;
 
   @override
-  String get gasConsumed;
+  Felt get l1GasConsumed;
   @override
-  String get dataGasConsumed;
+  Felt get l1GasPrice;
   @override
-  String get gasPrice;
+  Felt get l2GasConsumed;
   @override
-  String get dataGasPrice;
+  Felt get l2GasPrice;
   @override
-  String get overallFee;
+  Felt get l1DataGasConsumed;
+  @override
+  Felt get l1DataGasPrice;
+  @override
+  Felt get overallFee;
   @override
   String get unit;
 
@@ -269,6 +467,6 @@ abstract class _FeeEstimate implements FeeEstimate {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$FeeEstimateImplCopyWith<_$FeeEstimateImpl> get copyWith =>
+  _$$FeeEstimatev0_8ImplCopyWith<_$FeeEstimatev0_8Impl> get copyWith =>
       throw _privateConstructorUsedError;
 }

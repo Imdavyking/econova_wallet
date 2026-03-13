@@ -13,6 +13,40 @@ import '../../static_config.dart';
 abstract class BaseAccountSigner {
   Felt get publicKey;
 
+  BigInt _hashTipAndRessourceBounds({
+    required Felt tip,
+    required Map<String, ResourceBounds> resourceBounds,
+  }) {
+    final elementsToHash = <BigInt>[tip.toBigInt()];
+
+    final l1GasMaxAmount = resourceBounds['l1_gas']!.maxAmount;
+    final l1GasMaxPricePerUnit = resourceBounds['l1_gas']!.maxPricePerUnit;
+
+    final l1GasBounds = (Felt.fromString('L1_GAS') << (128 + 64)) +
+        (l1GasMaxAmount << 128) +
+        l1GasMaxPricePerUnit;
+    elementsToHash.add(l1GasBounds.toBigInt());
+
+    final l2GasMaxAmount = resourceBounds['l2_gas']!.maxAmount;
+    final l2GasMaxPricePerUnit = resourceBounds['l2_gas']!.maxPricePerUnit;
+
+    final l2GasBounds = (Felt.fromString('L2_GAS') << (128 + 64)) +
+        (l2GasMaxAmount << 128) +
+        l2GasMaxPricePerUnit;
+    elementsToHash.add(l2GasBounds.toBigInt());
+
+    // added in v0.8 JSON RPC SPECS
+    final l1DataGasMaxAmount = resourceBounds['l1_data_gas']!.maxAmount;
+    final l1DataGasMaxPricePerUnit =
+        resourceBounds['l1_data_gas']!.maxPricePerUnit;
+
+    final l1DataGasBounds = (Felt.fromString('L1_DATA') << (128 + 64)) +
+        (l1DataGasMaxAmount << 128) +
+        l1DataGasMaxPricePerUnit;
+    elementsToHash.add(l1DataGasBounds.toBigInt());
+    return poseidonHasher.hashMany(elementsToHash);
+  }
+
   /// Signs the given [messageHash] using an optional [seed] and returns the signature.
   Future<List<Felt>> sign(BigInt messageHash, BigInt? seed);
 
@@ -38,44 +72,11 @@ abstract class BaseAccountSigner {
     if (!resourceBounds.containsKey('l1_gas')) {
       throw Exception('Resource bounds for l1_gas must not be null');
     }
+    if (!resourceBounds.containsKey('l1_data_gas')) {
+      throw Exception('Resource bounds for l1_data_gas must not be null');
+    }
     if (!resourceBounds.containsKey('l2_gas')) {
       throw Exception('Resource bounds for l2_gas must not be null');
-    }
-
-    final l1GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxAmount);
-    final l1GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxPricePerUnit);
-    final l2GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxAmount);
-    final l2GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxPricePerUnit);
-    final l1DataGasMaxAmount = resourceBounds.containsKey('l1_data_gas')
-        ? Felt.fromHexString(resourceBounds['l1_data_gas']!.maxAmount)
-        : l1GasMaxAmount;
-    final l1DataGasMaxPricePerUnit = resourceBounds.containsKey('l1_data_gas')
-        ? Felt.fromHexString(resourceBounds['l1_data_gas']!.maxPricePerUnit)
-        : l1GasMaxPricePerUnit;
-
-    final l1GasBounds = (Felt.fromString('L1_GAS') << (128 + 64)) +
-        (l1GasMaxAmount << 128) +
-        l1GasMaxPricePerUnit;
-
-    final l2GasBounds = (Felt.fromString('L2_GAS') << (128 + 64)) +
-        (l2GasMaxAmount << 128) +
-        l2GasMaxPricePerUnit;
-
-    final elementToHash = [
-      tip.toBigInt(),
-      l1GasBounds.toBigInt(),
-      l2GasBounds.toBigInt(),
-    ];
-
-    if (resourceBounds.containsKey('l1_data_gas')) {
-      final l1DataGasBounds = (Felt.fromString('L1_DATA') << (128 + 64)) +
-          (l1DataGasMaxAmount << 128) +
-          l1DataGasMaxPricePerUnit;
-      elementToHash.add(l1DataGasBounds.toBigInt());
     }
 
     final dataAvailabilityMode =
@@ -86,7 +87,7 @@ abstract class BaseAccountSigner {
       TransactionHashPrefix.invoke.toBigInt(),
       BigInt.from(3), // version
       senderAddress.toBigInt(),
-      poseidonHasher.hashMany(elementToHash),
+      _hashTipAndRessourceBounds(tip: tip, resourceBounds: resourceBounds),
       poseidonHasher.hashMany(paymasterData.map((e) => e.toBigInt()).toList()),
       chainId.toBigInt(),
       nonce.toBigInt(),
@@ -102,179 +103,31 @@ abstract class BaseAccountSigner {
     return signature;
   }
 
-  Future<List<Felt>> signInvokeTransactionsV1({
-    required List<FunctionCall> transactions,
-    required Felt senderAddress,
-    required Felt chainId,
-    required Felt nonce,
-    Felt? maxFee,
-    bool useLegacyCalldata = false,
-  }) async {
-    maxFee = maxFee ?? defaultMaxFee;
-
-    final calldata = functionCallsToCalldata(
-      functionCalls: transactions,
-      useLegacyCalldata: useLegacyCalldata,
-    );
-
-    final transactionHash = calculateTransactionHashCommon(
-      txHashPrefix: TransactionHashPrefix.invoke.toBigInt(),
-      address: senderAddress.toBigInt(),
-      version: 1,
-      entryPointSelector: BigInt.parse('0'),
-      calldata: toBigIntList(calldata),
-      maxFee: maxFee.toBigInt(),
-      chainId: chainId.toBigInt(),
-      additionalData: [nonce.toBigInt()],
-    );
-
-    final signature = sign(transactionHash, BigInt.from(32));
-    return signature;
-  }
-
-  Future<List<Felt>> signInvokeTransactionsV0({
-    required List<FunctionCall> transactions,
-    required Felt contractAddress,
-    required Felt chainId,
-    required Felt nonce,
-    Felt? maxFee,
-    String entryPointSelectorName = '__execute__',
-  }) async {
-    maxFee = maxFee ?? defaultMaxFee;
-    final calldata =
-        functionCallsToCalldataLegacy(functionCalls: transactions) + [nonce];
-
-    final transactionHash = calculateTransactionHashCommon(
-      txHashPrefix: TransactionHashPrefix.invoke.toBigInt(),
-      address: contractAddress.toBigInt(),
-      version: 0,
-      entryPointSelector: getSelectorByName(entryPointSelectorName).toBigInt(),
-      calldata: toBigIntList(calldata),
-      maxFee: maxFee.toBigInt(),
-      chainId: chainId.toBigInt(),
-    );
-
-    final signature = sign(transactionHash, BigInt.from(32));
-    return signature;
-  }
-
   Future<List<Felt>> signTransactions({
     required List<FunctionCall> transactions,
     required Felt contractAddress,
     required Felt chainId,
-    required int version,
     required Felt nonce,
-    Felt? maxFee,
     String entryPointSelectorName = '__execute__',
-    bool useLegacyCalldata = false,
-    // needed for V3
-    List<Felt>? accountDeploymentData = const [],
-    List<Felt>? paymasterData = const [],
-    Felt? tip,
-    String? feeDataAvailabilityMode = 'L1',
-    String? nonceDataAvailabilityMode = 'L1',
+    required List<Felt> accountDeploymentData,
+    required List<Felt> paymasterData,
+    required Felt tip,
+    required String feeDataAvailabilityMode,
+    required String nonceDataAvailabilityMode,
     Map<String, ResourceBounds>? resourceBounds = const {},
   }) async {
-    switch (version) {
-      case 0:
-        return signInvokeTransactionsV0(
-          transactions: transactions,
-          contractAddress: contractAddress,
-          chainId: chainId,
-          entryPointSelectorName: entryPointSelectorName,
-          nonce: nonce,
-          maxFee: maxFee,
-        );
-      case 1:
-        return signInvokeTransactionsV1(
-          transactions: transactions,
-          senderAddress: contractAddress,
-          chainId: chainId,
-          nonce: nonce,
-          maxFee: maxFee,
-          useLegacyCalldata: useLegacyCalldata,
-        );
-      case 3:
-        tip ??= Felt.zero;
-        return signInvokeTransactionsV3(
-          transactions: transactions,
-          senderAddress: contractAddress,
-          chainId: chainId,
-          nonce: nonce,
-          resourceBounds: resourceBounds!,
-          accountDeploymentData: accountDeploymentData!,
-          paymasterData: paymasterData!,
-          tip: tip,
-          feeDataAvailabilityMode: feeDataAvailabilityMode!,
-          nonceDataAvailabilityMode: nonceDataAvailabilityMode!,
-        );
-      default:
-        throw Exception('Unsupported invoke transaction version: $version');
-    }
-  }
-
-  Future<List<Felt>> signDeclareTransactionV1({
-    required DeprecatedCompiledContract compiledContract,
-    required Felt senderAddress,
-    required Felt chainId,
-    required Felt nonce,
-    Felt? maxFee,
-  }) async {
-    maxFee = maxFee ?? defaultMaxFee;
-
-    final classHash = compiledContract.classHash();
-    final elementsToHash = <BigInt>[
-      TransactionHashPrefix.declare.toBigInt(),
-      BigInt.from(1),
-      senderAddress.toBigInt(),
-      BigInt.from(0),
-      computeHashOnElements([classHash]),
-      maxFee.toBigInt(),
-      chainId.toBigInt(),
-      nonce.toBigInt(),
-    ];
-    final transactionHash = computeHashOnElements(elementsToHash);
-
-    final signature = sign(transactionHash, BigInt.from(32));
-    return signature;
-  }
-
-  Future<List<Felt>> signDeclareTransactionV2({
-    required CompiledContract compiledContract,
-    required Felt senderAddress,
-    required Felt chainId,
-    required Felt nonce,
-    Felt? maxFee,
-    BigInt? classHash,
-    BigInt? compiledClassHash,
-    CASMCompiledContract? casmCompiledContract,
-  }) async {
-    maxFee = maxFee ?? defaultMaxFee;
-
-    classHash ??= compiledContract.classHash();
-    if ((compiledClassHash == null) && (casmCompiledContract == null)) {
-      throw Exception(
-        'compiledClassHash is null and CASM contract not provided',
-      );
-    }
-    compiledClassHash ??= casmCompiledContract!.classHash();
-
-    final elementsToHash = <BigInt>[
-      TransactionHashPrefix.declare.toBigInt(),
-      BigInt.two,
-      senderAddress.toBigInt(),
-      BigInt.zero,
-      computeHashOnElements([classHash]),
-      maxFee.toBigInt(),
-      chainId.toBigInt(),
-      nonce.toBigInt(),
-      compiledClassHash,
-    ];
-
-    final transactionHash = computeHashOnElements(elementsToHash);
-
-    final signature = sign(transactionHash, BigInt.from(32));
-    return signature;
+    return signInvokeTransactionsV3(
+      transactions: transactions,
+      senderAddress: contractAddress,
+      chainId: chainId,
+      nonce: nonce,
+      resourceBounds: resourceBounds!,
+      accountDeploymentData: accountDeploymentData,
+      paymasterData: paymasterData,
+      tip: tip,
+      feeDataAvailabilityMode: feeDataAvailabilityMode,
+      nonceDataAvailabilityMode: nonceDataAvailabilityMode,
+    );
   }
 
   Future<List<Felt>> signDeclareTransactionV3({
@@ -301,23 +154,6 @@ abstract class BaseAccountSigner {
     }
     compiledClassHash ??= Felt(casmCompiledContract!.classHash());
 
-    final l1GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxAmount);
-    final l1GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxPricePerUnit);
-    final l2GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxAmount);
-    final l2GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxPricePerUnit);
-
-    final l1GasBounds = (Felt.fromString('L1_GAS') << (128 + 64)) +
-        (l1GasMaxAmount << 128) +
-        l1GasMaxPricePerUnit;
-
-    final l2GasBounds = (Felt.fromString('L2_GAS') << (128 + 64)) +
-        (l2GasMaxAmount << 128) +
-        l2GasMaxPricePerUnit;
-
     final dataAvailabilityMode =
         (Felt.fromInt(nonceDataAvailabilityMode == 'L1' ? 0 : 1) << 32) +
             Felt.fromInt(feeDataAvailabilityMode == 'L1' ? 0 : 1);
@@ -326,9 +162,7 @@ abstract class BaseAccountSigner {
       TransactionHashPrefix.declare.toBigInt(),
       BigInt.from(3), // version
       senderAddress.toBigInt(),
-      poseidonHasher.hashMany(
-        [tip.toBigInt(), l1GasBounds.toBigInt(), l2GasBounds.toBigInt()],
-      ),
+      _hashTipAndRessourceBounds(tip: tip, resourceBounds: resourceBounds),
       poseidonHasher.hashMany(paymasterData.map((e) => e.toBigInt()).toList()),
       chainId.toBigInt(),
       nonce.toBigInt(),
@@ -340,41 +174,6 @@ abstract class BaseAccountSigner {
     ];
 
     final transactionHash = poseidonHasher.hashMany(elementsToHash);
-
-    final signature = sign(transactionHash, BigInt.from(32));
-    return signature;
-  }
-
-  Future<List<Felt>> signDeployAccountTransactionV1({
-    required Felt contractAddressSalt,
-    required Felt classHash,
-    required List<Felt> constructorCalldata,
-    required Felt chainId,
-    Felt? nonce,
-    Felt? maxFee,
-  }) async {
-    maxFee = maxFee ?? defaultMaxFee;
-    nonce = nonce ?? defaultNonce;
-    final contractAddress = Contract.computeAddress(
-      classHash: classHash,
-      calldata: constructorCalldata,
-      salt: contractAddressSalt,
-    );
-
-    final transactionHash = calculateTransactionHashCommon(
-      txHashPrefix: TransactionHashPrefix.deployAccount.toBigInt(),
-      version: 1,
-      address: contractAddress.toBigInt(),
-      entryPointSelector: BigInt.from(0),
-      calldata: toBigIntList([
-        classHash,
-        contractAddressSalt,
-        ...constructorCalldata,
-      ]),
-      maxFee: maxFee.toBigInt(),
-      chainId: chainId.toBigInt(),
-      additionalData: [nonce.toBigInt()],
-    );
 
     final signature = sign(transactionHash, BigInt.from(32));
     return signature;
@@ -399,23 +198,6 @@ abstract class BaseAccountSigner {
       salt: contractAddressSalt,
     );
 
-    final l1GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxAmount);
-    final l1GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l1_gas']!.maxPricePerUnit);
-    final l2GasMaxAmount =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxAmount);
-    final l2GasMaxPricePerUnit =
-        Felt.fromHexString(resourceBounds['l2_gas']!.maxPricePerUnit);
-
-    final l1GasBounds = (Felt.fromString('L1_GAS') << (128 + 64)) +
-        (l1GasMaxAmount << 128) +
-        l1GasMaxPricePerUnit;
-
-    final l2GasBounds = (Felt.fromString('L2_GAS') << (128 + 64)) +
-        (l2GasMaxAmount << 128) +
-        l2GasMaxPricePerUnit;
-
     final dataAvailabilityMode =
         (Felt.fromInt(nonceDataAvailabilityMode == 'L1' ? 0 : 1) << 32) +
             Felt.fromInt(feeDataAvailabilityMode == 'L1' ? 0 : 1);
@@ -424,9 +206,7 @@ abstract class BaseAccountSigner {
       TransactionHashPrefix.deployAccount.toBigInt(),
       BigInt.from(3), // version
       contractAddress.toBigInt(),
-      poseidonHasher.hashMany(
-        [tip.toBigInt(), l1GasBounds.toBigInt(), l2GasBounds.toBigInt()],
-      ),
+      _hashTipAndRessourceBounds(tip: tip, resourceBounds: resourceBounds),
       poseidonHasher.hashMany(paymasterData.map((e) => e.toBigInt()).toList()),
       chainId.toBigInt(),
       nonce.toBigInt(),

@@ -290,7 +290,6 @@ class StarknetCoin extends Coin {
     );
 
     final tx = await fundingAccount.execute(
-      useSTRKFee: true,
       functionCalls: calls
           .map(
             (call) => FunctionCall(
@@ -553,7 +552,6 @@ class StarknetCoin extends Coin {
           ],
         ),
       ],
-      useSTRKFee: true,
     );
 
     return trx.when(
@@ -686,7 +684,6 @@ class StarknetCoin extends Coin {
     );
     final result = await account.execute(
       functionCalls: [unstakeCall],
-      useSTRKFee: true,
     );
     return result.when(
       result: (result) {
@@ -722,7 +719,6 @@ class StarknetCoin extends Coin {
     );
     final rsult = await account.execute(
       functionCalls: [claimCall],
-      useSTRKFee: true,
     );
     return rsult.when(
       result: (result) {
@@ -761,7 +757,6 @@ class StarknetCoin extends Coin {
     );
     final rsult = await account.execute(
       functionCalls: [unstakeCall],
-      useSTRKFee: true,
     );
     return rsult.when(
       result: (result) {
@@ -828,7 +823,6 @@ class StarknetCoin extends Coin {
 
     final rsult = await account.execute(
       functionCalls: calls,
-      useSTRKFee: true,
     );
 
     return rsult.when(
@@ -985,7 +979,6 @@ class StarknetCoin extends Coin {
 
       final rsult = await fundingAccount.execute(
         functionCalls: functionCalls,
-        useSTRKFee: true,
       );
 
       return rsult.when(
@@ -1145,10 +1138,9 @@ class StarknetCoin extends Coin {
           ],
         ),
       ],
-      useSTRKFee: useStarkToken,
     );
 
-    return maxFee.maxFee.toBigInt() / base.pow(decimals());
+    return maxFee.overallFee.toBigInt() / base.pow(decimals());
   }
 
   @override
@@ -1227,7 +1219,6 @@ class StarknetCoin extends Coin {
 
     final tx = await fundingAccount.execute(
       functionCalls: [dployTx],
-      useSTRKFee: true,
     );
 
     final deployTokenTx = tx.when(
@@ -1359,7 +1350,6 @@ class StarknetCoin extends Coin {
 
     final res = await params.starknetAccount.execute(
       functionCalls: calls,
-      useSTRKFee: true,
     );
     final txHash = res.when(
       result: (result) {
