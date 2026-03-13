@@ -194,8 +194,34 @@ class StacksCoin extends Coin {
   }
 
   @override
-  Future<String?> resolveAddress(String address) async => address;
+  Future<String?> resolveAddress(String address) async {
+    // If it's already a valid Stacks address, return as-is
+    if (address.startsWith('SP') ||
+        address.startsWith('SM') ||
+        address.startsWith('ST') ||
+        address.startsWith('SN')) {
+      return address;
+    }
 
+    // Strip .btc suffix if present
+    String name = address.endsWith('.btc')
+        ? address.substring(0, address.length - 4)
+        : address;
+
+    try {
+      final res = await http.get(
+        Uri.parse('$_api/v1/names/$name.btc'),
+      );
+
+      if (res.statusCode ~/ 100 != 2) return null;
+
+      final data = jsonDecode(res.body);
+      final owner = data['address'] as String?;
+      return owner;
+    } catch (_) {
+      return null;
+    }
+  }
   // ─── Balance ────────────────────────────────────────────────────────────────
 
   @override
