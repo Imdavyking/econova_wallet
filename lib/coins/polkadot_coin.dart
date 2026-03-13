@@ -163,7 +163,7 @@ class PolkadotCoin extends Coin {
 
       final input = Input.fromHex(storageData.substring(0, 8));
 
-      return U16Codec.codec.decode(input);
+      return U32Codec.codec.decode(input);
     } catch (_) {
       return nonce;
     }
@@ -386,6 +386,7 @@ class PolkadotCoin extends Coin {
     );
 
     String txSubmission = '84';
+  
     txSubmission += HEX.encode(publicKey);
 
     txSubmission += '00';
