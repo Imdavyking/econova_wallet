@@ -193,7 +193,7 @@ class StarknetNFTCoin extends StarknetCoin {
     );
     final base = BigInt.from(10);
 
-    return maxFee.maxFee.toBigInt() / base.pow(decimals());
+    return maxFee.overallFee.toBigInt() / base.pow(decimals());
   }
 
   @override
