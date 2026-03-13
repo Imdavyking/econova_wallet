@@ -306,7 +306,7 @@ class PolkadotCoin extends Coin {
       );
 
       final responseBody = response.body;
-      print(responseBody);
+
       if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
         throw Exception(responseBody);
       }
@@ -386,7 +386,7 @@ class PolkadotCoin extends Coin {
     );
 
     String txSubmission = '84';
-  
+
     txSubmission += HEX.encode(publicKey);
 
     txSubmission += '00';
