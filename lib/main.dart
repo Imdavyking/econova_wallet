@@ -91,13 +91,15 @@ List<ERCFungibleCoin> erc20Coins = [
 List<StarknetCoin> starkNetCoins = [
   ...getStarknetBlockchains(),
 ];
+List<StacksCoin> stackCoins = [
+  ...getStacksBlockchains(),
+];
 
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
     ...getBitCoinPOSBlockchains(),
     ...getTonFungibleCoins(),
-    ...getStacksBlockchains(),
     ...tonChains,
     ...evmChains,
     ...nearChains,
