@@ -423,3 +423,80 @@ Uint8List _bigIntTo32Bytes(BigInt v) {
   final hex = v.toRadixString(16).padLeft(64, '0');
   return Uint8List.fromList(HEX.decode(hex));
 }
+
+// ─── ADD TO stack_tx_utils.dart ───────────────────────────────────────────────
+//
+// Paste this block anywhere after the existing imports in stack_tx_utils.dart.
+// It requires no new imports beyond what the file already has:
+//   dart:typed_data, package:hex/hex.dart, and the secp256k1 signer that
+//   stacksBuildSignedTx already uses internally.
+//
+// The only extra dependency is SHA-256, which is available via the
+// `blockchain_utils` package already imported elsewhere in the project
+// (look for sha256 / SHA256Digest usage in rpc_urls.dart / other utils).
+// If your stack_tx_utils.dart already imports a SHA-256 helper, use that.
+// Otherwise add:  import 'package:crypto/crypto.dart';
+// and replace stacksSha256(data) → sha256.convert(data).bytes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Signs an already-computed [hash] directly with secp256k1 — no message
+/// prefix applied. Used for SIP-018 structured messages where the caller
+/// builds the hash manually.
+///
+/// Returns 65 bytes: [ recId (1) | r (32) | s (32) ]
+Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) =>
+    _secp256k1SignRecoverable(privKey, hash);
+
+/// Re-signs a pre-serialised Stacks transaction [rawTx] with [privKey].
+///
+/// The Stacks transaction wire format places a 65-byte presig at a fixed
+/// offset inside the spending condition. This function:
+///   1. Locates the presig field.
+///   2. Computes the sighash (SHA-512/256 of the tx with presig zeroed).
+///   3. Replaces the presig with the real recoverable signature.
+///
+/// Layout assumed: standard single-sig spending condition (P2PKH).
+///
+///   offset  size  field
+///   ──────  ────  ──────────────────────────────────────────
+///   0       1     tx version
+///   1       4     chain id
+///   5       1     auth type  (0x04 = standard)
+///   6       1     hash mode  (0x00 = P2PKH compressed)
+///   7       20    signer hash160
+///   27      8     nonce (big-endian uint64)
+///   35      8     fee  (big-endian uint64)
+///   43      1     key encoding (0x00 = compressed)
+///   44      65    signature  ← this is what we replace
+///   109     …     payload
+///
+/// If the tx uses a different spending-condition layout this will throw;
+/// callers should catch and surface the error to the user.
+Uint8List stacksResignTx(Uint8List rawTx, Uint8List privKey) {
+  // The presig occupies bytes 44–108 (0-indexed).
+  const sigOffset = 44;
+  const sigLength = 65;
+
+  if (rawTx.length < sigOffset + sigLength) {
+    throw Exception('stacksResignTx: tx too short to contain a signature');
+  }
+
+  // 1. Zero out the presig field to get the signing bytes.
+  final forSigning = Uint8List.fromList(rawTx);
+  for (int i = sigOffset; i < sigOffset + sigLength; i++) {
+    forSigning[i] = 0x00;
+  }
+
+  // 2. Compute the Stacks sighash: SHA-512/256 of the zeroed tx.
+  //    Stacks uses SHA-512/256 (truncated SHA-512), not SHA-256.
+  //    Replace the call below with your project's SHA-512/256 helper.
+  //    If you use blockchain_utils:  SHA512256Digest().process(forSigning)
+  //    If you use pointycastle:      SHA512tDigest(256).process(forSigning)
+  final sigHash = stacksSha512_256(forSigning); // ← replace with actual helper
+
+  // 3. Sign the sighash and write back into the tx.
+  final sig = _secp256k1SignRecoverable(privKey, sigHash);
+  final signed = Uint8List.fromList(rawTx);
+  signed.setRange(sigOffset, sigOffset + sigLength, sig);
+  return signed;
+}

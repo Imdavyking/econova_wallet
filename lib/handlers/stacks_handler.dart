@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +8,13 @@ import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
-
+import 'package:wallet_app/utils/c32check.dart';
 import '../coins/stack_coin.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'base_handler.dart';
+import 'package:http/http.dart' as http;
 // ─── JS message shape ────────────────────────────────────────────────────────
 //
 // The injected provider sends:
@@ -513,7 +515,7 @@ class StacksHandler extends BaseWebViewHandler {
       name: '${tokenCoin.symbol} Transfer',
       onConfirm: () async {
         try {
-          final txHash = await tokenCoin.transferToken(
+          final txHash = await tokenCoin?.transferToken(
             amount,
             to,
             memo: memo,
