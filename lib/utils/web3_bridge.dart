@@ -315,16 +315,26 @@ Future<String> setupWebViewWalletBridge(int chainId, String rpc) async {
         }));
       },
 
-      // Convenience wrappers matching common Stacks wallet APIs.
-      connect:            (params) => window.stacks.request('requestAccounts', params ?? {}),
-      disconnect:         ()       => window.stacks.request('disconnect', {}),
-      signMessage:        (params) => window.stacks.request('signMessage', params),
-      signTransaction:    (params) => window.stacks.request('signTransaction', params),
-      // Transfer any SIP-010 token.
-      // Registered tokens need only contractAddress + contractName.
-      // Unregistered tokens must also include: symbol, decimals.
-      // Optional: amount, recipient, memo, name, image, geckoID.
-      signSIP010Transfer: (params) => window.stacks.request('signSIP010Transfer', params),
+      // ── Standard SIP-030 / Leather / Xverse methods ────────────────────
+      getInfo:                   (p)  => window.stacks.request('getInfo', p ?? {}),
+      getAddresses:              (p)  => window.stacks.request('getAddresses', p ?? {}),
+      getAccounts:               (p)  => window.stacks.request('getAccounts', p ?? {}),
+      disconnect:                ()   => window.stacks.request('disconnect', {}),
+
+      signMessage:               (p)  => window.stacks.request('signMessage', p),
+      stx_signMessage:           (p)  => window.stacks.request('stx_signMessage', p),
+      stx_signStructuredMessage: (p)  => window.stacks.request('stx_signStructuredMessage', p),
+      stx_signTransaction:       (p)  => window.stacks.request('stx_signTransaction', p),
+
+      sendTransfer:              (p)  => window.stacks.request('sendTransfer', p),
+      stx_transferStx:           (p)  => window.stacks.request('stx_transferStx', p),
+      stx_callContract:          (p)  => window.stacks.request('stx_callContract', p),
+      stx_deployContract:        (p)  => window.stacks.request('stx_deployContract', p),
+      stx_getAccounts:           (p)  => window.stacks.request('stx_getAccounts', p ?? {}),
+      stx_getAddresses:          (p)  => window.stacks.request('stx_getAddresses', p ?? {}),
+
+      // signPsbt is in the standard list but not supported (BTC-only).
+      signPsbt: () => Promise.reject(new Error('signPsbt not supported by this wallet')),
     };
 
   })();
