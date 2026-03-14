@@ -271,6 +271,62 @@ Future<String> setupWebViewWalletBridge(int chainId, String rpc) async {
 
     window.starknet_argentX = window.starknet;
 
+    // ── Stacks provider ────────────────────────────────────────────────────
+    window.stacks = {
+      isStacksWallet: true,
+
+      // Send a request to the Flutter StacksHandler and await the response.
+      request: (method, params) => {
+        const id = Math.floor(Math.random() * 1e9);
+        return new Promise((resolve, reject) => {
+          const eventName = 'stacks_response_' + id;
+          window.addEventListener(eventName, (event) => {
+            const { result, error } = event.detail;
+            if (error) { reject(new Error(error)); } else { resolve(result); }
+          }, { once: true });
+
+          const interval = setInterval(() => {
+            if (isFlutterInAppWebViewReady) {
+              clearInterval(interval);
+              window.flutter_inappwebview.callHandler(
+                'StacksHandler',
+                JSON.stringify({
+                  id,
+                  name: method,
+                  object: params ?? {},
+                  url: window.location.origin,
+                })
+              );
+            }
+          }, 100);
+        });
+      },
+
+      // Called by StacksHandler._sendResponse / _sendError via evaluateJavascript.
+      sendResponse: (id, result) => {
+        window.dispatchEvent(new CustomEvent('stacks_response_' + id, {
+          detail: { result },
+        }));
+      },
+
+      sendError: (id, message) => {
+        window.dispatchEvent(new CustomEvent('stacks_response_' + id, {
+          detail: { error: message },
+        }));
+      },
+
+      // Convenience wrappers matching common Stacks wallet APIs.
+      connect:            (params) => window.stacks.request('requestAccounts', params ?? {}),
+      disconnect:         ()       => window.stacks.request('disconnect', {}),
+      signMessage:        (params) => window.stacks.request('signMessage', params),
+      signTransaction:    (params) => window.stacks.request('signTransaction', params),
+      // Transfer any SIP-010 token.
+      // Registered tokens need only contractAddress + contractName.
+      // Unregistered tokens must also include: symbol, decimals.
+      // Optional: amount, recipient, memo, name, image, geckoID.
+      signSIP010Transfer: (params) => window.stacks.request('signSIP010Transfer', params),
+    };
+
   })();
 ''';
 }

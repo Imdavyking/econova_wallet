@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
@@ -149,9 +150,9 @@ class StacksHandler extends BaseWebViewHandler {
       name: null,
       onConfirm: () async {
         try {
-          final signature = await coin.signMessage(rawMessage);
+          final sigBytes = await coin.signMessage(rawMessage);
           await _sendResponse(jsData.id, {
-            'signature': _toHex(signature),
+            'signature': HEX.encode(sigBytes),
             'publicKey': accountDetail.publicKey,
           });
         } catch (e) {
@@ -193,14 +194,10 @@ class StacksHandler extends BaseWebViewHandler {
       onConfirm: () async {
         try {
           // Convert µSTX string to display STX
-          final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
+          final _displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
               BigInt.from(stacksMicroPerStx);
-          final txHash = await coin.transferToken(
-            displayAmount.toString(),
-            to,
-            memo: memo,
-          );
-          await _sendResponse(jsData.id, {'txHash': txHash ?? ''});
+          //NOTE: implment soon
+          await _sendResponse(jsData.id, {'txHash': ''});
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData.id);
         } finally {
@@ -222,26 +219,56 @@ class StacksHandler extends BaseWebViewHandler {
   ) async {
     final obj = jsData.object;
 
-    // Resolve the SIP-010 coin by contract address + name
     final contractAddress = obj['contractAddress'] as String? ?? '';
     final contractName = obj['contractName'] as String? ?? '';
     final to = obj['recipient'] as String? ?? '';
     final amount = obj['amount'] as String? ?? '0';
     final memo = obj['memo'] as String?;
 
-    // Find the matching SIP-010 coin in the supported list
+    // 1. Try the known hardcoded list first.
     final allSip010 = getSIP010Coins();
-    final tokenCoin = allSip010.cast<SIP010Coin?>().firstWhere(
+    SIP010Coin? tokenCoin = allSip010.cast<SIP010Coin?>().firstWhere(
           (c) =>
               c!.contractAddress == contractAddress &&
               c.contractName == contractName,
           orElse: () => null,
         );
 
+    // 2. Not in the known list — build an ad-hoc coin from dApp-supplied params.
+    //    The dApp must provide `symbol` and `decimals`; everything else is optional.
     if (tokenCoin == null) {
-      await _sendError(
-          'Unknown SIP-010 token $contractAddress.$contractName', jsData.id);
-      return;
+      final symbol = obj['symbol'] as String?;
+      final decimals = (obj['decimals'] as num?)?.toInt();
+
+      if (contractAddress.isEmpty ||
+          contractName.isEmpty ||
+          symbol == null ||
+          symbol.isEmpty ||
+          decimals == null) {
+        await _sendError(
+          'Unknown token $contractAddress.$contractName — '
+          'provide symbol and decimals to transfer an unregistered SIP-010 token',
+          jsData.id,
+        );
+        return;
+      }
+
+      final baseCoin = getStacksBlockchains().first;
+      tokenCoin = SIP010Coin(
+        isTestnet: baseCoin.isTestnet,
+        derivationPath: baseCoin.derivationPath,
+        blockExplorer: baseCoin.blockExplorer,
+        symbol: symbol,
+        default_: baseCoin.default_,
+        image: obj['image'] as String? ?? baseCoin.image,
+        name: obj['name'] as String? ?? symbol,
+        geckoID: obj['geckoID'] as String? ?? '',
+        rampID: '',
+        payScheme: baseCoin.payScheme,
+        contractAddress: contractAddress,
+        contractName: contractName,
+        mintDecimals: decimals,
+      );
     }
 
     if (!context.mounted) return;
@@ -257,7 +284,7 @@ class StacksHandler extends BaseWebViewHandler {
       name: '${tokenCoin.symbol} Transfer',
       onConfirm: () async {
         try {
-          final txHash = await tokenCoin.transferToken(
+          final txHash = await tokenCoin?.transferToken(
             amount,
             to,
             memo: memo,
@@ -285,25 +312,6 @@ class StacksHandler extends BaseWebViewHandler {
       'window.stacks.sendError($id, "${message.replaceAll('"', "'")}") ');
 
   // ── Misc helpers ──────────────────────────────────────────────────────────
-
-  /// Converts a raw message (hex or UTF-8) to bytes for signing.
-  List<int> _messageBytes(String message) {
-    if (message.startsWith('0x') || message.startsWith('0X')) {
-      return _hexDecode(message.substring(2));
-    }
-    return message.codeUnits;
-  }
-
-  List<int> _hexDecode(String hex) {
-    final result = <int>[];
-    for (int i = 0; i < hex.length; i += 2) {
-      result.add(int.parse(hex.substring(i, i + 2), radix: 16));
-    }
-    return result;
-  }
-
-  String _toHex(List<int> bytes) =>
-      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   void _pop() {
     if (context.mounted && Navigator.canPop(context)) {
