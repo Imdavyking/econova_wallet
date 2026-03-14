@@ -29,6 +29,14 @@ const int _txVersionTestnet = 0x80;
 const int _chainIdMainnet = 0x00000001;
 const int _chainIdTestnet = 0x80000000;
 
+// ─── Stacks structured-data signing prefix ────────────────────────────────────
+//
+// Matches Stacks.js `signMessageHashRsv` / `encodeMessage`:
+//   "\x17Stacks Signed Message:\n" + <decimal length> + <message bytes>
+// The whole thing is then SHA-256 hashed and signed with secp256k1.
+
+const String _stacksMsgPrefix = '\x17Stacks Signed Message:\n';
+
 // ─── Coin ─────────────────────────────────────────────────────────────────────
 
 class StacksCoin extends Coin {
@@ -215,6 +223,7 @@ class StacksCoin extends Coin {
       return null;
     }
   }
+
   // ─── Balance ────────────────────────────────────────────────────────────────
 
   @override
@@ -264,6 +273,27 @@ class StacksCoin extends Coin {
     final res = await http.get(Uri.parse('$_api/v2/accounts/$address?proof=0'));
     if (res.statusCode ~/ 100 != 2) throw Exception('STX nonce fetch failed');
     return jsonDecode(res.body)['nonce'] as int;
+  }
+
+  // ─── Message signing ────────────────────────────────────────────────────────
+
+  /// Signs [message] using the active wallet's private key.
+  ///
+  /// The message is prefixed following the Stacks.js `signMessageHashRsv`
+  /// convention before hashing:
+  ///
+  ///   SHA-256( "\x17Stacks Signed Message:\n" + decimalLength + messageBytes )
+  ///
+  /// Returns a 65-byte recoverable signature:
+  ///   [ recovery_id (1 byte) | r (32 bytes) | s (32 bytes) ]
+  ///
+  /// This is identical to the hex `rsv` string produced by Stacks.js, just
+  /// as raw bytes. Call [HEX.encode] on the result to get the hex string.
+  Future<Uint8List> signMessage(String message) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final keyPair = await importData(data);
+    final privBytes = txDataToUintList(keyPair.privateKey!);
+    return stacksSignMessage(privBytes, message);
   }
 
   // ─── Transfer ───────────────────────────────────────────────────────────────

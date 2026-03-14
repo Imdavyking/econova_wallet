@@ -301,3 +301,125 @@ Uint8List stacksBuildSignedTx({
   // Final: real nonce + fee + real signature
   return assemble(nonce, fee, sigBytes);
 }
+
+/// The Stacks message-signing prefix used by Stacks.js `signMessageHashRsv`.
+///
+///   prefixed = "\x17Stacks Signed Message:\n" + decimalLength(msg) + msg
+///   hash     = SHA-256( prefixed )
+const String _stacksMsgPrefix = '\x17Stacks Signed Message:\n';
+
+/// Signs [message] (as a UTF-8 string) with [privKey] using the same
+/// algorithm as Stacks.js `signMessageHashRsv`:
+///
+///   1. Prefix the message.
+///   2. SHA-256 hash the prefixed bytes.
+///   3. secp256k1 sign the hash (deterministic, RFC 6979).
+///   4. Normalise s to low-s (BIP-62).
+///   5. Return 65 bytes: [ recId (1) | r (32) | s (32) ].
+///
+/// The hex of the returned bytes is the `rsv` signature string that
+/// Stacks dApps verify with `verifyMessageSignatureRsv`.
+Uint8List stacksSignMessage(Uint8List privKey, String message) {
+  // 1. Build prefixed payload
+  final msgBytes = Uint8List.fromList(message.codeUnits);
+  final lenStr = msgBytes.length.toString();
+  final prefixed = Uint8List.fromList([
+    ..._stacksMsgPrefix.codeUnits,
+    ...lenStr.codeUnits,
+    ...msgBytes,
+  ]);
+
+  // 2. SHA-256 hash
+  //
+  // stacksBuildSignedTx already computes SHA-256 internally via the same
+  // helper used here. Adjust the call below to match whatever SHA-256
+  // function is already imported in this file.
+  //
+  // Option A – if stack_tx_utils.dart imports blockchain_utils:
+  //   final hash = SHA256Digest().process(prefixed);
+  //
+  // Option B – if it imports package:crypto:
+  //   final hash = Uint8List.fromList(sha256.convert(prefixed).bytes);
+  //
+  // Use whichever matches your existing imports:
+  final hash = stacksSha256(prefixed); // ← replace with your actual helper
+
+  // 3 + 4 + 5. Sign and return the compact 65-byte signature.
+  return _secp256k1SignRecoverable(privKey, hash);
+}
+
+/// secp256k1 deterministic signing (RFC 6979) with low-s normalisation.
+/// Returns [ recId (1) | r (32) | s (32) ].
+///
+/// This reuses the same secp256k1 domain params / signer that
+/// stacksBuildSignedTx uses.  Pull the ECDomainParameters instance and
+/// ECDSASigner construction out of stacksBuildSignedTx (or duplicate the
+/// two lines below) so they match your existing imports exactly.
+Uint8List _secp256k1SignRecoverable(Uint8List privKey, Uint8List hash) {
+  final domainParams = pc.ECDomainParameters('secp256k1');
+  final privScalar = BigInt.parse(HEX.encode(privKey), radix: 16);
+  final ecPrivKey = pc.ECPrivateKey(privScalar, domainParams);
+
+  final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 32));
+  signer.init(true, pc.PrivateKeyParameter<pc.ECPrivateKey>(ecPrivKey));
+
+  // Low-s normalisation (BIP-62): if s > n/2, replace with n - s.
+  pc.ECSignature sig = signer.generateSignature(hash) as pc.ECSignature;
+  final halfN = domainParams.n >> 1;
+  if (sig.s > halfN) {
+    sig = pc.ECSignature(sig.r, domainParams.n - sig.s);
+  }
+
+  // Derive recovery id (0 or 1) by trying both and checking the recovered
+  // public key against the expected compressed public key.
+  final expectedPub = HEX.encode(stacksCompressedPubKey(privKey));
+  int recId = 0;
+  for (int candidate = 0; candidate < 2; candidate++) {
+    final recovered = _recoverPublicKey(hash, sig, candidate, domainParams);
+    if (recovered != null && HEX.encode(recovered) == expectedPub) {
+      recId = candidate;
+      break;
+    }
+  }
+
+  final r = _bigIntTo32Bytes(sig.r);
+  final s = _bigIntTo32Bytes(sig.s);
+  return Uint8List.fromList([recId, ...r, ...s]);
+}
+
+/// Attempts to recover the compressed public key for [sig] using [recId].
+/// Returns null if the recovery point is at infinity or off the curve.
+Uint8List? _recoverPublicKey(
+  Uint8List hash,
+  pc.ECSignature sig,
+  int recId,
+  pc.ECDomainParameters params,
+) {
+  try {
+    final n = params.n;
+    final x = sig.r + BigInt.from(recId ~/ 2) * n;
+    if (x >= BigInt.from(params.curve.fieldSize)) return null;
+
+    final R = params.curve.decompressPoint(recId & 1, x);
+
+    final e = BigInt.parse(HEX.encode(hash), radix: 16);
+    final rInv = sig.r.modInverse(n);
+    final eNeg = (-e) % n;
+
+    // Q = rInv·s·R + rInv·(-e)·G  — ECPoint.operator* expects BigInt
+    final sScalar = rInv * sig.s % n;
+    final eScalar = rInv * eNeg % n;
+    final Q = (R * sScalar)! + (params.G * eScalar)!;
+    if (Q == null || Q.isInfinity) return null;
+
+    // Return compressed public key (33 bytes)
+    return Q.getEncoded(true);
+  } catch (_) {
+    return null;
+  }
+}
+
+Uint8List _bigIntTo32Bytes(BigInt v) {
+  final hex = v.toRadixString(16).padLeft(64, '0');
+  return Uint8List.fromList(HEX.decode(hex));
+}

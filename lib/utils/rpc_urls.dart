@@ -701,7 +701,7 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
-Future setupWebViewWalletBridge(
+Future<String> setupWebViewWalletBridge(
   int chainId,
   String rpc,
 ) async {
