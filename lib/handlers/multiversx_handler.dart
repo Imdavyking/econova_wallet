@@ -132,8 +132,7 @@ class MultiversxHandler extends BaseWebViewHandler {
             );
             final signTrans = await compute(MultiversxCoin.signTransaction,
                 {'signer': keys.signer, 'transaction': trans});
-            allTrans[i].signature =
-                (signTrans as multiversx.Transaction).signature.hex;
+            allTrans[i].signature = (signTrans).signature.hex;
             await _postMessage({
               'target': 'erdw-contentScript',
               'type': '',

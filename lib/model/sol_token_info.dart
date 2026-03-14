@@ -1,12 +1,10 @@
-
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:bs58check/bs58check.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart' as solana;
-
 import '../main.dart';
 
 class SolTokenInfo {
@@ -103,4 +101,28 @@ class SolTokenInfo {
     }
     throw Exception('failed parsing token program');
   }
+}
+
+class StructReader {
+  StructReader(this._buffer) : _offset = 0;
+
+  void skip(int length) => _offset += length;
+
+  String nextString() {
+    final length = _buffer.asByteData(_offset, 4).getInt32(0, Endian.little);
+    final rawBytes = _buffer.asUint8List(_offset + 4, length);
+    _offset += length + 4;
+    final lastZero = rawBytes.indexOf(0);
+    if (lastZero == -1) return '';
+    return utf8.decode(rawBytes.sublist(0, lastZero));
+  }
+
+  Uint8List nextBytes(int length) {
+    final bytes = _buffer.asUint8List(_offset, length);
+    _offset += length;
+    return bytes;
+  }
+
+  final ByteBuffer _buffer;
+  int _offset;
 }

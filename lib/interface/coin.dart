@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 
-import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';

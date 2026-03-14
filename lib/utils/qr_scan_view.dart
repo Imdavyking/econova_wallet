@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';

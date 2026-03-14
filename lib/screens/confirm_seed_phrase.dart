@@ -3,6 +3,7 @@
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/foundation.dart';

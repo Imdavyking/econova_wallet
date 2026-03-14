@@ -126,13 +126,6 @@ class SolanaHandler extends BaseWebViewHandler {
     final signature = await keyPair.sign(base58.decode(data.raw));
     final fee = await coin.getFeeForMessage(messageB64);
 
-    final signedTx = SignedTx(
-      signatures: [signature],
-      compiledMessage: CompiledMessage(ByteArray(base58.decode(data.raw))),
-    );
-
-    await coin.simulateTransaction(signedTx.encode());
-
     late solana.Ed25519HDPublicKey from;
     late SolanaSimuRes simulationResult;
 

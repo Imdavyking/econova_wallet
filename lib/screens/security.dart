@@ -1,3 +1,4 @@
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/main_screen.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';

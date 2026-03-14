@@ -1,3 +1,4 @@
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/confirm_seed_phrase.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
 import 'package:wallet_app/utils/app_config.dart';

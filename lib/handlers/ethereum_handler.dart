@@ -313,8 +313,8 @@ class EthereumHandler extends BaseWebViewHandler {
 
       if (switchChain == null) {
         // Build a new chain from the request params
-        final blockExplorers = data.blockExplorerUrls as List;
-        final rpcUrls = data.rpcUrls as List;
+        final blockExplorers = data.blockExplorerUrls;
+        final rpcUrls = data.rpcUrls;
 
         if (data.symbol == null || data.symbol!.isEmpty) {
           sendError('ethereum', 'no symbol set', jsData.id ?? 0);
