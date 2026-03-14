@@ -29,7 +29,11 @@ class Wallet extends Equatable {
   });
 
   static bool isEthSecp256(String derivationPath) {
-    return derivationPath.split('/')[2].trim() == "60'";
+    final segments = derivationPath.split('/');
+    // m / purpose' / coin_type' / account' / change / index
+    if (segments.length < 3) return false;
+    final coinType = segments[2].replaceAll("'", "").trim();
+    return coinType == "60";
   }
 
   static Uint8List compressPublicKey(Uint8List uncompressedKey) {
