@@ -7,9 +7,10 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-
+import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 import 'package:pointycastle/export.dart' as pc;
+import 'package:wallet_app/utils/c32check.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -499,4 +500,169 @@ Uint8List stacksResignTx(Uint8List rawTx, Uint8List privKey) {
   final signed = Uint8List.fromList(rawTx);
   signed.setRange(sigOffset, sigOffset + sigLength, sig);
   return signed;
+}
+
+// ─── ADD TO stack_tx_utils.dart ───────────────────────────────────────────────
+// Paste this block into stack_tx_utils.dart.
+// Once added, delete the private duplicates from SIP010Coin and StacksNFTCoin
+// and replace their calls with these public versions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Hiro API base URL ────────────────────────────────────────────────────────
+
+String stacksApiUrl(bool isTestnet) =>
+    isTestnet ? 'https://api.testnet.hiro.so' : 'https://api.hiro.so';
+
+// ─── Chain constants ──────────────────────────────────────────────────────────
+
+int stacksTxVersion(bool isTestnet) => isTestnet ? 0x80 : 0x00;
+int stacksChainId(bool isTestnet) => isTestnet ? 0x80000000 : 0x00000001;
+
+// ─── Fee / nonce ──────────────────────────────────────────────────────────────
+
+Future<int> stacksFetchFeeRate(bool isTestnet) async {
+  try {
+    final res = await http
+        .get(Uri.parse('${stacksApiUrl(isTestnet)}/v2/fees/transfer'));
+    if (res.statusCode ~/ 100 == 2) {
+      return int.parse(jsonDecode(res.body).toString());
+    }
+  } catch (_) {}
+  return 10; // fallback: 10 µSTX / byte
+}
+
+Future<int> stacksFetchNonce(bool isTestnet, String address) async {
+  final res = await http.get(
+    Uri.parse('${stacksApiUrl(isTestnet)}/v2/accounts/$address?proof=0'),
+  );
+  if (res.statusCode ~/ 100 != 2) throw Exception('STX nonce fetch failed');
+  return jsonDecode(res.body)['nonce'] as int;
+}
+
+// ─── Clarity value encoders ───────────────────────────────────────────────────
+
+/// Clarity UInt: type byte 0x01 | 16-byte big-endian unsigned integer.
+Uint8List clarityUInt(BigInt value) {
+  final buf = Uint8List(17)..[0] = 0x01;
+  var v = value.toUnsigned(128);
+  for (int i = 16; i >= 1; i--) {
+    buf[i] = (v & BigInt.from(0xFF)).toInt();
+    v >>= 8;
+  }
+  return buf;
+}
+
+/// Returns the 17-byte Clarity uint as a hex string (no 0x prefix).
+/// Used when passing arguments to read-only contract calls via the API.
+String clarityUIntHex(BigInt value) => HEX.encode(clarityUInt(value));
+
+/// Clarity standard principal: type 0x05 | version (1 byte) | hash160 (20 bytes).
+Uint8List clarityStandardPrincipal(int version, Uint8List hash160) =>
+    (BytesBuilder()
+          ..addByte(0x05)
+          ..addByte(version)
+          ..add(hash160))
+        .toBytes();
+
+/// Clarity (optional (buff N)):
+///   - None  → 0x09
+///   - Some  → 0x0a | 0x02 | 4-byte big-endian length | bytes (capped at [stacksMemoMaxBytes])
+Uint8List clarityOptionalMemo(String? memo) {
+  final text = (memo ?? '').trim();
+  if (text.isEmpty) return Uint8List(1)..[0] = 0x09;
+  final content = utf8.encode(text);
+  final len = content.length.clamp(0, stacksMemoMaxBytes);
+  return (BytesBuilder()
+        ..addByte(0x0a)
+        ..addByte(0x02)
+        ..add(stacksU32BE(len))
+        ..add(content.sublist(0, len)))
+      .toBytes();
+}
+
+// ─── Contract-call payload builder ───────────────────────────────────────────
+
+/// Serialises a Clarity contract-call payload (payload type 0x02).
+///
+/// Wire layout:
+///   [1]     payload type  (stacksPayloadContractCall = 0x02)
+///   [1]     contract address version
+///   [20]    contract address hash160
+///   [1+N]   contract name  (1-byte length prefix + UTF-8 bytes)
+///   [1+N]   function name  (1-byte length prefix + UTF-8 bytes)
+///   [4]     argument count (big-endian uint32)
+///   [N×]    Clarity-encoded arguments
+///
+/// Used by SIP010Coin, StacksNFTCoin, and _callContract in StacksHandler.
+Uint8List stacksBuildContractCallPayload({
+  required int contractVersion,
+  required Uint8List contractHash160,
+  required String contractName,
+  required String functionName,
+  required List<Uint8List> args,
+}) {
+  final nameBytes = utf8.encode(contractName);
+  final fnBytes = utf8.encode(functionName);
+
+  final bb = BytesBuilder()
+    ..addByte(stacksPayloadContractCall)
+    ..addByte(contractVersion)
+    ..add(contractHash160)
+    ..addByte(nameBytes.length)
+    ..add(nameBytes)
+    ..addByte(fnBytes.length)
+    ..add(fnBytes)
+    ..add(stacksU32BE(args.length));
+
+  for (final arg in args) {
+    bb.add(arg);
+  }
+  return bb.toBytes();
+}
+
+// ─── Clarity response parsers ─────────────────────────────────────────────────
+
+/// Extracts a Stacks address from a hex-encoded Clarity
+/// `(ok (some (principal …)))` read-only call response.
+/// Returns null if parsing fails.
+String? clarityParsePrincipal(String hex) {
+  try {
+    final h = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final bytes = HEX.decode(h);
+    // Scan for 0x05 (standard principal marker): version (1) + hash160 (20)
+    for (int i = 0; i < bytes.length - 21; i++) {
+      if (bytes[i] == 0x05) {
+        final version = bytes[i + 1];
+        final hash160 = bytes.sublist(i + 2, i + 22);
+        return 'S${c32checkEncode(version, HEX.encode(hash160))}';
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Extracts a UTF-8 string from a hex-encoded Clarity
+/// `(ok (some (string-ascii|string-utf8 …)))` read-only call response.
+/// Returns null if parsing fails.
+String? clarityParseString(String hex) {
+  try {
+    final h = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final bytes = HEX.decode(h);
+    for (int i = 0; i < bytes.length - 5; i++) {
+      // 0x0d = string-ascii, 0x0e = string-utf8
+      if (bytes[i] == 0x0d || bytes[i] == 0x0e) {
+        final len = ByteData.sublistView(
+                Uint8List.fromList(bytes.sublist(i + 1, i + 5)))
+            .getUint32(0, Endian.big);
+        if (i + 5 + len <= bytes.length) {
+          return utf8.decode(bytes.sublist(i + 5, i + 5 + len));
+        }
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
 }

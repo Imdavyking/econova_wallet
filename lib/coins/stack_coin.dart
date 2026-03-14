@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
+import '../extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import '../interface/coin.dart';
 import '../main.dart';
@@ -21,21 +22,6 @@ const int _versionMainnetP2PKH = 22; // SP…
 const int _versionMainnetP2SH = 20; // SM…
 const int _versionTestnetP2PKH = 26; // ST…
 const int _versionTestnetP2SH = 21; // SN…
-
-// ─── Transaction version / chain-ID ───────────────────────────────────────────
-
-const int _txVersionMainnet = 0x00;
-const int _txVersionTestnet = 0x80;
-const int _chainIdMainnet = 0x00000001;
-const int _chainIdTestnet = 0x80000000;
-
-// ─── Stacks structured-data signing prefix ────────────────────────────────────
-//
-// Matches Stacks.js `signMessageHashRsv` / `encodeMessage`:
-//   "\x17Stacks Signed Message:\n" + <decimal length> + <message bytes>
-// The whole thing is then SHA-256 hashed and signed with secp256k1.
-
-const String _stacksMsgPrefix = '\x17Stacks Signed Message:\n';
 
 // ─── Coin ─────────────────────────────────────────────────────────────────────
 
@@ -66,12 +52,10 @@ class StacksCoin extends Coin {
 
   // ─── Internal accessors ─────────────────────────────────────────────────────
 
-  String get _api =>
-      isTestnet ? 'https://api.testnet.hiro.so' : 'https://api.hiro.so';
+  // Only _addrVersion stays private — it is Stacks-address-specific and
+  // not shared by any utility function.
   int get _addrVersion =>
       isTestnet ? _versionTestnetP2PKH : _versionMainnetP2PKH;
-  int get _txVersion => isTestnet ? _txVersionTestnet : _txVersionMainnet;
-  int get _chainId => isTestnet ? _chainIdTestnet : _chainIdMainnet;
 
   // ─── Coin interface ─────────────────────────────────────────────────────────
 
@@ -196,7 +180,6 @@ class StacksCoin extends Coin {
 
   @override
   Future<String?> resolveAddress(String address) async {
-    // If it's already a valid Stacks address, return as-is
     if (address.startsWith('SP') ||
         address.startsWith('SM') ||
         address.startsWith('ST') ||
@@ -204,21 +187,16 @@ class StacksCoin extends Coin {
       return address;
     }
 
-    // Strip .btc suffix if present
-    String name = address.endsWith('.btc')
+    final name = address.endsWith('.btc')
         ? address.substring(0, address.length - 4)
         : address;
 
     try {
       final res = await http.get(
-        Uri.parse('$_api/v1/names/$name.btc'),
+        Uri.parse('${stacksApiUrl(isTestnet)}/v1/names/$name.btc'),
       );
-
       if (res.statusCode ~/ 100 != 2) return null;
-
-      final data = jsonDecode(res.body);
-      final owner = data['address'] as String?;
-      return owner;
+      return jsonDecode(res.body)['address'] as String?;
     } catch (_) {
       return null;
     }
@@ -228,7 +206,9 @@ class StacksCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    final res = await http.get(Uri.parse('$_api/v2/accounts/$address?proof=0'));
+    final res = await http.get(
+      Uri.parse('${stacksApiUrl(isTestnet)}/v2/accounts/$address?proof=0'),
+    );
     if (res.statusCode ~/ 100 != 2) throw Exception('STX balance fetch failed');
     final hexBal = jsonDecode(res.body)['balance'] as String;
     final micro = BigInt.parse(hexBal.replaceFirst('0x', ''), radix: 16);
@@ -240,7 +220,6 @@ class StacksCoin extends Coin {
     final address = await getAddress();
     final key = '${symbol}AddressBalance$address';
     final stored = pref.get(key) as double?;
-
     if (useCache) return stored ?? 0.0;
     try {
       final balance = await getUserBalance(address: address);
@@ -255,40 +234,12 @@ class StacksCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    final ratePerByte = await _fetchFeeRate();
+    final ratePerByte = await stacksFetchFeeRate(isTestnet);
     return (ratePerByte * stacksEstimatedStxTxBytes) / stacksMicroPerStx;
-  }
-
-  Future<int> _fetchFeeRate() async {
-    try {
-      final res = await http.get(Uri.parse('$_api/v2/fees/transfer'));
-      if (res.statusCode ~/ 100 == 2) {
-        return int.parse(jsonDecode(res.body).toString());
-      }
-    } catch (_) {}
-    return 10; // fallback: 10 µSTX / byte
-  }
-
-  Future<int> _fetchNonce(String address) async {
-    final res = await http.get(Uri.parse('$_api/v2/accounts/$address?proof=0'));
-    if (res.statusCode ~/ 100 != 2) throw Exception('STX nonce fetch failed');
-    return jsonDecode(res.body)['nonce'] as int;
   }
 
   // ─── Message signing ────────────────────────────────────────────────────────
 
-  /// Signs [message] using the active wallet's private key.
-  ///
-  /// The message is prefixed following the Stacks.js `signMessageHashRsv`
-  /// convention before hashing:
-  ///
-  ///   SHA-256( "\x17Stacks Signed Message:\n" + decimalLength + messageBytes )
-  ///
-  /// Returns a 65-byte recoverable signature:
-  ///   [ recovery_id (1 byte) | r (32 bytes) | s (32 bytes) ]
-  ///
-  /// This is identical to the hex `rsv` string produced by Stacks.js, just
-  /// as raw bytes. Call [HEX.encode] on the result to get the hex string.
   Future<Uint8List> signMessage(String message) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await importData(data);
@@ -307,20 +258,17 @@ class StacksCoin extends Coin {
     final privBytes = txDataToUintList(keyPair.privateKey!);
     final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
 
-    final nonce = await _fetchNonce(keyPair.address);
-    final feeRate = await _fetchFeeRate();
+    final nonce = await stacksFetchNonce(isTestnet, keyPair.address);
+    final feeRate = await stacksFetchFeeRate(isTestnet);
     final fee = BigInt.from(feeRate * stacksEstimatedStxTxBytes);
-    final microStx =
-        BigInt.from((double.parse(amount) * stacksMicroPerStx).toInt());
+    final microStx = amount.toBigIntDec(decimals());
 
     final decoded = c32checkDecode(to.substring(1));
     final recipientVersion = decoded[0] as int;
     final recipientHash160 =
         Uint8List.fromList(HEX.decode(decoded[1] as String));
-
     final memoStr = (memo ?? '').trim();
 
-    // Build STX token-transfer payload
     final payload = (BytesBuilder()
           ..addByte(stacksPayloadTokenTransfer)
           ..addByte(stacksPrincipalTypeStandard)
@@ -331,8 +279,8 @@ class StacksCoin extends Coin {
         .toBytes();
 
     final txBytes = stacksBuildSignedTx(
-      txVersion: _txVersion,
-      chainId: _chainId,
+      txVersion: stacksTxVersion(isTestnet),
+      chainId: stacksChainId(isTestnet),
       privKey: privBytes,
       senderHash160: senderHash160,
       nonce: BigInt.from(nonce),
@@ -341,7 +289,7 @@ class StacksCoin extends Coin {
     );
 
     final res = await http.post(
-      Uri.parse('$_api/v2/transactions'),
+      Uri.parse('${stacksApiUrl(isTestnet)}/v2/transactions'),
       headers: {'Content-Type': 'application/octet-stream'},
       body: txBytes,
     );
@@ -369,13 +317,10 @@ class StacksDeriveArgs {
   });
 }
 
-/// Top-level function so compute() can spawn it in an isolate.
 Map<String, dynamic> calculateStacksKey(StacksDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
-
   final pubKeyBytes = stacksCompressedPubKey(node.privateKey!);
   final hash160 = stacksHash160(pubKeyBytes);
-
   return {
     'address': 'S${c32checkEncode(args.addressVersion, HEX.encode(hash160))}',
     'privateKey': '0x${HEX.encode(node.privateKey!)}',

@@ -100,11 +100,9 @@ class MultiversxNFTCoin extends MultiversxCoin {
   @override
   String getGeckoId() => '';
 
-  Future<String> trnsNFT(_TrxNFTParams config) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
+  Future<String> trnsNFT(TrxNFTParams config) async {
     multiversx.UserSecretKey signer =
-        multiversx.UserSecretKey(HEX.decode(response.privateKey!));
+        multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
 
     await wallet.synchronize(getProxy());
@@ -128,11 +126,14 @@ class MultiversxNFTCoin extends MultiversxCoin {
     String to, {
     String? memo,
   }) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
     var sendTransaction = await compute(
       trnsNFT,
-      _TrxNFTParams(
+      TrxNFTParams(
         to: to,
         amount: amount,
+        privateKey: response.privateKey!,
       ),
     );
 
@@ -140,11 +141,13 @@ class MultiversxNFTCoin extends MultiversxCoin {
   }
 }
 
-class _TrxNFTParams {
+class TrxNFTParams {
   final String amount;
   final String to;
-  const _TrxNFTParams({
+  final String privateKey;
+  const TrxNFTParams({
     required this.amount,
     required this.to,
+    required this.privateKey,
   });
 }
