@@ -895,5 +895,6 @@ Map calculateCosmosKey(CosmosDeriveArgs config) {
 }
 
 
-// pubKey does not match signer address inj12zd4wvdln9ksnq3czu6kn0fj3zu4ar2lh4aymv with signer index: 0: invalid pubkey
-// solution: use correct typeurl /injective.crypto.v1beta1.ethsecp256k1.PubKey 
+
+// peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
+// usdt injective
