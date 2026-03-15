@@ -116,6 +116,7 @@ class X402Service {
     }
 
     final headers = _buildRequestHeaders(paymentHeader, probeResult.version);
+
     final response = await http.get(Uri.parse(url), headers: headers);
 
     if (response.statusCode == 200) {
