@@ -114,7 +114,7 @@ class StacksCoin extends Coin {
 
     // payTo is required to build the STX transfer transaction.
     final payTo = option.payTo;
-    if (payTo == null || payTo.isEmpty) {
+    if (payTo.isEmpty) {
       debugPrint('StacksCoin x402: payTo is missing from option — '
           'cannot build STX transfer without a recipient address.');
       return null;

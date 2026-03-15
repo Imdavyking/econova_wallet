@@ -177,17 +177,15 @@ class X402Service {
 
     const supportedSchemes = ['exact'];
 
-    // Determine preferred network group based on the coin's pay scheme.
     final isStacksCoin = coin.getPayScheme() == 'stacks';
     final preferredNetworks = isStacksCoin ? stacksNetworks : evmNetworks;
     final fallbackNetworks = isStacksCoin ? evmNetworks : stacksNetworks;
 
-    X402PaymentOption? _firstMatch(List<String> networks) {
+    X402PaymentOption? firstMatch(List<String> networks) {
       X402PaymentOption? testnetFallback;
       for (final option in options) {
         if (!supportedSchemes.contains(option.scheme)) continue;
         if (!networks.contains(option.network)) continue;
-        // Mainnet first: anything without a testnet marker wins immediately
         final isTestnet = option.network.contains('sepolia') ||
             option.network.contains('2147483648');
         if (!isTestnet) return option;
@@ -196,7 +194,7 @@ class X402Service {
       return testnetFallback;
     }
 
-    return _firstMatch(preferredNetworks) ?? _firstMatch(fallbackNetworks);
+    return firstMatch(preferredNetworks) ?? firstMatch(fallbackNetworks);
   }
 
   int _decimalsForAsset(String asset, X402Version version) {
@@ -217,6 +215,7 @@ class X402Service {
     if (key == 'sbtc') return 'sBTC';
     if (key.contains('usdt')) return 'USDT';
     if (key.contains('eth')) return 'ETH';
+    if (key.contains('usdcx')) return 'USDCX';
     return 'USDC';
   }
 }
@@ -226,7 +225,7 @@ class X402Service {
 class X402Response {
   final int x402Version;
   final List<X402PaymentOption> accepts;
-  final X402Resource? resource; // top-level in Stacks format
+  final X402Resource? resource;
   final String? error;
 
   X402Response({
@@ -239,7 +238,6 @@ class X402Response {
   factory X402Response.fromJson(Map<String, dynamic> json) {
     final rawVersion = json['x402Version'] ?? json['version'] ?? 1;
 
-    // resource may be a string (EVM legacy) or an object (Stacks)
     X402Resource? resource;
     final rawResource = json['resource'];
     if (rawResource is String) {
@@ -277,11 +275,14 @@ class X402PaymentOption {
   final String? description;
   final String? mimeType;
 
-  /// Null on Stacks — recipient is held server-side and resolved by facilitator.
-  final String? payTo;
+  /// Always present — required field in PaymentMiddlewareConfig.
+  final String payTo;
 
   final int maxTimeoutSeconds;
+
+  /// Optional in PaymentMiddlewareConfig — defaults to 'STX' when absent.
   final String asset;
+
   final Map<String, dynamic>? extra;
 
   X402PaymentOption({
@@ -291,7 +292,7 @@ class X402PaymentOption {
     this.resource,
     this.description,
     this.mimeType,
-    this.payTo,
+    required this.payTo,
     required this.maxTimeoutSeconds,
     required this.asset,
     this.extra,
@@ -318,6 +319,13 @@ class X402PaymentOption {
       resource = X402Resource.fromJson(rawResource);
     }
 
+    // payTo is required per PaymentMiddlewareConfig — throw early if missing
+    // so the error is clear rather than a null deref later during signing.
+    final payTo = json['payTo'] as String?;
+    if (payTo == null || payTo.isEmpty) {
+      throw FormatException('x402 option missing required payTo field');
+    }
+
     return X402PaymentOption(
       scheme: json['scheme'] as String,
       network: json['network'] as String,
@@ -325,9 +333,10 @@ class X402PaymentOption {
       resource: resource,
       description: json['description'] as String?,
       mimeType: json['mimeType'] as String?,
-      payTo: json['payTo'] as String?, // nullable — Stacks omits this
+      payTo: payTo,
       maxTimeoutSeconds: json['maxTimeoutSeconds'] as int? ?? 300,
-      asset: json['asset'] as String,
+      // asset is optional in PaymentMiddlewareConfig — default to 'STX'
+      asset: (json['asset'] as String?) ?? 'STX',
       extra: json['extra'] as Map<String, dynamic>?,
     );
   }

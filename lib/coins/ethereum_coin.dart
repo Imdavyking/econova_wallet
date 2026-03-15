@@ -104,7 +104,7 @@ class EthereumCoin extends Coin {
       // EVM payments always need a recipient address.
       // Stacks-style 402 responses omit payTo — cannot sign for those.
       final payTo = option.payTo;
-      if (payTo == null || payTo.isEmpty) {
+      if (payTo.isEmpty) {
         debugPrint(
             'EthereumCoin x402: payTo is missing — cannot sign EVM payment');
         return null;
