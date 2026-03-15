@@ -136,10 +136,9 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     final contractDecoded = c32checkDecode(contractAddress.substring(1));
     final contractHash160 =
         Uint8List.fromList(HEX.decode(contractDecoded[1] as String));
-
-    final memo =
-        'x402:${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}'
-            .substring(0, 34.clamp(0, 34));
+    final memoRaw =
+        'x402:${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+    final memo = memoRaw.substring(0, memoRaw.length.clamp(0, 34));
 
     final payload = stacksBuildContractCallPayload(
       contractVersion: contractDecoded[0] as int,
