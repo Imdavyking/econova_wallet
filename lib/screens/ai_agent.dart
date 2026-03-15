@@ -3,12 +3,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
+import 'package:wallet_app/service/ai_tools.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
@@ -181,6 +183,48 @@ class _AIAgent extends State<AIAgent>
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Agent'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(24),
+          child: FutureBuilder<String>(
+            future: AItools.coin.getAddress(),
+            builder: (context, snapshot) {
+              final address = snapshot.data ?? '...';
+              final short = address.length > 12
+                  ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
+                  : address;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: address));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Address copied')),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        AItools.coin.getImage(),
+                        width: 16,
+                        height: 16,
+                        errorBuilder: (_, __, ___) => const SizedBox(width: 16),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${AItools.coin.getSymbol()} · $short',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.white70),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.copy, size: 12, color: Colors.white54),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.clear_all),
