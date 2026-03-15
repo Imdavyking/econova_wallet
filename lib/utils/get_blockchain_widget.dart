@@ -1,11 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/format_money.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../components/user_balance.dart';
 import '../interface/coin.dart';
@@ -60,29 +56,13 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
 
   Future getBlockchainPrice() async {
     try {
-      Map allCryptoPrice = jsonDecode(
-        await getCryptoPrice(
-          useCache: useCache,
-        ),
-      ) as Map;
-
+      final cryptoPrice = await getCryptoPrice(useCache: useCache);
       if (useCache) useCache = false;
 
-      final currencyWithSymbol = jsonDecode(currencyJson);
-
-      final String defaultCurrency = pref.get('defaultCurrency') ?? "USD";
-      final symbol = currencyWithSymbol[defaultCurrency]['symbol'];
-
-      final Map cryptoMarket = allCryptoPrice[coin.getGeckoId()];
-
-      final deCurrLow = defaultCurrency.toLowerCase();
-
-      final currPrice = cryptoMarket[deCurrLow] as num;
-      num? change = cryptoMarket['${deCurrLow}_24h_change'];
-      final currChange = change ?? 0;
+      final currPrice = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0.0;
+      final currChange = cryptoPrice.getChange(coin.getGeckoId()) ?? 0.0;
 
       Color color = Colors.grey;
-
       if (currChange > 0) {
         color = green;
       } else if (currChange < 0) {
@@ -92,10 +72,10 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
       coinWorth.value = await coin.getBalance(true) * currPrice;
 
       cryptoInfo = BlockchainPrice(
-        pricewithSym: symbol + formatMoney(currPrice, true),
-        change: currChange.toDouble(),
+        pricewithSym: cryptoPrice.symbol + formatMoney(currPrice, true),
+        change: currChange,
         changeSign: currChange > 0 ? '+' : '',
-        symbol: symbol,
+        symbol: cryptoPrice.symbol,
         color: color,
       );
       if (mounted) setState(() {});

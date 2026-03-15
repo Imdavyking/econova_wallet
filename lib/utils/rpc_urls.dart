@@ -208,7 +208,7 @@ final List<String> months = [
 
 // ─── Crypto price ─────────────────────────────────────────────────────────────
 
-Future<String> getCryptoPrice({bool useCache = false}) async {
+Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
   const int secondsToResendRequest = 15;
   final String? savedCryptoPrice = pref.get(coinGeckoCryptoPriceKey);
   final DateTime now = DateTime.now();
@@ -216,31 +216,75 @@ Future<String> getCryptoPrice({bool useCache = false}) async {
       now.difference(MyApp.lastcoinGeckoData).inSeconds;
   final bool useCached = secondsSinceLastFetch < secondsToResendRequest;
 
+  final String defaultCurrency = pref.get('defaultCurrency') ?? 'usd';
+  final currencyWithSymbol = jsonDecode(currencyJson) as Map;
+  final String symbol =
+      currencyWithSymbol[defaultCurrency.toUpperCase()]['symbol'];
+
+  Map<String, dynamic> parsedPrices = {};
+
   if ((useCached || useCache || !NetworkGuard().isConnected) &&
       savedCryptoPrice != null) {
-    return json.decode(savedCryptoPrice)['data'];
+    parsedPrices = jsonDecode(
+      jsonDecode(savedCryptoPrice)['data'],
+    ) as Map<String, dynamic>;
+
+    return CryptoPrice(
+      prices: parsedPrices,
+      symbol: symbol,
+      defaultCurrency: defaultCurrency,
+    );
   }
 
   try {
-    final String defaultCurrency = pref.get('defaultCurrency') ?? 'usd';
     if (!MyApp.getCoinGeckoData && savedCryptoPrice != null) {
-      return json.decode(savedCryptoPrice)['data'];
+      parsedPrices = jsonDecode(
+        jsonDecode(savedCryptoPrice)['data'],
+      ) as Map<String, dynamic>;
+
+      return CryptoPrice(
+        prices: parsedPrices,
+        symbol: symbol,
+        defaultCurrency: defaultCurrency,
+      );
     }
+
     final String allCrypto = coinGeckoIDs.join(',');
     final Uri apiUrl = Uri.parse(
       '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=usd,$defaultCurrency&include_24hr_change=true',
     );
     final response = await get(apiUrl).timeout(networkTimeOutDuration);
+
     if (response.statusCode >= 400) {
       throw Exception('CoinGecko Error: ${response.statusCode}');
     }
+
     MyApp.getCoinGeckoData = false;
     MyApp.lastcoinGeckoData = now;
     await pref.put(
-        coinGeckoCryptoPriceKey, json.encode({'data': response.body}));
-    return response.body;
+      coinGeckoCryptoPriceKey,
+      json.encode({'data': response.body}),
+    );
+
+    parsedPrices = jsonDecode(response.body) as Map<String, dynamic>;
+
+    return CryptoPrice(
+      prices: parsedPrices,
+      symbol: symbol,
+      defaultCurrency: defaultCurrency,
+    );
   } catch (e) {
-    if (savedCryptoPrice != null) return json.decode(savedCryptoPrice)['data'];
+    if (savedCryptoPrice != null) {
+      parsedPrices = jsonDecode(
+        jsonDecode(savedCryptoPrice)['data'],
+      ) as Map<String, dynamic>;
+
+      return CryptoPrice(
+        prices: parsedPrices,
+        symbol: symbol,
+        defaultCurrency: defaultCurrency,
+      );
+    }
     throw Exception('Failed to get data from CoinGecko: $e');
   }
 }
@@ -248,22 +292,18 @@ Future<String> getCryptoPrice({bool useCache = false}) async {
 Future<String> getCurrencyJson() async => currencyJsonSearch;
 
 Future<double> totalCryptoBalance({
-  required Map<String, dynamic> allCryptoPrice,
-  required String defaultCurrency,
+  required CryptoPrice cryptoPrice,
 }) async {
   double totalBalance = 0.0;
   for (final coin in supportedChains) {
     try {
       if (WalletService.removeCoin(coin)) continue;
       final balance = await coin.getBalance(true);
-      final priceData = allCryptoPrice[coin.getGeckoId()];
-      if (priceData == null || priceData[defaultCurrency.toLowerCase()] == null)
-        continue;
-      totalBalance += balance *
-          (priceData[defaultCurrency.toLowerCase()] as num).toDouble();
-    } catch (e, stack) {
+      final price = cryptoPrice.getPrice(coin.getGeckoId());
+      if (price == null) continue;
+      totalBalance += balance * price;
+    } catch (e) {
       debugPrint('Failed to calculate balance for ${coin.getGeckoId()}: $e');
-      debugPrint('Stack trace: $stack');
     }
   }
   return totalBalance;
@@ -452,4 +492,31 @@ web3.Transaction wcEthTxToWeb3Tx(WCEthereumTransaction tx) {
     data: tx.data == null ? null : hexToBytes(tx.data!),
     nonce: tx.nonce != null ? int.tryParse(tx.nonce!) : null,
   );
+}
+
+class CryptoPrice {
+  final Map<String, dynamic> prices;
+  final String symbol;
+  final String defaultCurrency;
+
+  const CryptoPrice({
+    required this.prices,
+    required this.symbol,
+    required this.defaultCurrency,
+  });
+
+  double? getPrice(String geckoId) {
+    return (prices[geckoId]?[defaultCurrency.toLowerCase()] as num?)
+        ?.toDouble();
+  }
+
+  double? getChange(String geckoId) {
+    return (prices[geckoId]?['${defaultCurrency.toLowerCase()}_24h_change']
+            as num?)
+        ?.toDouble();
+  }
+
+  Map<String, dynamic>? getMarket(String geckoId) {
+    return prices[geckoId] as Map<String, dynamic>?;
+  }
 }

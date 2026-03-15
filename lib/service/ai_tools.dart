@@ -170,13 +170,9 @@ class AItools {
         String coinGeckoId = toolInput.coinGeckoId;
         try {
           debugPrint('coinGeckoId: $coinGeckoId');
-          Map allCryptoPrice = jsonDecode(
-            await getCryptoPrice(useCache: true),
-          ) as Map;
-
-          final Map cryptoMarket = allCryptoPrice[coinGeckoId];
-
-          final currPrice = cryptoMarket['usd'] as num;
+          final cryptoPrice = await getCryptoPrice(useCache: true);
+          final currPrice = cryptoPrice.getPrice(coinGeckoId);
+          if (currPrice == null) return 'Failed to get price for $coinGeckoId';
           return 'the price for $coinGeckoId is $currPrice USD';
         } catch (e) {
           debugPrint('Error getting token price: $e');

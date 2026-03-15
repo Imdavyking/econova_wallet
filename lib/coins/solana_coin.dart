@@ -313,21 +313,17 @@ class SolanaCoin extends Coin {
         "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg";
     const description = "A meme token created with Pump.fun";
 
-    Map allCryptoPrice = jsonDecode(
-      await getCryptoPrice(useCache: true),
-    ) as Map;
-
-    final Map cryptoMarket = allCryptoPrice[geckoID];
-
-    final currPrice = cryptoMarket['usd'] as num;
+    final cryptoPrice = await getCryptoPrice(useCache: true);
+    final currPrice = cryptoPrice.getPrice(geckoID) ?? 0.0;
 
     const dollarLiqInSol = 0.3;
 
     final options = PumpfunTokenOptions(
       initialLiquiditySol: dollarLiqInSol / currPrice,
-      slippageBps: 500, // 5%
+      slippageBps: 500,
       priorityFee: 0,
     );
+
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
 
