@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/bitcoin_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
@@ -107,6 +108,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...solanaChains,
     ...multiversXchains,
     ...stackCoins,
+    ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
     ...getFUSEBlockchains(),
     ...getZilliqaBlockChains(),
