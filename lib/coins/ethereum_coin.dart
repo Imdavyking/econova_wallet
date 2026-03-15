@@ -2,13 +2,16 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
+import '../service/x402_service.dart';
 import 'package:wallet_app/screens/view_erc_nfts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart';
+import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 
 import '../interface/coin.dart';
@@ -56,29 +59,196 @@ class EthereumCoin extends Coin {
   Widget? getNFTPage() => ViewErcNFTs(ethCoin: this);
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
 
   @override
-  String getSymbol() {
-    return symbol;
+  String getSymbol() => symbol;
+
+  // ── x402 support ────────────────────────────────────────────────────────────
+
+  @override
+  bool get supportsX402 => true;
+
+  @override
+  Future<String?> signX402Payment(X402PaymentOption option) async {
+    try {
+      final walletData = WalletService.getActiveKey(walletImportType)!.data;
+      final accountData = await importData(walletData);
+      final privateKeyBytes = hexToBytes(accountData.privateKey!);
+      final fromAddress = accountData.address;
+
+      final value = BigInt.parse(option.maxAmountRequired);
+      final validAfter = BigInt.zero;
+      final validBefore = BigInt.from(
+        DateTime.now()
+                .add(const Duration(minutes: 5))
+                .millisecondsSinceEpoch ~/
+            1000,
+      );
+      final nonce = _randomNonce();
+      final contractVersion = option.extra?['version'] as String? ?? '2';
+
+      final signature = _signEIP3009(
+        from: fromAddress,
+        to: option.payTo,
+        value: value,
+        validAfter: validAfter,
+        validBefore: validBefore,
+        nonce: nonce,
+        contractAddress: option.asset,
+        chainId: _chainIdForNetwork(option.network),
+        contractVersion: contractVersion,
+        privateKey: privateKeyBytes,
+      );
+
+      final payload = {
+        'x402Version': 1,
+        'scheme': option.scheme,
+        'network': option.network,
+        'payload': {
+          'signature': signature,
+          'authorization': {
+            'from': fromAddress,
+            'to': option.payTo,
+            'value': value.toString(),
+            'validAfter': validAfter.toString(),
+            'validBefore': validBefore.toString(),
+            'nonce': nonce,
+          },
+        },
+      };
+
+      return base64Encode(utf8.encode(jsonEncode(payload)));
+    } catch (e) {
+      debugPrint('x402 sign error: $e');
+      return null;
+    }
   }
+
+  // ── EIP-3009 signing ─────────────────────────────────────────────────────────
+
+  String _signEIP3009({
+    required String from,
+    required String to,
+    required BigInt value,
+    required BigInt validAfter,
+    required BigInt validBefore,
+    required String nonce,
+    required String contractAddress,
+    required int chainId,
+    required String contractVersion,
+    required Uint8List privateKey,
+  }) {
+    const transferTypeHash =
+        'TransferWithAuthorization(address from,address to,uint256 value,'
+        'uint256 validAfter,uint256 validBefore,bytes32 nonce)';
+
+    final typeHashBytes =
+        keccak256(Uint8List.fromList(utf8.encode(transferTypeHash)));
+
+    final structHash = keccak256(_abiEncode([
+      typeHashBytes,
+      _addressToBytes32(from),
+      _addressToBytes32(to),
+      _uint256ToBytes(value),
+      _uint256ToBytes(validAfter),
+      _uint256ToBytes(validBefore),
+      hexToBytes(nonce.replaceFirst('0x', '')),
+    ]));
+
+    final domainSeparator = _buildDomainSeparator(
+      contractAddress: contractAddress,
+      chainId: chainId,
+      version: contractVersion,
+    );
+
+    final digest = keccak256(
+      Uint8List.fromList([0x19, 0x01, ...domainSeparator, ...structHash]),
+    );
+
+    final sig = sign(digest, privateKey);
+    final v = (sig.v + 27).toRadixString(16).padLeft(2, '0');
+    final r = sig.r.toRadixString(16).padLeft(64, '0');
+    final s = sig.s.toRadixString(16).padLeft(64, '0');
+
+    return '0x$r$s$v';
+  }
+
+  Uint8List _buildDomainSeparator({
+    required String contractAddress,
+    required int chainId,
+    required String version,
+  }) {
+    const domainTypeHash =
+        'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)';
+
+    final typeHash =
+        keccak256(Uint8List.fromList(utf8.encode(domainTypeHash)));
+    final nameHash =
+        keccak256(Uint8List.fromList(utf8.encode('USD Coin')));
+    final versionHash =
+        keccak256(Uint8List.fromList(utf8.encode(version)));
+
+    return keccak256(_abiEncode([
+      typeHash,
+      nameHash,
+      versionHash,
+      _uint256ToBytes(BigInt.from(chainId)),
+      _addressToBytes32(contractAddress),
+    ]));
+  }
+
+  Uint8List _abiEncode(List<Uint8List> parts) {
+    final result = <int>[];
+    for (final part in parts) {
+      if (part.length <= 32) {
+        result.addAll(List.filled(32 - part.length, 0));
+        result.addAll(part);
+      } else {
+        result.addAll(part.sublist(part.length - 32));
+      }
+    }
+    return Uint8List.fromList(result);
+  }
+
+  Uint8List _uint256ToBytes(BigInt value) =>
+      hexToBytes(value.toRadixString(16).padLeft(64, '0'));
+
+  Uint8List _addressToBytes32(String address) => hexToBytes(
+        address.toLowerCase().replaceFirst('0x', '').padLeft(64, '0'),
+      );
+
+  String _randomNonce() {
+    final rng = Random.secure();
+    final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
+    return '0x${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
+  }
+
+  int _chainIdForNetwork(String network) {
+    switch (network) {
+      case 'base-mainnet':
+        return 8453;
+      case 'base-sepolia':
+        return 84532;
+      case 'ethereum-mainnet':
+        return 1;
+      case 'ethereum-sepolia':
+        return 11155111;
+      default:
+        return chainId; // fall back to this coin's own chainId
+    }
+  }
+
+  // ── Standard EthereumCoin methods ────────────────────────────────────────────
 
   factory EthereumCoin.fromJson(Map<String, dynamic> json) {
     return EthereumCoin(
@@ -110,7 +280,6 @@ class EthereumCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
-
     return data;
   }
 
@@ -127,16 +296,9 @@ class EthereumCoin extends Coin {
     }
 
     final address = await etherPrivateKeyToAddress(privateKey);
-
-    final keys = AccountData(
-      address: address,
-      privateKey: privateKey,
-    );
-
+    final keys = AccountData(address: address, privateKey: privateKey);
     privateKeyMap[privateKey] = keys.toJson();
-
     await pref.put(saveKey, jsonEncode(privateKeyMap));
-
     return keys;
   }
 
@@ -158,11 +320,8 @@ class EthereumCoin extends Coin {
     );
 
     final keys = await compute(calculateEthereumKey, args);
-
     mnemonicMap[mnemonic] = keys;
-
     await pref.put(saveKey, jsonEncode(mnemonicMap));
-
     return AccountData.fromJson(keys);
   }
 
@@ -176,33 +335,22 @@ class EthereumCoin extends Coin {
 
   @override
   Future<String?> resolveAddress(String address) async {
-    Map resolver = await ensToAddr(
-      domainName: address,
-    );
-
-    if (resolver['success']) {
-      return resolver['msg'];
-    }
+    Map resolver = await ensToAddr(domainName: address);
+    if (resolver['success']) return resolver['msg'];
 
     resolver = await udResolver(
       domainName: address,
       currency: getDefault(),
     );
-
-    if (resolver['success']) {
-      return resolver['msg'];
-    }
+    if (resolver['success']) return resolver['msg'];
     return null;
   }
 
   @override
   Future<double> getUserBalance({required String address}) async {
     final ethClient = Web3Client(rpc, Client());
-
     final userAddress = EthereumAddress.fromHex(address);
-
     final etherAmount = await ethClient.getBalance(userAddress);
-
     final base = BigInt.from(10);
     await ethClient.dispose();
     return etherAmount.getInWei / base.pow(decimals());
@@ -213,17 +361,12 @@ class EthereumCoin extends Coin {
     String address = roninAddrToEth(await getAddress());
     final tokenKey = '$rpc$address/balance';
     final storedBalance = pref.get(tokenKey);
-
     double savedBalance = 0;
-
     if (storedBalance != null) savedBalance = storedBalance;
-
     if (useCache) return savedBalance;
-
     try {
       double ethBalance = await getUserBalance(address: address);
       await pref.put(tokenKey, ethBalance);
-
       return ethBalance;
     } catch (e) {
       return savedBalance;
@@ -231,23 +374,15 @@ class EthereumCoin extends Coin {
   }
 
   @override
-  String savedTransKey() {
-    return '$default_$rpc Details';
-  }
+  String savedTransKey() => '$default_$rpc Details';
 
   @override
   Future<String?> transferToken(String amount, String to,
       {String? memo}) async {
-    final client = Web3Client(
-      rpc,
-      Client(),
-    );
+    final client = Web3Client(rpc, Client());
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
-
-    final credentials = EthPrivateKey.fromHex(
-      response.privateKey!,
-    );
+    final credentials = EthPrivateKey.fromHex(response.privateKey!);
     final gasPrice = await client.getGasPrice();
     final wei = amount.toBigIntDec(decimals());
 
@@ -256,9 +391,7 @@ class EthereumCoin extends Coin {
       Transaction(
         from: credentials.address,
         to: EthereumAddress.fromHex(roninAddrToEth(to)),
-        value: EtherAmount.inWei(
-          wei,
-        ),
+        value: EtherAmount.inWei(wei),
         gasPrice: gasPrice,
       ),
       chainId: chainId,
@@ -273,9 +406,7 @@ class EthereumCoin extends Coin {
   }
 
   @override
-  int decimals() {
-    return etherDecimals;
-  }
+  int decimals() => etherDecimals;
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
@@ -287,7 +418,6 @@ class EthereumCoin extends Coin {
       EthereumAddress.fromHex(roninAddrToEth(response.address)),
       EthereumAddress.fromHex(roninAddrToEth(to)),
     );
-
     return transactionFee / pow(10, decimals());
   }
 
@@ -361,7 +491,7 @@ List<EthereumCoin> getEVMBlockchains() {
         geckoID: "polygon-ecosystem-token",
         payScheme: 'polygon',
         rampID: 'MATIC_MATIC',
-      )
+      ),
     ]);
   } else {
     blockChains.addAll([
@@ -395,7 +525,8 @@ List<EthereumCoin> getEVMBlockchains() {
         name: 'Base Chain',
         rpc: 'https://mainnet.base.org',
         chainId: 8453,
-        blockExplorer: 'https://explorer.base.org/tx/$blockExplorerPlaceholder',
+        blockExplorer:
+            'https://explorer.base.org/tx/$blockExplorerPlaceholder',
         symbol: 'ETH',
         default_: 'ETH',
         image: 'assets/basechain.jpeg',
@@ -591,19 +722,6 @@ List<EthereumCoin> getEVMBlockchains() {
         payScheme: 'celo',
         rampID: 'CELO_CELO',
       ),
-      // EthereumCoin(
-      //   name: 'Fuse',
-      //   rpc: 'https://rpc.fuse.io',
-      //   chainId: 122,
-      //   blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
-      //   symbol: 'FUSE',
-      //   default_: 'FUSE',
-      //   image: 'assets/fuse.png',
-      //   coinType: 60,
-      //   geckoID: "fuse-network-token",
-      //   payScheme: 'fuse',
-      //   rampID: '',
-      // ),
       EthereumCoin(
         name: 'Aurora',
         rpc: 'https://mainnet.aurora.dev',
@@ -653,7 +771,6 @@ List<EthereumCoin> getEVMBlockchains() {
     final tokenList = Map.from(jsonDecode(prefCoin))
         .values
         .map((e) => EthereumCoin.fromJson(e));
-
     blockChains.addAll([...tokenList]);
   }
 
@@ -668,15 +785,10 @@ Future<double> getEtherTransactionFee(
   double? value,
   EtherAmount? gasPrice,
 }) async {
-  final client = Web3Client(
-    rpc,
-    Client(),
-  );
+  final client = Web3Client(rpc, Client());
 
   final etherValue = value != null
-      ? EtherAmount.inWei(
-          BigInt.from(value),
-        )
+      ? EtherAmount.inWei(BigInt.from(value))
       : null;
 
   if (gasPrice == null || gasPrice.getInWei == BigInt.from(0)) {
@@ -684,35 +796,28 @@ Future<double> getEtherTransactionFee(
   }
 
   BigInt? gasUnit;
-
   try {
     gasUnit = await client.estimateGas(
-      sender: sender,
-      to: to,
-      data: data,
-      value: etherValue,
-    );
+        sender: sender, to: to, data: data, value: etherValue);
   } catch (_) {}
 
   if (gasUnit == null) {
     try {
       gasUnit = await client.estimateGas(
-        sender: EthereumAddress.fromHex(zeroAddress),
-        to: to,
-        data: data,
-        value: etherValue,
-      );
+          sender: EthereumAddress.fromHex(zeroAddress),
+          to: to,
+          data: data,
+          value: etherValue);
     } catch (_) {}
   }
 
   if (gasUnit == null) {
     try {
       gasUnit = await client.estimateGas(
-        sender: EthereumAddress.fromHex(deadAddress),
-        to: to,
-        data: data,
-        value: etherValue,
-      );
+          sender: EthereumAddress.fromHex(deadAddress),
+          to: to,
+          data: data,
+          value: etherValue);
     } catch (e) {
       gasUnit = BigInt.from(0);
     }
@@ -724,11 +829,7 @@ Future<double> getEtherTransactionFee(
 class EthereumDeriveArgs {
   final SeedPhraseRoot seedRoot;
   final int coinType;
-
-  const EthereumDeriveArgs({
-    required this.seedRoot,
-    required this.coinType,
-  });
+  const EthereumDeriveArgs({required this.seedRoot, required this.coinType});
 }
 
 Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
@@ -738,11 +839,7 @@ Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
   final privateKey = HEX.encode(node.privateKey!);
   final privatekeyStr = "0x$privateKey";
   final address = await etherPrivateKeyToAddress(privatekeyStr);
-
-  return {
-    'address': address,
-    'privateKey': privatekeyStr,
-  };
+  return {'address': address, 'privateKey': privatekeyStr};
 }
 
 Future<String> etherPrivateKeyToAddress(String privateKey) async {
@@ -751,10 +848,5 @@ Future<String> etherPrivateKeyToAddress(String privateKey) async {
   return EthereumAddress.fromHex('$uncheckedAddr').hexEip55;
 }
 
-String roninAddrToEth(String address) {
-  return address.replaceFirst('ronin:', '0x');
-}
-
-String ethAddrToRonin(String address) {
-  return address.replaceFirst('0x', 'ronin:');
-}
+String roninAddrToEth(String address) => address.replaceFirst('ronin:', '0x');
+String ethAddrToRonin(String address) => address.replaceFirst('0x', 'ronin:');

@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
 
@@ -43,7 +44,10 @@ abstract class Coin {
 
   String getRampID();
   String getPayScheme();
+  Future<String?> signX402Payment(X402PaymentOption option) async => null;
 
+  /// Returns true if this coin supports x402 payments.
+  bool get supportsX402 => false;
   bool get supportKeystore => false;
   bool get supportPrivateKey => false;
   bool get isRpcWorking => true;

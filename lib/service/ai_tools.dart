@@ -1,11 +1,12 @@
 import "dart:convert";
-
+import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/contact_service.dart";
+import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
@@ -38,9 +39,12 @@ class AItools {
   List<Tool> getTools() {
     Constants.user.profileImage = coin.getImage();
     final currentCoin = "${coin.getName().split('(')[0]} (${coin.getSymbol()})";
+
+    // ── QRY_getAddress ──────────────────────────────────────────────────────────
+
     final addressTool = Tool.fromFunction<_GetAddressInput, String>(
       name: 'QRY_getAddress',
-      description: 'Tool for getting current user address,',
+      description: 'Tool for getting current user address.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {},
@@ -58,6 +62,8 @@ class AItools {
       getInputFromJson: _GetAddressInput.fromJson,
     );
 
+    // ── QRY_resolveUserContact ──────────────────────────────────────────────────
+
     final resolveUserContactTool =
         Tool.fromFunction<_GetContactNameInput, String>(
       name: 'QRY_resolveUsercontact',
@@ -67,7 +73,7 @@ class AItools {
         'properties': {
           'contactName': {
             'type': 'string',
-            'description': 'The domain name to resolve',
+            'description': 'The contact name to resolve',
           },
         },
         'required': ['contactName'],
@@ -86,18 +92,15 @@ class AItools {
           if (address == null || address.isEmpty) {
             return 'Contact "$contactName" has no associated address.';
           }
-
           try {
             coin.validateAddress(address);
           } catch (e) {
             return 'Invalid address for $coin: $address';
           }
-
           final hasMemo = exactMatch.memo?.isNotEmpty == true;
           final memoText = hasMemo
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
-
           return 'The address for "$contactName" on $coin is "$address"$memoText.';
         }
 
@@ -108,7 +111,6 @@ class AItools {
         if (bestMatch.rating == null) {
           return 'Contact "$contactName" not found.';
         }
-
         if (bestMatch.rating! > 0.5) {
           return 'Contact "$contactName" not found. Did you mean "${bestMatch.target}"?';
         } else if (bestMatch.rating! > 0.25) {
@@ -119,6 +121,8 @@ class AItools {
       },
       getInputFromJson: _GetContactNameInput.fromJson,
     );
+
+    // ── QRY_resolveDomainName ───────────────────────────────────────────────────
 
     final resolveDomainNameTool =
         Tool.fromFunction<_GetDomainNameInput, String>(
@@ -137,7 +141,6 @@ class AItools {
       func: (final _GetDomainNameInput toolInput) async {
         String domainName = toolInput.domainName;
         String? address;
-
         try {
           address = await coin.resolveAddress(domainName);
           if (address == null) {
@@ -147,11 +150,12 @@ class AItools {
         } catch (e) {
           return 'Invalid $currentCoin address: $address';
         }
-        final result = 'The address for $domainName is $address';
-        return result;
+        return 'The address for $domainName is $address';
       },
       getInputFromJson: _GetDomainNameInput.fromJson,
     );
+
+    // ── QRY_getTokenPrice ───────────────────────────────────────────────────────
 
     final getTokenPriceTool = Tool.fromFunction<_GetTokenPriceInput, String>(
       name: 'QRY_getTokenPrice',
@@ -182,6 +186,8 @@ class AItools {
       getInputFromJson: _GetTokenPriceInput.fromJson,
     );
 
+    // ── QRY_getBalance ──────────────────────────────────────────────────────────
+
     final balanceTool = Tool.fromFunction<_GetBalanceInput, String>(
       name: 'QRY_getBalance',
       description: 'Tool for checking $currentCoin balance for any address',
@@ -208,7 +214,6 @@ class AItools {
           final foundToken = supportedChains.firstWhereOrNull((token) =>
               token.getExplorer() == coin.getExplorer() &&
               token.tokenAddress() == tokenAddress);
-
           if (foundToken != null) {
             token = foundToken;
           } else {
@@ -223,17 +228,15 @@ class AItools {
         } catch (e) {
           return 'Invalid $currentCoin address: $walletAddress';
         }
-        final result = 'Checking $walletAddress $tokenAddress balance';
-        debugPrint(result);
 
         final coinBal = await token.getUserBalance(address: walletAddress);
-
-        final balanceString =
-            '$walletAddress have $coinBal ${token.getSymbol()}';
-        return balanceString;
+        return '$walletAddress have $coinBal ${token.getSymbol()}';
       },
       getInputFromJson: _GetBalanceInput.fromJson,
     );
+
+    // ── CMD_transferBalance ─────────────────────────────────────────────────────
+
     final transferTool = Tool.fromFunction<_GetTransferInput, String>(
       name: 'CMD_transferBalance',
       description:
@@ -266,13 +269,8 @@ class AItools {
         final tokenAddress = toolInput.tokenAddress;
         final memo = toolInput.memo;
 
-        if (recipient.isEmpty) {
-          return 'Recipient address is empty.';
-        }
-
-        if (amount <= 0) {
-          return 'Amount must be greater than zero.';
-        }
+        if (recipient.isEmpty) return 'Recipient address is empty.';
+        if (amount <= 0) return 'Amount must be greater than zero.';
 
         Coin token = coin;
 
@@ -289,10 +287,10 @@ class AItools {
 
         String message =
             'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
-
         if (memo != null && memo.isNotEmpty && coin.requireMemo()) {
           message += '\n\nMemo: $memo';
         }
+
         try {
           coin.validateAddress(recipient);
         } catch (e) {
@@ -301,9 +299,7 @@ class AItools {
         }
 
         final confirmation = await confirmTransaction(message);
-        if (confirmation != null) {
-          return confirmation; // User cancelled or rejected confirmation
-        }
+        if (confirmation != null) return confirmation;
 
         try {
           final txHash = await token.transferToken(
@@ -311,11 +307,9 @@ class AItools {
             recipient,
             memo: memo,
           );
-
           if (txHash == null || txHash.isEmpty) {
             return '${token.getSymbol()} Transaction failed: no transaction hash returned.';
           }
-
           final successMessage =
               'Sent $amount tokens to $recipient on ${token.getSymbol()}.\nTransaction hash: $txHash ${coin.formatTxHash(txHash)}';
           debugPrint(successMessage);
@@ -327,6 +321,8 @@ class AItools {
       },
       getInputFromJson: _GetTransferInput.fromJson,
     );
+
+    // ── QRY_getQuote ────────────────────────────────────────────────────────────
 
     final getQuote = Tool.fromFunction<_GetSwapInput, String>(
       name: 'QRY_getQuote',
@@ -353,10 +349,8 @@ class AItools {
         String tokenIn = toolInput.tokenIn;
         String tokenOut = toolInput.tokenOut;
         String amount = toolInput.amount;
-
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
-
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
@@ -368,6 +362,8 @@ class AItools {
       },
       getInputFromJson: _GetSwapInput.fromJson,
     );
+
+    // ── CMD_swapTokens ──────────────────────────────────────────────────────────
 
     final swapTool = Tool.fromFunction<_GetSwapInput, String>(
       name: 'CMD_swapTokens',
@@ -394,13 +390,11 @@ class AItools {
         String tokenIn = toolInput.tokenIn;
         String tokenOut = toolInput.tokenOut;
         String amount = toolInput.amount;
-
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
           if (quote == null) {
             return 'Failed to get quote for $tokenIn => $tokenOut $amount';
           }
-
           final tokenInSymbol =
               tokenIn == AIAgentService.defaultCoinTokenAddress
                   ? coin.getSymbol()
@@ -409,19 +403,16 @@ class AItools {
               tokenOut == AIAgentService.defaultCoinTokenAddress
                   ? coin.getSymbol()
                   : tokenOut;
-
           final message =
-              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. You will get ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}.';
+              'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. '
+              'You will get ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}.';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
 
           String? txHash = await coin.swapTokens(tokenIn, tokenOut, amount);
           if (txHash == null) {
             return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
           }
-
           return 'Swapped $tokenIn => $tokenOut $amount $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
@@ -430,33 +421,26 @@ class AItools {
       getInputFromJson: _GetSwapInput.fromJson,
     );
 
+    // ── CMD_stakeToken ──────────────────────────────────────────────────────────
+
     final stakeTool = Tool.fromFunction<_GetStakeInput, String>(
       name: 'CMD_stakeToken',
       description: 'Tool for staking token',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'amount': {
-            'type': 'string',
-            'description': 'The amount to stake',
-          },
+          'amount': {'type': 'string', 'description': 'The amount to stake'},
         },
         'required': ['amount'],
       },
       func: (final _GetStakeInput toolInput) async {
         String amount = toolInput.amount;
-
         try {
           final message = 'You are about to stake $amount $currentCoin';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
           final txHash = await coin.stakeToken(amount);
-          if (txHash == null) {
-            return 'Failed to get stake $amount $currentCoin';
-          }
-
+          if (txHash == null) return 'Failed to get stake $amount $currentCoin';
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Staking failed for $currentCoin $amount $e';
@@ -465,33 +449,28 @@ class AItools {
       getInputFromJson: _GetStakeInput.fromJson,
     );
 
+    // ── CMD_unstakeToken ────────────────────────────────────────────────────────
+
     final unstakeTool = Tool.fromFunction<_GetStakeInput, String>(
       name: 'CMD_unstakeToken',
       description: 'Tool for unstaking token',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'amount': {
-            'type': 'string',
-            'description': 'The amount to unstake',
-          },
+          'amount': {'type': 'string', 'description': 'The amount to unstake'},
         },
         'required': ['amount'],
       },
       func: (final _GetStakeInput toolInput) async {
         String amount = toolInput.amount;
-
         try {
           final message = 'You are about to unStake $amount $currentCoin';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
           final txHash = await coin.unstakeToken(amount);
           if (txHash == null) {
             return 'Failed to get unstake $amount $currentCoin';
           }
-
           return 'Unstaked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'UnStaking failed for $currentCoin $amount $e';
@@ -499,6 +478,8 @@ class AItools {
       },
       getInputFromJson: _GetStakeInput.fromJson,
     );
+
+    // ── QRY_getStakeRewards ─────────────────────────────────────────────────────
 
     final stakeRewardsTool = Tool.fromFunction<_GetStakeRewardsInput, String>(
       name: 'QRY_getStakeRewards',
@@ -514,10 +495,7 @@ class AItools {
             'Failed to get staked rewards for ${await coin.getAddress()}';
         try {
           final stakeRewards = await coin.getTotalStaked();
-          if (stakeRewards == null) {
-            return errMsg;
-          }
-
+          if (stakeRewards == null) return errMsg;
           return 'Your staked rewards are $stakeRewards $currentCoin';
         } catch (e) {
           return errMsg;
@@ -525,6 +503,8 @@ class AItools {
       },
       getInputFromJson: _GetStakeRewardsInput.fromJson,
     );
+
+    // ── CMD_claimRewards ────────────────────────────────────────────────────────
 
     final claimRewardsTool = Tool.fromFunction<_GetStakeInput, String>(
       name: 'CMD_claimRewards',
@@ -541,19 +521,15 @@ class AItools {
       },
       func: (final _GetStakeInput toolInput) async {
         String amount = toolInput.amount;
-
         try {
           final message =
               'You are about to claim $amount $currentCoin rewards for staking';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
           final txHash = await coin.claimRewards(amount);
           if (txHash == null) {
             return 'Failed to get claim $amount $currentCoin token rewards';
           }
-
           return 'Claimed staked rewards $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Claim rewards failed for $currentCoin $amount $e';
@@ -561,6 +537,8 @@ class AItools {
       },
       getInputFromJson: _GetStakeInput.fromJson,
     );
+
+    // ── CMD_switchCoin ──────────────────────────────────────────────────────────
 
     final switchCoinTool = Tool.fromFunction<_GetSwitchCoin, String>(
       name: 'CMD_switchCoin',
@@ -582,20 +560,15 @@ class AItools {
       func: (final _GetSwitchCoin toolInput) async {
         String name = toolInput.name;
         String default_ = toolInput.default_;
-
         try {
           final message = 'You are about to switch to $name ($default_)';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
           coin = supportedChains.firstWhere(
             (Coin value) =>
                 value.getSymbol() == default_ && coin.tokenAddress() == null,
           );
-
           Constants.user.profileImage = coin.getImage();
-
           return 'Switched to $name $default_';
         } catch (e) {
           return 'Switching failed for $currentCoin $name $default_ $e';
@@ -603,6 +576,8 @@ class AItools {
       },
       getInputFromJson: _GetSwitchCoin.fromJson,
     );
+
+    // ── CMD_deployMeme ──────────────────────────────────────────────────────────
 
     final deployMeme = Tool.fromFunction<_GetDeployMemeInput, String>(
       name: 'CMD_deployMeme',
@@ -623,28 +598,23 @@ class AItools {
             'description': 'The initial supply of the meme token',
           },
         },
-        'required': [
-          'name',
-          'symbol',
-          'initialSupply',
-        ],
+        'required': ['name', 'symbol', 'initialSupply'],
       },
       func: (final _GetDeployMemeInput toolInput) async {
         String name = toolInput.name;
         String symbol = toolInput.symbol;
         String initialSupply = toolInput.initialSupply;
-        const mininumTotalSupply = 1000000; // so users can deploy meme token
-
+        const mininumTotalSupply = 1000000;
         try {
           if (int.parse(initialSupply) < mininumTotalSupply) {
             return 'Initial supply must be greater than $mininumTotalSupply';
           }
           final message =
-              'You are about to deploy a meme token with name $name, symbol $symbol, and initial supply $initialSupply';
+              'You are about to deploy a meme token with name $name, '
+              'symbol $symbol, and initial supply $initialSupply';
           final confirmation = await confirmTransaction(message);
-          if (confirmation != null) {
-            return confirmation;
-          }
+          if (confirmation != null) return confirmation;
+
           final memeData = await coin.deployMemeCoin(
             name: name,
             symbol: symbol,
@@ -666,21 +636,123 @@ class AItools {
           }
 
           final tokenAddress = memeData.tokenAddress!;
-
           final dexScreener = coin.getDexScreener(tokenAddress);
 
-          return 'Deployed meme token with name $name, symbol $symbol, and initial supply $initialSupply Token address: $tokenAddress. Liquidity Transaction hash: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}, deployTx ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)} ${dexScreener ?? ''}';
+          return 'Deployed meme token with name $name, symbol $symbol, '
+              'and initial supply $initialSupply Token address: $tokenAddress. '
+              'Liquidity Transaction hash: ${memeData.liquidityTx} '
+              '${coin.formatTxHash(memeData.liquidityTx!)}, '
+              'deployTx ${memeData.deployTokenTx} '
+              '${coin.formatTxHash(memeData.deployTokenTx!)} '
+              '${dexScreener ?? ''}';
         } catch (e) {
-          if (kDebugMode) {
-            print(e);
-          }
+          if (kDebugMode) print(e);
           return 'Failed to deploy meme token: $e';
         }
       },
       getInputFromJson: _GetDeployMemeInput.fromJson,
     );
+// ── QRY_httpGet ─────────────────────────────────────────────────────────────
+
+    final httpGetTool = Tool.fromFunction<_GetHttpInput, String>(
+      name: 'QRY_httpGet',
+      description: 'Make an HTTP GET request to fetch data from any URL. '
+          'If the response is 402 Payment Required, return the details '
+          'so CMD_x402Pay can be used to pay and retry.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'url': {
+            'type': 'string',
+            'description': 'The URL to fetch',
+          },
+        },
+        'required': ['url'],
+      },
+      func: (final _GetHttpInput toolInput) async {
+        try {
+          final response = await http
+              .get(
+                Uri.parse(toolInput.url),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          if (response.statusCode == 402) {
+            return 'STATUS_402: This resource requires payment. '
+                'Use CMD_x402Pay with resourceUrl: ${toolInput.url}';
+          }
+
+          if (response.statusCode >= 400) {
+            return 'HTTP Error ${response.statusCode}: ${response.body}';
+          }
+
+          return response.body;
+        } catch (e) {
+          return 'Request failed: $e';
+        }
+      },
+      getInputFromJson: _GetHttpInput.fromJson,
+    );
+    // ── CMD_x402Pay ─────────────────────────────────────────────────────────────
+
+    final x402PayTool = Tool.fromFunction<_GetX402PayInput, String>(
+      name: 'CMD_x402Pay',
+      description:
+          'Pay for a resource or service autonomously using the x402 protocol. '
+          'Use this when a URL returns a 402 Payment Required response. '
+          'Pass only the URL — payment details (amount, recipient, token) '
+          'are read automatically from the 402 response.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'resourceUrl': {
+            'type': 'string',
+            'description': 'The URL of the resource that returned 402',
+          },
+        },
+        'required': ['resourceUrl'],
+      },
+      func: (final _GetX402PayInput toolInput) async {
+        try {
+          final service = X402Service(coin: coin);
+
+          // Step 1: probe the URL to get payment details
+          final probeResult = await service.probe(toolInput.resourceUrl);
+          if (probeResult == null) {
+            // Not a 402 — just fetch and return
+            return await service.fetchWithPayment(toolInput.resourceUrl);
+          }
+
+          // Step 2: show the user what will be paid and ask for confirmation
+          // Amount is in token base units — convert to human readable
+          final humanAmount = probeResult.humanReadableAmount;
+          final message = 'x402 Payment Required\n\n'
+              'Resource: ${toolInput.resourceUrl}\n'
+              'Amount: $humanAmount\n'
+              'Recipient: ${probeResult.option.payTo}\n'
+              'Network: ${probeResult.option.network}\n'
+              'Token: ${probeResult.option.asset}\n\n'
+              'Approve this payment?';
+
+          final confirmation = await confirmTransaction(message);
+          if (confirmation != null) return confirmation;
+
+          // Step 3: sign and submit
+          final result = await service.payAndFetch(
+            toolInput.resourceUrl,
+            probeResult,
+          );
+
+          return result;
+        } catch (e) {
+          return 'x402 payment failed: $e';
+        }
+      },
+      getInputFromJson: _GetX402PayInput.fromJson,
+    );
 
     return [
+      httpGetTool,
       addressTool,
       resolveDomainNameTool,
       balanceTool,
@@ -695,53 +767,43 @@ class AItools {
       claimRewardsTool,
       stakeRewardsTool,
       deployMeme,
+      x402PayTool,
     ];
   }
 }
 
+// ── Input classes ─────────────────────────────────────────────────────────────
+
 class _GetContactNameInput {
   final String contactName;
-
   _GetContactNameInput({required this.contactName});
-
   factory _GetContactNameInput.fromJson(Map<String, dynamic> json) {
     debugPrint('getContactNameInput: $json');
-    return _GetContactNameInput(
-      contactName: json['contactName'] as String,
-    );
+    return _GetContactNameInput(contactName: json['contactName'] as String);
   }
 }
 
 class _GetDomainNameInput {
   final String domainName;
-
   _GetDomainNameInput({required this.domainName});
-
   factory _GetDomainNameInput.fromJson(Map<String, dynamic> json) {
     debugPrint('getDomainNameInput: $json');
-    return _GetDomainNameInput(
-      domainName: json['domainName'] as String,
-    );
+    return _GetDomainNameInput(domainName: json['domainName'] as String);
   }
 }
 
 class _GetTokenPriceInput {
   final String coinGeckoId;
-
   _GetTokenPriceInput({required this.coinGeckoId});
-
   factory _GetTokenPriceInput.fromJson(Map<String, dynamic> json) {
-    return _GetTokenPriceInput(
-      coinGeckoId: json['coinGeckoId'] as String,
-    );
+    return _GetTokenPriceInput(coinGeckoId: json['coinGeckoId'] as String);
   }
 }
 
 class _GetAddressInput {
   _GetAddressInput();
-
   factory _GetAddressInput.fromJson(Map<String, dynamic> json) {
-    debugPrint('getBalanceInput: $json');
+    debugPrint('getAddressInput: $json');
     return _GetAddressInput();
   }
 }
@@ -749,9 +811,7 @@ class _GetAddressInput {
 class _GetBalanceInput {
   final String walletAddress;
   final String tokenAddress;
-
   _GetBalanceInput({required this.walletAddress, required this.tokenAddress});
-
   factory _GetBalanceInput.fromJson(Map<String, dynamic> json) {
     return _GetBalanceInput(
       walletAddress: json['walletAddress'] as String,
@@ -763,9 +823,7 @@ class _GetBalanceInput {
 class _GetSwitchCoin {
   final String name;
   final String default_;
-
   _GetSwitchCoin({required this.name, required this.default_});
-
   factory _GetSwitchCoin.fromJson(Map<String, dynamic> json) {
     debugPrint('getSwitchCoin: $json');
     return _GetSwitchCoin(
@@ -777,7 +835,6 @@ class _GetSwitchCoin {
 
 class _GetStakeRewardsInput {
   _GetStakeRewardsInput();
-
   factory _GetStakeRewardsInput.fromJson(Map<String, dynamic> json) {
     return _GetStakeRewardsInput();
   }
@@ -785,15 +842,9 @@ class _GetStakeRewardsInput {
 
 class _GetStakeInput {
   final String amount;
-
-  _GetStakeInput({
-    required this.amount,
-  });
-
+  _GetStakeInput({required this.amount});
   factory _GetStakeInput.fromJson(Map<String, dynamic> json) {
-    return _GetStakeInput(
-      amount: json['amount'] as String,
-    );
+    return _GetStakeInput(amount: json['amount'] as String);
   }
 }
 
@@ -801,13 +852,11 @@ class _GetSwapInput {
   final String tokenIn;
   final String tokenOut;
   final String amount;
-
   _GetSwapInput({
     required this.tokenIn,
     required this.tokenOut,
     required this.amount,
   });
-
   factory _GetSwapInput.fromJson(Map<String, dynamic> json) {
     return _GetSwapInput(
       tokenIn: json['tokenIn'] as String,
@@ -822,14 +871,12 @@ class _GetTransferInput {
   final String tokenAddress;
   final String? memo;
   final num amount;
-
   _GetTransferInput({
     required this.recipient,
     required this.amount,
     required this.memo,
     required this.tokenAddress,
   });
-
   factory _GetTransferInput.fromJson(Map<String, dynamic> json) {
     debugPrint('getTransferInput: $json');
     return _GetTransferInput(
@@ -845,18 +892,32 @@ class _GetDeployMemeInput {
   final String name;
   final String symbol;
   final String initialSupply;
-
   _GetDeployMemeInput({
     required this.name,
     required this.symbol,
     required this.initialSupply,
   });
-
   factory _GetDeployMemeInput.fromJson(Map<String, dynamic> json) {
     return _GetDeployMemeInput(
       name: json['name'] as String,
       symbol: json['symbol'] as String,
       initialSupply: json['initialSupply'] as String,
     );
+  }
+}
+
+class _GetX402PayInput {
+  final String resourceUrl;
+  _GetX402PayInput({required this.resourceUrl});
+  factory _GetX402PayInput.fromJson(Map<String, dynamic> json) {
+    return _GetX402PayInput(resourceUrl: json['resourceUrl'] as String);
+  }
+}
+
+class _GetHttpInput {
+  final String url;
+  _GetHttpInput({required this.url});
+  factory _GetHttpInput.fromJson(Map<String, dynamic> json) {
+    return _GetHttpInput(url: json['url'] as String);
   }
 }
