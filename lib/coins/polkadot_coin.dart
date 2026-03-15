@@ -132,13 +132,13 @@ class PolkadotCoin extends Coin {
       final storageName = blake2_128_concat(decodedAddr);
       final storageKey = '$systemAccount${HEX.encode(storageName)}';
 
-      String? getStorageAt =
-          rpcMethods!.firstWhere((element) => element == 'state_getStorageAt');
+      String? getStorageAt = rpcMethods!
+          .firstWhere((element) => element == 'state_getStorageAt');
       getStorageAt ??=
           rpcMethods!.firstWhere((element) => element == 'state_getStorage');
 
-      final storageResult =
-          await _queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
+      final storageResult = await _queryRpc(
+          getStorageAt!, [storageKey, blockHashRes!['result']]);
       String storageData = storageResult!['result'];
       storageData = storageData.replaceFirst('0x', '');
 
@@ -172,8 +172,8 @@ class PolkadotCoin extends Coin {
     getStorageAt ??=
         rpcMethods!.firstWhere((element) => element == 'state_getStorage');
 
-    final storageResult =
-        await _queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
+    final storageResult = await _queryRpc(
+        getStorageAt!, [storageKey, blockHashRes!['result']]);
     String storageData = storageResult!['result'];
     storageData = storageData.replaceFirst('0x', '');
 
@@ -265,7 +265,8 @@ class PolkadotCoin extends Coin {
         body: body,
       );
       final responseBody = response.body;
-      if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
+      if (response.statusCode ~/ 100 == 4 ||
+          response.statusCode ~/ 100 == 5) {
         throw Exception(responseBody);
       }
       return jsonDecode(responseBody);
@@ -316,13 +317,29 @@ class PolkadotCoin extends Coin {
     chainInfo.scaleCodec.registry.codecs['Call']!
         .encodeTo(transferArgument, output);
     final encodedData = HEX.encode(output.toBytes());
+    debugPrint('Encoded call: $encodedData');
 
     final data_service = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data_service);
     final privatekey = HEX.decode(response.privateKey!);
     final registry = chainInfo.scaleCodec.registry;
     final signables = registry.signedExtensions;
+
+    // ── Detect signed extension variants ─────────────────────────────────────
     final checkMetaHash = signables.containsKey('CheckMetadataHash');
+
+    // Asset Hub and other system parachains use ChargeAssetTxPayment instead
+    // of ChargeTransactionPayment. This extension encodes an extra
+    // Option<AssetId> byte (0x00 = None) after the tip.
+    // Sending only the tip byte without this Option byte shifts all subsequent
+    // bytes by one, causing the runtime to hit an unreachable branch during
+    // transaction validation.
+    final chargeAssetTxPayment =
+        signables.containsKey('ChargeAssetTxPayment');
+
+    debugPrint(
+        'Signed extensions — checkMetaHash: $checkMetaHash, chargeAssetTxPayment: $chargeAssetTxPayment');
+    debugPrint('All signed extensions: ${signables.keys.toList()}');
 
     final signaturePayload = await _signaturePayload(
       _SigParams(
@@ -333,24 +350,18 @@ class PolkadotCoin extends Coin {
     );
 
     // ── Extrinsic version ─────────────────────────────────────────────────────
-    // ChainInfo does not expose the extrinsic version, so we derive it from
-    // specVersion which is already fetched inside _signaturePayload.
-    //
-    // Rule:
-    //   - Parachain runtimes (Asset Hub, etc.) have specVersion >= 1_000_000
-    //     and use extrinsic version 5 → byte 0x85
-    //   - Relay chains (Polkadot, Westend, Kusama) use extrinsic version 4
-    //     → byte 0x84
-    //
-    // This avoids the WASM unreachable trap that Asset Hub throws when it
-    // receives a v4 extrinsic.
-    final int specVersion = (runTimeResult?['specVersion'] as int?) ?? 0;
+    // Relay chains (Polkadot, Westend, Kusama) use specVersion < 1_000_000
+    // and extrinsic version 4 (0x84).
+    // Parachains (Asset Hub, etc.) use specVersion >= 1_000_000
+    // and extrinsic version 5 (0x85).
+    final int specVersion =
+        (runTimeResult?['specVersion'] as int?) ?? 0;
     final int extrinsicVersion = specVersion >= 1000000 ? 5 : 4;
     final String extrinsicVersionHex =
         (0x80 | extrinsicVersion).toRadixString(16).padLeft(2, '0');
 
     debugPrint(
-        'specVersion: $specVersion → extrinsic version: $extrinsicVersion (0x$extrinsicVersionHex)');
+        'specVersion: $specVersion → extrinsicVersion: $extrinsicVersion (0x$extrinsicVersionHex)');
 
     final publicKey = HEX.decode(response.publicKey!);
     final signature = await compute(
@@ -362,8 +373,12 @@ class PolkadotCoin extends Coin {
     );
 
     // ── Build extrinsic bytes ─────────────────────────────────────────────────
-    // Layout: <version> | <pubkey> | <sig_type:00> | <sig> |
-    //         <era:00> | <nonce> | <tip:00> | [CheckMetadataHash] | <call>
+    // Layout:
+    //   <version> | <pubkey> | <sig_type:00=Ed25519> | <sig> |
+    //   <era:00=immortal> | <nonce> | <tip:00> |
+    //   [asset_id:00 — only if ChargeAssetTxPayment] |
+    //   [CheckMetadataHash:00 — only if present] |
+    //   <call>
     String txSubmission = extrinsicVersionHex;
     txSubmission += HEX.encode(publicKey);
     txSubmission += '00'; // signature type: Ed25519
@@ -371,11 +386,20 @@ class PolkadotCoin extends Coin {
     txSubmission += '00'; // era: immortal
     txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
     txSubmission += '00'; // tip: 0
+
+    if (chargeAssetTxPayment) {
+      // Option<AssetId>::None — required by ChargeAssetTxPayment on Asset Hub.
+      // Without this byte the transaction bytes are off by one and the runtime
+      // panics with an unreachable branch in validate_transaction.
+      txSubmission += '00';
+    }
+
     if (checkMetaHash) {
       final encoded = signables['CheckMetadataHash']!.encode('Disabled');
       debugPrint('CheckMetadataHash encoded: ${HEX.encode(encoded)}');
       txSubmission += HEX.encode(encoded);
     }
+
     txSubmission += encodedData;
 
     final int txLength = HEX.decode(txSubmission).length;
@@ -402,6 +426,8 @@ class PolkadotCoin extends Coin {
   Future<String> _signaturePayload(_SigParams param) async {
     final signables = param.registry.signedExtensions;
     final checkMetaHash = signables.containsKey('CheckMetadataHash');
+    final chargeAssetTxPayment =
+        signables.containsKey('ChargeAssetTxPayment');
 
     if (runTimeResult == null) {
       final runTimeVersion = await _queryRpc('chain_getRuntimeVersion', []);
@@ -414,24 +440,33 @@ class PolkadotCoin extends Coin {
     }
 
     // ── Signature payload layout ──────────────────────────────────────────────
-    // call | era | nonce | tip | [CheckMetadataHash mode] |
-    // specVersion | transactionVersion | genesisHash | blockHash |
-    // [CheckMetadataHash extra: 0x00 for Disabled]
+    // call | era | nonce | tip | [asset_id if ChargeAssetTxPayment] |
+    // [CheckMetadataHash mode] | specVersion | transactionVersion |
+    // genesisHash | blockHash | [CheckMetadataHash extra]
     String payload = '0x${param.call}';
     payload += '00'; // era: immortal
     payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
     payload += '00'; // tip: 0
+
+    if (chargeAssetTxPayment) {
+      // Option<AssetId>::None — must mirror the extrinsic encoding exactly
+      payload += '00';
+    }
+
     if (checkMetaHash) {
       final mode = signables['CheckMetadataHash']!.encode('Disabled');
       payload += HEX.encode(mode);
     }
-    payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
+
     payload +=
-        HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
+        HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
+    payload += HEX.encode(
+        U32Codec.codec.encode(runTimeResult!['transactionVersion']));
     payload += genesisHash!.replaceFirst('0x', '');
     payload += genesisHash!
-        .replaceFirst('0x', ''); // blockHash = genesisHash (immortal)
-    if (checkMetaHash) payload += '00'; // CheckMetadataHash extra byte
+        .replaceFirst('0x', ''); // blockHash = genesisHash for immortal era
+
+    if (checkMetaHash) payload += '00'; // CheckMetadataHash extra: no hash
 
     final hexPayload = HEX.decode(strip0x(payload));
 
@@ -471,7 +506,9 @@ List _polkaChecksum(Uint8List decoded) {
   final ss58Length = (decoded[0] & 64) != 0 ? 2 : 1;
   final ss58Decoded = ss58Length == 1
       ? decoded[0]
-      : ((decoded[0] & 63) << 2) | (decoded[1] >> 6) | ((decoded[1] & 63) << 8);
+      : ((decoded[0] & 63) << 2) |
+          (decoded[1] >> 6) |
+          ((decoded[1] & 63) << 8);
   final isPublicKey =
       [34 + ss58Length, 35 + ss58Length].contains(decoded.length);
   final length = decoded.length - (isPublicKey ? 2 : 1);
@@ -507,7 +544,8 @@ Future<List<int>> bip39ToMiniSeed(mnemonic) async {
     iterations: 2048,
     bits: 256,
   );
-  final keys = await pdkd.deriveKey(secretKey: SecretKey(entropy), nonce: salt);
+  final keys =
+      await pdkd.deriveKey(secretKey: SecretKey(entropy), nonce: salt);
   return await keys.extractBytes();
 }
 
