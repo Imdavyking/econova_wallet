@@ -95,6 +95,8 @@ class X402Service {
       version: probeResult.version.value,
     );
 
+    print("Header");
+    print(paymentHeader);
     if (paymentHeader == null) {
       return 'x402: ${coin.getSymbol()} does not support x402 payments '
           'on network ${probeResult.option.network}.';

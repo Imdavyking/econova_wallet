@@ -40,7 +40,15 @@ class AIAgentService {
         making transactions, checking balances,
         check the current coin is correct or ask the user to switch to the coin needed,
         and querying smart contracts—all through simple, conversational commands.
-        for sending,always use memo if available.''';
+        For sending, always use memo if available.
+        
+        ⚠️ x402 PAYMENT PROTOCOL — STRICT RULES:
+        - When a URL returns a 402 Payment Required response, you MUST use CMD_x402Pay exclusively.
+        - NEVER use CMD_transferBalance as a substitute or fallback for x402 payments.
+        - NEVER attempt to manually replicate what x402 does (e.g. sending tokens directly to payTo address).
+        - x402 is a signed authorization protocol — a direct transfer is NOT equivalent and will NOT unlock the resource.
+        - If CMD_x402Pay fails, report the failure. Do NOT retry with CMD_transferBalance.
+        - Only CMD_x402Pay can produce the signed payment header the server requires.''';
   // final llm = ChatOpenAI(
   //   apiKey: dotenv.env['OPENAI_API_KEY'],
   //   defaultOptions: const ChatOpenAIOptions(
