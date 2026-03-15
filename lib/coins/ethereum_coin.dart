@@ -23,6 +23,14 @@ import '../utils/rpc_urls.dart';
 
 const etherDecimals = 18;
 
+// ── Known USDC contract names per version ─────────────────────────────────────
+// v0 draft used a different domain name on some deployments.
+const _usdcDomainNameByVersion = {
+  0: 'USDC', // some early v0 servers used the short form
+  1: 'USD Coin', // canonical EIP-3009 domain name
+  2: 'USD Coin', // unchanged in v2
+};
+
 class EthereumCoin extends Coin {
   int coinType;
   int chainId;
@@ -73,29 +81,55 @@ class EthereumCoin extends Coin {
   @override
   String getSymbol() => symbol;
 
-  // ── x402 support ────────────────────────────────────────────────────────────
+  // ── x402 support ─────────────────────────────────────────────────────────────
 
   @override
   bool get supportsX402 => true;
 
+  /// Signs an x402 payment header, handling all known protocol versions.
+  ///
+  /// Version behaviour:
+  ///   v0 – legacy draft: uses short `"USDC"` domain name, emits `"version"`
+  ///         key in the JSON payload (not `"x402Version"`).
+  ///   v1 – current spec: full `"USD Coin"` domain, `"x402Version": 1`.
+  ///   v2 – extended: same as v1 for ERC-20 assets; native-ETH assets use a
+  ///         personal_sign digest instead of EIP-3009 (servers on v2 that
+  ///         request ETH micro-payments don't use transferWithAuthorization).
   @override
-  Future<String?> signX402Payment(X402PaymentOption option) async {
+  Future<String?> signX402Payment(
+    X402PaymentOption option, {
+    int version = 1,
+  }) async {
     try {
       final walletData = WalletService.getActiveKey(walletImportType)!.data;
       final accountData = await importData(walletData);
       final privateKeyBytes = hexToBytes(accountData.privateKey!);
       final fromAddress = accountData.address;
 
+      final resolvedChainId = _chainIdForNetwork(option.network);
+      final isNativeEth = _isNativeEth(option.asset);
+
+      // v2 native-ETH path: simple personal_sign commitment, no EIP-3009.
+      if (version >= 2 && isNativeEth) {
+        return _signNativeEthPayment(
+          from: fromAddress,
+          option: option,
+          chainId: resolvedChainId,
+          privateKey: privateKeyBytes,
+          version: version,
+        );
+      }
+
+      // ERC-20 path (all versions): EIP-3009 TransferWithAuthorization.
       final value = BigInt.parse(option.maxAmountRequired);
       final validAfter = BigInt.zero;
       final validBefore = BigInt.from(
-        DateTime.now()
-                .add(const Duration(minutes: 5))
-                .millisecondsSinceEpoch ~/
+        DateTime.now().add(const Duration(minutes: 5)).millisecondsSinceEpoch ~/
             1000,
       );
       final nonce = _randomNonce();
       final contractVersion = option.extra?['version'] as String? ?? '2';
+      final domainName = _usdcDomainNameByVersion[version] ?? 'USD Coin';
 
       final signature = _signEIP3009(
         from: fromAddress,
@@ -105,36 +139,133 @@ class EthereumCoin extends Coin {
         validBefore: validBefore,
         nonce: nonce,
         contractAddress: option.asset,
-        chainId: _chainIdForNetwork(option.network),
+        chainId: resolvedChainId,
         contractVersion: contractVersion,
+        domainName: domainName,
         privateKey: privateKeyBytes,
       );
 
-      final payload = {
-        'x402Version': 1,
-        'scheme': option.scheme,
-        'network': option.network,
-        'payload': {
-          'signature': signature,
-          'authorization': {
-            'from': fromAddress,
-            'to': option.payTo,
-            'value': value.toString(),
-            'validAfter': validAfter.toString(),
-            'validBefore': validBefore.toString(),
-            'nonce': nonce,
-          },
-        },
-      };
+      final payload = _buildPayload(
+        version: version,
+        option: option,
+        from: fromAddress,
+        value: value,
+        validAfter: validAfter,
+        validBefore: validBefore,
+        nonce: nonce,
+        signature: signature,
+      );
 
       return base64Encode(utf8.encode(jsonEncode(payload)));
     } catch (e) {
-      debugPrint('x402 sign error: $e');
+      debugPrint('x402 sign error (v$version): $e');
       return null;
     }
   }
 
-  // ── EIP-3009 signing ─────────────────────────────────────────────────────────
+  // ── Payload builders ──────────────────────────────────────────────────────────
+
+  /// Builds the JSON payload for ERC-20 payments, keyed per version.
+  Map<String, dynamic> _buildPayload({
+    required int version,
+    required X402PaymentOption option,
+    required String from,
+    required BigInt value,
+    required BigInt validAfter,
+    required BigInt validBefore,
+    required String nonce,
+    required String signature,
+  }) {
+    final authorization = {
+      'from': from,
+      'to': option.payTo,
+      'value': value.toString(),
+      'validAfter': validAfter.toString(),
+      'validBefore': validBefore.toString(),
+      'nonce': nonce,
+    };
+
+    if (version == 0) {
+      // v0 draft: used "version" instead of "x402Version"
+      return {
+        'version': 0,
+        'scheme': option.scheme,
+        'network': option.network,
+        'payload': {
+          'signature': signature,
+          'authorization': authorization,
+        },
+      };
+    }
+
+    // v1 and v2 share the same structure; v2 adds an optional "extra" echo.
+    final payload = <String, dynamic>{
+      'x402Version': version,
+      'scheme': option.scheme,
+      'network': option.network,
+      'payload': {
+        'signature': signature,
+        'authorization': authorization,
+      },
+    };
+
+    if (version >= 2 && option.extra != null) {
+      // v2 allows echoing server-supplied extra fields back in the header
+      // so the facilitator can route correctly (e.g. multi-hop).
+      payload['extra'] = option.extra;
+    }
+
+    return payload;
+  }
+
+  /// v2 native-ETH: personal_sign over a canonical commitment string.
+  /// This is NOT EIP-3009 (which only works for ERC-20 with the authorization
+  /// interface).  The server verifies ecrecover(commitment, sig) == from.
+  Future<String?> _signNativeEthPayment({
+    required String from,
+    required X402PaymentOption option,
+    required int chainId,
+    required Uint8List privateKey,
+    required int version,
+  }) async {
+    final validBefore =
+        DateTime.now().add(const Duration(minutes: 5)).millisecondsSinceEpoch ~/
+            1000;
+    final nonce = _randomNonce();
+
+    // Canonical commitment: matches the facilitator's verifyNativePayment spec.
+    final commitment =
+        'x402:eth:${option.network}:${option.payTo}:${option.maxAmountRequired}:$validBefore:$nonce';
+
+    final msgBytes = utf8.encode(commitment);
+    final prefixed =
+        '\x19Ethereum Signed Message:\n${msgBytes.length}$commitment';
+    final digest = keccak256(Uint8List.fromList(utf8.encode(prefixed)));
+
+    final sig = sign(digest, privateKey);
+    final v = (sig.v + 27).toRadixString(16).padLeft(2, '0');
+    final r = sig.r.toRadixString(16).padLeft(64, '0');
+    final s = sig.s.toRadixString(16).padLeft(64, '0');
+    final signature = '0x$r$s$v';
+
+    final payload = {
+      'x402Version': version,
+      'scheme': option.scheme,
+      'network': option.network,
+      'payload': {
+        'type': 'personal_sign',
+        'signature': signature,
+        'commitment': commitment,
+        'from': from,
+        'validBefore': validBefore.toString(),
+        'nonce': nonce,
+      },
+    };
+
+    return base64Encode(utf8.encode(jsonEncode(payload)));
+  }
+
+  // ── EIP-3009 signing ──────────────────────────────────────────────────────────
 
   String _signEIP3009({
     required String from,
@@ -146,6 +277,7 @@ class EthereumCoin extends Coin {
     required String contractAddress,
     required int chainId,
     required String contractVersion,
+    required String domainName,
     required Uint8List privateKey,
   }) {
     const transferTypeHash =
@@ -169,6 +301,7 @@ class EthereumCoin extends Coin {
       contractAddress: contractAddress,
       chainId: chainId,
       version: contractVersion,
+      name: domainName,
     );
 
     final digest = keccak256(
@@ -187,16 +320,14 @@ class EthereumCoin extends Coin {
     required String contractAddress,
     required int chainId,
     required String version,
+    required String name,
   }) {
     const domainTypeHash =
         'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)';
 
-    final typeHash =
-        keccak256(Uint8List.fromList(utf8.encode(domainTypeHash)));
-    final nameHash =
-        keccak256(Uint8List.fromList(utf8.encode('USD Coin')));
-    final versionHash =
-        keccak256(Uint8List.fromList(utf8.encode(version)));
+    final typeHash = keccak256(Uint8List.fromList(utf8.encode(domainTypeHash)));
+    final nameHash = keccak256(Uint8List.fromList(utf8.encode(name)));
+    final versionHash = keccak256(Uint8List.fromList(utf8.encode(version)));
 
     return keccak256(_abiEncode([
       typeHash,
@@ -206,6 +337,8 @@ class EthereumCoin extends Coin {
       _addressToBytes32(contractAddress),
     ]));
   }
+
+  // ── ABI encoding helpers ──────────────────────────────────────────────────────
 
   Uint8List _abiEncode(List<Uint8List> parts) {
     final result = <int>[];
@@ -227,28 +360,48 @@ class EthereumCoin extends Coin {
         address.toLowerCase().replaceFirst('0x', '').padLeft(64, '0'),
       );
 
+  // ── Misc helpers ──────────────────────────────────────────────────────────────
+
   String _randomNonce() {
     final rng = Random.secure();
     final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
     return '0x${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
   }
 
-  int _chainIdForNetwork(String network) {
-    switch (network) {
-      case 'base-mainnet':
-        return 8453;
-      case 'base-sepolia':
-        return 84532;
-      case 'ethereum-mainnet':
-        return 1;
-      case 'ethereum-sepolia':
-        return 11155111;
-      default:
-        return chainId; // fall back to this coin's own chainId
-    }
+  /// Returns true for asset identifiers that represent native ETH
+  /// rather than an ERC-20 contract address.
+  bool _isNativeEth(String asset) {
+    final lower = asset.toLowerCase();
+    // Common sentinel values servers use for native ETH in v2
+    return lower == 'eth' ||
+        lower == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+        lower == 'native';
   }
 
-  // ── Standard EthereumCoin methods ────────────────────────────────────────────
+  /// Maps an x402 network string to its EVM chain ID.
+  /// Falls back to this coin's own [chainId] for unknown networks.
+  int _chainIdForNetwork(String network) {
+    return switch (network) {
+      // ── Base ──────────────────────────────────────────────────────────────
+      'base-mainnet' => 8453,
+      'base-sepolia' => 84532,
+      // ── Ethereum ─────────────────────────────────────────────────────────
+      'ethereum-mainnet' => 1,
+      'ethereum-sepolia' => 11155111,
+      // ── Optimism (v2+) ────────────────────────────────────────────────────
+      'optimism-mainnet' => 10,
+      'optimism-sepolia' => 11155420,
+      // ── Arbitrum (v2+) ────────────────────────────────────────────────────
+      'arbitrum-mainnet' => 42161,
+      'arbitrum-sepolia' => 421614,
+      // ── Polygon (v2+) ─────────────────────────────────────────────────────
+      'polygon-mainnet' => 137,
+      'polygon-amoy' => 80002,
+      _ => chainId, // fall back to this coin's own chainId
+    };
+  }
+
+  // ── Standard EthereumCoin methods ─────────────────────────────────────────────
 
   factory EthereumCoin.fromJson(Map<String, dynamic> json) {
     return EthereumCoin(
@@ -431,6 +584,8 @@ class EthereumCoin extends Coin {
   String getRampID() => rampID;
 }
 
+// ── rest of file unchanged ─────────────────────────────────────────────────────
+
 List<EthereumCoin> getEVMBlockchains() {
   List<EthereumCoin> blockChains = [];
 
@@ -525,8 +680,7 @@ List<EthereumCoin> getEVMBlockchains() {
         name: 'Base Chain',
         rpc: 'https://mainnet.base.org',
         chainId: 8453,
-        blockExplorer:
-            'https://explorer.base.org/tx/$blockExplorerPlaceholder',
+        blockExplorer: 'https://explorer.base.org/tx/$blockExplorerPlaceholder',
         symbol: 'ETH',
         default_: 'ETH',
         image: 'assets/basechain.jpeg',
@@ -787,9 +941,8 @@ Future<double> getEtherTransactionFee(
 }) async {
   final client = Web3Client(rpc, Client());
 
-  final etherValue = value != null
-      ? EtherAmount.inWei(BigInt.from(value))
-      : null;
+  final etherValue =
+      value != null ? EtherAmount.inWei(BigInt.from(value)) : null;
 
   if (gasPrice == null || gasPrice.getInWei == BigInt.from(0)) {
     gasPrice = await client.getGasPrice();

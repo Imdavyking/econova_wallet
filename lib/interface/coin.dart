@@ -44,7 +44,19 @@ abstract class Coin {
 
   String getRampID();
   String getPayScheme();
-  Future<String?> signX402Payment(X402PaymentOption option) async => null;
+
+  /// Sign an x402 payment for [option].
+  ///
+  /// [version] mirrors the `x402Version` field from the server's 402 response
+  /// so each coin implementation can choose the correct typed-data schema:
+  ///   0 – legacy draft  (same EIP-3009, legacy JSON key names)
+  ///   1 – current spec  (default)
+  ///   2 – extended spec (adds native-ETH path, Optimism/Arbitrum networks)
+  Future<String?> signX402Payment(
+    X402PaymentOption option, {
+    int version = 1,
+  }) async =>
+      null;
 
   /// Returns true if this coin supports x402 payments.
   bool get supportsX402 => false;
