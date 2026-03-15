@@ -48,6 +48,12 @@ class _AIAgent extends State<AIAgent>
   ValueNotifier<bool> isListening = ValueNotifier(false);
   final ImagePicker _picker = ImagePicker();
 
+  // ── Address state ─────────────────────────────────────────────────────────
+  // Cached so we don't call getAddress() on every build.
+  String _currentAddress = '';
+  String _currentSymbol = '';
+  String _currentImage = '';
+
   @override
   initState() {
     super.initState();
@@ -61,6 +67,21 @@ class _AIAgent extends State<AIAgent>
       CurvedAnimation(parent: _micAnimationController, curve: Curves.easeInOut),
     );
     loadHistory();
+    _refreshCoinInfo();
+  }
+
+  /// Refreshes the address/symbol/image from the active coin.
+  /// Called on init and after CMD_switchCoin (next message rebuild).
+  Future<void> _refreshCoinInfo() async {
+    final coin = AItools.coin;
+    final address = await coin.getAddress();
+    if (mounted) {
+      setState(() {
+        _currentAddress = address;
+        _currentSymbol = coin.getSymbol();
+        _currentImage = coin.getImage();
+      });
+    }
   }
 
   void _initSpeech() async {
@@ -176,6 +197,50 @@ class _AIAgent extends State<AIAgent>
     }
   }
 
+  // ── Address bar widget ────────────────────────────────────────────────────
+
+  Widget _buildAddressBar() {
+    if (_currentAddress.isEmpty) return const SizedBox.shrink();
+
+    final address = _currentAddress;
+    final short = address.length > 12
+        ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
+        : address;
+
+    return GestureDetector(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: address));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Address copied'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              _currentImage,
+              width: 16,
+              height: 16,
+              errorBuilder: (_, __, ___) => const SizedBox(width: 16),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$_currentSymbol · $short',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.copy, size: 12, color: Colors.white54),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -184,46 +249,8 @@ class _AIAgent extends State<AIAgent>
       appBar: AppBar(
         title: const Text('AI Agent'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(24),
-          child: FutureBuilder<String>(
-            future: AItools.coin.getAddress(),
-            builder: (context, snapshot) {
-              final address = snapshot.data ?? '...';
-              final short = address.length > 12
-                  ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
-                  : address;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: address));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Address copied')),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AItools.coin.getImage(),
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (_, __, ___) => const SizedBox(width: 16),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${AItools.coin.getSymbol()} · $short',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.white70),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.copy, size: 12, color: Colors.white54),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+          preferredSize: const Size.fromHeight(28),
+          child: _buildAddressBar(),
         ),
         actions: [
           IconButton(
@@ -361,7 +388,7 @@ class _AIAgent extends State<AIAgent>
             enabledBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
               borderSide: BorderSide.none,
-            ), // you
+            ),
             filled: true,
           ),
           inputDisabled: typingUsers.isNotEmpty,
@@ -400,19 +427,13 @@ class _AIAgent extends State<AIAgent>
   }) async {
     final XFile(:mimeType, :name, :path) = image;
 
-    // Read image file bytes
     final fileBytes = await File(path).readAsBytes();
-
-    // Decode image
     final originalImage = img.decodeImage(fileBytes);
     if (originalImage == null) {
       throw Exception("Invalid image file");
     }
 
-    // Resize image (adjust width as needed)
     final resizedImage = img.copyResize(originalImage, height: 500);
-
-    // Compress image to JPEG with quality 70
     final compressedBytes = img.encodeJpg(resizedImage, quality: 70);
 
     final tempDir = await getTemporaryDirectory();
@@ -465,6 +486,9 @@ class _AIAgent extends State<AIAgent>
     _addUserMessage(userMessage);
 
     final response = await _chatRepository.sendTextMessage(userMessage);
+
+    // Refresh address bar in case CMD_switchCoin was called during the response
+    await _refreshCoinInfo();
 
     setState(() {
       typingUsers.remove(Constants.ai);
