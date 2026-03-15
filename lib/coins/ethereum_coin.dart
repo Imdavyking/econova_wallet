@@ -101,6 +101,15 @@ class EthereumCoin extends Coin {
     int version = 1,
   }) async {
     try {
+      // EVM payments always need a recipient address.
+      // Stacks-style 402 responses omit payTo — cannot sign for those.
+      final payTo = option.payTo;
+      if (payTo == null || payTo.isEmpty) {
+        debugPrint(
+            'EthereumCoin x402: payTo is missing — cannot sign EVM payment');
+        return null;
+      }
+
       final walletData = WalletService.getActiveKey(walletImportType)!.data;
       final accountData = await importData(walletData);
       final privateKeyBytes = hexToBytes(accountData.privateKey!);
@@ -114,6 +123,7 @@ class EthereumCoin extends Coin {
         return _signNativeEthPayment(
           from: fromAddress,
           option: option,
+          payTo: payTo,
           chainId: resolvedChainId,
           privateKey: privateKeyBytes,
           version: version,
@@ -133,7 +143,7 @@ class EthereumCoin extends Coin {
 
       final signature = _signEIP3009(
         from: fromAddress,
-        to: option.payTo,
+        to: payTo,
         value: value,
         validAfter: validAfter,
         validBefore: validBefore,
@@ -148,6 +158,7 @@ class EthereumCoin extends Coin {
       final payload = _buildPayload(
         version: version,
         option: option,
+        payTo: payTo,
         from: fromAddress,
         value: value,
         validAfter: validAfter,
@@ -169,6 +180,7 @@ class EthereumCoin extends Coin {
   Map<String, dynamic> _buildPayload({
     required int version,
     required X402PaymentOption option,
+    required String payTo,
     required String from,
     required BigInt value,
     required BigInt validAfter,
@@ -178,7 +190,7 @@ class EthereumCoin extends Coin {
   }) {
     final authorization = {
       'from': from,
-      'to': option.payTo,
+      'to': payTo,
       'value': value.toString(),
       'validAfter': validAfter.toString(),
       'validBefore': validBefore.toString(),
@@ -220,10 +232,11 @@ class EthereumCoin extends Coin {
 
   /// v2 native-ETH: personal_sign over a canonical commitment string.
   /// This is NOT EIP-3009 (which only works for ERC-20 with the authorization
-  /// interface).  The server verifies ecrecover(commitment, sig) == from.
+  /// interface). The server verifies ecrecover(commitment, sig) == from.
   Future<String?> _signNativeEthPayment({
     required String from,
     required X402PaymentOption option,
+    required String payTo,
     required int chainId,
     required Uint8List privateKey,
     required int version,
@@ -235,7 +248,7 @@ class EthereumCoin extends Coin {
 
     // Canonical commitment: matches the facilitator's verifyNativePayment spec.
     final commitment =
-        'x402:eth:${option.network}:${option.payTo}:${option.maxAmountRequired}:$validBefore:$nonce';
+        'x402:eth:${option.network}:$payTo:${option.maxAmountRequired}:$validBefore:$nonce';
 
     final msgBytes = utf8.encode(commitment);
     final prefixed =
@@ -372,7 +385,6 @@ class EthereumCoin extends Coin {
   /// rather than an ERC-20 contract address.
   bool _isNativeEth(String asset) {
     final lower = asset.toLowerCase();
-    // Common sentinel values servers use for native ETH in v2
     return lower == 'eth' ||
         lower == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
         lower == 'native';
@@ -388,16 +400,16 @@ class EthereumCoin extends Coin {
       // ── Ethereum ─────────────────────────────────────────────────────────
       'ethereum-mainnet' => 1,
       'ethereum-sepolia' => 11155111,
-      // ── Optimism (v2+) ────────────────────────────────────────────────────
+      // ── Optimism (v2+) ───────────────────────────────────────────────────
       'optimism-mainnet' => 10,
       'optimism-sepolia' => 11155420,
-      // ── Arbitrum (v2+) ────────────────────────────────────────────────────
+      // ── Arbitrum (v2+) ───────────────────────────────────────────────────
       'arbitrum-mainnet' => 42161,
       'arbitrum-sepolia' => 421614,
-      // ── Polygon (v2+) ─────────────────────────────────────────────────────
+      // ── Polygon (v2+) ────────────────────────────────────────────────────
       'polygon-mainnet' => 137,
       'polygon-amoy' => 80002,
-      _ => chainId, // fall back to this coin's own chainId
+      _ => chainId,
     };
   }
 
@@ -584,7 +596,7 @@ class EthereumCoin extends Coin {
   String getRampID() => rampID;
 }
 
-// ── rest of file unchanged ─────────────────────────────────────────────────────
+// ── Blockchain list ────────────────────────────────────────────────────────────
 
 List<EthereumCoin> getEVMBlockchains() {
   List<EthereumCoin> blockChains = [];
@@ -601,7 +613,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'BNB',
         image: 'assets/smartchain.png',
         coinType: 60,
-        geckoID: "binancecoin",
+        geckoID: 'binancecoin',
         payScheme: 'smartchain',
         rampID: 'BSC_BNB',
       ),
@@ -615,7 +627,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ETH',
         image: 'assets/ethereum_logo.png',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'ethereum',
         rampID: 'ETH_ETH',
       ),
@@ -629,21 +641,21 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'CELO',
         image: 'assets/celo.png',
         coinType: 60,
-        geckoID: "celo",
+        geckoID: 'celo',
         payScheme: 'celo',
         rampID: 'CELO_CELO',
       ),
       EthereumCoin(
         name: 'Polygon (Amoy)',
-        rpc: "https://rpc-amoy.polygon.technology",
+        rpc: 'https://rpc-amoy.polygon.technology',
         chainId: 80002,
         blockExplorer:
-            "https://amoy.polygonscan.com/tx/$blockExplorerPlaceholder",
+            'https://amoy.polygonscan.com/tx/$blockExplorerPlaceholder',
         symbol: 'POL',
         default_: 'POL',
-        image: "assets/polygon.png",
+        image: 'assets/polygon.png',
         coinType: 60,
-        geckoID: "polygon-ecosystem-token",
+        geckoID: 'polygon-ecosystem-token',
         payScheme: 'polygon',
         rampID: 'MATIC_MATIC',
       ),
@@ -659,7 +671,7 @@ List<EthereumCoin> getEVMBlockchains() {
         name: 'Ethereum',
         image: 'assets/ethereum_logo.png',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'ethereum',
         rampID: 'ETH_ETH',
       ),
@@ -672,7 +684,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'BNB',
         image: 'assets/smartchain.png',
         coinType: 60,
-        geckoID: "binancecoin",
+        geckoID: 'binancecoin',
         payScheme: 'smartchain',
         rampID: 'BSC_BNB',
       ),
@@ -685,7 +697,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ETH',
         image: 'assets/basechain.jpeg',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'base',
         rampID: 'BASE_ETH',
       ),
@@ -698,7 +710,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'POL',
         image: 'assets/polygon.png',
         coinType: 60,
-        geckoID: "polygon-ecosystem-token",
+        geckoID: 'polygon-ecosystem-token',
         payScheme: 'polygon',
         rampID: 'MATIC_MATIC',
       ),
@@ -711,7 +723,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'AVAX',
         image: 'assets/avalanche.png',
         coinType: 60,
-        geckoID: "avalanche-2",
+        geckoID: 'avalanche-2',
         payScheme: 'avalanchec',
         rampID: 'AVAX_AVAX',
       ),
@@ -724,7 +736,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'FTM',
         image: 'assets/fantom.png',
         coinType: 60,
-        geckoID: "fantom",
+        geckoID: 'fantom',
         payScheme: 'fantom',
         rampID: 'FANTOM_FTM',
       ),
@@ -737,7 +749,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ETH',
         image: 'assets/arbitrum.jpg',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'arbitrum',
         rampID: 'ARBITRUM_ETH',
       ),
@@ -751,7 +763,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ETH',
         image: 'assets/optimism.png',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'optimism',
         rampID: 'OPTIMISM_ETH',
       ),
@@ -765,7 +777,7 @@ List<EthereumCoin> getEVMBlockchains() {
         chainId: 61,
         image: 'assets/ethereum-classic.png',
         coinType: 61,
-        geckoID: "ethereum-classic",
+        geckoID: 'ethereum-classic',
         payScheme: 'classic',
         rampID: '',
       ),
@@ -778,7 +790,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'CRO',
         image: 'assets/cronos.png',
         coinType: 60,
-        geckoID: "crypto-com-chain",
+        geckoID: 'crypto-com-chain',
         payScheme: 'cronos',
         rampID: '',
       ),
@@ -805,7 +817,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'HT',
         image: 'assets/huobi.png',
         coinType: 60,
-        geckoID: "huobi-token",
+        geckoID: 'huobi-token',
         payScheme: 'heco',
         rampID: '',
       ),
@@ -818,7 +830,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'KCS',
         image: 'assets/kucoin.jpeg',
         coinType: 60,
-        geckoID: "kucoin-shares",
+        geckoID: 'kucoin-shares',
         payScheme: 'kcc',
         rampID: '',
       ),
@@ -832,7 +844,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ELA',
         image: 'assets/elastos.png',
         coinType: 60,
-        geckoID: "elastos",
+        geckoID: 'elastos',
         payScheme: 'elastos',
         rampID: '',
       ),
@@ -845,7 +857,7 @@ List<EthereumCoin> getEVMBlockchains() {
         symbol: 'XDAI',
         default_: 'XDAI',
         image: 'assets/xdai.jpg',
-        geckoID: "xdai",
+        geckoID: 'xdai',
         coinType: 60,
         payScheme: 'xdai',
         rampID: 'XDAI_XDAI',
@@ -859,7 +871,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'UBQ',
         image: 'assets/ubiq.png',
         coinType: 60,
-        geckoID: "ubiq",
+        geckoID: 'ubiq',
         payScheme: '',
         rampID: '',
       ),
@@ -872,7 +884,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'CELO',
         image: 'assets/celo.png',
         coinType: 60,
-        geckoID: "celo",
+        geckoID: 'celo',
         payScheme: 'celo',
         rampID: 'CELO_CELO',
       ),
@@ -885,7 +897,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'ETH',
         image: 'assets/aurora.png',
         coinType: 60,
-        geckoID: "ethereum",
+        geckoID: 'ethereum',
         payScheme: 'aurora',
         rampID: '',
       ),
@@ -899,7 +911,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'TT',
         image: 'assets/thunder-token.jpeg',
         coinType: 1001,
-        geckoID: "thunder-token",
+        geckoID: 'thunder-token',
         payScheme: 'thundertoken',
         rampID: '',
       ),
@@ -913,7 +925,7 @@ List<EthereumCoin> getEVMBlockchains() {
         default_: 'GO',
         image: 'assets/go-chain.png',
         coinType: 6060,
-        geckoID: "gochain",
+        geckoID: 'gochain',
         payScheme: 'gochain',
         rampID: '',
       ),
@@ -990,7 +1002,7 @@ Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
   final path = "m/44'/${config.coinType}'/0'/0/0";
   final node = seedRoot_.root.derivePath(path);
   final privateKey = HEX.encode(node.privateKey!);
-  final privatekeyStr = "0x$privateKey";
+  final privatekeyStr = '0x$privateKey';
   final address = await etherPrivateKeyToAddress(privatekeyStr);
   return {'address': address, 'privateKey': privatekeyStr};
 }

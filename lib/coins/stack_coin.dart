@@ -12,6 +12,7 @@ import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
+import '../service/x402_service.dart';
 import '../utils/app_config.dart';
 import '../utils/c32check.dart';
 import '../utils/stack_tx_utils.dart';
@@ -52,8 +53,6 @@ class StacksCoin extends Coin {
 
   // ─── Internal accessors ─────────────────────────────────────────────────────
 
-  // Only _addrVersion stays private — it is Stacks-address-specific and
-  // not shared by any utility function.
   int get _addrVersion =>
       isTestnet ? _versionTestnetP2PKH : _versionMainnetP2PKH;
 
@@ -85,6 +84,101 @@ class StacksCoin extends Coin {
   String getPayScheme() => payScheme;
 
   static const int _stacksDecimals = 6;
+
+  // ─── x402 support ───────────────────────────────────────────────────────────
+
+  @override
+  bool get supportsX402 => true;
+
+  /// Signs an x402 payment for a Stacks network option.
+  ///
+  /// Stacks x402 works differently from EVM:
+  ///   - No EIP-3009 — we build and sign a real STX transfer transaction.
+  ///   - The signed tx hex is what the facilitator broadcasts.
+  ///   - `payTo` may be null in the 402 response (server-side config only).
+  ///     When null, we cannot build the tx and return null.
+  ///   - Only handles `stacks:1` (mainnet) and `stacks:2147483648` (testnet).
+  ///     Returns null for non-Stacks networks so the service can fall back.
+  @override
+  Future<String?> signX402Payment(
+    X402PaymentOption option, {
+    int version = 1,
+  }) async {
+    // Only handle Stacks networks — return null for EVM so the caller
+    // knows this coin cannot sign that option.
+    if (!_isStacksNetwork(option.network)) {
+      debugPrint(
+          'StacksCoin: declining to sign non-Stacks network ${option.network}');
+      return null;
+    }
+
+    // payTo is required to build the STX transfer transaction.
+    final payTo = option.payTo;
+    if (payTo == null || payTo.isEmpty) {
+      debugPrint('StacksCoin x402: payTo is missing from option — '
+          'cannot build STX transfer without a recipient address.');
+      return null;
+    }
+
+    try {
+      final walletData = WalletService.getActiveKey(walletImportType)!.data;
+      final accountData = await importData(walletData);
+      final privBytes = txDataToUintList(accountData.privateKey!);
+      final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+
+      final microStx = BigInt.parse(option.maxAmountRequired);
+      final nonce = await stacksFetchNonce(isTestnet, accountData.address);
+      final feeRate = await stacksFetchFeeRate(isTestnet);
+      final fee = BigInt.from(feeRate * stacksEstimatedStxTxBytes);
+
+      // Decode recipient Stacks address.
+      final decoded = c32checkDecode(payTo.substring(1));
+      final recipientVersion = decoded[0] as int;
+      final recipientHash160 =
+          Uint8List.fromList(HEX.decode(decoded[1] as String));
+
+      // Build STX token-transfer payload (no memo for x402 payments).
+      final txPayload = (BytesBuilder()
+            ..addByte(stacksPayloadTokenTransfer)
+            ..addByte(stacksPrincipalTypeStandard)
+            ..addByte(recipientVersion)
+            ..add(recipientHash160)
+            ..add(stacksU64BE(microStx))
+            ..add(stacksMemoBytes('')))
+          .toBytes();
+
+      final txBytes = stacksBuildSignedTx(
+        txVersion: stacksTxVersion(isTestnet),
+        chainId: stacksChainId(isTestnet),
+        privKey: privBytes,
+        senderHash160: senderHash160,
+        nonce: BigInt.from(nonce),
+        fee: fee,
+        payload: txPayload,
+      );
+
+      final txHex = '0x${HEX.encode(txBytes)}';
+
+      final payload = {
+        'x402Version': version,
+        'scheme': option.scheme,
+        'network': option.network,
+        'payload': {
+          'transaction': txHex,
+        },
+      };
+
+      return base64Encode(utf8.encode(jsonEncode(payload)));
+    } catch (e) {
+      debugPrint('StacksCoin x402 sign error: $e');
+      return null;
+    }
+  }
+
+  // ─── Stacks network helpers ──────────────────────────────────────────────────
+
+  bool _isStacksNetwork(String network) =>
+      network == 'stacks:1' || network == 'stacks:2147483648';
 
   // ─── Serialization ──────────────────────────────────────────────────────────
 
