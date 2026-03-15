@@ -200,24 +200,31 @@ class AItools {
           },
           'tokenAddress': {
             'type': 'string',
-            'description': 'The token address',
+            'description': 'The token address or symbol',
           },
         },
         'required': ['walletAddress', 'tokenAddress'],
       },
       func: (final _GetBalanceInput toolInput) async {
-        String walletAddress = toolInput.walletAddress;
-        String tokenAddress = toolInput.tokenAddress;
-        Coin? token = coin;
+        final walletAddress = toolInput.walletAddress;
+        final tokenAddress = toolInput.tokenAddress;
 
-        if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          final foundToken = supportedChains.firstWhereOrNull((token) =>
-              token.getExplorer() == coin.getExplorer() &&
-              token.tokenAddress() == tokenAddress);
-          if (foundToken != null) {
-            token = foundToken;
+        // Resolve token silently from current network — no switch needed
+        Coin token = coin;
+        if (tokenAddress != AIAgentService.defaultCoinTokenAddress) {
+          final found = coin.findToken(tokenAddress);
+          if (found != null) {
+            token = found;
           } else {
-            return 'Token address $tokenAddress not found.';
+            // Not on current network — fall back to searching all chains
+            final fallback = supportedChains.firstWhereOrNull((t) =>
+                t.tokenAddress() == tokenAddress ||
+                t.getSymbol().toLowerCase() == tokenAddress.toLowerCase());
+            if (fallback != null) {
+              token = fallback;
+            } else {
+              return 'Token $tokenAddress not found on ${coin.getName()} network.';
+            }
           }
         }
 
@@ -230,7 +237,7 @@ class AItools {
         }
 
         final coinBal = await token.getUserBalance(address: walletAddress);
-        return '$walletAddress have $coinBal ${token.getSymbol()}';
+        return '$walletAddress has $coinBal ${token.getSymbol()}';
       },
       getInputFromJson: _GetBalanceInput.fromJson,
     );
@@ -240,13 +247,16 @@ class AItools {
     final transferTool = Tool.fromFunction<_GetTransferInput, String>(
       name: 'CMD_transferBalance',
       description:
-          'Transfers $currentCoin to a recipient. Always check the user\'s balance before transferring.',
+          'Transfers tokens to a recipient. Always check the user\'s balance '
+          'before transferring. Tokens on the current network (e.g. USDC on '
+          'Solana, USDCX on Stacks) are resolved automatically — the user does '
+          'not need to switch coins for same-network tokens.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
           'recipient': {
             'type': 'string',
-            'description': 'The recipient to send token to',
+            'description': 'The recipient address',
           },
           'amount': {
             'type': 'number',
@@ -254,11 +264,13 @@ class AItools {
           },
           'memo': {
             'type': 'string',
-            'description': 'the memo used to send',
+            'description': 'Optional memo',
           },
           'tokenAddress': {
             'type': 'string',
-            'description': 'The token address',
+            'description':
+                'The token address or symbol. Use the defaultCoinTokenAddress '
+                    'for the native coin.',
           },
         },
         'required': ['recipient', 'amount', 'tokenAddress'],
@@ -272,21 +284,24 @@ class AItools {
         if (recipient.isEmpty) return 'Recipient address is empty.';
         if (amount <= 0) return 'Amount must be greater than zero.';
 
+        // ── Resolve token silently from current network ──────────────────────
+        // Tokens on the active coin's network are used directly.
+        // No network switch is needed for same-network tokens.
         Coin token = coin;
-
-        if (AIAgentService.defaultCoinTokenAddress != tokenAddress) {
-          final foundToken = supportedChains.firstWhereOrNull((token) =>
-              token.getExplorer() == coin.getExplorer() &&
-              token.tokenAddress() == tokenAddress);
-          if (foundToken != null) {
-            token = foundToken;
+        if (tokenAddress != AIAgentService.defaultCoinTokenAddress) {
+          final found = coin.findToken(tokenAddress);
+          if (found != null) {
+            token = found;
           } else {
-            return 'Token address $tokenAddress not found.';
+            // Not found on current network
+            return 'Token $tokenAddress is not available on the ${coin.getName()} network. '
+                'Please switch to the correct network first.';
           }
         }
 
+        final networkName = coin.getName().split('(')[0];
         String message =
-            'You are about to send $amount ${token.getSymbol()} to $recipient on $currentCoin.';
+            'You are about to send $amount ${token.getSymbol()} to $recipient on $networkName.';
         if (memo != null && memo.isNotEmpty && coin.requireMemo()) {
           message += '\n\nMemo: $memo';
         }
@@ -311,7 +326,8 @@ class AItools {
             return '${token.getSymbol()} Transaction failed: no transaction hash returned.';
           }
           final successMessage =
-              'Sent $amount tokens to $recipient on ${token.getSymbol()}.\nTransaction hash: $txHash ${coin.formatTxHash(txHash)}';
+              'Sent $amount ${token.getSymbol()} to $recipient.\n'
+              'Transaction hash: $txHash ${coin.formatTxHash(txHash)}';
           debugPrint(successMessage);
           return successMessage;
         } catch (e) {
@@ -398,11 +414,11 @@ class AItools {
           final tokenInSymbol =
               tokenIn == AIAgentService.defaultCoinTokenAddress
                   ? coin.getSymbol()
-                  : tokenIn;
+                  : (coin.findToken(tokenIn)?.getSymbol() ?? tokenIn);
           final tokenOutSymbol =
               tokenOut == AIAgentService.defaultCoinTokenAddress
                   ? coin.getSymbol()
-                  : tokenOut;
+                  : (coin.findToken(tokenOut)?.getSymbol() ?? tokenOut);
           final message =
               'You are about to swap $amount $tokenInSymbol for $tokenOutSymbol. '
               'You will get ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}.';
@@ -411,11 +427,11 @@ class AItools {
 
           String? txHash = await coin.swapTokens(tokenIn, tokenOut, amount);
           if (txHash == null) {
-            return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
+            return 'Swapping not available for $tokenIn => $tokenOut $amount';
           }
           return 'Swapped $tokenIn => $tokenOut $amount $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'Swapping not available for this now $tokenIn => $tokenOut $amount';
+          return 'Swapping not available for $tokenIn => $tokenOut $amount';
         }
       },
       getInputFromJson: _GetSwapInput.fromJson,
@@ -440,7 +456,7 @@ class AItools {
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.stakeToken(amount);
-          if (txHash == null) return 'Failed to get stake $amount $currentCoin';
+          if (txHash == null) return 'Failed to stake $amount $currentCoin';
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Staking failed for $currentCoin $amount $e';
@@ -464,16 +480,14 @@ class AItools {
       func: (final _GetStakeInput toolInput) async {
         String amount = toolInput.amount;
         try {
-          final message = 'You are about to unStake $amount $currentCoin';
+          final message = 'You are about to unstake $amount $currentCoin';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.unstakeToken(amount);
-          if (txHash == null) {
-            return 'Failed to get unstake $amount $currentCoin';
-          }
+          if (txHash == null) return 'Failed to unstake $amount $currentCoin';
           return 'Unstaked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'UnStaking failed for $currentCoin $amount $e';
+          return 'Unstaking failed for $currentCoin $amount $e';
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
@@ -483,8 +497,7 @@ class AItools {
 
     final stakeRewardsTool = Tool.fromFunction<_GetStakeRewardsInput, String>(
       name: 'QRY_getStakeRewards',
-      description:
-          'Tool for getting the users current staked rewards they can claim',
+      description: 'Tool for getting current staked rewards',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {},
@@ -514,7 +527,7 @@ class AItools {
         'properties': {
           'amount': {
             'type': 'string',
-            'description': 'The amount to claims as staking rewards',
+            'description': 'The amount to claim as staking rewards',
           },
         },
         'required': ['amount'],
@@ -523,14 +536,13 @@ class AItools {
         String amount = toolInput.amount;
         try {
           final message =
-              'You are about to claim $amount $currentCoin rewards for staking';
+              'You are about to claim $amount $currentCoin staking rewards';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.claimRewards(amount);
-          if (txHash == null) {
-            return 'Failed to get claim $amount $currentCoin token rewards';
-          }
-          return 'Claimed staked rewards $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
+          if (txHash == null)
+            return 'Failed to claim $amount $currentCoin rewards';
+          return 'Claimed $amount $currentCoin rewards $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Claim rewards failed for $currentCoin $amount $e';
         }
@@ -542,36 +554,50 @@ class AItools {
 
     final switchCoinTool = Tool.fromFunction<_GetSwitchCoin, String>(
       name: 'CMD_switchCoin',
-      description: 'Tool for switching to another coin',
+      description:
+          'Switches the active network. Only use this to switch between '
+          'different blockchains (e.g. Stacks → Ethereum). Do NOT use this '
+          'to switch to a token on the current network — tokens like USDC or '
+          'USDCX are resolved automatically on the current network.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
           'name': {
             'type': 'string',
-            'description': 'The name of the coin to switch to',
+            'description': 'The name of the network coin to switch to',
           },
           'default': {
             'type': 'string',
-            'description': 'The default symbol of the coin to switch to',
+            'description': 'The default symbol of the network coin',
           },
         },
         'required': ['name', 'default'],
       },
       func: (final _GetSwitchCoin toolInput) async {
-        String name = toolInput.name;
-        String default_ = toolInput.default_;
+        final name = toolInput.name;
+        final default_ = toolInput.default_;
         try {
+          final target = supportedChains.firstWhereOrNull(
+            (Coin value) =>
+                value.getSymbol() == default_ &&
+                value.tokenAddress() == null &&
+                value.badgeImage == null,
+          );
+
+          if (target == null) {
+            return 'Network "$name ($default_)" not found. '
+                'You can only switch to native network coins.';
+          }
+
           final message = 'You are about to switch to $name ($default_)';
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
-          coin = supportedChains.firstWhere(
-            (Coin value) =>
-                value.getSymbol() == default_ && coin.tokenAddress() == null,
-          );
+
+          coin = target;
           Constants.user.profileImage = coin.getImage();
           return 'Switched to $name $default_';
         } catch (e) {
-          return 'Switching failed for $currentCoin $name $default_ $e';
+          return 'Switching failed for $name $default_: $e';
         }
       },
       getInputFromJson: _GetSwitchCoin.fromJson,
@@ -587,15 +613,15 @@ class AItools {
         'properties': {
           'name': {
             'type': 'string',
-            'description': 'The name of the meme token',
+            'description': 'The name of the meme token'
           },
           'symbol': {
             'type': 'string',
-            'description': 'The symbol of the meme token',
+            'description': 'The symbol of the meme token'
           },
           'initialSupply': {
             'type': 'string',
-            'description': 'The initial supply of the meme token',
+            'description': 'The initial supply of the meme token'
           },
         },
         'required': ['name', 'symbol', 'initialSupply'],
@@ -630,20 +656,18 @@ class AItools {
 ⚠️ Liquidity addition failed, but meme token was deployed successfully!
 
 ✅ Token Address: ${memeData.tokenAddress}
-🔗 Deploy Tx Hash: ${memeData.deployTokenTx!}
-🔗 Deploy Tx Hash Explorer: ${coin.formatTxHash(memeData.deployTokenTx!)}
+🔗 Deploy Tx: ${memeData.deployTokenTx!}
+🔗 Explorer: ${coin.formatTxHash(memeData.deployTokenTx!)}
 ''';
           }
 
           final tokenAddress = memeData.tokenAddress!;
           final dexScreener = coin.getDexScreener(tokenAddress);
 
-          return 'Deployed meme token with name $name, symbol $symbol, '
-              'and initial supply $initialSupply Token address: $tokenAddress. '
-              'Liquidity Transaction hash: ${memeData.liquidityTx} '
-              '${coin.formatTxHash(memeData.liquidityTx!)}, '
-              'deployTx ${memeData.deployTokenTx} '
-              '${coin.formatTxHash(memeData.deployTokenTx!)} '
+          return 'Deployed meme token $name ($symbol) supply $initialSupply. '
+              'Token: $tokenAddress. '
+              'Liquidity tx: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. '
+              'Deploy tx: ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}. '
               '${dexScreener ?? ''}';
         } catch (e) {
           if (kDebugMode) print(e);
@@ -652,7 +676,8 @@ class AItools {
       },
       getInputFromJson: _GetDeployMemeInput.fromJson,
     );
-// ── QRY_httpGet ─────────────────────────────────────────────────────────────
+
+    // ── QRY_httpGet ─────────────────────────────────────────────────────────────
 
     final httpGetTool = Tool.fromFunction<_GetHttpInput, String>(
       name: 'QRY_httpGet',
@@ -662,19 +687,14 @@ class AItools {
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'url': {
-            'type': 'string',
-            'description': 'The URL to fetch',
-          },
+          'url': {'type': 'string', 'description': 'The URL to fetch'},
         },
         'required': ['url'],
       },
       func: (final _GetHttpInput toolInput) async {
         try {
           final response = await http
-              .get(
-                Uri.parse(toolInput.url),
-              )
+              .get(Uri.parse(toolInput.url))
               .timeout(const Duration(seconds: 15));
 
           if (response.statusCode == 402) {
@@ -693,21 +713,23 @@ class AItools {
       },
       getInputFromJson: _GetHttpInput.fromJson,
     );
+
     // ── CMD_x402Pay ─────────────────────────────────────────────────────────────
 
     final x402PayTool = Tool.fromFunction<_GetX402PayInput, String>(
       name: 'CMD_x402Pay',
-      description:
-          'Pay for a resource or service autonomously using the x402 protocol. '
-          'Use this when a URL returns a 402 Payment Required response. '
-          'Pass only the URL — payment details (amount, recipient, token) '
-          'are read automatically from the 402 response.',
+      description: 'Pay for a resource using the x402 protocol. '
+          'Use when a URL returns 402 Payment Required. '
+          'Tokens on the current network are resolved automatically — '
+          'the user does not need to switch for same-network tokens. '
+          'Only a full network switch (CMD_switchCoin) is needed if the '
+          'server requires a completely different blockchain.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
           'resourceUrl': {
             'type': 'string',
-            'description': 'The URL of the resource that returned 402',
+            'description': 'The URL that returned 402',
           },
         },
         'required': ['resourceUrl'],
@@ -716,19 +738,14 @@ class AItools {
         try {
           final service = X402Service(coin: coin);
 
-          // Step 1: probe the URL to get payment details
           final probeResult = await service.probe(toolInput.resourceUrl);
           if (probeResult == null) {
-            // Not a 402 — just fetch and return
             return await service.fetchWithPayment(toolInput.resourceUrl);
           }
 
-          // Step 2: show the user what will be paid and ask for confirmation
-          // Amount is in token base units — convert to human readable
-          final humanAmount = probeResult.humanReadableAmount;
           final message = 'x402 Payment Required\n\n'
               'Resource: ${toolInput.resourceUrl}\n'
-              'Amount: $humanAmount\n'
+              'Amount: ${probeResult.humanReadableAmount}\n'
               'Recipient: ${probeResult.option.payTo}\n'
               'Network: ${probeResult.option.network}\n'
               'Token: ${probeResult.option.asset}\n\n'
@@ -737,13 +754,10 @@ class AItools {
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
 
-          // Step 3: sign and submit
-          final result = await service.payAndFetch(
+          return await service.payAndFetch(
             toolInput.resourceUrl,
             probeResult,
           );
-
-          return result;
         } catch (e) {
           return 'x402 payment failed: $e';
         }

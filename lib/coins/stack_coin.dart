@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
+import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import '../extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import '../interface/coin.dart';
@@ -51,8 +52,6 @@ class StacksCoin extends Coin {
     required this.payScheme,
   });
 
-  // ─── Internal accessors ─────────────────────────────────────────────────────
-
   int get _addrVersion =>
       isTestnet ? _versionTestnetP2PKH : _versionMainnetP2PKH;
 
@@ -90,33 +89,18 @@ class StacksCoin extends Coin {
   @override
   bool get supportsX402 => true;
 
-  /// Signs an x402 payment for a Stacks network option.
-  ///
-  /// Stacks x402 works differently from EVM:
-  ///   - No EIP-3009 — we build and sign a real STX transfer transaction.
-  ///   - The signed tx hex is what the facilitator broadcasts.
-  ///   - `payTo` may be null in the 402 response (server-side config only).
-  ///     When null, we cannot build the tx and return null.
-  ///   - Only handles `stacks:1` (mainnet) and `stacks:2147483648` (testnet).
-  ///     Returns null for non-Stacks networks so the service can fall back.
   @override
   Future<String?> signX402Payment(
     X402PaymentOption option, {
     int version = 1,
   }) async {
-    // Only handle Stacks networks — return null for EVM so the caller
-    // knows this coin cannot sign that option.
-    if (!_isStacksNetwork(option.network)) {
-      debugPrint(
-          'StacksCoin: declining to sign non-Stacks network ${option.network}');
+    if (!isStacksNetwork(option.network)) {
+      debugPrint('StacksCoin: declining non-Stacks network ${option.network}');
       return null;
     }
 
-    // payTo is required to build the STX transfer transaction.
-    final payTo = option.payTo;
-    if (payTo.isEmpty) {
-      debugPrint('StacksCoin x402: payTo is missing from option — '
-          'cannot build STX transfer without a recipient address.');
+    if (option.payTo.isEmpty) {
+      debugPrint('StacksCoin x402: payTo missing');
       return null;
     }
 
@@ -126,58 +110,98 @@ class StacksCoin extends Coin {
       final privBytes = txDataToUintList(accountData.privateKey!);
       final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
 
-      final microStx = BigInt.parse(option.maxAmountRequired);
-      final nonce = await stacksFetchNonce(isTestnet, accountData.address);
-      final feeRate = await stacksFetchFeeRate(isTestnet);
-      final fee = BigInt.from(feeRate * stacksEstimatedStxTxBytes);
-
-      // Decode recipient Stacks address.
-      final decoded = c32checkDecode(payTo.substring(1));
-      final recipientVersion = decoded[0] as int;
-      final recipientHash160 =
-          Uint8List.fromList(HEX.decode(decoded[1] as String));
-
-      // Build STX token-transfer payload (no memo for x402 payments).
-      final txPayload = (BytesBuilder()
-            ..addByte(stacksPayloadTokenTransfer)
-            ..addByte(stacksPrincipalTypeStandard)
-            ..addByte(recipientVersion)
-            ..add(recipientHash160)
-            ..add(stacksU64BE(microStx))
-            ..add(stacksMemoBytes('')))
-          .toBytes();
-
-      final txBytes = stacksBuildSignedTx(
-        txVersion: stacksTxVersion(isTestnet),
-        chainId: stacksChainId(isTestnet),
-        privKey: privBytes,
+      final txHex = await buildStxTransferHex(
+        option: option,
+        privBytes: privBytes,
         senderHash160: senderHash160,
-        nonce: BigInt.from(nonce),
-        fee: fee,
-        payload: txPayload,
+        senderAddress: accountData.address,
       );
 
-      final txHex = '0x${HEX.encode(txBytes)}';
-
-      final payload = {
-        'x402Version': version,
-        'scheme': option.scheme,
-        'network': option.network,
-        'payload': {
-          'transaction': txHex,
-        },
-      };
-
-      return base64Encode(utf8.encode(jsonEncode(payload)));
+      return encodePayload(
+        version: version,
+        option: option,
+        txHex: txHex,
+      );
     } catch (e) {
       debugPrint('StacksCoin x402 sign error: $e');
       return null;
     }
   }
 
-  // ─── Stacks network helpers ──────────────────────────────────────────────────
+  /// Builds and signs an STX transfer, returns hex WITHOUT 0x prefix.
+  Future<String> buildStxTransferHex({
+    required X402PaymentOption option,
+    required Uint8List privBytes,
+    required Uint8List senderHash160,
+    required String senderAddress,
+  }) async {
+    final microStx = BigInt.parse(option.maxAmountRequired);
+    final nonce = await stacksFetchNonce(isTestnet, senderAddress);
+    final feeRate = await stacksFetchFeeRate(isTestnet);
+    final fee = BigInt.from(feeRate * stacksEstimatedStxTxBytes);
 
-  bool _isStacksNetwork(String network) =>
+    final decoded = c32checkDecode(option.payTo.substring(1));
+    final recipientVersion = decoded[0] as int;
+    final recipientHash160 =
+        Uint8List.fromList(HEX.decode(decoded[1] as String));
+
+    final memo =
+        'x402:${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}'
+            .substring(0, 34.clamp(0, 34));
+
+    final txPayload = (BytesBuilder()
+          ..addByte(stacksPayloadTokenTransfer)
+          ..addByte(stacksPrincipalTypeStandard)
+          ..addByte(recipientVersion)
+          ..add(recipientHash160)
+          ..add(stacksU64BE(microStx))
+          ..add(stacksMemoBytes(memo)))
+        .toBytes();
+
+    final txBytes = stacksBuildSignedTx(
+      txVersion: stacksTxVersion(isTestnet),
+      chainId: stacksChainId(isTestnet),
+      privKey: privBytes,
+      senderHash160: senderHash160,
+      nonce: BigInt.from(nonce),
+      fee: fee,
+      payload: txPayload,
+    );
+
+    return HEX.encode(txBytes); // no 0x prefix
+  }
+
+  /// Encodes the x402 v2 payment payload as base64 JSON.
+  /// Public so SIP010Coin (different file) can call it via super.
+  ///
+  /// Matches wrapAxiosWithPayment exactly:
+  /// {
+  ///   x402Version: 2,
+  ///   resource: { url: "..." },
+  ///   accepted: { ...option },
+  ///   payload: { transaction: "hex" },  ← no 0x prefix
+  /// }
+  String encodePayload({
+    required int version,
+    required X402PaymentOption option,
+    required String txHex,
+  }) {
+    final paymentPayload = {
+      'x402Version': version,
+      if (option.resource != null) 'resource': option.resource!.toJson(),
+      'accepted': option.toJson(),
+      'payload': {
+        'transaction': txHex,
+      },
+    };
+
+    return base64Encode(utf8.encode(jsonEncode(paymentPayload)));
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  /// Public so SIP010Coin can call it from a different file.
+  bool isStacksNetwork(String network) =>
       network == 'stacks:1' || network == 'stacks:2147483648';
 
   // ─── Serialization ──────────────────────────────────────────────────────────
@@ -231,6 +255,9 @@ class StacksCoin extends Coin {
       throw Exception('Invalid $symbol address checksum');
     }
   }
+
+  @override
+  List<Coin> get networkTokens => getSIP010Coins();
 
   // ─── Key derivation ─────────────────────────────────────────────────────────
 

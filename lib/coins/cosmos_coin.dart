@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:aptos/aptos.dart';
-
+import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
@@ -248,6 +248,9 @@ class CosmosCoin extends Coin {
 
     return BigInt.parse(balance) / base.pow(decimals());
   }
+
+  @override
+  List<Coin> get networkTokens => getCosmosFungibleCoins();
 
   @override
   Future<double> getBalance(bool useCache) async {

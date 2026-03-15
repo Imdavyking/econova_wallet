@@ -2,10 +2,12 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
+import 'package:wallet_app/utils/pos_networks.dart';
 
 import '../main.dart';
 
@@ -41,6 +43,33 @@ abstract class Coin {
     String to, {
     String? memo,
   });
+
+  Coin? findToken(String symbolOrAddress) {
+    if (symbolOrAddress.isEmpty) return null;
+    final key = symbolOrAddress.toLowerCase();
+
+    return networkTokens.firstWhereOrNull((t) {
+      final sym = t.getSymbol().toLowerCase();
+      final contract = t.tokenAddress()?.toLowerCase();
+
+      // Exact symbol match — e.g. "usdc"
+      if (sym == key) return true;
+
+      // Exact contract address match — e.g. "0x036cbd..."
+      if (contract != null && contract == key) return true;
+
+      // Contract tail match — e.g. key "usdcx" matches ".usdcx"
+      if (contract != null && contract.split('.').last == key) return true;
+
+      // Key is a full contract identifier — match by tail
+      // e.g. "ST1PQHQ....usdcx" → tail "usdcx" vs sym "usdcx"
+      final keyTail = key.split('.').last;
+      if (sym == keyTail) return true;
+      if (contract != null && contract.split('.').last == keyTail) return true;
+
+      return false;
+    });
+  }
 
   String getRampID();
   String getPayScheme();
@@ -131,11 +160,11 @@ abstract class Coin {
   String getSymbol();
   String getExplorer();
   String getDefault();
+  List<Coin> get networkTokens => [];
 
   Future<String> getAddress() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
-
     return details.address;
   }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
+import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
 import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
@@ -114,6 +115,9 @@ class SolanaCoin extends Coin {
 
     return data;
   }
+
+  @override
+  List<Coin> get networkTokens => getSplTokens();
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {

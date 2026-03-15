@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,7 @@ import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
 import '../../main.dart';
 import '../../service/wallet_service.dart';
+import '../../service/x402_service.dart';
 import '../../utils/app_config.dart';
 import '../../utils/c32check.dart';
 import '../../utils/rpc_urls.dart';
@@ -65,6 +67,105 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
   @override
   String savedTransKey() =>
       '${tokenAddress()}${stacksApiUrl(isTestnet)}Details';
+
+  // ─── x402 support ───────────────────────────────────────────────────────────
+
+  /// SIP-010 tokens use a contract call to `transfer`, not a simple STX
+  /// transfer. Mirrors wrapAxiosWithPayment's makeContractCall path.
+  /// Calls encodePayload from StacksCoin (public, not file-private).
+  @override
+  Future<String?> signX402Payment(
+    X402PaymentOption option, {
+    int version = 1,
+  }) async {
+    if (!isStacksNetwork(option.network)) {
+      debugPrint('SIP010Coin: declining non-Stacks network ${option.network}');
+      return null;
+    }
+
+    if (option.payTo.isEmpty) {
+      debugPrint('SIP010Coin x402: payTo missing');
+      return null;
+    }
+
+    try {
+      final walletData = WalletService.getActiveKey(walletImportType)!.data;
+      final accountData = await importData(walletData);
+      final privBytes = txDataToUintList(accountData.privateKey!);
+      final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+
+      final txHex = await buildSip010TransferHex(
+        option: option,
+        privBytes: privBytes,
+        senderHash160: senderHash160,
+        senderAddress: accountData.address,
+      );
+
+      // encodePayload is public in StacksCoin — accessible across files
+      return encodePayload(
+        version: version,
+        option: option,
+        txHex: txHex,
+      );
+    } catch (e) {
+      debugPrint('SIP010Coin x402 sign error: $e');
+      return null;
+    }
+  }
+
+  /// Builds and signs a SIP-010 `transfer` contract call.
+  /// Returns hex WITHOUT 0x prefix — matches wrapAxiosWithPayment.
+  Future<String> buildSip010TransferHex({
+    required X402PaymentOption option,
+    required Uint8List privBytes,
+    required Uint8List senderHash160,
+    required String senderAddress,
+  }) async {
+    final tokenUnits = BigInt.parse(option.maxAmountRequired);
+    final nonce = await stacksFetchNonce(isTestnet, senderAddress);
+    final feeRate = await stacksFetchFeeRate(isTestnet);
+    final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
+
+    final senderDecoded = c32checkDecode(senderAddress.substring(1));
+    final senderHash =
+        Uint8List.fromList(HEX.decode(senderDecoded[1] as String));
+
+    final recipDecoded = c32checkDecode(option.payTo.substring(1));
+    final recipHash = Uint8List.fromList(HEX.decode(recipDecoded[1] as String));
+
+    final contractDecoded = c32checkDecode(contractAddress.substring(1));
+    final contractHash160 =
+        Uint8List.fromList(HEX.decode(contractDecoded[1] as String));
+
+    final memo =
+        'x402:${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}'
+            .substring(0, 34.clamp(0, 34));
+
+    final payload = stacksBuildContractCallPayload(
+      contractVersion: contractDecoded[0] as int,
+      contractHash160: contractHash160,
+      contractName: contractName,
+      functionName: 'transfer',
+      args: [
+        clarityUInt(tokenUnits),
+        clarityStandardPrincipal(senderDecoded[0] as int, senderHash),
+        clarityStandardPrincipal(recipDecoded[0] as int, recipHash),
+        clarityOptionalMemo(memo),
+      ],
+    );
+
+    final txBytes = stacksBuildSignedTx(
+      txVersion: stacksTxVersion(isTestnet),
+      chainId: stacksChainId(isTestnet),
+      privKey: privBytes,
+      senderHash160: senderHash160,
+      nonce: BigInt.from(nonce),
+      fee: fee,
+      payload: payload,
+    );
+
+    return HEX.encode(txBytes); // no 0x prefix
+  }
 
   // ─── Serialization ───────────────────────────────────────────────────────────
 
@@ -195,6 +296,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     );
 
     if (res.statusCode ~/ 100 != 2) {
+      if (kDebugMode) print(res.body);
       throw Exception('SIP010 broadcast failed: ${res.body}');
     }
     return jsonDecode(res.body) as String;

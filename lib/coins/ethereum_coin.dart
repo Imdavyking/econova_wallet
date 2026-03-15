@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import '../service/x402_service.dart';
@@ -13,7 +12,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
-
+import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -80,6 +79,9 @@ class EthereumCoin extends Coin {
 
   @override
   String getSymbol() => symbol;
+
+  @override
+  List<Coin> get networkTokens => getERC20Coins();
 
   // ── x402 support ─────────────────────────────────────────────────────────────
 

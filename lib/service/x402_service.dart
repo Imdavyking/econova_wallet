@@ -74,15 +74,16 @@ class X402Service {
       );
     }
 
-    final decimals = _decimalsForAsset(option.asset, version);
+    // Resolve the signing coin early so we can use its decimals.
+    final signingCoin = _resolveSigningCoin(option) ?? coin;
+    final decimals = signingCoin.decimals();
     final rawAmount = BigInt.parse(option.maxAmountRequired);
     final humanAmount =
         (rawAmount / BigInt.from(pow(10, decimals))).toStringAsFixed(decimals);
-    final symbol = _symbolForAsset(option.asset, version);
 
     return X402ProbeResult(
       option: option,
-      humanReadableAmount: '$humanAmount $symbol',
+      humanReadableAmount: '$humanAmount ${signingCoin.getSymbol()}',
       version: version,
     );
   }
@@ -90,15 +91,27 @@ class X402Service {
   // ── Step 2: Pay and fetch ─────────────────────────────────────────────────
 
   Future<String> payAndFetch(String url, X402ProbeResult probeResult) async {
-    final paymentHeader = await coin.signX402Payment(
+    // Silently resolve the correct signing coin from the active coin's
+    // network tokens — user never needs to switch for same-network tokens.
+    // Only falls back to active coin if no match found (native asset payment).
+    final signingCoin = _resolveSigningCoin(probeResult.option) ?? coin;
+
+    // If the required network is completely different from the active coin's
+    // network, the signing coin will still be null after resolution — in that
+    // case we cannot sign and must tell the user to switch networks.
+    if (!_canSignForNetwork(signingCoin, probeResult.option.network)) {
+      final requiredSymbol = _symbolForAsset(probeResult.option.asset);
+      return 'x402: This resource requires payment on ${probeResult.option.network}. '
+          'Please switch to a $requiredSymbol wallet and try again.';
+    }
+
+    final paymentHeader = await signingCoin.signX402Payment(
       probeResult.option,
       version: probeResult.version.value,
     );
 
-    print("Header");
-    print(paymentHeader);
     if (paymentHeader == null) {
-      return 'x402: ${coin.getSymbol()} does not support x402 payments '
+      return 'x402: ${signingCoin.getSymbol()} does not support x402 payments '
           'on network ${probeResult.option.network}.';
     }
 
@@ -109,8 +122,7 @@ class X402Service {
       return 'x402 payment accepted.\n\nResponse: ${response.body}';
     }
 
-    final receipt =
-        response.headers['x-payment-response'] ?? response.headers['x-receipt'];
+    final receipt = response.headers['payment-response'];
     final receiptNote = receipt != null ? '\nReceipt: $receipt' : '';
 
     return 'x402: Server returned ${response.statusCode}: ${response.body}$receiptNote';
@@ -128,6 +140,62 @@ class X402Service {
     return payAndFetch(url, probeResult);
   }
 
+  // ── Signing coin resolution ───────────────────────────────────────────────
+
+  /// Finds the correct coin to sign the payment with.
+  ///
+  /// Resolution order:
+  ///   1. Active coin itself matches the asset → use active coin.
+  ///   2. A token on the active coin's network matches → use that token
+  ///      (user stays on their current network, no switch needed).
+  ///   3. No match → return null (caller decides — network switch needed).
+  Coin? _resolveSigningCoin(X402PaymentOption option) {
+    final asset = option.asset;
+
+    // Active coin itself is the required asset
+    if (_coinMatchesAsset(coin, asset)) return coin;
+
+    // Look in the active coin's network tokens — same network, no switch
+    final token = coin.findToken(asset);
+    if (token != null) return token;
+
+    // Asset is on a completely different network
+    return null;
+  }
+
+  /// Returns true if [c] can sign for [network].
+  /// Checks by attempting to sign — if the coin returns null it can't.
+  /// We use a lighter check: see if the network prefix matches the coin type.
+  bool _canSignForNetwork(Coin c, String network) {
+    final isStacksNetwork =
+        network == 'stacks:1' || network == 'stacks:2147483648';
+    final isEvmNetwork = !isStacksNetwork && !network.contains(':');
+
+    final coinScheme = c.getPayScheme().toLowerCase();
+    final isStacksCoin = coinScheme == 'stacks';
+
+    if (isStacksNetwork) return isStacksCoin;
+    if (isEvmNetwork) return !isStacksCoin;
+
+    // Unknown network format — let the coin try
+    return true;
+  }
+
+  /// Returns true if [c]'s symbol or tokenAddress matches [asset].
+  bool _coinMatchesAsset(Coin c, String asset) {
+    final key = asset.toLowerCase();
+    final sym = c.getSymbol().toLowerCase();
+    final contract = c.tokenAddress()?.toLowerCase();
+
+    if (sym == key) return true;
+    if (contract != null && contract == key) return true;
+    if (contract != null && contract.split('.').last == key) return true;
+    final keyTail = key.split('.').last;
+    if (sym == keyTail) return true;
+    if (contract != null && contract.split('.').last == keyTail) return true;
+    return false;
+  }
+
   // ── Version-aware helpers ─────────────────────────────────────────────────
 
   Map<String, String> _buildRequestHeaders(
@@ -142,17 +210,12 @@ class X402Service {
           'Content-Type': 'application/json',
         },
       X402Version.v2 => {
-          'X-PAYMENT': paymentHeader,
-          'X-Payment-Version': '2',
+          'payment-signature': paymentHeader,
           'Content-Type': 'application/json',
         },
     };
   }
 
-  /// Pick the best payment option based on what the current coin supports.
-  ///
-  /// Stacks coins prefer `stacks:*` networks; EVM coins prefer EVM networks.
-  /// Within each group, mainnet is preferred over testnet.
   X402PaymentOption? _pickOption(
       List<X402PaymentOption> options, X402Version version) {
     final evmNetworks = switch (version) {
@@ -173,8 +236,8 @@ class X402Service {
     };
 
     const stacksNetworks = [
-      'stacks:1', // mainnet
-      'stacks:2147483648', // testnet
+      'stacks:1',
+      'stacks:2147483648',
     ];
 
     const supportedSchemes = ['exact'];
@@ -199,26 +262,15 @@ class X402Service {
     return firstMatch(preferredNetworks) ?? firstMatch(fallbackNetworks);
   }
 
-  int _decimalsForAsset(String asset, X402Version version) {
-    final key = asset.toLowerCase();
-    return switch (key) {
-      'stx' => 6,
-      'sbtc' => 8,
-      String k when k.contains('usdc') => 6,
-      String k when k.contains('usdt') => 6,
-      String k when k.contains('eth') && version == X402Version.v2 => 18,
-      _ => 6,
-    };
-  }
+  String _symbolForAsset(String asset) {
+    // Ask active coin and its tokens first — no hardcoding
+    if (_coinMatchesAsset(coin, asset)) return coin.getSymbol();
+    final token = coin.findToken(asset);
+    if (token != null) return token.getSymbol();
 
-  String _symbolForAsset(String asset, X402Version version) {
-    final key = asset.toLowerCase();
-    if (key == 'stx') return 'STX';
-    if (key == 'sbtc') return 'sBTC';
-    if (key.contains('usdt')) return 'USDT';
-    if (key.contains('eth')) return 'ETH';
-    if (key.contains('usdcx')) return 'USDCX';
-    return 'USDC';
+    // Fallback: use tail of identifier, uppercased
+    final tail = asset.split('.').last;
+    return tail.length > 10 ? '${tail.substring(0, 6)}…' : tail.toUpperCase();
   }
 }
 
@@ -267,6 +319,8 @@ class X402Resource {
   X402Resource({required this.url});
   factory X402Resource.fromJson(Map<String, dynamic> json) =>
       X402Resource(url: json['url'] as String);
+
+  Map<String, dynamic> toJson() => {'url': url};
 }
 
 class X402PaymentOption {
@@ -276,15 +330,9 @@ class X402PaymentOption {
   final X402Resource? resource;
   final String? description;
   final String? mimeType;
-
-  /// Always present — required field in PaymentMiddlewareConfig.
   final String payTo;
-
   final int maxTimeoutSeconds;
-
-  /// Optional in PaymentMiddlewareConfig — defaults to 'STX' when absent.
   final String asset;
-
   final Map<String, dynamic>? extra;
 
   X402PaymentOption({
@@ -300,19 +348,28 @@ class X402PaymentOption {
     this.extra,
   });
 
+  Map<String, dynamic> toJson() => {
+        'scheme': scheme,
+        'network': network,
+        'amount': maxAmountRequired,
+        'asset': asset,
+        'payTo': payTo,
+        'maxTimeoutSeconds': maxTimeoutSeconds,
+        if (description != null) 'description': description,
+        if (mimeType != null) 'mimeType': mimeType,
+        if (extra != null) 'extra': extra,
+      };
+
   factory X402PaymentOption.fromJson(
     Map<String, dynamic> json, {
     X402Resource? topLevelResource,
   }) {
-    // Stacks uses 'amount'; EVM uses 'maxAmountRequired'
     final rawAmount = json['maxAmountRequired'] ?? json['amount'];
     if (rawAmount == null) {
-      throw FormatException(
+      throw const FormatException(
           'x402 option missing both maxAmountRequired and amount fields');
     }
 
-    // resource may be inside the option (EVM) or inherited from the
-    // top-level response (Stacks)
     X402Resource? resource = topLevelResource;
     final rawResource = json['resource'];
     if (rawResource is String) {
@@ -321,11 +378,9 @@ class X402PaymentOption {
       resource = X402Resource.fromJson(rawResource);
     }
 
-    // payTo is required per PaymentMiddlewareConfig — throw early if missing
-    // so the error is clear rather than a null deref later during signing.
     final payTo = json['payTo'] as String?;
     if (payTo == null || payTo.isEmpty) {
-      throw FormatException('x402 option missing required payTo field');
+      throw const FormatException('x402 option missing required payTo field');
     }
 
     return X402PaymentOption(
@@ -337,8 +392,9 @@ class X402PaymentOption {
       mimeType: json['mimeType'] as String?,
       payTo: payTo,
       maxTimeoutSeconds: json['maxTimeoutSeconds'] as int? ?? 300,
-      // asset is optional in PaymentMiddlewareConfig — default to 'STX'
-      asset: (json['asset'] as String?) ?? 'STX',
+      asset: json['asset'] as String? ??
+          (throw const FormatException(
+              'x402 option missing required asset field')),
       extra: json['extra'] as Map<String, dynamic>?,
     );
   }

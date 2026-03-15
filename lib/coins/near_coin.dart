@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/coins/fungible_tokens/near_fungible_coin.dart';
+
 import '../extensions/big_int_ext.dart';
 import '../model/near_trx_obj.dart' as near_trx_obj;
 import '../service/wallet_service.dart';
@@ -240,6 +242,9 @@ class NearCoin extends Coin {
 
     return balance / base.pow(decimals());
   }
+
+  @override
+  List<Coin> get networkTokens => getNearFungibles();
 
   @override
   Future<double> getBalance(bool useCache) async {

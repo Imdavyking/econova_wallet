@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:wallet_app/coins/fungible_tokens/ton_fungible_coins.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
@@ -219,6 +220,9 @@ class TonCoin extends Coin {
       ),
     );
   }
+
+  @override
+  List<Coin> get networkTokens => getTonFungibleCoins();
 
   @override
   requireMemo() => true;

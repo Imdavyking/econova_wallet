@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
+import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import '../extensions/uint256_starknet.dart';
 import 'package:wallet_app/utils/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
@@ -475,6 +476,9 @@ class StarknetCoin extends Coin {
 
     return userBalance;
   }
+
+  @override
+  List<Coin> get networkTokens => getStarknetFungibleCoins();
 
   @override
   Future<double> getBalance(bool useCache) async {

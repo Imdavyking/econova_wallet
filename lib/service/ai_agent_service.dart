@@ -32,29 +32,119 @@ class AIAgentService {
   static const historyKey = '33221-93d0-8007-8a0f-cd31191';
   static final logger = Logger();
   static const defaultCoinTokenAddress = '0xdefault';
-  final botPrompt = '''You are $walletName,
+
+  // ── Coin context ─────────────────────────────────────────────────────────────
+
+  /// Builds the coin context for the bot prompt.
+  ///
+  /// - [fungibleTokens]  — tokens on the active coin's network.
+  ///                       Resolved automatically — user never needs to switch.
+  /// - [switchableCoins] — native coins of other blockchains.
+  ///                       Require CMD_switchCoin to use.
+  static ({
+    String currentCoin,
+    List<String> fungibleTokens,
+    String switchableCoins,
+  }) _buildCoinContext() {
+    final coin = AItools.coin;
+
+    final currentCoin = 'name: ${coin.getName().split('(')[0]}, '
+        'symbol: (${coin.getSymbol()}), '
+        'coinGeckoId: ${coin.getGeckoId()}, '
+        'default_: ${coin.getDefault()}';
+
+    final List<String> fungibleTokens = [];
+
+    final switchableCoins = supportedChains
+        .where((Coin value) {
+          // ── Same-network tokens ─────────────────────────────────────────
+          // Collect tokens on the active coin's network into fungibleTokens.
+          // These are resolved automatically — user never needs to switch.
+          if (value.tokenAddress() != null &&
+              value.getExplorer() == coin.getExplorer()) {
+            final geckoId = value.getGeckoId().isNotEmpty
+                ? ', coinGeckoId: ${value.getGeckoId()}'
+                : '';
+            fungibleTokens.add(
+              'name: ${value.getName().split('(')[0].trim()}, '
+              'symbol: (${value.getSymbol()}), '
+              'tokenAddress: ${value.tokenAddress()}'
+              '$geckoId',
+            );
+            return false; // exclude from switchable coins list
+          }
+
+          // ── Switchable networks ─────────────────────────────────────────
+          // Only native coins of other networks — not tokens, not the
+          // current coin, not badges.
+          return coinGeckoIDs.contains(value.getGeckoId()) &&
+              value.getSymbol() == value.getDefault() &&
+              value.badgeImage == null &&
+              value != coin;
+        })
+        .map((token) => 'name: ${token.getName().split('(')[0]}, '
+            'symbol: (${token.getSymbol()}), '
+            'coinGeckoId: ${token.getGeckoId()}, '
+            'default_: ${token.getDefault()}')
+        .join(', ');
+
+    return (
+      currentCoin: currentCoin,
+      fungibleTokens: fungibleTokens,
+      switchableCoins: switchableCoins,
+    );
+  }
+
+  // ── Bot prompt ───────────────────────────────────────────────────────────────
+
+  static String _buildBotPrompt({
+    required String currentCoin,
+    required List<String> fungibleTokens,
+    required String otherCoins,
+    required String tokenAddress,
+  }) {
+    return '''You are $walletName,
         a smart wallet that allows users to perform transactions,
         and query the blockchain using natural language.
         With your intuitive interface,
         users can seamlessly interact with the blockchain,
         making transactions, checking balances,
-        check the current coin is correct or ask the user to switch to the coin needed,
-        and querying smart contracts—all through simple, conversational commands.
+        and querying smart contracts — all through simple, conversational commands.
         For sending, always use memo if available.
-        
-        ⚠️ x402 PAYMENT PROTOCOL — STRICT RULES:
-        - When a URL returns a 402 Payment Required response, you MUST use CMD_x402Pay exclusively.
-        - NEVER use CMD_transferBalance as a substitute or fallback for x402 payments.
-        - NEVER attempt to manually replicate what x402 does (e.g. sending tokens directly to payTo address).
-        - x402 is a signed authorization protocol — a direct transfer is NOT equivalent and will NOT unlock the resource.
-        - If CMD_x402Pay fails, report the failure. Do NOT retry with CMD_transferBalance.
-        - Only CMD_x402Pay can produce the signed payment header the server requires.''';
-  // final llm = ChatOpenAI(
-  //   apiKey: dotenv.env['OPENAI_API_KEY'],
-  //   defaultOptions: const ChatOpenAIOptions(
-  //     temperature: 0,
-  //   ),
-  // );
+
+        ── CURRENT NETWORK ──────────────────────────────────────────────────────
+        Active network: $currentCoin
+        Native token address: $tokenAddress
+        Tokens on this network: ${fungibleTokens.isNotEmpty ? fungibleTokens.join(', ') : 'none'}
+        Other available networks: $otherCoins
+
+        ── TOKEN RESOLUTION — NO SWITCHING NEEDED ───────────────────────────────
+        Tokens on the current network (e.g. USDC on Solana, USDCX on Stacks,
+        BUSD on BNB) are resolved AUTOMATICALLY by CMD_transferBalance and
+        CMD_x402Pay. Do NOT use CMD_switchCoin for tokens — only use it to
+        switch to a completely different blockchain (e.g. Stacks → Ethereum).
+
+        ⚠️ Use the token address shown above as the true source of identity
+        for this coin, especially in testnet or non-standard environments.
+        Do NOT rely on known token maps or CoinGecko IDs for address resolution
+        — the address given here is authoritative.
+
+        ── x402 PAYMENT PROTOCOL — STRICT RULES ────────────────────────────────
+        - When a URL returns 402 Payment Required, use CMD_x402Pay exclusively.
+        - NEVER use CMD_transferBalance as a substitute for x402 payments.
+        - NEVER send tokens directly to the payTo address as a workaround.
+        - x402 is a signed authorization protocol — a direct transfer will NOT
+          unlock the resource.
+        - Tokens on the current network are resolved automatically inside
+          CMD_x402Pay — no coin switch is needed for same-network tokens.
+        - Only if CMD_x402Pay returns a network mismatch error (a completely
+          different blockchain is required), use CMD_switchCoin then retry
+          CMD_x402Pay automatically without asking the user.
+        - If CMD_x402Pay fails for any other reason, report it — do NOT retry
+          with CMD_transferBalance.''';
+  }
+
+  // ── LLM ─────────────────────────────────────────────────────────────────────
 
   final llm = ChatOpenAI(
     apiKey: dotenv.env['OPENROUTER_API_KEY'],
@@ -64,6 +154,8 @@ class AIAgentService {
       model: 'openai/gpt-4o-mini',
     ),
   );
+
+  // ── Message deserialization ──────────────────────────────────────────────────
 
   static lang_chain.ChatMessage jsonToLangchainMessage(
       Map<String, dynamic> json) {
@@ -160,6 +252,8 @@ class AIAgentService {
     }
   }
 
+  // ── History ──────────────────────────────────────────────────────────────────
+
   static Future<void> saveHistory() async {
     List<lang_chain.ChatMessage> histories =
         await memory.chatHistory.getChatMessages();
@@ -192,72 +286,34 @@ class AIAgentService {
           .map(
             (history) => ChatMessageWithDate(
               jsonToLangchainMessage(history),
-              DateTime.parse(
-                history['date'],
-              ),
+              DateTime.parse(history['date']),
             ),
           )
           .toList();
 
       messages.addAll(convertedMessages);
       await memory.clear();
-      for (ChatMessageWithDate savedMessages in convertedMessages.reversed) {
-        await memory.chatHistory.addChatMessage(savedMessages.message);
+      for (final saved in convertedMessages.reversed) {
+        await memory.chatHistory.addChatMessage(saved.message);
       }
     }
 
     return messages;
   }
 
+  // ── Text message ─────────────────────────────────────────────────────────────
+
   Future<Either<String, DashChatMessage>> sendTextMessage(
     DashChatMessage chatMessage,
   ) async {
     try {
-      final coin = AItools.coin;
-
-      final currentCoin =
-          "name: ${coin.getName().split('(')[0]},symbol: (${coin.getSymbol()}),coinGeckoId: ${coin.getGeckoId()}) default_: ${coin.getDefault()}";
-
-      final List<String> listFungibleToken = [];
-
-      final otherCoins = supportedChains
-          .where((Coin value) {
-            if (value.tokenAddress() != null &&
-                value.getExplorer() == coin.getExplorer()) {
-              final geckoId = value.getGeckoId().isNotEmpty
-                  ? 'coinGeckoId: ${value.getGeckoId()}'
-                  : '';
-              final tokenDescription =
-                  'name: ${value.getName().split('(')[0].trim()}, '
-                  'symbol: (${value.getSymbol()}) '
-                  'on ${coin.getName().split('(')[0]} is ${value.tokenAddress()} '
-                  '$geckoId';
-
-              listFungibleToken.add(tokenDescription);
-
-              return false;
-            }
-            return coinGeckoIDs.contains(value.getGeckoId()) &&
-                value.getSymbol() == value.getDefault() &&
-                value.badgeImage == null &&
-                value != coin;
-          })
-          .toList()
-          .map(
-            (token) =>
-                "name: ${token.getName().split('(')[0]}, symbol: (${token.getSymbol()}), coinGeckoId: ${token.getGeckoId()}), default_: ${token.getDefault()}",
-          )
-          .toList()
-          .join(',');
-
-      final prompt = """
-        ⚠️ Use the token address shown above as the **true source of identity** for this coin, especially in testnet or non-standard environments.  
-        Do **not** rely on known token maps or CoinGecko IDs for address resolution — the address given here is authoritative.
-        $botPrompt
-        current coin is $currentCoin coinGeckoId: ${coin.getGeckoId()} with tokenAddress ${coin.tokenAddress() ?? defaultCoinTokenAddress}.
-        ${listFungibleToken.isNotEmpty ? 'current fungible tokens are: ${listFungibleToken.join(',')}' : ''}
-        other coins are $otherCoins.
-        """;
+      final ctx = _buildCoinContext();
+      final botPrompt = _buildBotPrompt(
+        currentCoin: ctx.currentCoin,
+        fungibleTokens: ctx.fungibleTokens,
+        otherCoins: ctx.switchableCoins,
+        tokenAddress: AItools.coin.tokenAddress() ?? defaultCoinTokenAddress,
+      );
 
       final agent = ToolsAgent.fromLLMAndTools(
         llm: llm,
@@ -266,13 +322,12 @@ class AIAgentService {
         systemChatMessage: SystemChatMessagePromptTemplate(
           prompt: PromptTemplate(
             inputVariables: const {},
-            template: prompt,
+            template: botPrompt,
           ),
         ),
       );
 
       final executor = AgentExecutor(agent: agent);
-
       final response = await executor.run(chatMessage.text);
 
       await saveHistory();
@@ -296,18 +351,18 @@ class AIAgentService {
     }
   }
 
+  // ── Image message ─────────────────────────────────────────────────────────────
+
   Future<Either<String, DashChatMessage>> sendImageMessage(
     DashChatMessage chatMessage,
   ) async {
     final medias = chatMessage.medias ?? <DashChatMedia>[];
-
     final mediaContents = <ChatMessageContent>[];
 
     try {
       if (medias.isNotEmpty) {
         for (final DashChatMedia(:url, :customProperties) in medias) {
           final isExternal = Uri.tryParse(url)?.hasScheme ?? false;
-
           final data =
               isExternal ? url : base64Encode(File(url).readAsBytesSync());
 
@@ -320,26 +375,28 @@ class AIAgentService {
         }
       }
 
+      final ctx = _buildCoinContext();
+      final botPrompt = _buildBotPrompt(
+        currentCoin: ctx.currentCoin,
+        fungibleTokens: ctx.fungibleTokens,
+        otherCoins: ctx.switchableCoins,
+        tokenAddress: AItools.coin.tokenAddress() ?? defaultCoinTokenAddress,
+      );
+
       final history = await memory.loadMemoryVariables();
-      final humanMessage = chatMessage.text;
       final info = ChatMessage.human(
         ChatMessageContent.multiModal([
-          ChatMessageContent.text(humanMessage),
+          ChatMessageContent.text(chatMessage.text),
           ...mediaContents,
         ]),
       );
+
       final prompt = PromptValue.chat([
-        ChatMessage.system(
-          """
-          $botPrompt
-          $history
-          """,
-        ),
+        ChatMessage.system('$botPrompt\n$history'),
         info,
       ]);
 
       final chain = llm.pipe(const StringOutputParser());
-
       final response = await chain.invoke(prompt);
 
       await memory.chatHistory.addChatMessage(info);

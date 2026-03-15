@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:hex/hex.dart';
+import 'package:wallet_app/coins/fungible_tokens/esdt_coin.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -11,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:multiversx_sdk/multiversx.dart' as multiversx;
 import 'package:web3dart/crypto.dart';
-
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/multix_resolver.dart';
@@ -69,6 +69,9 @@ class MultiversxCoin extends Coin {
   String getSymbol() {
     return symbol;
   }
+
+  @override
+  List<Coin> get networkTokens => getESDTCoins();
 
   MultiversxCoin({
     required this.blockExplorer,

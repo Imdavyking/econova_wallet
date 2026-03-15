@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:http/http.dart' as http;
 import 'package:on_chain/tron/tron.dart';
@@ -109,6 +110,9 @@ class TronCoin extends Coin {
 
     return data;
   }
+
+  @override
+  List<Coin> get networkTokens => getTronFungibleCoins();
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
