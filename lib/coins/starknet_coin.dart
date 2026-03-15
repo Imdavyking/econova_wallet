@@ -480,7 +480,7 @@ class StarknetCoin extends Coin {
   Future<double> getBalance(bool useCache) async {
     String address = await getAddress();
 
-    final key = 'StarknetAddressBalance$address$api$name';
+    final key = 'StarknetAddressBalance$address$api$name$tokenContractAddress';
 
     final storedBalance = pref.get(key);
 

@@ -6,6 +6,7 @@ import 'package:alan/alan.dart' as cosmos;
 import 'package:alan/proto/cosmos/bank/v1beta1/export.dart' as bank;
 import 'package:http/http.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/main.dart';
 import '../../interface/ft_explorer.dart';
 import '../../utils/app_config.dart';
 import '../cosmos_coin.dart';
@@ -95,6 +96,28 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   int decimals() => mintDecimals;
 
   // ── Balance: filter bank balances by this token's denom ────────────────────
+  @override
+  Future<double> getBalance(bool useCache) async {
+    final address = await getAddress();
+    final key = 'cosmosFTBalance${denom}_${address}_$lcdUrl';
+
+    final storedBalance = pref.get(key);
+    double savedBalance = 0;
+
+    if (storedBalance != null) {
+      savedBalance = storedBalance;
+    }
+
+    if (useCache) return savedBalance;
+
+    try {
+      final balance = await getUserBalance(address: address);
+      await pref.put(key, balance);
+      return balance;
+    } catch (e) {
+      return savedBalance;
+    }
+  }
 
   @override
   Future<double> getUserBalance({required String address}) async {
