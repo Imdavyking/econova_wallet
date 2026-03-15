@@ -63,10 +63,11 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   String contractExplorer() {
     // Most Cosmos explorers don't have a per-token page,
     // so we fall back to the address explorer
+    final replacement = '/asset/${tokenAddress()}';
     return getExplorer()
-        .replaceFirst('/transaction/$blockExplorerPlaceholder', '/assets')
-        .replaceFirst('/transactions/$blockExplorerPlaceholder', '/assets')
-        .replaceFirst('/tx/$blockExplorerPlaceholder', '/assets');
+        .replaceFirst('/transaction/$blockExplorerPlaceholder', replacement)
+        .replaceFirst('/transactions/$blockExplorerPlaceholder', replacement)
+        .replaceFirst('/tx/$blockExplorerPlaceholder', replacement);
   }
 
   @override

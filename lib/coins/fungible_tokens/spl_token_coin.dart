@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
-import 'package:solana/dto.dart';
 
 import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
@@ -77,14 +76,6 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     data['mintDecimals'] = mintDecimals;
 
     return data;
-  }
-
-  @override
-  Future listenForBalanceChange() async {
-    final address = await getAddress();
-    final subscription = getProxy().createSubscriptionClient();
-
-    subscription.accountSubscribe(address).listen((Account event) {});
   }
 
   @override
@@ -176,7 +167,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
 List<SplTokenCoin> getSplTokens() {
   List<SplTokenCoin> blockChains = [];
   if (enableTestNet) {
-  blockChains.addAll([
+    blockChains.addAll([
       SplTokenCoin(
         name: 'USDC (Devnet)',
         symbol: 'USDC',

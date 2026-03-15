@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';

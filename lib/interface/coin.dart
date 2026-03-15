@@ -48,8 +48,6 @@ abstract class Coin {
   bool get supportPrivateKey => false;
   bool get isRpcWorking => true;
   Future<bool> needDeploy() async => false;
-
-  Future listenForBalanceChange() async {}
   Future deployAccount() async {}
   Future<Map> getTransactions() async {
     final address = await getAddress();

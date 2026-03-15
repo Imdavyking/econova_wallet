@@ -217,7 +217,7 @@ class PolkadotCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'polkadotAddressBalance$address$api$ss58Prefix';
+    final key = 'polBal$address$api$ss58Prefix';
 
     final storedBalance = pref.get(key);
 
@@ -231,9 +231,11 @@ class PolkadotCoin extends Coin {
 
     try {
       double userBal = await getUserBalance(address: address);
+      print(userBal);
       await pref.put(key, userBal);
       return userBal;
     } catch (_) {
+      print('couldnt get bal');
       return savedBalance;
     }
   }

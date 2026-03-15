@@ -169,14 +169,6 @@ class SolanaCoin extends Coin {
     return AccountData.fromJson(keys);
   }
 
-  @override
-  listenForBalanceChange() async {
-    final address = await getAddress();
-    final subscription = getProxy().createSubscriptionClient();
-
-    subscription.accountSubscribe(address).listen((Account event) {});
-  }
-
   List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
     final instructions = simulation.message.compiledInstructions;
     final staticKeys = simulation.message.staticAccountKeys;
