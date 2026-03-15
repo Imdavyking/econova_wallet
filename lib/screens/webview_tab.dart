@@ -274,12 +274,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       callback: (args) => _onCloseNotification(args[0] as int),
     );
 
-    // No-op AI tracker
-    ctrl.addJavaScriptHandler(
-      handlerName: 'AITrackerHandler',
-      callback: (cb) => debugPrint('AITrackerHandler: $cb'),
-    );
-
     // Attach all blockchain handlers and keep context fresh
     for (final h in _allHandlers) {
       h.context = context;
