@@ -231,11 +231,9 @@ class PolkadotCoin extends Coin {
 
     try {
       double userBal = await getUserBalance(address: address);
-      print(userBal);
       await pref.put(key, userBal);
       return userBal;
     } catch (_) {
-      print('couldnt get bal');
       return savedBalance;
     }
   }
