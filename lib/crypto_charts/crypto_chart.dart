@@ -38,10 +38,6 @@ String getMarketData({
   return "$coinGeckoBaseurl/coins/$coinGeckoId/market_chart?vs_currency=$defaultCurrency&days=$days";
 }
 
-String getMarketInfo(String coinGeckoId) {
-  return "$coinGeckoBaseurl/coins/$coinGeckoId";
-}
-
 class _CryptoChartState extends State<CryptoChart> {
   late List<charts.Series<List, num>> series;
   List<List<dynamic>> chartData = [];
