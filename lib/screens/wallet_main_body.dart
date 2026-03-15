@@ -9,7 +9,6 @@ import 'package:wallet_app/components/wallet/wallet_coin_list.dart';
 import 'package:wallet_app/components/wallet/wallet_header.dart';
 import 'package:wallet_app/components/wallet/wallet_search_bar.dart';
 import 'package:wallet_app/interface/coin.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/wallet_connect_reown/wc_connector_reown.dart';
 import 'package:wallet_app/utils/wallet_connect_v1/wc_connector_v1.dart';
 import '../api/notification_api.dart';
