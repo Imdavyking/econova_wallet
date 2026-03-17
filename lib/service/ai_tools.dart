@@ -702,7 +702,7 @@ class AItools {
           (c) =>
               c is ERCFungibleCoin &&
               c.getSymbol() == 'USDC' &&
-              (c.chainId == 1 || c.chainId == 5),
+              (c.chainId == 1 || c.chainId == 11155111),
         ) as ERCFungibleCoin?;
 
         if (usdcCoin == null) {

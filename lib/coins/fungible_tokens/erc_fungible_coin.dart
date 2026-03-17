@@ -409,7 +409,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 
     final value = amount.toBigIntDec(decimals()); // 6 decimals
     final xReserve = EthereumAddress.fromHex(
-      chainId == 5 ? _xReserveTestnet : _xReserveMainnet,
+      chainId == 11155111 ? _xReserveTestnet : _xReserveMainnet,
     );
     final usdcContract = EthereumAddress.fromHex(contractAddress_);
     final remoteRecipient = _encodeStacksAddress(stacksRecipient);
