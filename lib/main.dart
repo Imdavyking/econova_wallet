@@ -61,7 +61,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 List<Coin> supportedChains = [];
 late String currencyJson;
 late String currencyJsonSearch;
-late String provider;
+late String trustWalletProvider;
 late String nightly;
 late String webNotifer;
 List<EthereumCoin> evmChains = [
@@ -190,7 +190,7 @@ void main() async {
   );
   walletImportType = WalletService.getType();
 
-  provider = await rootBundle.loadString('js/trust.min.js');
+  trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
   nightly = await rootBundle.loadString('js/nightly.min.js');
   webNotifer = await rootBundle.loadString('js/web_notification.js');
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
@@ -198,7 +198,7 @@ void main() async {
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
-    print('Reinstantiated seed root');
+    debugPrint('Reinstantiated seed root');
   }
   supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
