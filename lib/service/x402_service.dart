@@ -24,6 +24,22 @@ enum X402Version {
 
 const _supportedVersions = {X402Version.v0, X402Version.v1, X402Version.v2};
 
+// ── Request context — carries original method/body/headers through the flow ───
+
+class X402RequestContext {
+  final String url;
+  final String method;
+  final String? body;
+  final Map<String, String> headers;
+
+  const X402RequestContext({
+    required this.url,
+    this.method = 'GET',
+    this.body,
+    this.headers = const {},
+  });
+}
+
 // ── Probe result ──────────────────────────────────────────────────────────────
 
 class X402ProbeResult {
@@ -46,9 +62,21 @@ class X402Service {
   X402Service({required this.coin});
 
   // ── Step 1: Probe ─────────────────────────────────────────────────────────
+  // Probes using the *actual* method + body so a POST-only 402 is caught.
 
-  Future<X402ProbeResult?> probe(String url) async {
-    final response = await http.get(Uri.parse(url));
+  Future<X402ProbeResult?> probe(
+    String url, {
+    String method = 'GET',
+    String? body,
+    Map<String, String> headers = const {},
+  }) async {
+    final response = await _dispatch(X402RequestContext(
+      url: url,
+      method: method,
+      body: body,
+      headers: headers,
+    ));
+
     if (response.statusCode != 402) return null;
 
     final X402Response x402;
@@ -62,7 +90,7 @@ class X402Service {
     if (version == null || !_supportedVersions.contains(version)) {
       throw Exception(
         'Unsupported x402 version: ${x402.x402Version}. '
-        'Supported versions: ${_supportedVersions.map((v) => v.value).join(', ')}',
+        'Supported: ${_supportedVersions.map((v) => v.value).join(', ')}',
       );
     }
 
@@ -74,7 +102,6 @@ class X402Service {
       );
     }
 
-    // Resolve the signing coin early so we can use its decimals.
     final signingCoin = _resolveSigningCoin(option) ?? coin;
     final decimals = signingCoin.decimals();
     final rawAmount = BigInt.parse(option.maxAmountRequired);
@@ -89,19 +116,21 @@ class X402Service {
   }
 
   // ── Step 2: Pay and fetch ─────────────────────────────────────────────────
+  // Re-dispatches the *original* request with the payment header injected.
 
-  Future<String> payAndFetch(String url, X402ProbeResult probeResult) async {
-    // Silently resolve the correct signing coin from the active coin's
-    // network tokens — user never needs to switch for same-network tokens.
-    // Only falls back to active coin if no match found (native asset payment).
+  Future<String> payAndFetch(
+    String url,
+    X402ProbeResult probeResult, {
+    String method = 'GET',
+    String? body,
+    Map<String, String> headers = const {},
+  }) async {
     final signingCoin = _resolveSigningCoin(probeResult.option) ?? coin;
 
-    // If the required network is completely different from the active coin's
-    // network, the signing coin will still be null after resolution — in that
-    // case we cannot sign and must tell the user to switch networks.
     if (!_canSignForNetwork(signingCoin, probeResult.option.network)) {
       final requiredSymbol = _symbolForAsset(probeResult.option.asset);
-      return 'x402: This resource requires payment on ${probeResult.option.network}. '
+      return 'x402: This resource requires payment on '
+          '${probeResult.option.network}. '
           'Please switch to a $requiredSymbol wallet and try again.';
     }
 
@@ -115,9 +144,18 @@ class X402Service {
           'on network ${probeResult.option.network}.';
     }
 
-    final headers = _buildRequestHeaders(paymentHeader, probeResult.version);
+    // Merge payment header into original headers — preserves Content-Type etc.
+    final paymentHeaders = {
+      ...headers,
+      ..._buildPaymentHeaders(paymentHeader, probeResult.version),
+    };
 
-    final response = await http.get(Uri.parse(url), headers: headers);
+    final response = await _dispatch(X402RequestContext(
+      url: url,
+      method: method,
+      body: body,
+      headers: paymentHeaders,
+    ));
 
     if (response.statusCode == 200) {
       return 'x402 payment accepted.\n\nResponse: ${response.body}';
@@ -125,95 +163,97 @@ class X402Service {
 
     final receipt = response.headers['payment-response'];
     final receiptNote = receipt != null ? '\nReceipt: $receipt' : '';
-
-    return 'x402: Server returned ${response.statusCode}: ${response.body}$receiptNote';
+    return 'x402: Server returned ${response.statusCode}: '
+        '${response.body}$receiptNote';
   }
 
   // ── Full flow without confirmation ────────────────────────────────────────
 
-  Future<String> fetchWithPayment(String url) async {
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode != 402) return response.body;
+  Future<String> fetchWithPayment(
+    String url, {
+    String method = 'GET',
+    String? body,
+    Map<String, String> headers = const {},
+  }) async {
+    final probeResult = await probe(
+      url,
+      method: method,
+      body: body,
+      headers: headers,
+    );
+    if (probeResult == null) {
+      final response = await _dispatch(X402RequestContext(
+        url: url,
+        method: method,
+        body: body,
+        headers: headers,
+      ));
+      return response.body;
+    }
 
-    final probeResult = await probe(url);
-    if (probeResult == null) return response.body;
+    return payAndFetch(
+      url,
+      probeResult,
+      method: method,
+      body: body,
+      headers: headers,
+    );
+  }
 
-    return payAndFetch(url, probeResult);
+  // ── HTTP dispatch — single place for all method routing ──────────────────
+
+  Future<http.Response> _dispatch(X402RequestContext ctx) {
+    final uri = Uri.parse(ctx.url);
+    final headers = {
+      if (ctx.body != null) 'Content-Type': 'application/json',
+      ...ctx.headers,
+    };
+
+    return switch (ctx.method.toUpperCase()) {
+      'GET' => http.get(uri, headers: headers),
+      'POST' => http.post(uri, headers: headers, body: ctx.body),
+      'PUT' => http.put(uri, headers: headers, body: ctx.body),
+      'PATCH' => http.patch(uri, headers: headers, body: ctx.body),
+      'DELETE' => http.delete(uri, headers: headers, body: ctx.body),
+      _ => throw Exception('Unsupported HTTP method: ${ctx.method}'),
+    };
   }
 
   // ── Signing coin resolution ───────────────────────────────────────────────
 
-  /// Finds the correct coin to sign the payment with.
-  ///
-  /// Resolution order:
-  ///   1. Active coin itself matches the asset → use active coin.
-  ///   2. A token on the active coin's network matches → use that token
-  ///      (user stays on their current network, no switch needed).
-  ///   3. No match → return null (caller decides — network switch needed).
   Coin? _resolveSigningCoin(X402PaymentOption option) {
-    final asset = option.asset;
-
-    // Active coin itself is the required asset
-    if (_coinMatchesAsset(coin, asset)) return coin;
-
-    // Look in the active coin's network tokens — same network, no switch
-    final token = coin.findToken(asset);
-    if (token != null) return token;
-
-    // Asset is on a completely different network
-    return null;
+    if (_coinMatchesAsset(coin, option.asset)) return coin;
+    return coin.findToken(option.asset);
   }
 
-  /// Returns true if [c] can sign for [network].
-  /// Checks by attempting to sign — if the coin returns null it can't.
-  /// We use a lighter check: see if the network prefix matches the coin type.
   bool _canSignForNetwork(Coin c, String network) {
     final isStacksNetwork =
         network == 'stacks:1' || network == 'stacks:2147483648';
-    final isEvmNetwork = !isStacksNetwork && !network.contains(':');
-
     final coinScheme = c.getPayScheme().toLowerCase();
-    final isStacksCoin = coinScheme == 'stacks';
-
-    if (isStacksNetwork) return isStacksCoin;
-    if (isEvmNetwork) return !isStacksCoin;
-
-    // Unknown network format — let the coin try
-    return true;
+    if (isStacksNetwork) return coinScheme == 'stacks';
+    return coinScheme != 'stacks';
   }
 
-  /// Returns true if [c]'s symbol or tokenAddress matches [asset].
   bool _coinMatchesAsset(Coin c, String asset) {
     final key = asset.toLowerCase();
     final sym = c.getSymbol().toLowerCase();
     final contract = c.tokenAddress()?.toLowerCase();
-
-    if (sym == key) return true;
-    if (contract != null && contract == key) return true;
-    if (contract != null && contract.split('.').last == key) return true;
     final keyTail = key.split('.').last;
-    if (sym == keyTail) return true;
-    if (contract != null && contract.split('.').last == keyTail) return true;
-    return false;
+
+    return sym == key ||
+        sym == keyTail ||
+        (contract != null &&
+            (contract == key || contract.split('.').last == keyTail));
   }
 
-  // ── Version-aware helpers ─────────────────────────────────────────────────
+  // ── Version-aware payment header key ─────────────────────────────────────
 
-  Map<String, String> _buildRequestHeaders(
+  Map<String, String> _buildPaymentHeaders(
       String paymentHeader, X402Version version) {
     return switch (version) {
-      X402Version.v0 => {
-          'X-Payment': paymentHeader,
-          'Content-Type': 'application/json',
-        },
-      X402Version.v1 => {
-          'X-PAYMENT': paymentHeader,
-          'Content-Type': 'application/json',
-        },
-      X402Version.v2 => {
-          'payment-signature': paymentHeader,
-          'Content-Type': 'application/json',
-        },
+      X402Version.v0 => {'X-Payment': paymentHeader},
+      X402Version.v1 => {'X-PAYMENT': paymentHeader},
+      X402Version.v2 => {'payment-signature': paymentHeader},
     };
   }
 
@@ -236,11 +276,7 @@ class X402Service {
         ],
     };
 
-    const stacksNetworks = [
-      'stacks:1',
-      'stacks:2147483648',
-    ];
-
+    const stacksNetworks = ['stacks:1', 'stacks:2147483648'];
     const supportedSchemes = ['exact'];
 
     final isStacksCoin = coin.getPayScheme() == 'stacks';
@@ -264,12 +300,9 @@ class X402Service {
   }
 
   String _symbolForAsset(String asset) {
-    // Ask active coin and its tokens first — no hardcoding
     if (_coinMatchesAsset(coin, asset)) return coin.getSymbol();
     final token = coin.findToken(asset);
     if (token != null) return token.getSymbol();
-
-    // Fallback: use tail of identifier, uppercased
     final tail = asset.split('.').last;
     return tail.length > 10 ? '${tail.substring(0, 6)}…' : tail.toUpperCase();
   }
@@ -320,7 +353,6 @@ class X402Resource {
   X402Resource({required this.url});
   factory X402Resource.fromJson(Map<String, dynamic> json) =>
       X402Resource(url: json['url'] as String);
-
   Map<String, dynamic> toJson() => {'url': url};
 }
 

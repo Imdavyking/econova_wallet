@@ -679,39 +679,89 @@ class AItools {
 
     // ── QRY_httpGet ─────────────────────────────────────────────────────────────
 
-    final httpGetTool = Tool.fromFunction<_GetHttpInput, String>(
-      name: 'QRY_httpGet',
-      description: 'Make an HTTP GET request to fetch data from any URL. '
-          'If the response is 402 Payment Required, return the details '
-          'so CMD_x402Pay can be used to pay and retry.',
+    final httpRequestTool = Tool.fromFunction<_HttpRequestInput, String>(
+      name: 'QRY_httpRequest',
+      description: 'Make any HTTP request (GET, POST, PUT, DELETE, PATCH). '
+          'If the response is 402, use CMD_x402Pay with the same URL.',
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'url': {'type': 'string', 'description': 'The URL to fetch'},
+          'url': {'type': 'string'},
+          'method': {
+            'type': 'string',
+            'enum': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+            'description': 'HTTP method',
+          },
+          'body': {
+            'type': 'string',
+            'description': 'Request body as string (optional)',
+          },
+          'contentType': {
+            'type': 'string',
+            'description': 'Content-Type header. Defaults to application/json',
+          },
+          'headers': {
+            'type': 'object',
+            'description': 'Additional headers as key-value pairs (optional)',
+            'additionalProperties': {'type': 'string'},
+          },
         },
-        'required': ['url'],
+        'required': ['url', 'method'],
       },
-      func: (final _GetHttpInput toolInput) async {
+      func: (final _HttpRequestInput input) async {
         try {
-          final response = await http
-              .get(Uri.parse(toolInput.url))
-              .timeout(const Duration(seconds: 15));
+          final uri = Uri.parse(input.url);
+          final headers = <String, String>{
+            'Content-Type': input.contentType ?? 'application/json',
+            ...?input.headers,
+          };
+
+          final http.Response response;
+          switch (input.method.toUpperCase()) {
+            case 'GET':
+              response = await http.get(uri, headers: headers);
+              break;
+            case 'POST':
+              response =
+                  await http.post(uri, headers: headers, body: input.body);
+              break;
+            case 'PUT':
+              response =
+                  await http.put(uri, headers: headers, body: input.body);
+              break;
+            case 'PATCH':
+              response =
+                  await http.patch(uri, headers: headers, body: input.body);
+              break;
+            case 'DELETE':
+              response =
+                  await http.delete(uri, headers: headers, body: input.body);
+              break;
+            default:
+              return 'Unsupported HTTP method: ${input.method}';
+          }
 
           if (response.statusCode == 402) {
-            return 'STATUS_402: This resource requires payment. '
-                'Use CMD_x402Pay with resourceUrl: ${toolInput.url}';
+            return 'STATUS_402: Payment required. Use CMD_x402Pay with resourceUrl: ${input.url}';
           }
-
           if (response.statusCode >= 400) {
-            return 'HTTP Error ${response.statusCode}: ${response.body}';
+            return 'HTTP ${response.statusCode}: ${response.body}';
           }
 
+          // Detect content type and return accordingly
+          final ct = response.headers['content-type'] ?? '';
+          if (ct.contains('application/json')) {
+            try {
+              // Pretty print JSON so the AI can read it better
+              return jsonEncode(jsonDecode(response.body));
+            } catch (_) {}
+          }
           return response.body;
         } catch (e) {
           return 'Request failed: $e';
         }
       },
-      getInputFromJson: _GetHttpInput.fromJson,
+      getInputFromJson: _HttpRequestInput.fromJson,
     );
 
     // ── CMD_x402Pay ─────────────────────────────────────────────────────────────
@@ -724,12 +774,23 @@ class AItools {
           'the user does not need to switch for same-network tokens. '
           'Only a full network switch (CMD_switchCoin) is needed if the '
           'server requires a completely different blockchain.',
+      // ── CMD_x402Pay input schema ─────────────────────────────────────────────────
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
           'resourceUrl': {
             'type': 'string',
             'description': 'The URL that returned 402',
+          },
+          'method': {
+            'type': 'string',
+            'enum': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+            'description': 'Original HTTP method. Defaults to GET.',
+          },
+          'body': {
+            'type': 'string',
+            'description':
+                'Original request body to replay after payment (optional)',
           },
         },
         'required': ['resourceUrl'],
@@ -738,9 +799,17 @@ class AItools {
         try {
           final service = X402Service(coin: coin);
 
-          final probeResult = await service.probe(toolInput.resourceUrl);
+          final probeResult = await service.probe(
+            toolInput.resourceUrl,
+            method: toolInput.method ?? 'GET',
+            body: toolInput.body,
+          );
           if (probeResult == null) {
-            return await service.fetchWithPayment(toolInput.resourceUrl);
+            return await service.fetchWithPayment(
+              toolInput.resourceUrl,
+              method: toolInput.method ?? 'GET',
+              body: toolInput.body,
+            );
           }
 
           final message = 'x402 Payment Required\n\n'
@@ -757,6 +826,8 @@ class AItools {
           return await service.payAndFetch(
             toolInput.resourceUrl,
             probeResult,
+            method: toolInput.method ?? 'GET',
+            body: toolInput.body,
           );
         } catch (e) {
           return 'x402 payment failed: $e';
@@ -766,7 +837,7 @@ class AItools {
     );
 
     return [
-      httpGetTool,
+      httpRequestTool,
       addressTool,
       resolveDomainNameTool,
       balanceTool,
@@ -922,16 +993,47 @@ class _GetDeployMemeInput {
 
 class _GetX402PayInput {
   final String resourceUrl;
-  _GetX402PayInput({required this.resourceUrl});
+  final String? method;
+  final String? body;
+
+  _GetX402PayInput({
+    required this.resourceUrl,
+    this.method,
+    this.body,
+  });
+
   factory _GetX402PayInput.fromJson(Map<String, dynamic> json) {
-    return _GetX402PayInput(resourceUrl: json['resourceUrl'] as String);
+    return _GetX402PayInput(
+      resourceUrl: json['resourceUrl'] as String,
+      method: json['method'] as String?,
+      body: json['body'] as String?,
+    );
   }
 }
 
-class _GetHttpInput {
+class _HttpRequestInput {
   final String url;
-  _GetHttpInput({required this.url});
-  factory _GetHttpInput.fromJson(Map<String, dynamic> json) {
-    return _GetHttpInput(url: json['url'] as String);
+  final String method;
+  final String? body;
+  final String? contentType;
+  final Map<String, String>? headers;
+
+  _HttpRequestInput({
+    required this.url,
+    required this.method,
+    this.body,
+    this.contentType,
+    this.headers,
+  });
+
+  factory _HttpRequestInput.fromJson(Map<String, dynamic> json) {
+    return _HttpRequestInput(
+      url: json['url'] as String,
+      method: json['method'] as String,
+      body: json['body'] as String?,
+      contentType: json['contentType'] as String?,
+      headers: (json['headers'] as Map<String, dynamic>?)
+          ?.map((k, v) => MapEntry(k, v as String)),
+    );
   }
 }
