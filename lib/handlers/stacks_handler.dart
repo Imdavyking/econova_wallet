@@ -904,7 +904,8 @@ class StacksHandler extends BaseWebViewHandler {
                 Uint8List.fromList([...prefix, ...domHash, ...msgHash]));
             sigBytes = stacksSignRaw(privBytes, hash);
           } else {
-            sigBytes = await coin.signMessage(message);
+            //  "0d96b65f498a2328d544a5cb866960d3eaca8a4ca5b0b4c091b8f8a88159aef25175207f55b83afeedeae457599fdb7625f9c5de9536a188c18cb02abef2e13300"
+            sigBytes = await coin.signMessage(message, isLegacy: true);
           }
 
           await _legacySendResponse(responseName, {

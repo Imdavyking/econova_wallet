@@ -361,7 +361,7 @@ class StacksCoin extends Coin {
 
   // ─── Message signing ────────────────────────────────────────────────────────
 
-  Future<Uint8List> signMessage(String message, {bool isLegacy = true}) async {
+  Future<Uint8List> signMessage(String message, {bool isLegacy = false}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await importData(data);
     final privBytes = txDataToUintList(keyPair.privateKey!);

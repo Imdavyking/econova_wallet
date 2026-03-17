@@ -328,7 +328,7 @@ const String _stacksPrefixLegacy = "\x18Stacks Message Signing:\n";
 ///
 /// verifyMessageSignatureRsv() on the JS side handles both automatically.
 Uint8List stacksSignMessage(Uint8List privKey, String message,
-    {bool isLegacy = true}) {
+    {bool isLegacy = false}) {
   final prefix = isLegacy ? _stacksPrefixLegacy : _stacksPrefixCurrent;
 
   final msgBytes = utf8.encode(message);
@@ -338,6 +338,8 @@ Uint8List stacksSignMessage(Uint8List privKey, String message,
     ..._varuint(msgBytes.length),
     ...msgBytes,
   ]));
+
+  
 
   return _secp256k1SignRecoverable(privKey, hash);
 }
