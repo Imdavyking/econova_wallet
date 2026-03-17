@@ -543,54 +543,13 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'Contract Call',
       onConfirm: () async {
         try {
-          final data = WalletService.getActiveKey(walletImportType)!.data;
-          final keyPair = await coin.importData(data);
-          final privBytes = txDataToUintList(keyPair.privateKey!);
-          final senderHash160 =
-              stacksHash160(stacksCompressedPubKey(privBytes));
-          final nonce = await _fetchNonce(coin);
-          final feeRate = await _fetchFeeRate(coin);
-          final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
-          final contractDecoded = c32checkDecode(contractAddress.substring(1));
-          final contractVersion = contractDecoded[0] as int;
-          final contractHash160 =
-              Uint8List.fromList(HEX.decode(contractDecoded[1] as String));
-          final encodedArgs = rawArgs
-              .map((hex) => Uint8List.fromList(
-                  HEX.decode(hex.startsWith('0x') ? hex.substring(2) : hex)))
-              .toList();
-          final nameBytes = utf8.encode(contractName);
-          final fnBytes = utf8.encode(functionName);
-          final payload = (BytesBuilder()
-                ..addByte(stacksPayloadContractCall)
-                ..addByte(contractVersion)
-                ..add(contractHash160)
-                ..addByte(nameBytes.length)
-                ..add(nameBytes)
-                ..addByte(fnBytes.length)
-                ..add(fnBytes)
-                ..add(stacksU32BE(encodedArgs.length)))
-              .toBytes();
-          final fullPayload = Uint8List.fromList(
-              [...payload, for (final arg in encodedArgs) ...arg]);
-          final txBytes = stacksBuildSignedTx(
-            txVersion: coin.isTestnet ? 0x80 : 0x00,
-            chainId: coin.isTestnet ? 0x80000000 : 0x00000001,
-            privKey: privBytes,
-            senderHash160: senderHash160,
-            nonce: BigInt.from(nonce),
-            fee: fee,
-            payload: fullPayload,
+          final txHash = await _buildAndBroadcastContractCall(
+            coin: coin,
+            contractAddress: contractAddress,
+            contractName: contractName,
+            functionName: functionName,
+            rawArgs: rawArgs,
           );
-          final res = await http.post(
-            Uri.parse(
-                '${coin.isTestnet ? 'https://api.testnet.hiro.so' : 'https://api.hiro.so'}/v2/transactions'),
-            headers: {'Content-Type': 'application/octet-stream'},
-            body: txBytes,
-          );
-          if (res.statusCode ~/ 100 != 2)
-            throw Exception('broadcast failed: ${res.body}');
-          final txHash = jsonDecode(res.body) as String;
           await _sendResponse(jsData, {'txHash': txHash});
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -684,6 +643,10 @@ class StacksHandler extends BaseWebViewHandler {
 
   // ── Legacy hiroWallet* handlers ───────────────────────────────────────────
 
+  /// CHANGED: Added Path 3 — contract_call without txHex in JWT.
+  /// Old @stacks/connect sends txType='contract_call' with contractAddress,
+  /// contractName, functionName, functionArgs but no pre-serialized txHex.
+  /// We now build and broadcast the transaction ourselves.
   Future<void> _legacyTransactionRequest(
     _StacksMessage jsData,
     StacksCoin coin,
@@ -694,7 +657,6 @@ class StacksHandler extends BaseWebViewHandler {
     final responseName =
         jsData.legacyResponseName ?? 'hiroWalletTransactionResponse';
 
-    // Decode JWT to show readable info in the confirm dialog
     final decoded = _decodeJwt(jwtValue);
     final txType = decoded?['txType'] as String? ?? 'transaction';
     final recipient = decoded?['recipient'] as String? ?? '';
@@ -702,6 +664,9 @@ class StacksHandler extends BaseWebViewHandler {
     final contractAddress = decoded?['contractAddress'] as String? ?? '';
     final contractName = decoded?['contractName'] as String? ?? '';
     final functionName = decoded?['functionName'] as String? ?? '';
+    // functionArgs from old @stacks/connect are hex-encoded Clarity values
+    final rawFunctionArgs =
+        (decoded?['functionArgs'] as List?)?.whereType<String>().toList() ?? [];
 
     String displayInfo;
     if (txType == 'contract_call' && functionName.isNotEmpty) {
@@ -724,11 +689,11 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'Confirm Transaction',
       onConfirm: () async {
         try {
-          // If the JWT contains a pre-built txHex, resign and broadcast it
-          final txHex = decoded?['txHex'] as String?;
           String txHash;
+          final txHex = decoded?['txHex'] as String?;
 
           if (txHex != null && txHex.isNotEmpty) {
+            // ── Path 1: pre-built txHex — resign and broadcast ─────────────
             final privBytes = txDataToUintList(accountDetail.privateKey!);
             final rawTx = Uint8List.fromList(HEX
                 .decode(txHex.startsWith('0x') ? txHex.substring(2) : txHex));
@@ -743,11 +708,24 @@ class StacksHandler extends BaseWebViewHandler {
               throw Exception('broadcast failed: ${res.body}');
             txHash = jsonDecode(res.body) as String;
           } else if (txType == 'token_transfer' && recipient.isNotEmpty) {
+            // ── Path 2: STX transfer ───────────────────────────────────────
             final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
                 BigInt.from(stacksMicroPerStx);
             txHash =
                 await coin.transferToken(displayAmount.toString(), recipient) ??
                     '';
+          } else if (txType == 'contract_call' &&
+              contractAddress.isNotEmpty &&
+              contractName.isNotEmpty &&
+              functionName.isNotEmpty) {
+            // ── Path 3: contract_call without txHex — build it here ────────
+            txHash = await _buildAndBroadcastContractCall(
+              coin: coin,
+              contractAddress: contractAddress,
+              contractName: contractName,
+              functionName: functionName,
+              rawArgs: rawFunctionArgs,
+            );
           } else {
             throw Exception(
                 'Cannot process txType=$txType without txHex in JWT');
@@ -770,6 +748,17 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
+  /// CHANGED: authenticationResponse is now an unsecured JWT string instead
+  /// of a plain {address, publicKey} object.
+  ///
+  /// Why: dApps call decodeToken(authenticationResponse) expecting a JWT.
+  /// If they receive an object, decodeToken() throws, extractStxAddress()
+  /// returns "", cachedStxAddress stays empty, and any subsequent
+  /// signatureRequest() call is blocked with "Run authenticationRequest first".
+  ///
+  /// Fix: build an unsecured JWT (alg=none, format: header.payload.) whose
+  /// payload includes both payload.address (extractStxAddress fallback) and
+  /// payload.profile.stxAddress.testnet (primary check in extractStxAddress).
   Future<void> _legacyAuthenticationRequest(
     _StacksMessage jsData,
     String sendingAddress,
@@ -780,10 +769,22 @@ class StacksHandler extends BaseWebViewHandler {
     final responseName =
         jsData.legacyResponseName ?? 'hiroWalletAuthenticationResponse';
 
+    // Decode the incoming JWT to show the app details in the modal
+    final decoded = _decodeJwt(jwtValue);
+    final appName = (decoded?['appDetails'] as Map?)?['name'] as String? ??
+        decoded?['domain_name'] as String? ??
+        jsData.url ??
+        'Unknown App';
+    final scopes = (decoded?['scopes'] as List?)?.cast<String>() ?? [];
+
+    if (kDebugMode) {
+      print('Auth request from: $appName  scopes: $scopes');
+    }
+
     if (!context.mounted) return;
     await connectWalletModal(
       context: context,
-      url: jsData.url,
+      url: appName, // show app name, not just origin URL
       onConfirm: () async {
         try {
           await saveWeb3Address('stacks', sendingAddress);
@@ -876,8 +877,9 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  // ── JWT decoder ───────────────────────────────────────────────────────────
+  // ── JWT helpers ───────────────────────────────────────────────────────────
 
+  /// Decodes any JWT (including unsecured alg=none) and returns the payload.
   static Map<String, dynamic>? _decodeJwt(String jwt) {
     try {
       final parts = jwt.split('.');
@@ -891,6 +893,88 @@ class StacksHandler extends BaseWebViewHandler {
     }
   }
 
+  /// Builds an RFC 7519 unsecured JWT (alg=none).
+  /// Format: base64url(header) . base64url(payload) . (empty signature)
+  /// Parseable by jsontokens' decodeToken() on the JS/TS side.
+  static String _buildUnsecuredJwt(Map<String, dynamic> payload) {
+    // base64url with no padding
+    String b64url(String input) =>
+        base64Url.encode(utf8.encode(input)).replaceAll('=', '');
+
+    final header = b64url('{"typ":"JWT","alg":"none"}');
+    final pay = b64url(json.encode(payload));
+    return '$header.$pay.'; // trailing dot = empty signature segment
+  }
+
+  // ── Shared contract-call builder / broadcaster ────────────────────────────
+  //
+  // Extracted from _callContract so _legacyTransactionRequest can reuse it
+  // for contract_call JWTs that don't include a pre-serialized txHex.
+
+  Future<String> _buildAndBroadcastContractCall({
+    required StacksCoin coin,
+    required String contractAddress,
+    required String contractName,
+    required String functionName,
+    required List<String> rawArgs,
+  }) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final keyPair = await coin.importData(data);
+    final privBytes = txDataToUintList(keyPair.privateKey!);
+    final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+    final nonce = await _fetchNonce(coin);
+    final feeRate = await _fetchFeeRate(coin);
+    final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
+
+    final contractDecoded = c32checkDecode(contractAddress.substring(1));
+    final contractVersion = contractDecoded[0] as int;
+    final contractHash160 =
+        Uint8List.fromList(HEX.decode(contractDecoded[1] as String));
+
+    final encodedArgs = rawArgs
+        .map((hex) => Uint8List.fromList(
+            HEX.decode(hex.startsWith('0x') ? hex.substring(2) : hex)))
+        .toList();
+
+    final nameBytes = utf8.encode(contractName);
+    final fnBytes = utf8.encode(functionName);
+
+    final payload = (BytesBuilder()
+          ..addByte(stacksPayloadContractCall)
+          ..addByte(contractVersion)
+          ..add(contractHash160)
+          ..addByte(nameBytes.length)
+          ..add(nameBytes)
+          ..addByte(fnBytes.length)
+          ..add(fnBytes)
+          ..add(stacksU32BE(encodedArgs.length)))
+        .toBytes();
+
+    final fullPayload =
+        Uint8List.fromList([...payload, for (final arg in encodedArgs) ...arg]);
+
+    final txBytes = stacksBuildSignedTx(
+      txVersion: coin.isTestnet ? 0x80 : 0x00,
+      chainId: coin.isTestnet ? 0x80000000 : 0x00000001,
+      privKey: privBytes,
+      senderHash160: senderHash160,
+      nonce: BigInt.from(nonce),
+      fee: fee,
+      payload: fullPayload,
+    );
+
+    final api =
+        coin.isTestnet ? 'https://api.testnet.hiro.so' : 'https://api.hiro.so';
+    final res = await http.post(
+      Uri.parse('$api/v2/transactions'),
+      headers: {'Content-Type': 'application/octet-stream'},
+      body: txBytes,
+    );
+    if (res.statusCode ~/ 100 != 2)
+      throw Exception('broadcast failed: ${res.body}');
+    return jsonDecode(res.body) as String;
+  }
+
   // ── Response helpers ──────────────────────────────────────────────────────
 
   Future<void> _sendResponse(
@@ -898,11 +982,9 @@ class StacksHandler extends BaseWebViewHandler {
     final encoded = json.encode(result);
 
     if (jsData.isLegacy) {
-      // Legacy path — respond with hiroWallet* format
       final responseName = jsData.legacyResponseName;
       if (responseName != null) await _legacySendResponse(responseName, result);
     } else {
-      // request() path — integer or UUID id
       final safeId = jsData.id is String ? '"${jsData.id}"' : '${jsData.id}';
       await sendCustom('window.leatherSendResponse?.($safeId, $encoded)');
     }
@@ -977,11 +1059,11 @@ class StacksHandler extends BaseWebViewHandler {
 // ─── Message model ────────────────────────────────────────────────────────────
 
 class _StacksMessage {
-  final dynamic id; // UUID string (Leather) | JWT string (legacy)
+  final dynamic id;
   final String name;
   final Map<String, dynamic> object;
   final String? url;
-  final String? legacyResponseName; // only set for hiroWallet* legacy events
+  final String? legacyResponseName;
 
   const _StacksMessage({
     required this.id,
@@ -995,7 +1077,7 @@ class _StacksMessage {
 
   factory _StacksMessage.fromJson(Map<String, dynamic> json) {
     return _StacksMessage(
-      id: json['id'] as String? ?? '', // always a string now
+      id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       object: (json['object'] as Map<String, dynamic>?) ?? {},
       url: json['url'] as String?,
