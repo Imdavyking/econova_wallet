@@ -339,9 +339,13 @@ Uint8List stacksSignMessage(Uint8List privKey, String message,
     ...msgBytes,
   ]));
 
-  
+  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
 
-  return _secp256k1SignRecoverable(privKey, hash);
+  final r = stacksBigIntTo32Bytes(sig.r);
+  final s = stacksBigIntTo32Bytes(sig.s);
+
+  // VRS → RSV to match signMessageHashRsv output
+  return Uint8List.fromList([...r, ...s, recoveryId]);
 }
 
 Uint8List _varuint(int value) {
@@ -368,6 +372,9 @@ Uint8List _varuint(int value) {
 /// ECDSASigner construction out of stacksBuildSignedTx (or duplicate the
 /// two lines below) so they match your existing imports exactly.
 Uint8List _secp256k1SignRecoverable(Uint8List privKey, Uint8List hash) {
+  assert(privKey.length == 32,
+      'privKey must be exactly 32 bytes, got ${privKey.length}');
+
   final domainParams = pc.ECDomainParameters('secp256k1');
   final privScalar = BigInt.parse(HEX.encode(privKey), radix: 16);
   final ecPrivKey = pc.ECPrivateKey(privScalar, domainParams);
@@ -456,8 +463,12 @@ Uint8List _bigIntTo32Bytes(BigInt v) {
 /// builds the hash manually.
 ///
 /// Returns 65 bytes: [ recId (1) | r (32) | s (32) ]
-Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) =>
-    _secp256k1SignRecoverable(privKey, hash);
+Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
+  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
+  final r = stacksBigIntTo32Bytes(sig.r);
+  final s = stacksBigIntTo32Bytes(sig.s);
+  return Uint8List.fromList([recoveryId, ...r, ...s]); // VRS for raw usage
+}
 
 /// Re-signs a pre-serialised Stacks transaction [rawTx] with [privKey].
 ///
