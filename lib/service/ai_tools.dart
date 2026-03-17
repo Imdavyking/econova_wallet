@@ -709,7 +709,6 @@ class AItools {
           return 'USDC not found. Make sure you are on the Ethereum network.';
         }
 
-        // Always bridge to the user's own Stacks address — no need to ask
         final stacksAddress = await stackCoins.first.getAddress();
 
         final message = 'Bridge ${input.amount} USDC → USDCx on Stacks\n\n'
