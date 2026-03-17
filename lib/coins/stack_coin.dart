@@ -240,6 +240,7 @@ class StacksCoin extends Coin {
     final address = await getAddress();
     return blockExplorer
         .replaceFirst('/tx/', '/address/')
+        .replaceFirst('/txid/', '/address/')
         .replaceFirst(blockExplorerPlaceholder, address);
   }
 
