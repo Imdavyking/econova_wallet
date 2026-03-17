@@ -690,17 +690,12 @@ class AItools {
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
-          'stacksRecipient': {
-            'type': 'string',
-            'description':
-                'The Stacks address (ST... or SP...) to receive USDCx',
-          },
           'amount': {
             'type': 'string',
             'description': 'Amount of USDC to bridge (e.g. "10.00")',
           },
         },
-        'required': ['stacksRecipient', 'amount'],
+        'required': ['amount'],
       },
       func: (final _MintUSDCxInput input) async {
         final usdcCoin = supportedChains.firstWhereOrNull(
