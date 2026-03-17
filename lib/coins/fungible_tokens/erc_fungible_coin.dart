@@ -492,8 +492,14 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     await depositClient.dispose();
 
     return (
-      blockExplorer.replaceAll(approveTxHash, blockExplorerPlaceholder),
-      blockExplorer.replaceAll(depositTxHash, blockExplorerPlaceholder),
+      blockExplorer.replaceAll(
+        blockExplorerPlaceholder,
+        approveTxHash,
+      ),
+      blockExplorer.replaceAll(
+        blockExplorerPlaceholder,
+        depositTxHash,
+      ),
     );
   }
 

@@ -727,6 +727,9 @@ class AItools {
             amount: input.amount,
           );
 
+          print(approveTx);
+          print(depositTx);
+
           return 'Bridge initiated!\n\n'
               '✅ Approve tx: $approveTx\n'
               '✅ Deposit tx: $depositTx\n\n'
