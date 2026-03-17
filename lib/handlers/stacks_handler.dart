@@ -877,12 +877,17 @@ class StacksHandler extends BaseWebViewHandler {
 
     final decoded = _decodeJwt(jwtValue);
     final message = decoded?['message'] as String? ?? '(encoded message)';
+    final domain = decoded?['domain'] as String? ?? '';
+
+    final displayData = structured
+        ? 'Sign structured message\nDomain: ${domain.substring(0, domain.length.clamp(0, 20))}...\nMessage: ${message.substring(0, message.length.clamp(0, 20))}...'
+        : message;
 
     if (!context.mounted) return;
     await signMessage(
       context: context,
       messageType: structured ? typedMessageSignKey : personalSignKey,
-      data: message,
+      data: displayData,
       networkIcon: null,
       name: structured ? 'Sign Structured Message' : 'Sign Message',
       onConfirm: () async {
@@ -908,7 +913,10 @@ class StacksHandler extends BaseWebViewHandler {
           } else {
             sigBytes = await coin.signMessage(message, isLegacy: false);
           }
-
+          print({
+            'signature': HEX.encode(sigBytes),
+            'publicKey': accountDetail.publicKey,
+          });
           await _legacySendResponse(responseName, {
             'signatureRequest': jwtValue,
             'signatureResponse': {

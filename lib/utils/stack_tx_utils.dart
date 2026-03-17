@@ -425,7 +425,7 @@ Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
   final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
   final r = stacksBigIntTo32Bytes(sig.r);
   final s = stacksBigIntTo32Bytes(sig.s);
-  return Uint8List.fromList([recoveryId, ...r, ...s]); // VRS for raw usage
+  return Uint8List.fromList([...r, ...s, recoveryId]); // VRS for raw usage
 }
 
 /// Re-signs a pre-serialised Stacks transaction [rawTx] with [privKey].

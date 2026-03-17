@@ -74,11 +74,10 @@ Future<void> signMessage({
                       const Icon(Icons.error, color: Colors.red),
                 ),
               ),
-            if (name != null)
-              Text(name, style: const TextStyle(fontSize: 16)),
+            if (name != null) Text(name, style: const TextStyle(fontSize: 16)),
             Theme(
-              data: Theme.of(context)
-                  .copyWith(dividerColor: Colors.transparent),
+              data:
+                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: ExpansionTile(
@@ -89,10 +88,17 @@ Future<void> signMessage({
                           fontWeight: FontWeight.bold, fontSize: 18)),
                   children: [
                     if (messageType == typedMessageSignKey)
-                      JsonViewer(json.decode(decoded!), fontSize: 16)
+                      Builder(builder: (_) {
+                        try {
+                          return JsonViewer(json.decode(decoded!),
+                              fontSize: 16);
+                        } catch (_) {
+                          return Text(decoded!,
+                              style: const TextStyle(fontSize: 16));
+                        }
+                      })
                     else
-                      Text(decoded!,
-                          style: const TextStyle(fontSize: 16)),
+                      Text(decoded!, style: const TextStyle(fontSize: 16)),
                   ],
                 ),
               ),
