@@ -303,12 +303,6 @@ Uint8List stacksBuildSignedTx({
   return assemble(nonce, fee, sigBytes);
 }
 
-/// The Stacks message-signing prefix used by Stacks.js `signMessageHashRsv`.
-///
-///   prefixed = "\x17Stacks Signed Message:\n" + decimalLength(msg) + msg
-///   hash     = SHA-256( prefixed )
-const String _stacksMsgPrefix = '\x17Stacks Signed Message:\n';
-
 /// Signs [message] (as a UTF-8 string) with [privKey] using the same
 /// algorithm as Stacks.js `signMessageHashRsv`:
 ///
@@ -320,33 +314,48 @@ const String _stacksMsgPrefix = '\x17Stacks Signed Message:\n';
 ///
 /// The hex of the returned bytes is the `rsv` signature string that
 /// Stacks dApps verify with `verifyMessageSignatureRsv`.
-Uint8List stacksSignMessage(Uint8List privKey, String message) {
-  // 1. Build prefixed payload
-  final msgBytes = Uint8List.fromList(message.codeUnits);
-  final lenStr = msgBytes.length.toString();
-  final prefixed = Uint8List.fromList([
-    ..._stacksMsgPrefix.codeUnits,
-    ...lenStr.codeUnits,
+// In stack_tx_utils.dart
+
+const String _stacksPrefixCurrent = "\x17Stacks Signed Message:\n";
+const String _stacksPrefixLegacy = "\x18Stacks Message Signing:\n";
+
+/// Signs a message using the Stacks personal-sign format.
+///
+/// [isLegacy] = false (default) → current prefix '\x17Stacks Signed Message:\n'
+///              (Stacks.js >=5.x, Xverse, Leather)
+/// [isLegacy] = true            → legacy prefix '\x18Stacks Message Signing:\n'
+///              (Stacks.js <=4.x, old blockstack.js dApps)
+///
+/// verifyMessageSignatureRsv() on the JS side handles both automatically.
+Uint8List stacksSignMessage(Uint8List privKey, String message,
+    {bool isLegacy = true}) {
+  final prefix = isLegacy ? _stacksPrefixLegacy : _stacksPrefixCurrent;
+
+  final msgBytes = utf8.encode(message);
+
+  final hash = stacksSha256(Uint8List.fromList([
+    ...utf8.encode(prefix),
+    ..._varuint(msgBytes.length),
     ...msgBytes,
-  ]);
+  ]));
 
-  // 2. SHA-256 hash
-  //
-  // stacksBuildSignedTx already computes SHA-256 internally via the same
-  // helper used here. Adjust the call below to match whatever SHA-256
-  // function is already imported in this file.
-  //
-  // Option A – if stack_tx_utils.dart imports blockchain_utils:
-  //   final hash = SHA256Digest().process(prefixed);
-  //
-  // Option B – if it imports package:crypto:
-  //   final hash = Uint8List.fromList(sha256.convert(prefixed).bytes);
-  //
-  // Use whichever matches your existing imports:
-  final hash = stacksSha256(prefixed); // ← replace with your actual helper
-
-  // 3 + 4 + 5. Sign and return the compact 65-byte signature.
   return _secp256k1SignRecoverable(privKey, hash);
+}
+
+Uint8List _varuint(int value) {
+  if (value < 0xfd) {
+    return Uint8List.fromList([value]);
+  } else if (value <= 0xffff) {
+    return Uint8List.fromList([0xfd, value & 0xff, (value >> 8) & 0xff]);
+  } else {
+    return Uint8List.fromList([
+      0xfe,
+      value & 0xff,
+      (value >> 8) & 0xff,
+      (value >> 16) & 0xff,
+      (value >> 24) & 0xff,
+    ]);
+  }
 }
 
 /// secp256k1 deterministic signing (RFC 6979) with low-s normalisation.
