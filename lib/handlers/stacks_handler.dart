@@ -769,31 +769,32 @@ class StacksHandler extends BaseWebViewHandler {
     final responseName =
         jsData.legacyResponseName ?? 'hiroWalletAuthenticationResponse';
 
-    // Decode the incoming JWT to show the app details in the modal
+    // Decode the INCOMING request JWT to surface app info in the modal
     final decoded = _decodeJwt(jwtValue);
     final appName = (decoded?['appDetails'] as Map?)?['name'] as String? ??
         decoded?['domain_name'] as String? ??
         jsData.url ??
         'Unknown App';
-    final scopes = (decoded?['scopes'] as List?)?.cast<String>() ?? [];
-
-    if (kDebugMode) {
-      print('Auth request from: $appName  scopes: $scopes');
-    }
 
     if (!context.mounted) return;
     await connectWalletModal(
       context: context,
-      url: appName, // show app name, not just origin URL
+      url: appName,
       onConfirm: () async {
         try {
           await saveWeb3Address('stacks', sendingAddress);
+
+          // Build a proper ES256K-signed authenticationResponse JWT
+          // that mirrors what the real Leather wallet returns
+          final authResponseJwt = _buildSignedAuthResponse(
+            accountDetail: accountDetail,
+            sendingAddress: sendingAddress,
+            requestJwt: jwtValue,
+          );
+
           await _legacySendResponse(responseName, {
             'authenticationRequest': jwtValue,
-            'authenticationResponse': {
-              'address': sendingAddress,
-              'publicKey': accountDetail.publicKey,
-            },
+            'authenticationResponse': authResponseJwt,
           });
         } catch (e) {
           await _legacySendCancel(
@@ -808,6 +809,55 @@ class StacksHandler extends BaseWebViewHandler {
         _pop();
       },
     );
+  }
+
+  String _buildSignedAuthResponse({
+    required AccountData accountDetail,
+    required String sendingAddress,
+    required String requestJwt,
+  }) {
+    final privBytes = txDataToUintList(accountDetail.privateKey!);
+    final pubKey = accountDetail.publicKey;
+
+    // base64url without padding
+    String b64url(String s) =>
+        base64Url.encode(utf8.encode(s)).replaceAll('=', '');
+
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    // Header — ES256K so dApps know it's properly signed
+    final header = b64url('{"typ":"JWT","alg":"ES256K"}');
+
+    // Payload mirrors the real Leather authenticationResponse structure
+    final payload = b64url(json.encode({
+      'jti': '${now}_auth_response',
+      'iat': now,
+      'exp': now + 86400,
+      // iss = the wallet's DID derived from the STX address
+      'iss': 'did:btc-addr:$sendingAddress',
+      'public_keys': [pubKey],
+      'profile': {
+        'stxAddress': {
+          'mainnet': sendingAddress,
+          'testnet': sendingAddress,
+        },
+        'walletProvider': walletName,
+      },
+      'core_token': null,
+      'email': null,
+      'profile_url': null,
+      'hubUrl': 'https://hub.hiro.so',
+      'version': '1.4.0',
+    }));
+
+    final signingInput = '$header.$payload';
+
+    // Sign with the wallet's secp256k1 private key (same key used for STX txs)
+    final hash = stacksSha256(Uint8List.fromList(utf8.encode(signingInput)));
+    final sigBytes = stacksSignRaw(privBytes, hash);
+    final sig = base64Url.encode(sigBytes).replaceAll('=', '');
+
+    return '$signingInput.$sig';
   }
 
   Future<void> _legacySignatureRequest(
