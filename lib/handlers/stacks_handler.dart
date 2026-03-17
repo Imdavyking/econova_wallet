@@ -691,6 +691,7 @@ class StacksHandler extends BaseWebViewHandler {
       onConfirm: () async {
         try {
           String txHash;
+          String txRaw = '';
           final txHex = decoded?['txHex'] as String?;
 
           if (txHex != null && txHex.isNotEmpty) {
@@ -709,6 +710,7 @@ class StacksHandler extends BaseWebViewHandler {
               throw Exception('broadcast failed: ${res.body}');
             }
             txHash = jsonDecode(res.body) as String;
+            txRaw = HEX.encode(signedTx);
           } else if (txType == 'token_transfer' && recipient.isNotEmpty) {
             // ── Path 2: STX transfer ───────────────────────────────────────
             final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
@@ -721,13 +723,15 @@ class StacksHandler extends BaseWebViewHandler {
               contractName.isNotEmpty &&
               functionName.isNotEmpty) {
             // ── Path 3: contract_call without txHex — build it here ────────
-            txHash = await _buildAndBroadcastContractCall(
+            final result = await _buildAndBroadcastContractCall(
               coin: coin,
               contractAddress: contractAddress,
               contractName: contractName,
               functionName: functionName,
               rawArgs: rawFunctionArgs,
             );
+            txHash = result.txHash;
+            txRaw = result.txRaw;
           } else {
             throw Exception(
                 'Cannot process txType=$txType without txHex in JWT');
@@ -735,7 +739,11 @@ class StacksHandler extends BaseWebViewHandler {
 
           await _legacySendResponse(responseName, {
             'transactionRequest': jwtValue,
-            'transactionResponse': {'txid': txHash},
+            'transactionResponse': {
+              'txid': txHash, // lowercase — kept for back-compat
+              'txId': txHash, // camelCase — what Xverse/newer dApps read
+              'txRaw': txRaw, // signed tx hex
+            },
           });
         } catch (e) {
           await _legacySendCancel(responseName, 'transactionRequest', jwtValue);
@@ -970,7 +978,7 @@ class StacksHandler extends BaseWebViewHandler {
   // Extracted from _callContract so _legacyTransactionRequest can reuse it
   // for contract_call JWTs that don't include a pre-serialized txHex.
 
-  Future<String> _buildAndBroadcastContractCall({
+  Future<({String txHash, String txRaw})> _buildAndBroadcastContractCall({
     required StacksCoin coin,
     required String contractAddress,
     required String contractName,
@@ -1032,7 +1040,10 @@ class StacksHandler extends BaseWebViewHandler {
     if (res.statusCode ~/ 100 != 2) {
       throw Exception('broadcast failed: ${res.body}');
     }
-    return jsonDecode(res.body) as String;
+    return (
+      txHash: jsonDecode(res.body) as String,
+      txRaw: HEX.encode(txBytes),
+    );
   }
 
   // ── Response helpers ──────────────────────────────────────────────────────
