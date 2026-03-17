@@ -15,31 +15,7 @@ import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'base_handler.dart';
 import 'package:http/http.dart' as http;
-// ─── JS message shape ────────────────────────────────────────────────────────
-//
-// The injected provider sends:
-//   {
-//     id:       <int>,          // response correlation id
-//     name:     <string>,       // method name
-//     network:  "stacks",
-//     object:   { … },          // method-specific params
-//     url:      <string>,       // origin
-//   }
-//
-// Responses are dispatched via:
-//   window.stacks.sendResponse(id, result)
-//   window.stacks.sendError(id, message)
 
-/// Handles the `StacksHandler` JavaScript bridge for both native STX
-/// transfers and SIP-010 fungible-token transfers.
-///
-/// Supported methods
-/// ─────────────────
-///   requestAccounts      → return address + public key
-///   disconnect           → clear saved address
-///   signMessage          → personal sign (UTF-8 or hex)
-///   signTransaction      → build + sign a STX token-transfer tx
-///   signSIP010Transfer   → build + sign a SIP-010 contract-call tx
 class StacksHandler extends BaseWebViewHandler {
   StacksHandler({required super.context});
 
@@ -63,7 +39,8 @@ class StacksHandler extends BaseWebViewHandler {
     final sendingAddress = accountDetail.address;
 
     if (kDebugMode) {
-      print('StacksHandler → ${jsData.name} (id=${jsData.id})');
+      print(
+          'StacksHandler → ${jsData.name} (id=${jsData.id} isLeather=${jsData.isLeather})');
     }
 
     switch (jsData.name) {
@@ -78,6 +55,9 @@ class StacksHandler extends BaseWebViewHandler {
       case 'getAccounts':
       case 'stx_getAccounts':
         await _getAccounts(jsData, sendingAddress, accountDetail, coin);
+        break;
+      case 'stx_getNetworks':
+        await _getNetworks(jsData, coin);
         break;
       case 'disconnect':
         await removeWeb3Address('stacks', sendingAddress);
@@ -100,6 +80,9 @@ class StacksHandler extends BaseWebViewHandler {
       case 'stx_transferStx':
         await _transferStx(jsData, coin, sendingAddress);
         break;
+      case 'stx_transferSip10Ft': // ← was missing
+        await _signSIP010Transfer(jsData, sendingAddress);
+        break;
       case 'stx_callContract':
         await _callContract(jsData, coin);
         break;
@@ -107,7 +90,13 @@ class StacksHandler extends BaseWebViewHandler {
         await _deployContract(jsData, coin);
         break;
 
-      // ── Bitcoin PSBT (stub — Stacks wallet standard includes this) ──────
+      // ── Stubs ────────────────────────────────────────────────────────────
+      case 'stx_transferSip9Nft':
+        await _sendError('NFT transfers not yet supported', jsData.id);
+        break;
+      case 'stx_updateProfile':
+        await _sendError('stx_updateProfile not supported', jsData.id);
+        break;
       case 'signPsbt':
         await _sendError('signPsbt not supported by this wallet', jsData.id);
         break;
@@ -135,18 +124,30 @@ class StacksHandler extends BaseWebViewHandler {
         'stx_deployContract',
         'stx_getAccounts',
         'stx_getAddresses',
+        'stx_getNetworks',
         'stx_signMessage',
         'stx_signStructuredMessage',
         'stx_signTransaction',
         'stx_transferStx',
+        'stx_transferSip10Ft',
+      ],
+    });
+  }
+
+  // ── stx_getNetworks ───────────────────────────────────────────────────────
+
+  Future<void> _getNetworks(_StacksMessage jsData, StacksCoin coin) async {
+    await _sendResponse(jsData.id, {
+      'networks': [
+        {
+          'chainId': coin.isTestnet ? 2147483648 : 1,
+          'networkName': coin.isTestnet ? 'testnet' : 'mainnet',
+        }
       ],
     });
   }
 
   // ── getAddresses / stx_getAddresses ───────────────────────────────────────
-  //
-  // Returns the wallet's STX address + public key.
-  // Prompts connection modal on first call.
 
   Future<void> _getAddresses(
     _StacksMessage jsData,
@@ -182,8 +183,6 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── getAccounts / stx_getAccounts ─────────────────────────────────────────
-  //
-  // Like getAddresses but includes network and symbol metadata.
 
   Future<void> _getAccounts(
     _StacksMessage jsData,
@@ -244,8 +243,6 @@ class StacksHandler extends BaseWebViewHandler {
       };
 
   // ── stx_signMessage ───────────────────────────────────────────────────────
-  //
-  // Signs a plain UTF-8 message. Params: { message: string }
 
   Future<void> _signMessage(
     _StacksMessage jsData,
@@ -283,10 +280,6 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── stx_signStructuredMessage ─────────────────────────────────────────────
-  //
-  // Signs a SIP-018 structured (typed) message.
-  // Params: { message: ClarityValue (hex), domain: ClarityValue (hex) }
-  // The message and domain are already Clarity-encoded by the dApp.
 
   Future<void> _signStructuredMessage(
     _StacksMessage jsData,
@@ -306,9 +299,6 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'Sign Structured Message',
       onConfirm: () async {
         try {
-          // Hash the structured message per SIP-018:
-          //   SHA-256( 0x534950303138 ++ domain_hash ++ message_hash )
-          // where domain_hash and message_hash are SHA-256 of the serialised CV.
           final msgBytes = HEX.decode(
             messageHex.startsWith('0x') ? messageHex.substring(2) : messageHex,
           );
@@ -316,7 +306,7 @@ class StacksHandler extends BaseWebViewHandler {
             domainHex.startsWith('0x') ? domainHex.substring(2) : domainHex,
           );
 
-          const prefix = [0x53, 0x49, 0x50, 0x30, 0x31, 0x38]; // "SIP018"
+          const prefix = [0x53, 0x49, 0x50, 0x30, 0x31, 0x38];
           final domHash = stacksSha256(Uint8List.fromList(domBytes));
           final msgHash = stacksSha256(Uint8List.fromList(msgBytes));
           final toSign =
@@ -344,10 +334,6 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── stx_signTransaction ───────────────────────────────────────────────────
-  //
-  // Signs but does NOT broadcast a pre-serialised transaction.
-  // Params: { transaction: hex-encoded serialised Stacks tx }
-  // Returns: { transaction: hex of signed tx }
 
   Future<void> _signTransaction(
     _StacksMessage jsData,
@@ -379,7 +365,6 @@ class StacksHandler extends BaseWebViewHandler {
             txHex.startsWith('0x') ? txHex.substring(2) : txHex,
           ));
 
-          // Re-sign: strip the presig, compute hash, attach real sig.
           final signedTx = stacksResignTx(rawTx, privBytes);
 
           await _sendResponse(jsData.id, {
@@ -399,9 +384,6 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── sendTransfer / stx_transferStx ────────────────────────────────────────
-  //
-  // Builds, signs, and broadcasts a native STX transfer.
-  // Params: { recipient/to, amount (µSTX string), memo? }
 
   Future<void> _transferStx(
     _StacksMessage jsData,
@@ -442,7 +424,7 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  // ── signSIP010Transfer ────────────────────────────────────────────────────
+  // ── stx_transferSip10Ft ───────────────────────────────────────────────────
 
   Future<void> _signSIP010Transfer(
     _StacksMessage jsData,
@@ -456,7 +438,6 @@ class StacksHandler extends BaseWebViewHandler {
     final amount = obj['amount'] as String? ?? '0';
     final memo = obj['memo'] as String?;
 
-    // 1. Try the known hardcoded list first.
     final allSip010 = getSIP010Coins();
     SIP010Coin? tokenCoin = allSip010.cast<SIP010Coin?>().firstWhere(
           (c) =>
@@ -465,8 +446,6 @@ class StacksHandler extends BaseWebViewHandler {
           orElse: () => null,
         );
 
-    // 2. Not in the known list — build an ad-hoc coin from dApp-supplied params.
-    //    The dApp must provide `symbol` and `decimals`; everything else is optional.
     if (tokenCoin == null) {
       final symbol = obj['symbol'] as String?;
       final decimals = (obj['decimals'] as num?)?.toInt();
@@ -534,19 +513,7 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  // ── callContract (arbitrary contract call) ───────────────────────────────
-  //
-  // dApp params:
-  //   contractAddress  String   — deployer address e.g. "SP2C2YFP12..."
-  //   contractName     String   — e.g. "my-contract"
-  //   functionName     String   — e.g. "mint", "stake", "vote"
-  //   functionArgs     List     — Clarity values as hex strings, each already
-  //                               ABI-encoded by the dApp (e.g. via Stacks.js
-  //                               serializeCV / cvToHex). Passed through as-is.
-  //   postConditions   List?    — ignored for now (future work)
-  //
-  // The UI shows: contract, function name, and the raw arg list so the user
-  // can confirm before signing.
+  // ── stx_callContract ─────────────────────────────────────────────────────
 
   Future<void> _callContract(
     _StacksMessage jsData,
@@ -571,7 +538,6 @@ class StacksHandler extends BaseWebViewHandler {
 
     if (!context.mounted) return;
 
-    // Build a readable summary for the confirmation UI.
     final argSummary = rawArgs.isEmpty
         ? 'none'
         : rawArgs
@@ -600,13 +566,11 @@ class StacksHandler extends BaseWebViewHandler {
           final feeRate = await _fetchFeeRate(coin);
           final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
 
-          // Decode contract principal
           final contractDecoded = c32checkDecode(contractAddress.substring(1));
           final contractVersion = contractDecoded[0] as int;
           final contractHash160 =
               Uint8List.fromList(HEX.decode(contractDecoded[1] as String));
 
-          // Decode each pre-serialised Clarity arg from hex.
           final encodedArgs = rawArgs
               .map((hex) => Uint8List.fromList(
                   HEX.decode(hex.startsWith('0x') ? hex.substring(2) : hex)))
@@ -626,7 +590,6 @@ class StacksHandler extends BaseWebViewHandler {
                 ..add(stacksU32BE(encodedArgs.length)))
               .toBytes();
 
-          // Append each arg directly — they are already Clarity-encoded.
           final fullPayload = Uint8List.fromList([
             ...payload,
             for (final arg in encodedArgs) ...arg,
@@ -669,9 +632,6 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── stx_deployContract ────────────────────────────────────────────────────
-  //
-  // Deploys a new Clarity contract.
-  // Params: { contractName, codeBody, clarityVersion? }
 
   Future<void> _deployContract(
     _StacksMessage jsData,
@@ -715,13 +675,8 @@ class StacksHandler extends BaseWebViewHandler {
           final nameBytes = utf8.encode(contractName);
           final codeBytes = utf8.encode(codeBody);
 
-          // Smart-contract payload (type 0x01):
-          //   [1]   payload type
-          //   [1]   clarity version
-          //   [1+N] contract name (1-byte len prefix)
-          //   [4+N] code body (4-byte len prefix, big-endian)
           final payload = (BytesBuilder()
-                ..addByte(0x01) // payload type: smart contract
+                ..addByte(0x01)
                 ..addByte(clarityVersion)
                 ..addByte(nameBytes.length)
                 ..add(nameBytes)
@@ -771,10 +726,8 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  // ── Private chain helpers ─────────────────────────────────────────────────
+  // ── Private helpers ───────────────────────────────────────────────────────
 
-  /// Raw secp256k1 sign — used for structured messages where the hash is
-  /// computed manually (not via the Stacks message prefix).
   Uint8List _secp256k1SignRaw(Uint8List privKey, Uint8List hash) =>
       stacksSignRaw(privKey, hash);
 
@@ -802,14 +755,31 @@ class StacksHandler extends BaseWebViewHandler {
   }
 
   // ── JS response helpers ───────────────────────────────────────────────────
+  // Sends to BOTH bridges:
+  //   window.stacks  — for dApps using the EcoNova/Xverse-style provider
+  //   leatherSendResponse — for dApps using the Leather/Hiro provider
 
-  Future<void> _sendResponse(int id, Map<String, dynamic> result) =>
-      sendCustom('window.stacks.sendResponse($id, ${json.encode(result)})');
+  Future<void> _sendResponse(dynamic id, Map<String, dynamic> result) async {
+    final encoded = json.encode(result);
+    final safeId = id is String ? '"$id"' : '$id';
+    // window.stacks uses integer ids
+    if (id is int) {
+      await sendCustom('window.stacks?.sendResponse($id, $encoded)');
+    }
+    // Leather uses UUID string ids
+    await sendCustom('window.leatherSendResponse?.($safeId, $encoded)');
+  }
 
-  Future<void> _sendError(String message, int id) => sendCustom(
-      'window.stacks.sendError($id, "${message.replaceAll('"', "'")}") ');
+  Future<void> _sendError(String message, dynamic id) async {
+    final safe = message.replaceAll('"', "'");
+    final safeId = id is String ? '"$id"' : '$id';
+    if (id is int) {
+      await sendCustom('window.stacks?.sendError($id, "$safe")');
+    }
+    await sendCustom('window.leatherSendError?.($safeId, "$safe")');
+  }
 
-  // ── Misc helpers ──────────────────────────────────────────────────────────
+  // ── Misc ─────────────────────────────────────────────────────────────────
 
   void _pop() {
     if (context.mounted && Navigator.canPop(context)) {
@@ -821,7 +791,8 @@ class StacksHandler extends BaseWebViewHandler {
 // ─── Message model ────────────────────────────────────────────────────────────
 
 class _StacksMessage {
-  final int id;
+  // Leather sends UUID strings; window.stacks sends ints.
+  final dynamic id;
   final String name;
   final Map<String, dynamic> object;
   final String? url;
@@ -833,10 +804,18 @@ class _StacksMessage {
     this.url,
   });
 
-  factory _StacksMessage.fromJson(Map<String, dynamic> json) => _StacksMessage(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: json['name'] as String? ?? '',
-        object: (json['object'] as Map<String, dynamic>?) ?? {},
-        url: json['url'] as String?,
-      );
+  /// True if this message came from the Leather provider (UUID string id).
+  bool get isLeather => id is String;
+
+  factory _StacksMessage.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
+    final dynamic parsedId =
+        rawId is String ? rawId : (rawId as num?)?.toInt() ?? 0;
+    return _StacksMessage(
+      id: parsedId,
+      name: json['name'] as String? ?? '',
+      object: (json['object'] as Map<String, dynamic>?) ?? {},
+      url: json['url'] as String?,
+    );
+  }
 }
