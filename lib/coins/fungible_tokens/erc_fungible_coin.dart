@@ -517,7 +517,7 @@ List<ERCFungibleCoin> getERC20Coins() {
         symbol: 'USDC',
         mintDecimals: 6,
         rpc: 'https://sepolia.infura.io/v3/$infuraApiKey',
-        chainId: 5,
+        chainId: 11155111,
         blockExplorer:
             'https://sepolia.etherscan.io/tx/$blockExplorerPlaceholder',
         default_: 'ETH',

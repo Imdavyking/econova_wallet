@@ -622,7 +622,7 @@ List<EthereumCoin> getEVMBlockchains() {
       EthereumCoin(
         name: 'Ethereum(Sepolia)',
         rpc: 'https://sepolia.infura.io/v3/$infuraApiKey',
-        chainId: 5,
+        chainId: 11155111,
         blockExplorer:
             'https://sepolia.etherscan.io/tx/$blockExplorerPlaceholder',
         symbol: 'ETH',

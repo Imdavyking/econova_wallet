@@ -733,6 +733,7 @@ class AItools {
               '✅ Deposit tx: $depositTxHash\n\n'
               'USDCx will arrive at $stacksAddress in ~10-15 minutes.';
         } catch (e) {
+          print(e);
           return 'Bridge failed: $e';
         }
       },
