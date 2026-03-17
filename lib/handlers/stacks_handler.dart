@@ -913,10 +913,7 @@ class StacksHandler extends BaseWebViewHandler {
           } else {
             sigBytes = await coin.signMessage(message, isLegacy: false);
           }
-          print({
-            'signature': HEX.encode(sigBytes),
-            'publicKey': accountDetail.publicKey,
-          });
+
           await _legacySendResponse(responseName, {
             'signatureRequest': jwtValue,
             'signatureResponse': {
