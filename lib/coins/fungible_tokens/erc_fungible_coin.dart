@@ -374,7 +374,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 List<ERCFungibleCoin> getERC20Coins() {
   List<ERCFungibleCoin> blockChains = [];
   if (enableTestNet) {
-    blockChains.add(
+    blockChains.addAll([
       ERCFungibleCoin(
         contractAddress_: '0x9a2f19121f2f72ab77f6e4a2391a7b858df60c64',
         name: 'ECLA Eco(Testnet)',
@@ -389,9 +389,23 @@ List<ERCFungibleCoin> getERC20Coins() {
         coinType: 60,
         geckoID: '',
       ),
-    );
+      ERCFungibleCoin(
+        contractAddress_: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+        name: 'USD Coin',
+        symbol: 'USDC',
+        mintDecimals: 6,
+        rpc: 'https://sepolia.infura.io/v3/$infuraApiKey',
+        chainId: 5,
+        blockExplorer:
+            'https://sepolia.etherscan.io/tx/$blockExplorerPlaceholder',
+        default_: 'ETH',
+        image: 'assets/wusd.png',
+        coinType: 60,
+        geckoID: 'usd-coin',
+      ),
+    ]);
   } else {
-    blockChains.add(
+    blockChains.addAll([
       ERCFungibleCoin(
         contractAddress_: '0xe9e7cea3dedca5984780bafc599bd69add087d56',
         name: 'BUSD Token',
@@ -405,7 +419,33 @@ List<ERCFungibleCoin> getERC20Coins() {
         coinType: 60,
         geckoID: "binance-usd",
       ),
-    );
+      ERCFungibleCoin(
+        contractAddress_: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        name: 'USD Coin',
+        symbol: 'USDC',
+        mintDecimals: 6,
+        rpc: 'https://mainnet.base.org',
+        chainId: 8453,
+        blockExplorer: 'https://explorer.base.org/tx/$blockExplorerPlaceholder',
+        default_: 'ETH',
+        image: 'assets/wusd.png',
+        coinType: 60,
+        geckoID: 'usd-coin',
+      ),
+      ERCFungibleCoin(
+        contractAddress_: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        name: 'USD Coin',
+        symbol: 'USDC',
+        mintDecimals: 6,
+        rpc: 'https://mainnet.infura.io/v3/$infuraApiKey',
+        chainId: 1,
+        blockExplorer: 'https://etherscan.io/tx/$blockExplorerPlaceholder',
+        default_: 'ETH',
+        image: 'assets/wusd.png',
+        coinType: 60,
+        geckoID: 'usd-coin',
+      ),
+    ]);
   }
 
   blockChains.addAll(ERCFungibleCoin.getCoinsInStore());
