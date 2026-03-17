@@ -588,9 +588,8 @@ class StacksHandler extends BaseWebViewHandler {
             headers: {'Content-Type': 'application/octet-stream'},
             body: txBytes,
           );
-          if (res.statusCode ~/ 100 != 2) {
+          if (res.statusCode ~/ 100 != 2)
             throw Exception('broadcast failed: ${res.body}');
-          }
           final txHash = jsonDecode(res.body) as String;
           await _sendResponse(jsData, {'txHash': txHash});
         } catch (e) {
@@ -663,9 +662,8 @@ class StacksHandler extends BaseWebViewHandler {
           final res = await http.post(Uri.parse('$api/v2/transactions'),
               headers: {'Content-Type': 'application/octet-stream'},
               body: txBytes);
-          if (res.statusCode ~/ 100 != 2) {
+          if (res.statusCode ~/ 100 != 2)
             throw Exception('deploy failed: ${res.body}');
-          }
           final txHash = jsonDecode(res.body) as String;
           await _sendResponse(jsData, {
             'txid': txHash,
@@ -741,9 +739,8 @@ class StacksHandler extends BaseWebViewHandler {
             final res = await http.post(Uri.parse('$api/v2/transactions'),
                 headers: {'Content-Type': 'application/octet-stream'},
                 body: signedTx);
-            if (res.statusCode ~/ 100 != 2) {
+            if (res.statusCode ~/ 100 != 2)
               throw Exception('broadcast failed: ${res.body}');
-            }
             txHash = jsonDecode(res.body) as String;
           } else if (txType == 'token_transfer' && recipient.isNotEmpty) {
             final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
@@ -886,9 +883,7 @@ class StacksHandler extends BaseWebViewHandler {
       final parts = jwt.split('.');
       if (parts.length < 2) return null;
       var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
-      while (payload.length % 4 != 0) {
-        payload += '=';
-      }
+      while (payload.length % 4 != 0) payload += '=';
       final decoded = utf8.decode(base64Decode(payload));
       return jsonDecode(decoded) as Map<String, dynamic>;
     } catch (_) {
@@ -957,9 +952,8 @@ class StacksHandler extends BaseWebViewHandler {
         coin.isTestnet ? 'https://api.testnet.hiro.so' : 'https://api.hiro.so';
     try {
       final res = await http.get(Uri.parse('$api/v2/fees/transfer'));
-      if (res.statusCode ~/ 100 == 2) {
+      if (res.statusCode ~/ 100 == 2)
         return int.parse(jsonDecode(res.body).toString());
-      }
     } catch (_) {}
     return 10;
   }
