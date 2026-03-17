@@ -723,7 +723,8 @@ class AItools {
         if (confirmation != null) return confirmation;
 
         try {
-          final (approveTxHash, depositTxHash) = await usdcCoin.mintUSDCx(
+          final (approveTxHash, depositTxHash, chainId) =
+              await usdcCoin.mintUSDCx(
             stacksRecipient: stacksAddress,
             amount: input.amount,
           );
@@ -733,7 +734,6 @@ class AItools {
               '✅ Deposit tx: $depositTxHash\n\n'
               'USDCx will arrive at $stacksAddress in ~10-15 minutes.';
         } catch (e) {
-          print(e);
           return 'Bridge failed: $e';
         }
       },
