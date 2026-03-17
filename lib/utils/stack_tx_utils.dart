@@ -364,48 +364,6 @@ Uint8List _varuint(int value) {
   }
 }
 
-/// secp256k1 deterministic signing (RFC 6979) with low-s normalisation.
-/// Returns [ recId (1) | r (32) | s (32) ].
-///
-/// This reuses the same secp256k1 domain params / signer that
-/// stacksBuildSignedTx uses.  Pull the ECDomainParameters instance and
-/// ECDSASigner construction out of stacksBuildSignedTx (or duplicate the
-/// two lines below) so they match your existing imports exactly.
-Uint8List _secp256k1SignRecoverable(Uint8List privKey, Uint8List hash) {
-  assert(privKey.length == 32,
-      'privKey must be exactly 32 bytes, got ${privKey.length}');
-
-  final domainParams = pc.ECDomainParameters('secp256k1');
-  final privScalar = BigInt.parse(HEX.encode(privKey), radix: 16);
-  final ecPrivKey = pc.ECPrivateKey(privScalar, domainParams);
-
-  final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 32));
-  signer.init(true, pc.PrivateKeyParameter<pc.ECPrivateKey>(ecPrivKey));
-
-  // Low-s normalisation (BIP-62): if s > n/2, replace with n - s.
-  pc.ECSignature sig = signer.generateSignature(hash) as pc.ECSignature;
-  final halfN = domainParams.n >> 1;
-  if (sig.s > halfN) {
-    sig = pc.ECSignature(sig.r, domainParams.n - sig.s);
-  }
-
-  // Derive recovery id (0 or 1) by trying both and checking the recovered
-  // public key against the expected compressed public key.
-  final expectedPub = HEX.encode(stacksCompressedPubKey(privKey));
-  int recId = 0;
-  for (int candidate = 0; candidate < 2; candidate++) {
-    final recovered = _recoverPublicKey(hash, sig, candidate, domainParams);
-    if (recovered != null && HEX.encode(recovered) == expectedPub) {
-      recId = candidate;
-      break;
-    }
-  }
-
-  final r = _bigIntTo32Bytes(sig.r);
-  final s = _bigIntTo32Bytes(sig.s);
-  return Uint8List.fromList([recId, ...r, ...s]);
-}
-
 /// Attempts to recover the compressed public key for [sig] using [recId].
 /// Returns null if the recovery point is at infinity or off the curve.
 Uint8List? _recoverPublicKey(
@@ -496,7 +454,6 @@ Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
 /// If the tx uses a different spending-condition layout this will throw;
 /// callers should catch and surface the error to the user.
 Uint8List stacksResignTx(Uint8List rawTx, Uint8List privKey) {
-  // The presig occupies bytes 44–108 (0-indexed).
   const sigOffset = 44;
   const sigLength = 65;
 
@@ -504,26 +461,26 @@ Uint8List stacksResignTx(Uint8List rawTx, Uint8List privKey) {
     throw Exception('stacksResignTx: tx too short to contain a signature');
   }
 
-  // 1. Zero out the presig field to get the signing bytes.
   final forSigning = Uint8List.fromList(rawTx);
   for (int i = sigOffset; i < sigOffset + sigLength; i++) {
     forSigning[i] = 0x00;
   }
 
-  // 2. Compute the Stacks sighash: SHA-512/256 of the zeroed tx.
-  //    Stacks uses SHA-512/256 (truncated SHA-512), not SHA-256.
-  //    Replace the call below with your project's SHA-512/256 helper.
-  //    If you use blockchain_utils:  SHA512256Digest().process(forSigning)
-  //    If you use pointycastle:      SHA512tDigest(256).process(forSigning)
-  final sigHash = stacksSha512_256(forSigning); // ← replace with actual helper
+  final sigHash = stacksSha512_256(forSigning);
 
-  // 3. Sign the sighash and write back into the tx.
-  final sig = _secp256k1SignRecoverable(privKey, sigHash);
+  // CHANGED: use stacksSecp256k1Sign instead of _secp256k1SignRecoverable
+  // to match noble/secp256k1 output exactly (same k derivation)
+  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, sigHash);
+
+  final sigBytes = Uint8List(65)
+    ..[0] = recoveryId
+    ..setRange(1, 33, stacksBigIntTo32Bytes(sig.r))
+    ..setRange(33, 65, stacksBigIntTo32Bytes(sig.s));
+
   final signed = Uint8List.fromList(rawTx);
-  signed.setRange(sigOffset, sigOffset + sigLength, sig);
+  signed.setRange(sigOffset, sigOffset + sigLength, sigBytes);
   return signed;
 }
-
 // ─── ADD TO stack_tx_utils.dart ───────────────────────────────────────────────
 // Paste this block into stack_tx_utils.dart.
 // Once added, delete the private duplicates from SIP010Coin and StacksNFTCoin
