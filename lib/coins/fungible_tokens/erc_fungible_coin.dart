@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:hex/hex.dart';
+import 'package:wallet_app/utils/c32check.dart';
 
 import '../../extensions/big_int_ext.dart';
 import '../../interface/ft_explorer.dart';
@@ -369,26 +371,146 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 
   @override
   String getGeckoId() => geckoID;
+  // Contracts
+  static const _xReserveTestnet = '0x008888878f94C0d87defdf0B07f46B93C1934442';
+  static const _xReserveMainnet = '0x008888878f94C0d87defdf0B07f46B93C1934442';
+  static const _stacksDomain = 10003;
+
+  /// Encodes a Stacks address to bytes32 for depositToRemote.
+  /// Mirrors encodeStacksAddress() from helper.ts:
+  ///   strip 'S' → c32checkDecode → [version(1 byte) + hash160(20 bytes)] → right-pad to 32
+  static Uint8List _encodeStacksAddress(String stacksAddress) {
+    // c32checkDecode expects the string without the leading 'S'
+    final decoded = c32checkDecode(stacksAddress.substring(1));
+    final version = decoded[0] as int;
+    final hash160 = HEX.decode(decoded[1] as String);
+
+    final bytes = Uint8List(32);
+    bytes[0] = version;
+    bytes.setRange(
+      1,
+      21,
+      hash160,
+    ); // bytes 1-20 = hash160, 21-31 = zero padding
+    return bytes;
+  }
+
+  /// Bridges USDC (Ethereum/Sepolia) → USDCx (Stacks) via xReserve.
+  /// Two on-chain txs: approve + depositToRemote.
+  /// Returns (approveTxHash, depositTxHash).
+  Future<(String, String)> mintUSDCx({
+    required String stacksRecipient,
+    required String amount,
+  }) async {
+    final client = Web3Client(rpc, Client());
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+    final accountData = await importData(walletData);
+    final credentials = EthPrivateKey.fromHex(accountData.privateKey!);
+
+    final value = amount.toBigIntDec(decimals()); // 6 decimals
+    final xReserve = EthereumAddress.fromHex(
+      chainId == 5 ? _xReserveTestnet : _xReserveMainnet,
+    );
+    final usdcContract = EthereumAddress.fromHex(contractAddress_);
+    final remoteRecipient = _encodeStacksAddress(stacksRecipient);
+
+    // ── Step 1: approve ────────────────────────────────────────────────────────
+    final approveAbi = ContractAbi.fromJson(
+        jsonEncode([
+          {
+            'name': 'approve',
+            'type': 'function',
+            'stateMutability': 'nonpayable',
+            'inputs': [
+              {'name': 'spender', 'type': 'address'},
+              {'name': 'amount', 'type': 'uint256'},
+            ],
+            'outputs': [],
+          }
+        ]),
+        '');
+
+    final approveContract = DeployedContract(approveAbi, usdcContract);
+    final approveFn = approveContract.function('approve');
+
+    final approveTx = await client.signTransaction(
+      credentials,
+      Transaction.callContract(
+        contract: approveContract,
+        function: approveFn,
+        parameters: [xReserve, value],
+      ),
+      chainId: chainId,
+    );
+    final approveTxHash = await client.sendRawTransaction(approveTx);
+
+    // Wait for approval confirmation before depositing
+    await client.dispose();
+    await _waitForTx(approveTxHash);
+
+    // ── Step 2: depositToRemote ────────────────────────────────────────────────
+    final depositClient = Web3Client(rpc, Client());
+    final depositAbi = ContractAbi.fromJson(
+        jsonEncode([
+          {
+            'name': 'depositToRemote',
+            'type': 'function',
+            'stateMutability': 'nonpayable',
+            'inputs': [
+              {'name': 'value', 'type': 'uint256'},
+              {'name': 'remoteDomain', 'type': 'uint32'},
+              {'name': 'remoteRecipient', 'type': 'bytes32'},
+              {'name': 'localToken', 'type': 'address'},
+              {'name': 'maxFee', 'type': 'uint256'},
+              {'name': 'hookData', 'type': 'bytes'},
+            ],
+            'outputs': [],
+          }
+        ]),
+        '');
+
+    final depositContract = DeployedContract(depositAbi, xReserve);
+    final depositFn = depositContract.function('depositToRemote');
+
+    final depositTx = await depositClient.signTransaction(
+      credentials,
+      Transaction.callContract(
+        contract: depositContract,
+        function: depositFn,
+        parameters: [
+          value,
+          BigInt.from(_stacksDomain),
+          remoteRecipient,
+          usdcContract,
+          BigInt.zero, // maxFee = 0
+          Uint8List(0), // hookData = 0x
+        ],
+      ),
+      chainId: chainId,
+    );
+    final depositTxHash = await depositClient.sendRawTransaction(depositTx);
+    await depositClient.dispose();
+
+    return (approveTxHash, depositTxHash);
+  }
+
+  Future<void> _waitForTx(String txHash) async {
+    final client = Web3Client(rpc, Client());
+    while (true) {
+      try {
+        final receipt = await client.getTransactionReceipt(txHash);
+        if (receipt != null) break;
+      } catch (_) {}
+      await Future.delayed(const Duration(seconds: 3));
+    }
+    await client.dispose();
+  }
 }
 
 List<ERCFungibleCoin> getERC20Coins() {
   List<ERCFungibleCoin> blockChains = [];
   if (enableTestNet) {
     blockChains.addAll([
-      ERCFungibleCoin(
-        contractAddress_: '0x9a2f19121f2f72ab77f6e4a2391a7b858df60c64',
-        name: 'ECLA Eco(Testnet)',
-        symbol: "ECLA",
-        mintDecimals: 18,
-        rpc: 'https://data-seed-prebsc-2-s3.binance.org:8545/',
-        chainId: 97,
-        blockExplorer:
-            'https://testnet.bscscan.com/tx/$blockExplorerPlaceholder',
-        default_: 'BNB',
-        image: 'assets/ethereum-2.png',
-        coinType: 60,
-        geckoID: '',
-      ),
       ERCFungibleCoin(
         contractAddress_: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         name: 'USD Coin',

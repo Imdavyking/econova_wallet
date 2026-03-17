@@ -7,8 +7,6 @@ import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
-import 'package:wallet_app/utils/pos_networks.dart';
-
 import '../main.dart';
 
 enum WalletType {

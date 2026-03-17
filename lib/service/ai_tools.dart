@@ -1,6 +1,7 @@
 import "dart:convert";
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
+import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/interface/user_quote.dart";
@@ -677,7 +678,73 @@ class AItools {
       getInputFromJson: _GetDeployMemeInput.fromJson,
     );
 
-    // ── QRY_httpGet ─────────────────────────────────────────────────────────────
+    // ── CMD_mintUSDCx ────────────────────────────────────────────────────────────
+
+    final mintUSDCxTool = Tool.fromFunction<_MintUSDCxInput, String>(
+      name: 'CMD_mintUSDCx',
+      description:
+          'Bridges USDC from Ethereum/Sepolia to USDCx on Stacks via xReserve. '
+          'Requires the user to be on the Ethereum network with a USDC balance. '
+          'Takes ~10-15 minutes after deposit confirmation for USDCx to appear on Stacks. '
+          'Always check USDC balance before calling this.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'stacksRecipient': {
+            'type': 'string',
+            'description':
+                'The Stacks address (ST... or SP...) to receive USDCx',
+          },
+          'amount': {
+            'type': 'string',
+            'description': 'Amount of USDC to bridge (e.g. "10.00")',
+          },
+        },
+        'required': ['stacksRecipient', 'amount'],
+      },
+      func: (final _MintUSDCxInput input) async {
+        final usdcCoin = supportedChains.firstWhereOrNull(
+          (c) =>
+              c is ERCFungibleCoin &&
+              c.getSymbol() == 'USDC' &&
+              (c.chainId == 1 || c.chainId == 5),
+        ) as ERCFungibleCoin?;
+
+        if (usdcCoin == null) {
+          return 'USDC not found. Make sure you are on the Ethereum network.';
+        }
+
+        // Always bridge to the user's own Stacks address — no need to ask
+        final stacksAddress = await stackCoins.first.getAddress();
+
+        final message = 'Bridge ${input.amount} USDC → USDCx on Stacks\n\n'
+            'Your Stacks address: $stacksAddress\n'
+            'Step 1: Approve USDC spend\n'
+            'Step 2: Deposit to xReserve bridge\n\n'
+            'USDCx will arrive in ~10-15 minutes.\n\n'
+            'Approve?';
+
+        final confirmation = await confirmTransaction(message);
+        if (confirmation != null) return confirmation;
+
+        try {
+          final (approveTxHash, depositTxHash) = await usdcCoin.mintUSDCx(
+            stacksRecipient: stacksAddress,
+            amount: input.amount,
+          );
+
+          return 'Bridge initiated!\n\n'
+              '✅ Approve tx: $approveTxHash\n'
+              '✅ Deposit tx: $depositTxHash\n\n'
+              'USDCx will arrive at $stacksAddress in ~10-15 minutes.';
+        } catch (e) {
+          return 'Bridge failed: $e';
+        }
+      },
+      getInputFromJson: _MintUSDCxInput.fromJson,
+    );
+
+    // ── QRY_httpRequest ─────────────────────────────────────────────────────────────
 
     final httpRequestTool = Tool.fromFunction<_HttpRequestInput, String>(
       name: 'QRY_httpRequest',
@@ -837,6 +904,7 @@ class AItools {
     );
 
     return [
+      mintUSDCxTool,
       httpRequestTool,
       addressTool,
       resolveDomainNameTool,
@@ -1034,6 +1102,16 @@ class _HttpRequestInput {
       contentType: json['contentType'] as String?,
       headers: (json['headers'] as Map<String, dynamic>?)
           ?.map((k, v) => MapEntry(k, v as String)),
+    );
+  }
+}
+
+class _MintUSDCxInput {
+  final String amount;
+  _MintUSDCxInput({required this.amount});
+  factory _MintUSDCxInput.fromJson(Map<String, dynamic> json) {
+    return _MintUSDCxInput(
+      amount: json['amount'] as String,
     );
   }
 }
