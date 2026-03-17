@@ -903,9 +903,6 @@ class StacksHandler extends BaseWebViewHandler {
       if (responseName != null) await _legacySendResponse(responseName, result);
     } else {
       // request() path — integer or UUID id
-      if (jsData.id is int) {
-        await sendCustom('window.stacks?.sendResponse(${jsData.id}, $encoded)');
-      }
       final safeId = jsData.id is String ? '"${jsData.id}"' : '${jsData.id}';
       await sendCustom('window.leatherSendResponse?.($safeId, $encoded)');
     }
@@ -921,9 +918,6 @@ class StacksHandler extends BaseWebViewHandler {
         await _legacySendCancel(responseName, payloadKey, jsData.id.toString());
       }
     } else {
-      if (jsData.id is int) {
-        await sendCustom('window.stacks?.sendError(${jsData.id}, "$safe")');
-      }
       final safeId = jsData.id is String ? '"${jsData.id}"' : '${jsData.id}';
       await sendCustom('window.leatherSendError?.($safeId, "$safe")');
     }
@@ -983,8 +977,7 @@ class StacksHandler extends BaseWebViewHandler {
 // ─── Message model ────────────────────────────────────────────────────────────
 
 class _StacksMessage {
-  final dynamic
-      id; // int (window.stacks) | UUID string (Leather) | JWT string (legacy)
+  final dynamic id; // UUID string (Leather) | JWT string (legacy)
   final String name;
   final Map<String, dynamic> object;
   final String? url;
@@ -1001,11 +994,8 @@ class _StacksMessage {
   bool get isLegacy => name.startsWith('hiroWallet');
 
   factory _StacksMessage.fromJson(Map<String, dynamic> json) {
-    final rawId = json['id'];
-    final dynamic parsedId =
-        rawId is String ? rawId : (rawId as num?)?.toInt() ?? 0;
     return _StacksMessage(
-      id: parsedId,
+      id: json['id'] as String? ?? '', // always a string now
       name: json['name'] as String? ?? '',
       object: (json['object'] as Map<String, dynamic>?) ?? {},
       url: json['url'] as String?,
