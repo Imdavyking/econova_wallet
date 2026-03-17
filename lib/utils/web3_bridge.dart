@@ -363,7 +363,7 @@ Future<void> navigateToDappBrowser(BuildContext context, String data) async {
       context,
       MaterialPageRoute(
         builder: (context) => Dapp(
-          provider: '$trustWalletProvider;$nightly',
+          provider: '$trustWalletProvider;$leatherWalletProvider;$nightly',
           webNotifier: webNotifer,
           init: init,
           data: data,

@@ -62,6 +62,7 @@ List<Coin> supportedChains = [];
 late String currencyJson;
 late String currencyJsonSearch;
 late String trustWalletProvider;
+late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
 List<EthereumCoin> evmChains = [
@@ -191,6 +192,7 @@ void main() async {
   walletImportType = WalletService.getType();
 
   trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
+  leatherWalletProvider = await rootBundle.loadString('js/leather.stx.min.js');
   nightly = await rootBundle.loadString('js/nightly.min.js');
   webNotifer = await rootBundle.loadString('js/web_notification.js');
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
