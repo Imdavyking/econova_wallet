@@ -4,7 +4,7 @@ import Demo from "../demo";
 function Router() {
   const routes = [
     {
-      path: "/demo",
+      path: "/",
       element: <Demo />,
     },
   ];
