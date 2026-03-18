@@ -148,7 +148,6 @@ class StacksHandler extends BaseWebViewHandler {
         'stx_getNetworks',
         'signMessage',
         'sendTransfer',
-        'signPsbt',
         'stx_callContract',
         'stx_deployContract',
         'stx_getAccounts',
@@ -837,6 +836,7 @@ class StacksHandler extends BaseWebViewHandler {
 
     // Header — ES256K so dApps know it's properly signed
     final header = b64url('{"typ":"JWT","alg":"ES256K"}');
+    final isTestnet = stackCoins.first.isTestnet;
 
     // Payload mirrors the real Leather authenticationResponse structure
     final payload = b64url(json.encode({
@@ -848,8 +848,8 @@ class StacksHandler extends BaseWebViewHandler {
       'public_keys': [pubKey],
       'profile': {
         'stxAddress': {
-          'mainnet': sendingAddress,
-          'testnet': sendingAddress,
+          'mainnet': isTestnet ? null : sendingAddress,
+          'testnet': isTestnet ? sendingAddress : null,
         },
         'walletProvider': walletName,
       },
@@ -866,6 +866,8 @@ class StacksHandler extends BaseWebViewHandler {
     final hash = stacksSha256(Uint8List.fromList(utf8.encode(signingInput)));
     final sigBytes = stacksSignRaw(privBytes, hash);
     final sig = base64Url.encode(sigBytes).replaceAll('=', '');
+
+    print('$signingInput.$sig');
 
     return '$signingInput.$sig';
   }
