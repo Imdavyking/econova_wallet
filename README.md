@@ -83,7 +83,8 @@ incrementally, and withdraw at any time — no lockups, no penalties.
 - Goal names persisted locally per user address + contract version
 - Last `txId` and raw signed bytes stored per goal for auditability
 - Shared contract — deployed once, all users scoped by `tx-sender`
-- Ask the AI: _"Save 10 USDCx to my holiday fund"_
+- Ask the AI: _"Save 10 USDCx to my holiday fund"_, _"Show my savings goals"_, _"Withdraw 5 USDCx from my holiday fund"_
+
 
 ```clarity
 ;; Users can withdraw anytime — no lockup
@@ -154,6 +155,9 @@ and executes on-chain actions autonomously:
 
 - _"Send 10 STX to alice.btc"_
 - _"Save 5 USDCx to my holiday fund"_
+- _"Show my savings goals"_
+- _"How much have I saved for my holiday fund?"_
+- _"Withdraw all from my holiday fund"_
 - _"What's my sBTC balance?"_
 - _"Pay for this API"_
 - _"Swap \$20 STX to USDCx"_
@@ -202,6 +206,7 @@ _"Send 20 STX to Mom"_ — no copying long addresses.
 | Portfolio overview                                   | ✅     |
 | AI natural language agent                            | ✅     |
 | Multi-chain (ETH, SOL, Base, TON, and 25+ more)      | ✅     |
+| USDCx savings goals (Clarity 2) — create, save, view, withdraw | ✅ |
 
 ---
 
