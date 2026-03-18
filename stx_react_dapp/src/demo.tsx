@@ -353,11 +353,75 @@ async function runStxCallContract(): Promise<unknown> {
 
 async function runStxDeployContract(): Promise<unknown> {
   if (!cachedPublicKey) throw new Error("Run getAddresses first.");
-  return await req("stx_deployContract", {
-    name: `demo-contract-${Date.now()}`,
-    clarityCode: ';; Demo contract\n(define-public (hello) (ok "world"))',
+
+  const clarityCode = `
+;; usdcx-savings-goal-v2
+(define-constant err-goal-exists        (err u100))
+(define-constant err-goal-not-found     (err u101))
+(define-constant err-insufficient-funds (err u102))
+(define-constant err-zero-amount        (err u103))
+
+(define-map goals
+  { owner: principal, name: (string-ascii 50) }
+  { balance: uint, target: uint, created-at: uint }
+)
+
+(define-public (create-goal (name (string-ascii 50)) (target uint))
+  (let ((key { owner: tx-sender, name: name }))
+    (asserts! (is-none (map-get? goals key)) err-goal-exists)
+    (map-set goals key { balance: u0, target: target, created-at: block-height })
+    (ok true)))
+
+(define-public (save (name (string-ascii 50)) (amount uint))
+  (let ((key  { owner: tx-sender, name: name })
+        (goal (unwrap! (map-get? goals key) err-goal-not-found)))
+    (asserts! (> amount u0) err-zero-amount)
+    (try! (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx
+            transfer amount tx-sender (as-contract tx-sender) none))
+    (map-set goals key (merge goal { balance: (+ (get balance goal) amount) }))
+    (ok true)))
+
+(define-public (withdraw (name (string-ascii 50)) (amount uint))
+  (let ((caller tx-sender)
+        (key  { owner: tx-sender, name: name })
+        (goal (unwrap! (map-get? goals key) err-goal-not-found)))
+    (asserts! (> amount u0) err-zero-amount)
+    (asserts! (>= (get balance goal) amount) err-insufficient-funds)
+    (try! (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx
+            transfer amount tx-sender caller none)))
+    (map-set goals key (merge goal { balance: (- (get balance goal) amount) }))
+    (ok true)))
+
+(define-read-only (get-goal (owner principal) (name (string-ascii 50)))
+  (map-get? goals { owner: owner, name: name }))
+
+(define-read-only (get-progress (owner principal) (name (string-ascii 50)))
+  (match (map-get? goals { owner: owner, name: name })
+    goal (ok {
+      balance: (get balance goal),
+      target:  (get target goal),
+      percent: (if (> (get target goal) u0)
+                 (/ (* (get balance goal) u100) (get target goal)) u0)
+    })
+    (err err-goal-not-found)))`.trim();
+
+  const result = await req("stx_deployContract", {
+    name: "usdcx-savings-goal-v2",
+    clarityCode,
     clarityVersion: 2,
   });
+
+  // ── Extract contractId and print it ──────────────────────────────────────
+  const contractId =
+    (result as any)?.result?.contractId ??
+    (result as any)?.contractId ??
+    `${cachedStxAddress}.usdcx-savings-goal-v2`;
+
+  console.log("=== COPY THIS INTO usdcx_goals.dart ===");
+  console.log(`const _savingsContractId = '${contractId}';`);
+  console.log("========================================");
+
+  return { ...(result as any), contractId };
 }
 
 // ─── Method Metadata ──────────────────────────────────────────────────────────
