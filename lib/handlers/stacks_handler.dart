@@ -317,7 +317,8 @@ class StacksHandler extends BaseWebViewHandler {
     await signMessage(
       context: context,
       messageType: typedMessageSignKey,
-      data: 'Domain: $domainHex\nMessage: $messageHex',
+      data:
+          'Domain:\n${clarityHexDisplay(domainHex)}\n\nMessage:\n${clarityHexDisplay(messageHex)}',
       networkIcon: null,
       name: 'Sign Structured Message',
       onConfirm: () async {
@@ -867,8 +868,6 @@ class StacksHandler extends BaseWebViewHandler {
     final sigBytes = stacksSignRaw(privBytes, hash);
     final sig = base64Url.encode(sigBytes).replaceAll('=', '');
 
-    print('$signingInput.$sig');
-
     return '$signingInput.$sig';
   }
 
@@ -890,7 +889,7 @@ class StacksHandler extends BaseWebViewHandler {
     final domain = decoded?['domain'] as String? ?? '';
 
     final displayData = structured
-        ? 'Sign structured message\nDomain: ${domain.substring(0, domain.length.clamp(0, 20))}...\nMessage: ${message.substring(0, message.length.clamp(0, 20))}...'
+        ? 'Domain:\n${clarityHexDisplay(domain)}\n\nMessage:\n${clarityHexDisplay(message)}'
         : message;
 
     if (!context.mounted) return;

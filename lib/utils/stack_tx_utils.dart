@@ -364,7 +364,6 @@ Uint8List _varuint(int value) {
   }
 }
 
-
 /// ──────────────────────────────────────────────────────────────────────────
 
 /// Signs an already-computed [hash] directly with secp256k1 — no message
@@ -594,5 +593,104 @@ String? clarityParseString(String hex) {
     return null;
   } catch (_) {
     return null;
+  }
+}
+
+// ─── Clarity display decoder ──────────────────────────────────────────────────
+
+/// Reads a single Clarity value from [bytes] at [pos] and returns a
+/// human-readable string + how many bytes were consumed.
+({String display, int bytesRead}) clarityReadValue(Uint8List bytes, int pos) {
+  if (pos >= bytes.length) return (display: '?', bytesRead: 1);
+  final type = bytes[pos];
+  int cur = pos + 1;
+
+  switch (type) {
+    case 0x00: // int128
+      if (cur + 16 > bytes.length) return (display: '?', bytesRead: 1);
+      var v = BigInt.zero;
+      for (int i = 0; i < 16; i++) v = (v << 8) | BigInt.from(bytes[cur + i]);
+      if (bytes[cur] >= 0x80) v = v - (BigInt.one << 128);
+      return (display: '$v', bytesRead: 17);
+
+    case 0x01: // uint128
+      if (cur + 16 > bytes.length) return (display: '?', bytesRead: 1);
+      var u = BigInt.zero;
+      for (int i = 0; i < 16; i++) u = (u << 8) | BigInt.from(bytes[cur + i]);
+      return (display: 'u$u', bytesRead: 17);
+
+    case 0x03:
+      return (display: 'true', bytesRead: 1);
+    case 0x04:
+      return (display: 'false', bytesRead: 1);
+    case 0x09:
+      return (display: 'none', bytesRead: 1);
+
+    case 0x0a: // some
+      final inner = clarityReadValue(bytes, cur);
+      return (
+        display: '(some ${inner.display})',
+        bytesRead: 1 + inner.bytesRead
+      );
+
+    case 0x02: // buffer
+      if (cur + 4 > bytes.length) return (display: '?', bytesRead: 1);
+      final blen = (bytes[cur] << 24) |
+          (bytes[cur + 1] << 16) |
+          (bytes[cur + 2] << 8) |
+          bytes[cur + 3];
+      cur += 4;
+      return (
+        display: '0x${HEX.encode(bytes.sublist(cur, cur + blen))}',
+        bytesRead: 1 + 4 + blen,
+      );
+
+    case 0x0d: // string-ascii
+    case 0x0e: // string-utf8
+      if (cur + 4 > bytes.length) return (display: '?', bytesRead: 1);
+      final slen = (bytes[cur] << 24) |
+          (bytes[cur + 1] << 16) |
+          (bytes[cur + 2] << 8) |
+          bytes[cur + 3];
+      cur += 4;
+      if (cur + slen > bytes.length) return (display: '?', bytesRead: 1);
+      final str = utf8.decode(bytes.sublist(cur, cur + slen));
+      final prefix = type == 0x0e ? 'u' : '';
+      return (display: '$prefix"$str"', bytesRead: 1 + 4 + slen);
+
+    case 0x0c: // tuple
+      if (cur + 4 > bytes.length) return (display: '?', bytesRead: 1);
+      final count = (bytes[cur] << 24) |
+          (bytes[cur + 1] << 16) |
+          (bytes[cur + 2] << 8) |
+          bytes[cur + 3];
+      cur += 4;
+      final parts = <String>[];
+      for (int i = 0; i < count; i++) {
+        if (cur >= bytes.length) break;
+        final keyLen = bytes[cur++];
+        if (cur + keyLen > bytes.length) break;
+        final key = utf8.decode(bytes.sublist(cur, cur + keyLen));
+        cur += keyLen;
+        final val = clarityReadValue(bytes, cur);
+        cur += val.bytesRead;
+        parts.add('$key: ${val.display}');
+      }
+      return (display: parts.join('\n'), bytesRead: cur - pos);
+
+    default:
+      return (display: '(0x${type.toRadixString(16)})', bytesRead: 1);
+  }
+}
+
+/// Decodes a hex-encoded Clarity value into a human-readable string.
+/// Safe — returns the raw hex on any parse failure.
+String clarityHexDisplay(String hex) {
+  try {
+    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final bytes = Uint8List.fromList(HEX.decode(clean));
+    return clarityReadValue(bytes, 0).display;
+  } catch (_) {
+    return hex;
   }
 }
