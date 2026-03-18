@@ -370,12 +370,13 @@ Uint8List _varuint(int value) {
 /// prefix applied. Used for SIP-018 structured messages where the caller
 /// builds the hash manually.
 ///
-/// Returns 65 bytes: [ recId (1) | r (32) | s (32) ]
+/// Returns 65 bytes: [ r (32) | s (32) | recId (1) ] — RSV format,
+/// matching signMessageHashRsv output expected by Stacks.js verifiers.
 Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
   final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
   final r = stacksBigIntTo32Bytes(sig.r);
   final s = stacksBigIntTo32Bytes(sig.s);
-  return Uint8List.fromList([...r, ...s, recoveryId]); // RSV for raw usage
+  return Uint8List.fromList([...r, ...s, recoveryId]); // RSV
 }
 
 /// Re-signs a pre-serialised Stacks transaction [rawTx] with [privKey].
