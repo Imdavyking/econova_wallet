@@ -14,11 +14,11 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
 
 // ─── Contract config ──────────────────────────────────────────────────────────
-// Deploy usdcx-savings-goal.clar once via the demo testbed, then paste the
+// Deploy usdcx-savings-goal-v2.clar once via the demo testbed, then paste the
 // contractId here. Format: "ST2VR...address.contract-name"
 
 const savingsContractId =
-    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goal';
+    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goal-v2';
 
 String get savingsContractAddress => savingsContractId.split('.').first;
 String get savingsContractName => savingsContractId.split('.').last;

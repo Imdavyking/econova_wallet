@@ -1,5 +1,4 @@
 import "dart:convert";
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
