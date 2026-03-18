@@ -7,12 +7,28 @@ import { Cl, serializeCV } from "@stacks/transactions";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MethodName =
+  // ── Legacy (hiroWallet / StacksProvider) ──────────────────────────────────
   | "getURL"
   | "authenticationRequest"
   | "signatureRequest"
   | "structuredDataSignatureRequest"
   | "transactionRequest"
-  | "psbtRequest";
+  | "psbtRequest"
+  // ── request() API (LeatherProvider.request) ───────────────────────────────
+  | "getInfo"
+  | "getAddresses"
+  | "stx_getAddresses"
+  | "getAccounts"
+  | "stx_getAccounts"
+  | "stx_getNetworks"
+  | "disconnect"
+  | "stx_signMessage"
+  | "stx_signStructuredMessage"
+  | "stx_signTransaction"
+  | "stx_transferStx"
+  | "stx_transferSip10Ft"
+  | "stx_callContract"
+  | "stx_deployContract";
 
 type Status = "idle" | "pending" | "success" | "error";
 
@@ -32,36 +48,26 @@ function getProvider(): any {
   return null;
 }
 
-// Decoded from the authenticationResponse JWT — populated after runAuthenticationRequest
 let cachedStxAddress = "";
+let cachedPublicKey = "";
 
-/**
- * The authenticationResponse is a JWT. Its payload contains:
- *   profile.stxAddress.testnet  — SP...
- *   profile.stxAddress.testnet  — ST...
- *
- * We decode it and cache the testnet address so signatureRequest can use it
- * without any user input.
- */
 function extractStxAddress(authResponse: unknown): string {
   if (typeof authResponse !== "string") return "";
   try {
     const decoded = decodeToken(authResponse) as any;
-    console.log({ decoded });
     const payload = decoded?.payload ?? decoded;
-    // Leather / Xverse both put the address here after a successful auth
-    const addr =
+    return (
       payload?.profile?.stxAddress?.testnet ??
       payload?.stxAddress?.testnet ??
       payload?.address ??
-      "";
-    return addr;
+      ""
+    );
   } catch {
     return "";
   }
 }
 
-// ─── Method Runners ───────────────────────────────────────────────────────────
+// ─── Legacy Method Runners ────────────────────────────────────────────────────
 
 async function runGetURL(): Promise<unknown> {
   const provider = getProvider();
@@ -72,11 +78,9 @@ async function runGetURL(): Promise<unknown> {
 async function runAuthenticationRequest(): Promise<unknown> {
   const provider = getProvider();
   if (!provider) throw new Error("StacksProvider not found");
-
   const transitPrivateKey = secp.utils.randomPrivateKey();
   const transitPublicKey = secp.getPublicKey(transitPrivateKey, true);
   const pubKeyHex = Buffer.from(transitPublicKey).toString("hex");
-
   const token = createUnsecuredToken({
     jti: crypto.randomUUID(),
     iat: Math.floor(Date.now() / 1000),
@@ -87,7 +91,7 @@ async function runAuthenticationRequest(): Promise<unknown> {
     manifest_uri: `${window.location.origin}/manifest.json`,
     redirect_uri: window.location.href,
     version: "1.3.1",
-    do_not_include_profile: false, // we NEED the profile to get stxAddress
+    do_not_include_profile: false,
     supports_hub_url: true,
     scopes: ["store_write", "publish_data"],
     appDetails: {
@@ -95,34 +99,21 @@ async function runAuthenticationRequest(): Promise<unknown> {
       icon: `${window.location.origin}/favicon.ico`,
     },
   });
-
   const response = await provider.authenticationRequest(token);
-
-  // The response is itself a JWT — decode it to extract stxAddress
-  // and cache it for all subsequent calls in this session
   const addr = extractStxAddress(response);
   if (addr) {
     cachedStxAddress = addr;
-    console.log("[demo] cached stxAddress from auth response:", addr);
+    console.log("[demo] cached stxAddress:", addr);
   }
-
   return response;
 }
 
 async function runSignatureRequest(): Promise<unknown> {
   const provider = getProvider();
   if (!provider) throw new Error("StacksProvider not found");
-
-  if (!cachedStxAddress) {
-    throw new Error(
-      "No STX address cached. Run authenticationRequest first to connect and get your address.",
-    );
-  }
-
-  const message = "Hello from demo.tsx — sign me!";
-
+  if (!cachedStxAddress) throw new Error("Run authenticationRequest first.");
   const token = createUnsecuredToken({
-    message: message,
+    message: "Hello from demo.tsx — sign me!",
     stxAddress: cachedStxAddress,
     network: "testnet",
     appDetails: {
@@ -132,63 +123,39 @@ async function runSignatureRequest(): Promise<unknown> {
     redirect_uri: window.location.href,
     domain_name: window.location.hostname,
   });
-  // for xverse gives {
-  //   "signature": "0d96b65f498a2328d544a5cb866960d3eaca8a4ca5b0b4c091b8f8a88159aef25175207f55b83afeedeae457599fdb7625f9c5de9536a188c18cb02abef2e13300",
-  //   "publicKey": "02f2761827990110805d8b434a9234928cdbf54a9853dafdf9499ff4836832756d"
-  // }
-
-  // mine gives
-
-  // for xverse gives {
-  //   "signature": "00c5eb4a...",
-  //   "publicKey": "02f2761827990110805d8b434a9234928cdbf54a9853dafdf9499ff4836832756d"
-  // }
-
   return await provider.signatureRequest(token);
 }
 
-// 'Stacks Message Signing:\n'.length //  = 24
-// 'Stacks Message Signing:\n'.length.toString(16) //  = 18
-const chainPrefix = "\x18Stacks Message Signing:\n";
-
 export function hashMessage(message: string): Buffer {
-  return Buffer.from(sha256(encodeMessage(message)));
-}
-
-export function encodeMessage(message: string | Buffer): Buffer {
+  const chainPrefix = "\x18Stacks Message Signing:\n";
   const encoded = encode(Buffer.from(message).length);
-  return Buffer.concat([
-    Buffer.from(chainPrefix),
-    encoded,
-    Buffer.from(message),
-  ]);
+  return Buffer.from(
+    sha256(
+      Buffer.concat([Buffer.from(chainPrefix), encoded, Buffer.from(message)]),
+    ),
+  );
 }
 
 async function runStructuredDataSignatureRequest(): Promise<unknown> {
   const provider = getProvider();
   if (!provider) throw new Error("StacksProvider not found");
-
-  if (!cachedStxAddress) {
-    throw new Error("No STX address cached. Run authenticationRequest first.");
-  }
-
-  // message and domain must be Clarity-serialized hex strings
-  const clarityMessage = Cl.tuple({
-    action: Cl.stringAscii("test-nice-data"),
-    value: Cl.uint(42),
-  });
-
-  const clarityDomain = Cl.tuple({
-    name: Cl.stringAscii("Demos App"),
-    version: Cl.stringAscii("1.0.0"),
-    "chain-id": Cl.uint(1),
-  });
-
+  if (!cachedStxAddress) throw new Error("Run authenticationRequest first.");
   const token = createUnsecuredToken({
     stxAddress: cachedStxAddress,
     network: "testnet",
-    message: serializeCV(clarityMessage), // already hex string ✓
-    domain: serializeCV(clarityDomain), // already hex string ✓
+    message: serializeCV(
+      Cl.tuple({
+        action: Cl.stringAscii("test-nice-data"),
+        value: Cl.uint(42),
+      }),
+    ),
+    domain: serializeCV(
+      Cl.tuple({
+        name: Cl.stringAscii("Demos App"),
+        version: Cl.stringAscii("1.0.0"),
+        "chain-id": Cl.uint(1),
+      }),
+    ),
     primaryType: "Action",
     appDetails: {
       name: "Demos App",
@@ -197,35 +164,23 @@ async function runStructuredDataSignatureRequest(): Promise<unknown> {
     redirect_uri: window.location.href,
     domain_name: window.location.hostname,
   });
-
-  const result = await provider.structuredDataSignatureRequest(token);
-  console.log({ result });
-  return result;
+  return await provider.structuredDataSignatureRequest(token);
 }
+
 async function runTransactionRequest(): Promise<unknown> {
   const provider = getProvider();
   if (!provider) throw new Error("StacksProvider not found");
-
-  if (!cachedStxAddress) {
-    throw new Error("No STX address cached. Run authenticationRequest first.");
-  }
-
-  // 1 USDCx = 1_000_000 (6 decimals)
-  const amount = Cl.uint(1_000_000);
-  const sender = Cl.principal(cachedStxAddress);
-  const recipient = Cl.principal(cachedStxAddress); // sending to self for test
-  const memo = Cl.none();
-
+  if (!cachedStxAddress) throw new Error("Run authenticationRequest first.");
   const token = createUnsecuredToken({
     txType: "contract_call",
     contractAddress: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM",
     contractName: "usdcx",
     functionName: "transfer",
     functionArgs: [
-      serializeCV(amount),
-      serializeCV(sender),
-      serializeCV(recipient),
-      serializeCV(memo),
+      serializeCV(Cl.uint(1_000_000)),
+      serializeCV(Cl.principal(cachedStxAddress)),
+      serializeCV(Cl.principal(cachedStxAddress)),
+      serializeCV(Cl.none()),
     ],
     postConditions: [],
     network: "testnet",
@@ -235,25 +190,179 @@ async function runTransactionRequest(): Promise<unknown> {
     },
     stxAddress: cachedStxAddress,
   });
-
   return await provider.transactionRequest(token);
 }
 
 async function runPsbtRequest(): Promise<unknown> {
   const provider = getProvider();
   if (!provider) throw new Error("StacksProvider not found");
+  if (typeof provider.psbtRequest !== "function")
+    throw new Error("psbtRequest not implemented on this provider.");
+  return await provider.psbtRequest({
+    psbt: "70736274ff01000a01000000000000000000000000",
+  });
+}
 
-  if (typeof provider.psbtRequest !== "function") {
-    throw new Error(
-      "psbtRequest is not a function on this provider — likely unimplemented (TODO)",
-    );
-  }
+// ─── request() API Runners ────────────────────────────────────────────────────
 
-  const psbtHex = "70736274ff01000a01000000000000000000000000";
-  return await provider.psbtRequest({ psbt: psbtHex });
+async function req(
+  method: string,
+  params: Record<string, unknown> = {},
+): Promise<unknown> {
+  const provider = getProvider();
+  if (!provider) throw new Error("Stacks Provider not found");
+  return await provider.request(method, params);
+}
+
+async function runGetInfo(): Promise<unknown> {
+  return await req("getInfo");
+}
+async function cacheStxAccount(account: any) {
+  if (!account) return;
+  if (account.publicKey) cachedPublicKey = account.publicKey as string;
+  if (!cachedStxAddress && account.address) cachedStxAddress = account.address;
+}
+
+async function runGetAddresses(): Promise<unknown> {
+  const result = (await req("getAddresses")) as any;
+  const addresses = result?.result?.addresses ?? result?.addresses ?? [];
+  const account = addresses.find(
+    (a: any) => a.address?.startsWith("ST") || a.address?.startsWith("SP"),
+  );
+  await cacheStxAccount(account);
+  return result;
+}
+
+async function runStxGetAddresses(): Promise<unknown> {
+  const result = (await req("stx_getAddresses")) as any;
+  const addresses = result?.result?.addresses ?? result?.addresses ?? [];
+  const account = addresses.find(
+    (a: any) => a.address?.startsWith("ST") || a.address?.startsWith("SP"),
+  );
+  await cacheStxAccount(account);
+  return result;
+}
+
+async function runGetAccounts(): Promise<unknown> {
+  const result = (await req("getAccounts")) as any;
+  const accounts = result?.result?.accounts ?? result?.accounts ?? [];
+  const account = accounts.find(
+    (a: any) => a.address?.startsWith("ST") || a.address?.startsWith("SP"),
+  );
+  await cacheStxAccount(account);
+  return result;
+}
+
+async function runStxGetAccounts(): Promise<unknown> {
+  const result = (await req("stx_getAccounts")) as any;
+  const accounts = result?.result?.accounts ?? result?.accounts ?? [];
+  const account = accounts.find(
+    (a: any) => a.address?.startsWith("ST") || a.address?.startsWith("SP"),
+  );
+  await cacheStxAccount(account);
+  return result;
+}
+
+async function runStxGetNetworks(): Promise<unknown> {
+  return await req("stx_getNetworks");
+}
+
+async function runDisconnect(): Promise<unknown> {
+  return await req("disconnect");
+}
+
+async function runStxSignMessage(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  return await req("stx_signMessage", { message: "Hello from request() API!" });
+}
+
+async function runStxSignStructuredMessage(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  return await req("stx_signStructuredMessage", {
+    message: serializeCV(
+      Cl.tuple({ action: Cl.stringAscii("test"), value: Cl.uint(1) }),
+    ),
+    domain: serializeCV(
+      Cl.tuple({
+        name: Cl.stringAscii("Demo App"),
+        version: Cl.stringAscii("1.0.0"),
+        "chain-id": Cl.uint(1),
+      }),
+    ),
+  });
+}
+
+async function runStxSignTransaction(): Promise<unknown> {
+  if (!cachedStxAddress) throw new Error("Run authenticationRequest first.");
+
+  const { makeUnsignedSTXTokenTransfer } = await import("@stacks/transactions");
+
+  const tx = await makeUnsignedSTXTokenTransfer({
+    recipient: "ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR",
+    amount: 1n,
+    fee: 200n,
+    nonce: 0n,
+    network: "testnet",
+    publicKey: cachedPublicKey,
+  });
+
+  const serialized = tx.serialize();
+  // serialize() returns a hex string in newer @stacks/transactions
+  const hex =
+    typeof serialized === "string"
+      ? serialized
+      : Buffer.from(serialized).toString("hex");
+
+  console.log("[stx_signTransaction] first byte:", hex.slice(0, 2)); // should be "80" for testnet
+
+  return await req("stx_signTransaction", { transaction: hex });
+}
+async function runStxTransferStx(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  // Transfer 1 µSTX to self
+  return await req("stx_transferStx", {
+    recipient: "ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR",
+    amount: "1",
+    memo: "test transfer",
+  });
+}
+
+async function runStxTransferSip10Ft(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  // Transfer 1 USDCx (1_000_000 base units) to self
+  return await req("stx_transferSip10Ft", {
+    asset: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx::usdcx",
+    recipient: "ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR",
+    amount: "1000000",
+  });
+}
+
+async function runStxCallContract(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  return await req("stx_callContract", {
+    contract: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx",
+    functionName: "transfer",
+    functionArgs: [
+      serializeCV(Cl.uint(1)), // amount
+      serializeCV(Cl.principal(cachedStxAddress)), // sender
+      serializeCV(Cl.principal(cachedStxAddress)), // recipient (self)
+      serializeCV(Cl.none()), // memo
+    ],
+  });
+}
+
+async function runStxDeployContract(): Promise<unknown> {
+  if (!cachedPublicKey) throw new Error("Run getAddresses first.");
+  return await req("stx_deployContract", {
+    name: `demo-contract-${Date.now()}`,
+    clarityCode: ';; Demo contract\n(define-public (hello) (ok "world"))',
+    clarityVersion: 2,
+  });
 }
 
 // ─── Method Metadata ──────────────────────────────────────────────────────────
+
+type GroupName = "Legacy (StacksProvider)" | "request() API (LeatherProvider)";
 
 const METHOD_META: Record<
   MethodName,
@@ -262,47 +371,144 @@ const METHOD_META: Record<
     description: string;
     warning?: string;
     runner: () => Promise<unknown>;
+    group: GroupName;
   }
 > = {
+  // ── Legacy ───────────────────────────────────────────────────────────────
   getURL: {
+    group: "Legacy (StacksProvider)",
     label: "getURL",
     description: "Returns the URL of the wallet provider.",
     runner: runGetURL,
   },
   authenticationRequest: {
+    group: "Legacy (StacksProvider)",
     label: "authenticationRequest",
     description:
-      "Connects the wallet and caches the STX address from the auth response. Run this first.",
+      "Connects the wallet and caches the STX address. Run this first.",
     runner: runAuthenticationRequest,
   },
   signatureRequest: {
+    group: "Legacy (StacksProvider)",
     label: "signatureRequest",
-    description:
-      "Signs a plain text message. Requires authenticationRequest to have run first.",
+    description: "Signs a plain-text message. Requires auth first.",
     runner: runSignatureRequest,
   },
   structuredDataSignatureRequest: {
+    group: "Legacy (StacksProvider)",
     label: "structuredDataSignatureRequest",
-    description:
-      "Signs structured domain+message data. Requires authenticationRequest first.",
+    description: "Signs domain+message structured data. Requires auth first.",
     warning: "Not in official docs. May vary by wallet version.",
     runner: runStructuredDataSignatureRequest,
   },
   transactionRequest: {
+    group: "Legacy (StacksProvider)",
     label: "transactionRequest",
-    description: "Submits a placeholder pox contract-call token for signing.",
-    warning: "Wallet will open a confirmation prompt.",
+    description: "Submits USDCx transfer (1 token, self) via JWT.",
+    warning: "Opens a confirmation prompt.",
     runner: runTransactionRequest,
   },
   psbtRequest: {
+    group: "Legacy (StacksProvider)",
     label: "psbtRequest",
-    description: "Sends a PSBT hex to the wallet.",
-    warning: "Marked TODO in source. May not be implemented.",
+    description: "Sends a stub Bitcoin PSBT hex to the wallet.",
+    warning: "Stubbed — not supported by EcoNova.",
     runner: runPsbtRequest,
+  },
+
+  // ── request() ─────────────────────────────────────────────────────────────
+  getInfo: {
+    group: "request() API (LeatherProvider)",
+    label: "getInfo",
+    description: "Returns wallet name, version, supported methods.",
+    runner: runGetInfo,
+  },
+  getAddresses: {
+    group: "request() API (LeatherProvider)",
+    label: "getAddresses",
+    description: "Prompts connection and returns STX + BTC addresses.",
+    runner: runGetAddresses,
+  },
+  stx_getAddresses: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_getAddresses",
+    description: "Stacks-specific address fetch (same as getAddresses).",
+    runner: runStxGetAddresses,
+  },
+  getAccounts: {
+    group: "request() API (LeatherProvider)",
+    label: "getAccounts",
+    description: "Returns full account objects including publicKey + network.",
+    runner: runGetAccounts,
+  },
+  stx_getAccounts: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_getAccounts",
+    description: "Stacks-specific account fetch.",
+    runner: runStxGetAccounts,
+  },
+  stx_getNetworks: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_getNetworks",
+    description: "Returns the active network (mainnet / testnet) and chainId.",
+    runner: runStxGetNetworks,
+  },
+  disconnect: {
+    group: "request() API (LeatherProvider)",
+    label: "disconnect",
+    description: "Clears the saved web3 address from the wallet's store.",
+    warning: "You'll need to re-run getAddresses after this.",
+    runner: runDisconnect,
+  },
+  stx_signMessage: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_signMessage",
+    description: "Signs a plain-text message via the modern request() path.",
+    runner: runStxSignMessage,
+  },
+  stx_signStructuredMessage: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_signStructuredMessage",
+    description: "Signs a Clarity-serialised domain+message (SIP-018).",
+    runner: runStxSignStructuredMessage,
+  },
+  stx_signTransaction: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_signTransaction",
+    description: "Signs a raw pre-built transaction hex without broadcasting.",
+    warning: "Stub tx — will sign but result won't broadcast.",
+    runner: runStxSignTransaction,
+  },
+  stx_transferStx: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_transferStx",
+    description: "Builds, signs, and broadcasts a 1 µSTX self-transfer.",
+    warning: "Broadcasts to testnet.",
+    runner: runStxTransferStx,
+  },
+  stx_transferSip10Ft: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_transferSip10Ft",
+    description: "Transfers 1 USDCx (1_000_000 base units) to self on testnet.",
+    warning: "Broadcasts to testnet.",
+    runner: runStxTransferSip10Ft,
+  },
+  stx_callContract: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_callContract",
+    description: "Calls usdcx.get-balance for the connected address.",
+    runner: runStxCallContract,
+  },
+  stx_deployContract: {
+    group: "request() API (LeatherProvider)",
+    label: "stx_deployContract",
+    description: "Deploys a minimal 'hello world' Clarity contract.",
+    warning: "Broadcasts to testnet. Costs STX fees.",
+    runner: runStxDeployContract,
   },
 };
 
-const METHOD_ORDER: MethodName[] = [
+const LEGACY_METHODS: MethodName[] = [
   "getURL",
   "authenticationRequest",
   "signatureRequest",
@@ -311,9 +517,33 @@ const METHOD_ORDER: MethodName[] = [
   "psbtRequest",
 ];
 
+const REQUEST_METHODS: MethodName[] = [
+  "getInfo",
+  "getAddresses",
+  "stx_getAddresses",
+  "getAccounts",
+  "stx_getAccounts",
+  "stx_getNetworks",
+  "disconnect",
+  "stx_signMessage",
+  "stx_signStructuredMessage",
+  "stx_signTransaction",
+  "stx_transferStx",
+  "stx_transferSip10Ft",
+  "stx_callContract",
+  "stx_deployContract",
+];
+
 const NEEDS_AUTH: MethodName[] = [
   "signatureRequest",
   "structuredDataSignatureRequest",
+  "stx_signMessage",
+  "stx_signStructuredMessage",
+  "stx_signTransaction",
+  "stx_transferStx",
+  "stx_transferSip10Ft",
+  "stx_callContract",
+  "stx_deployContract",
 ];
 
 // ─── UI Components ────────────────────────────────────────────────────────────
@@ -341,13 +571,29 @@ const StatusDot = ({ status }: { status: Status }) => {
   );
 };
 
+function SectionHeader({
+  title,
+  onRunAll,
+}: {
+  title: string;
+  onRunAll: () => void;
+}) {
+  return (
+    <div style={styles.sectionHeader}>
+      <div style={styles.sectionLabel}>{title}</div>
+      <button style={styles.runAllBtn} onClick={onRunAll}>
+        ▶ Run All
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Demo() {
   const [results, setResults] = useState<
     Partial<Record<MethodName, MethodResult>>
   >({});
-  // Track whether auth has been completed so we can show hints in the UI
   const [authed, setAuthed] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState("");
 
@@ -364,12 +610,12 @@ export default function Demo() {
           durationMs: Math.round(performance.now() - t0),
         },
       }));
-      // After a successful auth, update the UI to reflect that we now have an address
       if (name === "authenticationRequest" && cachedStxAddress) {
         setAuthed(true);
         setResolvedAddress(cachedStxAddress);
       }
     } catch (err: any) {
+      console.log(JSON.stringify(err));
       setResults((prev) => ({
         ...prev,
         [name]: {
@@ -381,32 +627,82 @@ export default function Demo() {
     }
   }
 
+  function runGroup(methods: MethodName[]) {
+    methods.reduce((p, n) => p.then(() => invoke(n)), Promise.resolve());
+  }
+
+  function renderCard(name: MethodName) {
+    const meta = METHOD_META[name];
+    const result = results[name];
+    const status: Status = result?.status ?? "idle";
+    const blocked = NEEDS_AUTH.includes(name) && !authed;
+
+    return (
+      <div key={name} style={{ ...styles.card, ...borderByStatus(status) }}>
+        <div style={styles.cardHeader}>
+          <StatusDot status={status} />
+          <span style={styles.methodName}>{meta.label}</span>
+          {blocked && <span style={styles.badge}>auth first</span>}
+          {result?.durationMs !== undefined && (
+            <span style={styles.duration}>{result.durationMs} ms</span>
+          )}
+        </div>
+
+        <p style={styles.desc}>{meta.description}</p>
+
+        {meta.warning && <div style={styles.warning}>⚠ {meta.warning}</div>}
+
+        {result && result.status !== "idle" && (
+          <pre style={{ ...styles.output, ...outputColor(status) }}>
+            {status === "pending"
+              ? "Waiting for wallet…"
+              : status === "error"
+                ? `Error: ${result.error}`
+                : JSON.stringify(result.data, null, 2)}
+          </pre>
+        )}
+
+        <button
+          style={{
+            ...styles.btn,
+            opacity: status === "pending" ? 0.5 : 1,
+            cursor: status === "pending" ? "not-allowed" : "pointer",
+          }}
+          disabled={status === "pending"}
+          onClick={() => invoke(name)}
+        >
+          {status === "pending"
+            ? "⏳ Waiting…"
+            : status === "success"
+              ? "↺ Re-run"
+              : "▶ Run"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.root}>
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <span style={styles.chip}>window.StacksProvider</span>
-          <h1 style={styles.title}>Deprecated Methods Testbed</h1>
+          <span style={styles.chip}>EcoNova · Stacks Provider Testbed</span>
+          <h1 style={styles.title}>Wallet Method Runner</h1>
           <p style={styles.subtitle}>
-            All six methods are marked{" "}
-            <code style={styles.code}>TODO: deprecated</code> in source.
+            Legacy <code style={styles.code}>StacksProvider</code> methods &amp;
+            modern <code style={styles.code}>LeatherProvider.request()</code>{" "}
+            API
           </p>
         </div>
         <button
           style={styles.runAllBtn}
-          onClick={() =>
-            METHOD_ORDER.reduce(
-              (p, n) => p.then(() => invoke(n)),
-              Promise.resolve(),
-            )
-          }
+          onClick={() => runGroup([...LEGACY_METHODS, ...REQUEST_METHODS])}
         >
           ▶ Run All
         </button>
       </div>
 
-      {/* Auth status banner */}
+      {/* Auth banner */}
       <div
         style={{
           ...styles.banner,
@@ -427,69 +723,25 @@ export default function Demo() {
         ) : (
           <span style={{ color: "#f6ad55" }}>
             ⚠ Run <strong>authenticationRequest</strong> first — the STX address
-            is extracted from the auth response and reused by signatureRequest
+            is extracted from the auth response and reused by signed calls
             automatically.
           </span>
         )}
       </div>
 
-      {/* Cards */}
-      <div style={styles.grid}>
-        {METHOD_ORDER.map((name) => {
-          const meta = METHOD_META[name];
-          const result = results[name];
-          const status: Status = result?.status ?? "idle";
-          const blocked = NEEDS_AUTH.includes(name) && !authed;
+      {/* Legacy group */}
+      <SectionHeader
+        title="Legacy (StacksProvider / hiroWallet*)"
+        onRunAll={() => runGroup(LEGACY_METHODS)}
+      />
+      <div style={styles.grid}>{LEGACY_METHODS.map(renderCard)}</div>
 
-          return (
-            <div
-              key={name}
-              style={{ ...styles.card, ...borderByStatus(status) }}
-            >
-              <div style={styles.cardHeader}>
-                <StatusDot status={status} />
-                <span style={styles.methodName}>{meta.label}</span>
-                {blocked && <span style={styles.badge}>auth first</span>}
-                {result?.durationMs !== undefined && (
-                  <span style={styles.duration}>{result.durationMs} ms</span>
-                )}
-              </div>
-
-              <p style={styles.desc}>{meta.description}</p>
-
-              {meta.warning && (
-                <div style={styles.warning}>⚠ {meta.warning}</div>
-              )}
-
-              {result && result.status !== "idle" && (
-                <pre style={{ ...styles.output, ...outputColor(status) }}>
-                  {status === "pending"
-                    ? "Waiting for wallet…"
-                    : status === "error"
-                      ? `Error: ${result.error}`
-                      : JSON.stringify(result.data, null, 2)}
-                </pre>
-              )}
-
-              <button
-                style={{
-                  ...styles.btn,
-                  opacity: status === "pending" ? 0.5 : 1,
-                  cursor: status === "pending" ? "not-allowed" : "pointer",
-                }}
-                disabled={status === "pending"}
-                onClick={() => invoke(name)}
-              >
-                {status === "pending"
-                  ? "⏳ Waiting…"
-                  : status === "success"
-                    ? "↺ Re-run"
-                    : "▶ Run"}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+      {/* request() group */}
+      <SectionHeader
+        title="request() API (LeatherProvider.request)"
+        onRunAll={() => runGroup(REQUEST_METHODS)}
+      />
+      <div style={styles.grid}>{REQUEST_METHODS.map(renderCard)}</div>
     </div>
   );
 }
@@ -559,35 +811,50 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 3,
     fontSize: 12,
   },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    margin: "28px 0 12px",
+    paddingBottom: 8,
+    borderBottom: "1px solid #2d3748",
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#718096",
+    letterSpacing: "0.1em",
+    textTransform: "uppercase" as const,
+  },
   runAllBtn: {
     background: "#2b6cb0",
     color: "#bee3f8",
     border: "none",
     borderRadius: 6,
-    padding: "10px 20px",
-    fontSize: 13,
+    padding: "8px 16px",
+    fontSize: 12,
     fontFamily: "inherit",
     fontWeight: 600,
     cursor: "pointer",
     letterSpacing: "0.04em",
-    whiteSpace: "nowrap",
+    whiteSpace: "nowrap" as const,
   },
   banner: {
     display: "flex",
     alignItems: "center",
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
     gap: 4,
     border: "1px solid",
     borderRadius: 8,
     padding: "12px 16px",
-    marginBottom: 24,
+    marginBottom: 8,
     fontSize: 13,
     lineHeight: 1.5,
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-    gap: 16,
+    gap: 14,
   },
   card: {
     background: "#161b22",
@@ -595,7 +862,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: "18px 20px",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column" as const,
     gap: 10,
     transition: "border-color 0.2s",
   },
@@ -606,7 +873,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   methodName: {
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 13,
     color: "#90cdf4",
     flex: 1,
   },
@@ -643,11 +910,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 5,
     fontSize: 11,
     padding: "10px 12px",
-    overflowX: "auto",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all",
+    overflowX: "auto" as const,
+    whiteSpace: "pre-wrap" as const,
+    wordBreak: "break-all" as const,
     maxHeight: 180,
-    overflowY: "auto",
+    overflowY: "auto" as const,
     margin: 0,
     color: "#a0aec0",
     lineHeight: 1.6,
