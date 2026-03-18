@@ -36,7 +36,7 @@ abstract class Coin {
   Future<String> addressExplorer();
   Map toJson();
   Future<double> getBalance(bool useCache);
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,

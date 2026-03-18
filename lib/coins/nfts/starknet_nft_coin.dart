@@ -95,7 +95,8 @@ class StarknetNFTCoin extends StarknetCoin {
   String get badgeImage => starkNetCoins.first.image;
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(walletData);
@@ -136,7 +137,10 @@ class StarknetNFTCoin extends StarknetCoin {
     ]);
     return tx.when(
       result: (result) {
-        return result.transaction_hash;
+        return (
+          txHash: result.transaction_hash,
+          txRaw: null,
+        );
       },
       error: (error) {
         throw Exception(

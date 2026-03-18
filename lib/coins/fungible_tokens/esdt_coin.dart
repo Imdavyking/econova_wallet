@@ -123,7 +123,9 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   }
 
   @override
-  Future<String> transferToken(String amount, String to, {String? memo}) async {
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
+      {String? memo}) async {
     var sendTransaction = await compute(
       _trnsCoin,
       _TrxCoinParams(
@@ -132,7 +134,10 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
       ),
     );
 
-    return sendTransaction;
+    return (
+      txHash: sendTransaction,
+      txRaw: null,
+    );
   }
 
   @override

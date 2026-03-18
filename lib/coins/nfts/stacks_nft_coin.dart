@@ -107,7 +107,8 @@ class StacksNFTCoin extends StacksCoin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await importData(data);
@@ -159,7 +160,10 @@ class StacksNFTCoin extends StacksCoin {
     if (res.statusCode ~/ 100 != 2) {
       throw Exception('SIP-009 transfer failed: ${res.body}');
     }
-    return jsonDecode(res.body) as String;
+    return (
+      txHash: jsonDecode(res.body) as String,
+      txRaw: HEX.encode(txBytes),
+    );
   }
 
   Future<String?> _getOwner() async {

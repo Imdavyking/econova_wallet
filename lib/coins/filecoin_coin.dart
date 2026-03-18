@@ -375,7 +375,8 @@ class FilecoinCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final amounToSend = amount.toBigIntDec(fileCoinDecimals);
 
@@ -403,6 +404,14 @@ class FilecoinCoin extends Coin {
     final signature = transactionSignLotus(msg, fileCoinDetails.privateKey!);
     const signTypeSecp = 1;
 
+    final signedMsg = json.encode({
+      "Message": msg,
+      "Signature": {
+        "Type": signTypeSecp,
+        "Data": signature,
+      },
+    });
+
     final response = await http.post(
       Uri.parse(baseUrl),
       headers: {'Content-Type': 'application/json'},
@@ -410,15 +419,7 @@ class FilecoinCoin extends Coin {
         "id": 1,
         "jsonrpc": "2.0",
         "method": "Filecoin.MpoolPush",
-        "params": [
-          {
-            "Message": msg,
-            "Signature": {
-              "Type": signTypeSecp,
-              "Data": signature,
-            },
-          }
-        ]
+        "params": [json.decode(signedMsg)],
       }),
     );
 
@@ -429,7 +430,10 @@ class FilecoinCoin extends Coin {
 
     Map jsonDecodedBody = json.decode(responseBody) as Map;
 
-    return jsonDecodedBody['result']['/'];
+    return (
+      txHash: jsonDecodedBody['result']['/'] as String,
+      txRaw: signedMsg,
+    );
   }
 
   @override

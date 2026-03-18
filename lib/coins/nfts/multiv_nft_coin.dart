@@ -121,7 +121,7 @@ class MultiversxNFTCoin extends MultiversxCoin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -137,7 +137,10 @@ class MultiversxNFTCoin extends MultiversxCoin {
       ),
     );
 
-    return sendTransaction;
+    return (
+      txHash: sendTransaction,
+      txRaw: null,
+    );
   }
 }
 

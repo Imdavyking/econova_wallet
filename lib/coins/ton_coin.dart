@@ -228,7 +228,7 @@ class TonCoin extends Coin {
   requireMemo() => true;
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -267,7 +267,7 @@ class TonCoin extends Coin {
       rpc: getRpc(),
     );
 
-    return txHash;
+    return (txHash: txHash, txRaw: null);
   }
 
   @override

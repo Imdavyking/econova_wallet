@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:alan/alan.dart' as cosmos;
 import 'package:alan/proto/cosmos/bank/v1beta1/export.dart' as bank;
+import 'package:hex/hex.dart';
 import 'package:http/http.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/main.dart';
@@ -148,7 +149,7 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   // ── Transfer: send this token, pay fees in feeDenom ─────────────────────────
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -193,10 +194,17 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
       pubKeyTypeUrl: pubKeyTypeUrl,
     );
 
+    final txBytes = tx.writeToBuffer(); // protobuf bytes
+
     final txSender = cosmos.TxSender.fromNetworkInfo(networkInfo);
     final response = await txSender.broadcastTx(tx);
 
-    if (response.isSuccessful) return response.txhash;
+    if (response.isSuccessful) {
+      return (
+        txHash: response.txhash,
+        txRaw: HEX.encode(txBytes),
+      );
+    }
     return null;
   }
 

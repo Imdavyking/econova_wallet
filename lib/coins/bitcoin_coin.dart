@@ -213,13 +213,15 @@ class BitcoinCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final satoshi = amount.toBigIntDec(bitCoinDecimals);
 
     int amountToSend = satoshi.toInt();
 
-    return await _sendBTCType(to, amountToSend);
+    final result = await _sendBTCType(to, amountToSend);
+    return (txHash: result.txHash, txRaw: result.txRaw);
   }
 
   @override
@@ -287,7 +289,7 @@ class BitcoinCoin extends Coin {
     return jsonDecode(request.body)['data']['txs'];
   }
 
-  Future<String> _sendBTCType(
+  Future<({String txHash, String txRaw})> _sendBTCType(
       String destinationAddress, int satoshiToSend) async {
     if (satoshiToSend < satoshiDustAmount) {
       throw Exception('dust amount given, bitcoin too small to send');
@@ -358,7 +360,10 @@ class BitcoinCoin extends Coin {
       print(sendTransaction.body);
     }
 
-    return json.decode(sendTransaction.body)['data']['txid'];
+    return (
+      txHash: json.decode(sendTransaction.body)['data']['txid'] as String,
+      txRaw: hexBuilt,
+    );
   }
 
   @override

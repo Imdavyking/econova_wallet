@@ -190,7 +190,9 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
     throw Exception('unknown tron type');
   }
 
-  Future<String?> _transferV20(String amount, String to, {String? memo}) async {
+  Future<({String txHash, String? txRaw})?> _transferV20(
+      String amount, String to,
+      {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final tronDetails = await importData(data);
 
@@ -244,12 +246,14 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
     final result = await rpc.request(TronRequestBroadcastHex(transaction: raw));
 
     if (result.isSuccess) {
-      return result.txId;
+      return (txHash: result.txId!, txRaw: raw);
     }
     throw Exception('sending failed');
   }
 
-  Future<String?> _transferV10(String amount, String to, {String? memo}) async {
+  Future<({String txHash, String? txRaw})?> _transferV10(
+      String amount, String to,
+      {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final tronDetails = await importData(data);
 
@@ -299,13 +303,13 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
     final result = await rpc.request(TronRequestBroadcastHex(transaction: raw));
 
     if (result.isSuccess) {
-      return result.txId;
+      return (txHash: result.txId!, txRaw: raw);
     }
     throw Exception('sending failed');
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,

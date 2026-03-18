@@ -347,7 +347,8 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final lamportToSend = amount.toBigIntDec(solDecimals);
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -359,13 +360,16 @@ class SolanaCoin extends Coin {
       privateKey: privateKeyBytes,
     );
 
-    final signature = await getProxy().transferLamports(
+    final txHash = await getProxy().transferLamports(
       source: keyPair,
       destination: solana.Ed25519HDPublicKey.fromBase58(to),
       lamports: lamportToSend.toInt(),
       memo: memo,
     );
-    return signature;
+    return (
+      txHash: txHash,
+      txRaw: null,
+    );
   }
 
   @override

@@ -318,17 +318,17 @@ class AItools {
         if (confirmation != null) return confirmation;
 
         try {
-          final txHash = await token.transferToken(
+          final result = await token.transferToken(
             amount.toString(),
             recipient,
             memo: memo,
           );
-          if (txHash == null || txHash.isEmpty) {
+          if (result == null) {
             return '${token.getSymbol()} Transaction failed: no transaction hash returned.';
           }
           final successMessage =
               'Sent $amount ${token.getSymbol()} to $recipient.\n'
-              'Transaction hash: $txHash ${coin.formatTxHash(txHash)}';
+              'Transaction hash: ${result.txHash} ${coin.formatTxHash(result.txHash)}';
           debugPrint(successMessage);
           return successMessage;
         } catch (e) {

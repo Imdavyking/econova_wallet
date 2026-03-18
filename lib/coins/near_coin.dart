@@ -29,14 +29,14 @@ class NearDappTxResponse {
   const NearDappTxResponse({required this.signature});
 }
 
-class _NearTokenMetaData {
+class NearTokenMetaData {
   String name;
   String symbol;
   int decimals;
   String spec;
   String icon;
 
-  _NearTokenMetaData({
+  NearTokenMetaData({
     required this.name,
     required this.symbol,
     required this.decimals,
@@ -189,7 +189,7 @@ class NearCoin extends Coin {
     return ed.sign(account.keyPair.privateKey, message);
   }
 
-  Future<_NearTokenMetaData?> getMetaData(String contractID) async {
+  Future<NearTokenMetaData?> getMetaData(String contractID) async {
     final account = await getAccount();
 
     String method = 'ft_metadata';
@@ -204,7 +204,7 @@ class NearCoin extends Coin {
 
     final decoded = json.decode(ascii.decode(blRst));
 
-    return _NearTokenMetaData(
+    return NearTokenMetaData(
       name: decoded['name'],
       symbol: decoded['symbol'],
       decimals: decoded['decimals'],
@@ -432,7 +432,7 @@ class NearCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -447,7 +447,12 @@ class NearCoin extends Coin {
 
     String transactionHash = trans['result']['transaction']['hash'];
 
-    return transactionHash.replaceAll('\n', '');
+    final txHash = transactionHash.replaceAll('\n', '');
+
+    return (
+      txHash: txHash,
+      txRaw: null,
+    );
   }
 
   @override

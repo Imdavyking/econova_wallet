@@ -240,7 +240,8 @@ class TronCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final tronDetails = await importData(data);
@@ -288,7 +289,7 @@ class TronCoin extends Coin {
     final result = await rpc.request(TronRequestBroadcastHex(transaction: raw));
 
     if (result.isSuccess) {
-      return result.txId;
+      return (txHash: result.txId!, txRaw: raw);
     }
 
     debugPrint(result.toString());

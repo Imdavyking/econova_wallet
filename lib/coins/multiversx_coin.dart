@@ -256,7 +256,8 @@ class MultiversxCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
@@ -265,7 +266,10 @@ class MultiversxCoin extends Coin {
       TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
-    return sendTransaction;
+    return (
+      txHash: sendTransaction,
+      txRaw: null,
+    );
   }
 
   static Uint8List serializeForSigning(String message) {

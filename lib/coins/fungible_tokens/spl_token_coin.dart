@@ -116,7 +116,9 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   }
 
   @override
-  Future<String> transferToken(String amount, String to, {String? memo}) async {
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
+      {String? memo}) async {
     final tokenToSend = amount.toBigIntDec(mintDecimals);
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
@@ -137,14 +139,17 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
       mintKey: mintKey,
     );
 
-    final signature = await getProxy().transferSplToken(
+    final txHash = await getProxy().transferSplToken(
       mint: mintKey,
       destination: toKey,
       amount: tokenToSend.toInt(),
       owner: solanaKeyPair,
       memo: memo,
     );
-    return signature;
+    return (
+      txHash: txHash,
+      txRaw: null,
+    );
   }
 
   @override

@@ -465,7 +465,8 @@ class FuseCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final fuseSdk = await getSdk();
     final wei = amount.toBigIntDec(decimals());
@@ -479,7 +480,13 @@ class FuseCoin extends Coin {
       wei,
     );
     final ev = await res.wait();
-    return ev?.transactionHash;
+
+    if (ev == null) return null;
+
+    return (
+      txHash: ev.transactionHash as String,
+      txRaw: null,
+    );
   }
 
   @override

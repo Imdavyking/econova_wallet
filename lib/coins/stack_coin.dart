@@ -372,7 +372,8 @@ class StacksCoin extends Coin {
   // ─── Transfer ───────────────────────────────────────────────────────────────
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await importData(data);
@@ -421,7 +422,10 @@ class StacksCoin extends Coin {
       throw Exception('STX broadcast failed: ${res.body}');
     }
 
-    return jsonDecode(res.body) as String;
+    return (
+      txHash: jsonDecode(res.body) as String,
+      txRaw: HEX.encode(txBytes),
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:hex/hex.dart';
 
 import '../../service/wallet_service.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -157,7 +158,8 @@ class ERCNFTCoin extends EthereumCoin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     await fillParameter(amount, to);
 
@@ -192,7 +194,10 @@ class ERCNFTCoin extends EthereumCoin {
     final transactionHash = await client.sendRawTransaction(trans);
 
     await client.dispose();
-    return transactionHash;
+    return (
+      txHash: transactionHash,
+      txRaw: HEX.encode(trans),
+    );
   }
 
   @override

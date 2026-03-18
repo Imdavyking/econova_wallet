@@ -166,7 +166,7 @@ class StellarCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -206,11 +206,16 @@ class StellarCoin extends Coin {
       cluster,
     );
 
+    final txRaw = transaction.toEnvelopeXdrBase64();
+
     stellar.SubmitTransactionResponse response =
         await sdk.submitTransaction(transaction);
 
     if (response.success) {
-      return response.hash;
+      return (
+        txHash: response.hash!,
+        txRaw: txRaw,
+      );
     }
     throw Exception('could not send coin');
   }

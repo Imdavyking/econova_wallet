@@ -195,7 +195,7 @@ class SuiCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -224,7 +224,7 @@ class SuiCoin extends Coin {
 
     final waitForLocalExecutionTx = await client.paySui(txn);
 
-    return waitForLocalExecutionTx.digest;
+    return (txHash: waitForLocalExecutionTx.digest, txRaw: null);
   }
 
   @override

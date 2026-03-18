@@ -89,7 +89,8 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final account = await getAccount();
 
@@ -118,7 +119,10 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
     }
 
     if (entry['final_execution_status'] == 'EXECUTED_OPTIMISTIC') {
-      return entry['transaction']['hash'];
+      return (
+        txHash: entry['transaction']['hash'] as String,
+        txRaw: null,
+      );
     }
 
     return null;

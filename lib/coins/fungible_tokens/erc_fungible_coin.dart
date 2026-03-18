@@ -180,7 +180,8 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final sendAmt = amount.toBigIntDec(decimals());
     final parameters_ = [EthereumAddress.fromHex(to), sendAmt];
@@ -215,7 +216,10 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     final transactionHash = await client.sendRawTransaction(trans);
 
     await client.dispose();
-    return transactionHash;
+    return (
+      txHash: transactionHash,
+      txRaw: HEX.encode(trans),
+    );
   }
 
   Future<_ERC20Meta?> getERC20Meta() async {

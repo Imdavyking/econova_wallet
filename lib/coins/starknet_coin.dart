@@ -516,7 +516,7 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -559,7 +559,10 @@ class StarknetCoin extends Coin {
     );
 
     return trx.when(
-      result: (result) => result.transaction_hash,
+      result: (result) => (
+        txHash: result.transaction_hash,
+        txRaw: null,
+      ),
       error: (error) {
         throw Exception("Error transfer (${error.code}): ${error.message}");
       },

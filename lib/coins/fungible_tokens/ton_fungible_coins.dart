@@ -195,7 +195,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -245,7 +245,10 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       ),
     );
 
-    return tx;
+    return (
+      txHash: tx,
+      txRaw: null,
+    );
   }
 
   Cell buildMessageBody(String? memo) {

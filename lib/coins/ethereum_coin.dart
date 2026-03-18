@@ -544,7 +544,8 @@ class EthereumCoin extends Coin {
   String savedTransKey() => '$default_$rpc Details';
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final client = Web3Client(rpc, Client());
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -564,7 +565,11 @@ class EthereumCoin extends Coin {
       chainId: chainId,
     );
 
-    return await client.sendRawTransaction(trans);
+    final txHash = await client.sendRawTransaction(trans);
+    return (
+      txHash: txHash,
+      txRaw: HEX.encode(trans),
+    );
   }
 
   @override

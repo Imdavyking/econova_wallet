@@ -193,7 +193,7 @@ class ZilliqaCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -216,7 +216,7 @@ class ZilliqaCoin extends Coin {
     final signed = await acc!.signTransaction(txn);
     final sent = await signed.sendTransaction();
 
-    return sent!.transaction.transactionID;
+    return (txHash: sent!.transaction.transactionID!, txRaw: null);
   }
 
   @override

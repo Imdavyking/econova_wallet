@@ -529,7 +529,8 @@ class CosmosCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final networkInfo = getNetworkInfo();
     final uatomToSend = amount.toBigIntDec(decimals());
@@ -564,12 +565,16 @@ class CosmosCoin extends Coin {
       isEthSecp256: cosmos.Wallet.isEthSecp256(path),
       pubKeyTypeUrl: pubKeyTypeUrl,
     );
+    final txBytes = tx.writeToBuffer(); // protobuf bytes
 
     final txSender = cosmos.TxSender.fromNetworkInfo(networkInfo);
     final response = await txSender.broadcastTx(tx);
 
     if (response.isSuccessful) {
-      return response.txhash;
+      return (
+        txHash: response.txhash,
+        txRaw: HEX.encode(txBytes),
+      );
     }
     if (kDebugMode) {
       print(response.toString());

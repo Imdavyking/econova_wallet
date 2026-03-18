@@ -174,7 +174,8 @@ class AptosCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final miniAptostoSend = amount.toBigIntDec(decimals());
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -186,11 +187,16 @@ class AptosCoin extends Coin {
     final aptosClient = AptosClient(rpc, enableDebugLog: kDebugMode);
     final coinClient = CoinClient(aptosClient);
 
-    return await coinClient.transfer(
+    final txHash = await coinClient.transfer(
       keyPair,
       to,
       miniAptostoSend,
       createReceiverIfMissing: true,
+    );
+
+    return (
+      txHash: txHash,
+      txRaw: null,
     );
   }
 

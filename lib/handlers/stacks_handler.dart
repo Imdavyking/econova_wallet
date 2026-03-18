@@ -367,8 +367,8 @@ class StacksHandler extends BaseWebViewHandler {
     StacksCoin coin,
     String sendingAddress,
   ) async {
-    final txHexUnsign = (jsData.object['transaction'] as String?) ?? '';
-    if (txHexUnsign.isEmpty) {
+    final inputTx = (jsData.object['transaction'] as String?) ?? '';
+    if (inputTx.isEmpty) {
       await _sendError(
           'stx_signTransaction requires a transaction hex', jsData);
       return;
@@ -377,7 +377,7 @@ class StacksHandler extends BaseWebViewHandler {
     await signMessage(
       context: context,
       messageType: '',
-      data: txHexUnsign,
+      data: inputTx,
       networkIcon: null,
       name: 'Sign Transaction',
       onConfirm: () async {
@@ -386,14 +386,12 @@ class StacksHandler extends BaseWebViewHandler {
           final keyPair = await coin.importData(data);
           final privBytes = txDataToUintList(keyPair.privateKey!);
           final rawTx = Uint8List.fromList(HEX.decode(
-              txHexUnsign.startsWith('0x')
-                  ? txHexUnsign.substring(2)
-                  : txHexUnsign));
+              inputTx.startsWith('0x') ? inputTx.substring(2) : inputTx));
           final signedTx = stacksResignTx(rawTx, privBytes);
           final signedHex = HEX.encode(signedTx);
           await _sendResponse(jsData, {
-            'transaction': txHexUnsign,
-            'txHex': signedHex,
+            'transaction': inputTx, // original unsigned — echoed back
+            'txHex': signedHex, // signed result
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -420,9 +418,9 @@ class StacksHandler extends BaseWebViewHandler {
     final amount =
         (obj['amount'] as String?) ?? (obj['value'] as String?) ?? '0';
     final memo = obj['memo'] as String?;
-    if (!context.mounted) return;
     final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
         BigInt.from(stacksMicroPerStx);
+    if (!context.mounted) return;
     await signMessage(
       context: context,
       messageType: '',
@@ -432,11 +430,15 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'STX Transfer',
       onConfirm: () async {
         try {
-          final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
+          final sendAmt = (BigInt.tryParse(amount) ?? BigInt.zero) /
               BigInt.from(stacksMicroPerStx);
-          final txHash = await coin.transferToken(displayAmount.toString(), to,
-              memo: memo);
-          await _sendResponse(jsData, {'txid': txHash ?? ''});
+          final result =
+              await coin.transferToken(sendAmt.toString(), to, memo: memo);
+          await _sendResponse(jsData, {
+            'txid': result?.txHash ?? '',
+            'txId': result?.txHash ?? '',
+            'txRaw': result?.txRaw ?? '',
+          });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
         } finally {
@@ -457,6 +459,8 @@ class StacksHandler extends BaseWebViewHandler {
     String sendingAddress,
   ) async {
     final obj = jsData.object;
+
+    // ── Parse asset field (request() path) or legacy fields ──────────────
     String contractAddress;
     String contractName;
     final assetField = obj['asset'] as String?;
@@ -523,8 +527,12 @@ class StacksHandler extends BaseWebViewHandler {
       name: '${tokenCoin.symbol} Transfer',
       onConfirm: () async {
         try {
-          final txHash = await tokenCoin?.transferToken(amount, to, memo: memo);
-          await _sendResponse(jsData, {'txHash': txHash ?? ''});
+          final result = await tokenCoin?.transferToken(amount, to, memo: memo);
+          await _sendResponse(jsData, {
+            'txid': result?.txHash ?? '',
+            'txId': result?.txHash ?? '',
+            'txRaw': result?.txRaw ?? '',
+          });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
         } finally {
@@ -542,8 +550,20 @@ class StacksHandler extends BaseWebViewHandler {
 
   Future<void> _callContract(_StacksMessage jsData, StacksCoin coin) async {
     final obj = jsData.object;
-    final contractAddress = obj['contractAddress'] as String? ?? '';
-    final contractName = obj['contractName'] as String? ?? '';
+
+    // ── Parse contract field (request() path) or legacy fields ──────────────
+    String contractAddress;
+    String contractName;
+    final contractField = obj['contract'] as String?;
+    if (contractField != null && contractField.contains('.')) {
+      final parts = contractField.split('.');
+      contractAddress = parts[0];
+      contractName = parts[1];
+    } else {
+      contractAddress = obj['contractAddress'] as String? ?? '';
+      contractName = obj['contractName'] as String? ?? '';
+    }
+
     final functionName = obj['functionName'] as String? ?? '';
     final rawArgs = (obj['functionArgs'] as List?)?.cast<String>() ?? [];
 
@@ -574,14 +594,19 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'Contract Call',
       onConfirm: () async {
         try {
-          final txHash = await _buildAndBroadcastContractCall(
+          final result = await _buildAndBroadcastContractCall(
             coin: coin,
             contractAddress: contractAddress,
             contractName: contractName,
             functionName: functionName,
             rawArgs: rawArgs,
           );
-          await _sendResponse(jsData, {'txHash': txHash});
+          await _sendResponse(jsData, {
+            'txid': result.txHash,
+            'txId': result.txHash,
+            'txRaw': result.txRaw,
+            'transaction': result.txRaw,
+          });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
         } finally {
@@ -599,8 +624,11 @@ class StacksHandler extends BaseWebViewHandler {
 
   Future<void> _deployContract(_StacksMessage jsData, StacksCoin coin) async {
     final obj = jsData.object;
-    final contractName = obj['contractName'] as String? ?? '';
-    final codeBody = obj['codeBody'] as String? ?? '';
+    // Support both request() path (name/clarityCode) and legacy (contractName/codeBody)
+    final contractName =
+        obj['name'] as String? ?? obj['contractName'] as String? ?? '';
+    final codeBody =
+        obj['clarityCode'] as String? ?? obj['codeBody'] as String? ?? '';
     final clarityVersion = (obj['clarityVersion'] as num?)?.toInt() ?? 2;
 
     if (contractName.isEmpty || codeBody.isEmpty) {
@@ -656,9 +684,13 @@ class StacksHandler extends BaseWebViewHandler {
             throw Exception('deploy failed: ${res.body}');
           }
           final txHash = jsonDecode(res.body) as String;
+          final txRaw = HEX.encode(txBytes);
           await _sendResponse(jsData, {
             'txid': txHash,
-            'contractId': '${keyPair.address}.$contractName'
+            'txId': txHash,
+            'txRaw': txRaw,
+            'transaction': txRaw,
+            'contractId': '${keyPair.address}.$contractName',
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -675,10 +707,6 @@ class StacksHandler extends BaseWebViewHandler {
 
   // ── Legacy hiroWallet* handlers ───────────────────────────────────────────
 
-  /// CHANGED: Added Path 3 — contract_call without txHex in JWT.
-  /// Old @stacks/connect sends txType='contract_call' with contractAddress,
-  /// contractName, functionName, functionArgs but no pre-serialized txHex.
-  /// We now build and broadcast the transaction ourselves.
   Future<void> _legacyTransactionRequest(
     _StacksMessage jsData,
     StacksCoin coin,
@@ -696,7 +724,6 @@ class StacksHandler extends BaseWebViewHandler {
     final contractAddress = decoded?['contractAddress'] as String? ?? '';
     final contractName = decoded?['contractName'] as String? ?? '';
     final functionName = decoded?['functionName'] as String? ?? '';
-    // functionArgs from old @stacks/connect are hex-encoded Clarity values
     final rawFunctionArgs =
         (decoded?['functionArgs'] as List?)?.whereType<String>().toList() ?? [];
 
@@ -705,7 +732,9 @@ class StacksHandler extends BaseWebViewHandler {
       displayInfo =
           'Contract call: $contractAddress.$contractName\nFunction: $functionName';
     } else if (txType == 'token_transfer' && recipient.isNotEmpty) {
-      displayInfo = 'Transfer $amount µSTX to $recipient';
+      final displayAmt = (BigInt.tryParse(amount) ?? BigInt.zero) /
+          BigInt.from(stacksMicroPerStx);
+      displayInfo = 'Transfer $displayAmt STX to $recipient';
     } else if (txType == 'smart_contract') {
       displayInfo = 'Deploy contract: ${decoded?['contractName'] ?? ''}';
     } else {
@@ -746,9 +775,10 @@ class StacksHandler extends BaseWebViewHandler {
             // ── Path 2: STX transfer ───────────────────────────────────────
             final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
                 BigInt.from(stacksMicroPerStx);
-            txHash =
-                await coin.transferToken(displayAmount.toString(), recipient) ??
-                    '';
+            final result =
+                await coin.transferToken(displayAmount.toString(), recipient);
+            txHash = result?.txHash ?? '';
+            txRaw = result?.txRaw ?? '';
           } else if (txType == 'contract_call' &&
               contractAddress.isNotEmpty &&
               contractName.isNotEmpty &&
@@ -771,9 +801,9 @@ class StacksHandler extends BaseWebViewHandler {
           await _legacySendResponse(responseName, {
             'transactionRequest': jwtValue,
             'transactionResponse': {
-              'txid': txHash, // lowercase — kept for back-compat
-              'txId': txHash, // camelCase — what Xverse/newer dApps read
-              'txRaw': txRaw, // signed tx hex
+              'txid': txHash,
+              'txId': txHash,
+              'txRaw': txRaw,
             },
           });
         } catch (e) {
@@ -789,17 +819,6 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  /// CHANGED: authenticationResponse is now an unsecured JWT string instead
-  /// of a plain {address, publicKey} object.
-  ///
-  /// Why: dApps call decodeToken(authenticationResponse) expecting a JWT.
-  /// If they receive an object, decodeToken() throws, extractStxAddress()
-  /// returns "", cachedStxAddress stays empty, and any subsequent
-  /// signatureRequest() call is blocked with "Run authenticationRequest first".
-  ///
-  /// Fix: build an unsecured JWT (alg=none, format: header.payload.) whose
-  /// payload includes both payload.address (extractStxAddress fallback) and
-  /// payload.profile.stxAddress.testnet (primary check in extractStxAddress).
   Future<void> _legacyAuthenticationRequest(
     _StacksMessage jsData,
     String sendingAddress,
@@ -810,7 +829,6 @@ class StacksHandler extends BaseWebViewHandler {
     final responseName =
         jsData.legacyResponseName ?? 'hiroWalletAuthenticationResponse';
 
-    // Decode the INCOMING request JWT to surface app info in the modal
     final decoded = _decodeJwt(jwtValue);
     final appName = (decoded?['appDetails'] as Map?)?['name'] as String? ??
         decoded?['domain_name'] as String? ??
@@ -825,8 +843,6 @@ class StacksHandler extends BaseWebViewHandler {
         try {
           await saveWeb3Address('stacks', sendingAddress);
 
-          // Build a proper ES256K-signed authenticationResponse JWT
-          // that mirrors what the real Leather wallet returns
           final authResponseJwt = _buildSignedAuthResponse(
             accountDetail: accountDetail,
             sendingAddress: sendingAddress,
@@ -860,22 +876,17 @@ class StacksHandler extends BaseWebViewHandler {
     final privBytes = txDataToUintList(accountDetail.privateKey!);
     final pubKey = accountDetail.publicKey;
 
-    // base64url without padding
     String b64url(String s) =>
         base64Url.encode(utf8.encode(s)).replaceAll('=', '');
 
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-    // Header — ES256K so dApps know it's properly signed
     final header = b64url('{"typ":"JWT","alg":"ES256K"}');
     final isTestnet = stackCoins.first.isTestnet;
 
-    // Payload mirrors the real Leather authenticationResponse structure
     final payload = b64url(json.encode({
       'jti': '${now}_auth_response',
       'iat': now,
       'exp': now + 86400,
-      // iss = the wallet's DID derived from the STX address
       'iss': 'did:btc-addr:$sendingAddress',
       'public_keys': [pubKey],
       'profile': {
@@ -893,8 +904,6 @@ class StacksHandler extends BaseWebViewHandler {
     }));
 
     final signingInput = '$header.$payload';
-
-    // Sign with the wallet's secp256k1 private key (same key used for STX txs)
     final hash = stacksSha256(Uint8List.fromList(utf8.encode(signingInput)));
     final sigBytes = stacksSignRaw(privBytes, hash);
     final sig = base64Url.encode(sigBytes).replaceAll('=', '');
@@ -976,7 +985,6 @@ class StacksHandler extends BaseWebViewHandler {
 
   // ── JWT helpers ───────────────────────────────────────────────────────────
 
-  /// Decodes any JWT (including unsecured alg=none) and returns the payload.
   static Map<String, dynamic>? _decodeJwt(String jwt) {
     try {
       final parts = jwt.split('.');
@@ -992,23 +1000,15 @@ class StacksHandler extends BaseWebViewHandler {
     }
   }
 
-  /// Builds an RFC 7519 unsecured JWT (alg=none).
-  /// Format: base64url(header) . base64url(payload) . (empty signature)
-  /// Parseable by jsontokens' decodeToken() on the JS/TS side.
   static String _buildUnsecuredJwt(Map<String, dynamic> payload) {
-    // base64url with no padding
     String b64url(String input) =>
         base64Url.encode(utf8.encode(input)).replaceAll('=', '');
-
     final header = b64url('{"typ":"JWT","alg":"none"}');
     final pay = b64url(json.encode(payload));
-    return '$header.$pay.'; // trailing dot = empty signature segment
+    return '$header.$pay.';
   }
 
   // ── Shared contract-call builder / broadcaster ────────────────────────────
-  //
-  // Extracted from _callContract so _legacyTransactionRequest can reuse it
-  // for contract_call JWTs that don't include a pre-serialized txHex.
 
   Future<({String txHash, String txRaw})> _buildAndBroadcastContractCall({
     required StacksCoin coin,
