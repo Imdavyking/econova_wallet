@@ -2,8 +2,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:typed_data';
-
+import '../../save_goal/usdcx_goal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
@@ -51,6 +50,11 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 
   @override
   String tokenAddress() => '$contractAddress.$contractName';
+  @override
+  Widget? getGoalPage() {
+    if (contractName == 'usdcx') return USDCxGoalsPage(coin: this);
+    return null;
+  }
 
   @override
   String contractExplorer() {
