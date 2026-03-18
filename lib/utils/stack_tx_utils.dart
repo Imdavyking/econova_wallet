@@ -364,57 +364,8 @@ Uint8List _varuint(int value) {
   }
 }
 
-/// Attempts to recover the compressed public key for [sig] using [recId].
-/// Returns null if the recovery point is at infinity or off the curve.
-Uint8List? _recoverPublicKey(
-  Uint8List hash,
-  pc.ECSignature sig,
-  int recId,
-  pc.ECDomainParameters params,
-) {
-  try {
-    final n = params.n;
-    final x = sig.r + BigInt.from(recId ~/ 2) * n;
-    if (x >= BigInt.from(params.curve.fieldSize)) return null;
 
-    final R = params.curve.decompressPoint(recId & 1, x);
-
-    final e = BigInt.parse(HEX.encode(hash), radix: 16);
-    final rInv = sig.r.modInverse(n);
-    final eNeg = (-e) % n;
-
-    // Q = rInv·s·R + rInv·(-e)·G  — ECPoint.operator* expects BigInt
-    final sScalar = rInv * sig.s % n;
-    final eScalar = rInv * eNeg % n;
-    final Q = (R * sScalar)! + (params.G * eScalar)!;
-    if (Q == null || Q.isInfinity) return null;
-
-    // Return compressed public key (33 bytes)
-    return Q.getEncoded(true);
-  } catch (_) {
-    return null;
-  }
-}
-
-Uint8List _bigIntTo32Bytes(BigInt v) {
-  final hex = v.toRadixString(16).padLeft(64, '0');
-  return Uint8List.fromList(HEX.decode(hex));
-}
-
-// ─── ADD TO stack_tx_utils.dart ───────────────────────────────────────────────
-//
-// Paste this block anywhere after the existing imports in stack_tx_utils.dart.
-// It requires no new imports beyond what the file already has:
-//   dart:typed_data, package:hex/hex.dart, and the secp256k1 signer that
-//   stacksBuildSignedTx already uses internally.
-//
-// The only extra dependency is SHA-256, which is available via the
-// `blockchain_utils` package already imported elsewhere in the project
-// (look for sha256 / SHA256Digest usage in rpc_urls.dart / other utils).
-// If your stack_tx_utils.dart already imports a SHA-256 helper, use that.
-// Otherwise add:  import 'package:crypto/crypto.dart';
-// and replace stacksSha256(data) → sha256.convert(data).bytes.
-// ─────────────────────────────────────────────────────────────────────────────
+/// ──────────────────────────────────────────────────────────────────────────
 
 /// Signs an already-computed [hash] directly with secp256k1 — no message
 /// prefix applied. Used for SIP-018 structured messages where the caller
@@ -425,7 +376,7 @@ Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
   final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
   final r = stacksBigIntTo32Bytes(sig.r);
   final s = stacksBigIntTo32Bytes(sig.s);
-  return Uint8List.fromList([...r, ...s, recoveryId]); // VRS for raw usage
+  return Uint8List.fromList([...r, ...s, recoveryId]); // RSV for raw usage
 }
 
 /// Re-signs a pre-serialised Stacks transaction [rawTx] with [privKey].
