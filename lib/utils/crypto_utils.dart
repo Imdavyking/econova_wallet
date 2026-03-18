@@ -121,14 +121,12 @@ selectImage({
     btnCancelColor: Colors.blue,
     btnOkColor: Colors.blue,
     btnCancelOnPress: () async {
-      final file =
-          await ImagePicker().pickImage(source: ImageSource.camera);
+      final file = await ImagePicker().pickImage(source: ImageSource.camera);
       if (file == null) return;
       onSelect(file);
     },
     btnOkOnPress: () async {
-      final file =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      final file = await ImagePicker().pickImage(source: ImageSource.gallery);
       if (file == null) return;
       onSelect(file);
     },
