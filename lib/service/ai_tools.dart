@@ -1,4 +1,5 @@
 import "dart:convert";
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
@@ -6,6 +7,7 @@ import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
+import "package:wallet_app/save_goal/usdcx_goal.dart";
 import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
@@ -13,8 +15,11 @@ import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
 import "package:wallet_app/screens/navigator_service.dart";
-import "./ai_confirm_transaction.dart";
-import "./ai_agent_service.dart";
+import "package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart";
+import "package:wallet_app/service/wallet_service.dart";
+import "package:wallet_app/utils/stack_tx_utils.dart";
+import './ai_confirm_transaction.dart';
+import './ai_agent_service.dart';
 import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
@@ -210,14 +215,12 @@ class AItools {
         final walletAddress = toolInput.walletAddress;
         final tokenAddress = toolInput.tokenAddress;
 
-        // Resolve token silently from current network — no switch needed
         Coin token = coin;
         if (tokenAddress != AIAgentService.defaultCoinTokenAddress) {
           final found = coin.findToken(tokenAddress);
           if (found != null) {
             token = found;
           } else {
-            // Not on current network — fall back to searching all chains
             final fallback = supportedChains.firstWhereOrNull((t) =>
                 t.tokenAddress() == tokenAddress ||
                 t.getSymbol().toLowerCase() == tokenAddress.toLowerCase());
@@ -285,16 +288,12 @@ class AItools {
         if (recipient.isEmpty) return 'Recipient address is empty.';
         if (amount <= 0) return 'Amount must be greater than zero.';
 
-        // ── Resolve token silently from current network ──────────────────────
-        // Tokens on the active coin's network are used directly.
-        // No network switch is needed for same-network tokens.
         Coin token = coin;
         if (tokenAddress != AIAgentService.defaultCoinTokenAddress) {
           final found = coin.findToken(tokenAddress);
           if (found != null) {
             token = found;
           } else {
-            // Not found on current network
             return 'Token $tokenAddress is not available on the ${coin.getName()} network. '
                 'Please switch to the correct network first.';
           }
@@ -738,7 +737,7 @@ class AItools {
       getInputFromJson: _MintUSDCxInput.fromJson,
     );
 
-    // ── QRY_httpRequest ─────────────────────────────────────────────────────────────
+    // ── QRY_httpRequest ─────────────────────────────────────────────────────────
 
     final httpRequestTool = Tool.fromFunction<_HttpRequestInput, String>(
       name: 'QRY_httpRequest',
@@ -809,11 +808,9 @@ class AItools {
             return 'HTTP ${response.statusCode}: ${response.body}';
           }
 
-          // Detect content type and return accordingly
           final ct = response.headers['content-type'] ?? '';
           if (ct.contains('application/json')) {
             try {
-              // Pretty print JSON so the AI can read it better
               return jsonEncode(jsonDecode(response.body));
             } catch (_) {}
           }
@@ -835,7 +832,6 @@ class AItools {
           'the user does not need to switch for same-network tokens. '
           'Only a full network switch (CMD_switchCoin) is needed if the '
           'server requires a completely different blockchain.',
-      // ── CMD_x402Pay input schema ─────────────────────────────────────────────────
       inputJsonSchema: const {
         'type': 'object',
         'properties': {
@@ -897,6 +893,276 @@ class AItools {
       getInputFromJson: _GetX402PayInput.fromJson,
     );
 
+    // ── QRY_getSavingsGoals ─────────────────────────────────────────────────────
+
+    final getSavingsGoalsTool =
+        Tool.fromFunction<_GetSavingsGoalsInput, String>(
+      name: 'QRY_getSavingsGoals',
+      description:
+          'Lists all USDCx savings goals for the current user with balance, '
+          'target, and progress percentage. Only available on Stacks network.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {},
+        'required': [],
+      },
+      func: (final _GetSavingsGoalsInput input) async {
+        final usdcx = coin.networkTokens
+            .whereType<SIP010Coin>()
+            .firstWhereOrNull((c) => c.contractName == 'usdcx');
+
+        if (usdcx == null) {
+          return 'Savings goals are only available on the Stacks network. '
+              'Please switch to Stacks first.';
+        }
+
+        final data = WalletService.getActiveKey(walletImportType)!.data;
+        final keyPair = await usdcx.importData(data);
+        final address = keyPair.address;
+        final api = stacksApiUrl(usdcx.isTestnet);
+
+        final storedNames = loadStoredGoalNames(address);
+        if (storedNames.isEmpty) {
+          return 'You have no savings goals yet. '
+              'Use CMD_createSavingsGoal to create one.';
+        }
+
+        final buffer = StringBuffer('Your USDCx savings goals:\n\n');
+        int found = 0;
+
+        for (final name in storedNames) {
+          try {
+            final res = await http.post(
+              Uri.parse(
+                  '$api/v2/contracts/call-read/$savingsContractAddress/$savingsContractName/get-progress'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'sender': address,
+                'arguments': [
+                  hexSerialize(clarityStandardPrincipalFromAddress(address)),
+                  hexSerialize(clarityStringAscii(name)),
+                ],
+              }),
+            );
+
+            if (res.statusCode ~/ 100 != 2) continue;
+            final body = jsonDecode(res.body) as Map;
+            if (body['okay'] != true) continue;
+
+            final goal = parseProgressResult(name, body['result'] as String);
+            if (goal == null) continue;
+
+            final pct = goal.target > 0
+                ? ((goal.balance / goal.target) * 100)
+                    .clamp(0.0, 100.0)
+                    .toStringAsFixed(1)
+                : '0.0';
+
+            buffer.writeln('📦 $name');
+            buffer
+                .writeln('   Saved: ${goal.balance.toStringAsFixed(2)} USDCx');
+            buffer
+                .writeln('   Target: ${goal.target.toStringAsFixed(2)} USDCx');
+            buffer.writeln('   Progress: $pct%');
+            if (goal.reached) buffer.writeln('   ✅ Goal reached!');
+            buffer.writeln();
+            found++;
+          } catch (_) {
+            continue;
+          }
+        }
+
+        if (found == 0) {
+          return 'No goals found on the current contract. '
+              'They may be on a different deployment.';
+        }
+
+        return buffer.toString().trim();
+      },
+      getInputFromJson: _GetSavingsGoalsInput.fromJson,
+    );
+
+    // ── CMD_createSavingsGoal ──────────────────────────────────────────────────
+
+    final createGoalTool = Tool.fromFunction<_CreateGoalInput, String>(
+      name: 'CMD_createSavingsGoal',
+      description:
+          'Creates a new USDCx savings goal with a name and target amount. '
+          'Only available when the active coin is on the Stacks network. '
+          'Use this before CMD_saveToGoal.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'goalName': {
+            'type': 'string',
+            'description': 'A short name for the goal, e.g. "Holiday fund"',
+          },
+          'targetAmount': {
+            'type': 'number',
+            'description': 'Target amount in USDCx (display units, e.g. 100)',
+          },
+        },
+        'required': ['goalName', 'targetAmount'],
+      },
+      func: (final _CreateGoalInput input) async {
+        final usdcx = coin.networkTokens
+            .whereType<SIP010Coin>()
+            .firstWhereOrNull((c) => c.contractName == 'usdcx');
+
+        if (usdcx == null) {
+          return 'USDCx savings goals are only available on the Stacks network. '
+              'Please switch to Stacks first.';
+        }
+
+        final message = 'Create savings goal "${input.goalName}" '
+            'with target ${input.targetAmount} USDCx';
+        final confirmation = await confirmTransaction(message);
+        if (confirmation != null) return confirmation;
+
+        try {
+          final targetUnits = BigInt.from((input.targetAmount * 1e6).round());
+          final result = await contractCallGoal(
+            coin: usdcx,
+            functionName: 'create-goal',
+            args: [
+              clarityStringAscii(input.goalName),
+              clarityUInt(targetUnits),
+            ],
+          );
+          final data = WalletService.getActiveKey(walletImportType)!.data;
+          final keyPair = await usdcx.importData(data);
+          saveGoalName(keyPair.address, input.goalName,
+              txId: result.txId, txRaw: result.txRaw);
+          return 'Savings goal "${input.goalName}" created! '
+              'Target: ${input.targetAmount} USDCx. '
+              'Tx: ${result.txId} ${coin.formatTxHash(result.txId)}';
+        } catch (e) {
+          return 'Failed to create goal: $e';
+        }
+      },
+      getInputFromJson: _CreateGoalInput.fromJson,
+    );
+
+    // ── CMD_saveToGoal ─────────────────────────────────────────────────────────
+
+    final saveToGoalTool = Tool.fromFunction<_SaveToGoalInput, String>(
+      name: 'CMD_saveToGoal',
+      description: 'Deposits USDCx into a named savings goal. '
+          'Always check USDCx balance first. '
+          'Only available on the Stacks network.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'goalName': {
+            'type': 'string',
+            'description': 'Name of the savings goal',
+          },
+          'amount': {
+            'type': 'number',
+            'description': 'Amount of USDCx to save (display units, e.g. 5)',
+          },
+        },
+        'required': ['goalName', 'amount'],
+      },
+      func: (final _SaveToGoalInput input) async {
+        final usdcx = coin.networkTokens
+            .whereType<SIP010Coin>()
+            .firstWhereOrNull((c) => c.contractName == 'usdcx');
+
+        if (usdcx == null) {
+          return 'USDCx savings goals are only available on the Stacks network.';
+        }
+
+        final message =
+            'Save ${input.amount} USDCx to goal "${input.goalName}"';
+        final confirmation = await confirmTransaction(message);
+        if (confirmation != null) return confirmation;
+
+        try {
+          final units = BigInt.from((input.amount * 1e6).round());
+          final result = await contractCallGoal(
+            coin: usdcx,
+            functionName: 'save',
+            args: [
+              clarityStringAscii(input.goalName),
+              clarityUInt(units),
+            ],
+          );
+          final data = WalletService.getActiveKey(walletImportType)!.data;
+          final keyPair = await usdcx.importData(data);
+          saveGoalName(keyPair.address, input.goalName,
+              txId: result.txId, txRaw: result.txRaw);
+          return 'Saved ${input.amount} USDCx to "${input.goalName}". '
+              'Tx: ${result.txId} ${coin.formatTxHash(result.txId)}';
+        } catch (e) {
+          return 'Failed to save to goal: $e';
+        }
+      },
+      getInputFromJson: _SaveToGoalInput.fromJson,
+    );
+
+    // ── CMD_withdrawFromGoal ───────────────────────────────────────────────────
+
+    final withdrawFromGoalTool =
+        Tool.fromFunction<_WithdrawFromGoalInput, String>(
+      name: 'CMD_withdrawFromGoal',
+      description:
+          'Withdraws USDCx from a named savings goal back to the wallet. '
+          'No lockup — users can withdraw anytime. '
+          'Only available on the Stacks network.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'goalName': {
+            'type': 'string',
+            'description': 'Name of the savings goal',
+          },
+          'amount': {
+            'type': 'number',
+            'description': 'Amount of USDCx to withdraw (display units)',
+          },
+        },
+        'required': ['goalName', 'amount'],
+      },
+      func: (final _WithdrawFromGoalInput input) async {
+        final usdcx = coin.networkTokens
+            .whereType<SIP010Coin>()
+            .firstWhereOrNull((c) => c.contractName == 'usdcx');
+
+        if (usdcx == null) {
+          return 'USDCx savings goals are only available on the Stacks network.';
+        }
+
+        final message =
+            'Withdraw ${input.amount} USDCx from goal "${input.goalName}"';
+        final confirmation = await confirmTransaction(message);
+        if (confirmation != null) return confirmation;
+
+        try {
+          final units = BigInt.from((input.amount * 1e6).round());
+          final result = await contractCallGoal(
+            coin: usdcx,
+            functionName: 'withdraw',
+            args: [
+              clarityStringAscii(input.goalName),
+              clarityUInt(units),
+            ],
+          );
+          final data = WalletService.getActiveKey(walletImportType)!.data;
+          final keyPair = await usdcx.importData(data);
+          saveGoalName(keyPair.address, input.goalName,
+              txId: result.txId, txRaw: result.txRaw);
+          return 'Withdrew ${input.amount} USDCx from "${input.goalName}". '
+              'Tx: ${result.txId} ${coin.formatTxHash(result.txId)}';
+        } catch (e) {
+          return 'Failed to withdraw from goal: $e';
+        }
+      },
+      getInputFromJson: _WithdrawFromGoalInput.fromJson,
+    );
+
+    // ── Tool list ──────────────────────────────────────────────────────────────
+
     return [
       mintUSDCxTool,
       httpRequestTool,
@@ -915,6 +1181,11 @@ class AItools {
       stakeRewardsTool,
       deployMeme,
       x402PayTool,
+      // ── Savings goals ─────────────────────────────────────────────────────
+      getSavingsGoalsTool,
+      createGoalTool,
+      saveToGoalTool,
+      withdrawFromGoalTool,
     ];
   }
 }
@@ -1104,8 +1375,45 @@ class _MintUSDCxInput {
   final String amount;
   _MintUSDCxInput({required this.amount});
   factory _MintUSDCxInput.fromJson(Map<String, dynamic> json) {
-    return _MintUSDCxInput(
-      amount: json['amount'] as String,
-    );
+    return _MintUSDCxInput(amount: json['amount'] as String);
   }
+}
+
+class _GetSavingsGoalsInput {
+  _GetSavingsGoalsInput();
+  factory _GetSavingsGoalsInput.fromJson(Map<String, dynamic> json) =>
+      _GetSavingsGoalsInput();
+}
+
+class _CreateGoalInput {
+  final String goalName;
+  final double targetAmount;
+  _CreateGoalInput({required this.goalName, required this.targetAmount});
+  factory _CreateGoalInput.fromJson(Map<String, dynamic> json) =>
+      _CreateGoalInput(
+        goalName: json['goalName'] as String,
+        targetAmount: (json['targetAmount'] as num).toDouble(),
+      );
+}
+
+class _SaveToGoalInput {
+  final String goalName;
+  final double amount;
+  _SaveToGoalInput({required this.goalName, required this.amount});
+  factory _SaveToGoalInput.fromJson(Map<String, dynamic> json) =>
+      _SaveToGoalInput(
+        goalName: json['goalName'] as String,
+        amount: (json['amount'] as num).toDouble(),
+      );
+}
+
+class _WithdrawFromGoalInput {
+  final String goalName;
+  final double amount;
+  _WithdrawFromGoalInput({required this.goalName, required this.amount});
+  factory _WithdrawFromGoalInput.fromJson(Map<String, dynamic> json) =>
+      _WithdrawFromGoalInput(
+        goalName: json['goalName'] as String,
+        amount: (json['amount'] as num).toDouble(),
+      );
 }
