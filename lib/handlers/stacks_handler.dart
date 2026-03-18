@@ -436,8 +436,6 @@ class StacksHandler extends BaseWebViewHandler {
               await coin.transferToken(sendAmt.toString(), to, memo: memo);
           await _sendResponse(jsData, {
             'txid': result?.txHash ?? '',
-            'txId': result?.txHash ?? '',
-            'txRaw': result?.txRaw ?? '',
             'transaction': result?.txRaw ?? '',
           });
         } catch (e) {
@@ -531,8 +529,6 @@ class StacksHandler extends BaseWebViewHandler {
           final result = await tokenCoin?.transferToken(amount, to, memo: memo);
           await _sendResponse(jsData, {
             'txid': result?.txHash ?? '',
-            'txId': result?.txHash ?? '',
-            'txRaw': result?.txRaw ?? '',
             'transaction': result?.txRaw ?? '',
           });
         } catch (e) {
@@ -605,8 +601,6 @@ class StacksHandler extends BaseWebViewHandler {
           );
           await _sendResponse(jsData, {
             'txid': result.txHash,
-            'txId': result.txHash,
-            'txRaw': result.txRaw,
             'transaction': result.txRaw,
           });
         } catch (e) {
@@ -696,10 +690,7 @@ class StacksHandler extends BaseWebViewHandler {
           final txRaw = HEX.encode(txBytes);
           await _sendResponse(jsData, {
             'txid': txHash,
-            'txId': txHash,
-            'txRaw': txRaw,
             'transaction': txRaw,
-            'contractId': '${keyPair.address}.$contractName',
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
