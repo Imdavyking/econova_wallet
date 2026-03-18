@@ -385,8 +385,10 @@ class StacksHandler extends BaseWebViewHandler {
           final data = WalletService.getActiveKey(walletImportType)!.data;
           final keyPair = await coin.importData(data);
           final privBytes = txDataToUintList(keyPair.privateKey!);
-          final rawTx = Uint8List.fromList(
-              HEX.decode(txHexUnsign.startsWith('0x') ? txHexUnsign.substring(2) : txHexUnsign));
+          final rawTx = Uint8List.fromList(HEX.decode(
+              txHexUnsign.startsWith('0x')
+                  ? txHexUnsign.substring(2)
+                  : txHexUnsign));
           final signedTx = stacksResignTx(rawTx, privBytes);
           final signedHex = HEX.encode(signedTx);
           await _sendResponse(jsData, {
@@ -452,8 +454,20 @@ class StacksHandler extends BaseWebViewHandler {
     String sendingAddress,
   ) async {
     final obj = jsData.object;
-    final contractAddress = obj['contractAddress'] as String? ?? '';
-    final contractName = obj['contractName'] as String? ?? '';
+    String contractAddress;
+    String contractName;
+    final assetField = obj['asset'] as String?;
+    if (assetField != null && assetField.contains('.')) {
+      final dotIndex = assetField.indexOf('.');
+      contractAddress = assetField.substring(0, dotIndex);
+      final rest = assetField.substring(dotIndex + 1);
+      contractName =
+          rest.contains('::') ? rest.substring(0, rest.indexOf('::')) : rest;
+    } else {
+      contractAddress = obj['contractAddress'] as String? ?? '';
+      contractName = obj['contractName'] as String? ?? '';
+    }
+
     final to = obj['recipient'] as String? ?? '';
     final amount = obj['amount'] as String? ?? '0';
     final memo = obj['memo'] as String?;
