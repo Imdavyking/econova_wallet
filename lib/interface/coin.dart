@@ -120,33 +120,33 @@ abstract class Coin {
     return getExplorer().replaceFirst(blockExplorerPlaceholder, txHash);
   }
 
-  Future<String?> unstakeToken(String amount) async {
-    return null;
-  }
+  Future<String?> unstakeToken(String amount) async => null;
 
-  Future<String?> claimRewards(String amount) async {
-    return null;
-  }
+  Future<String?> claimRewards(String amount) async => null;
 
-  Future<double?> getTotalStaked() async {
-    return null;
-  }
+  Future<double?> getTotalStaked() async => null;
+
+  /// Returns the native DEX dApp URL for this coin.
+  /// Override in each coin implementation to point to the correct DEX.
+  String getSwapDappUrl() => walletDexProviderUrl;
+
+  /// Returns the native staking dApp URL for this coin.
+  /// Override in each coin implementation to point to the correct staking dApp.
+  String getStakeDappUrl() => stakeDexProviderUrl;
 
   Future<String?> getQuote(
     String tokenIn,
     String tokenOut,
     String amount,
-  ) async {
-    return null;
-  }
+  ) async =>
+      null;
 
   Future<String?> swapTokens(
     String tokenIn,
     String tokenOut,
     String amount,
-  ) async {
-    return null;
-  }
+  ) async =>
+      null;
 
   Widget? getGoalPage() => null;
 

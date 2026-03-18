@@ -19,7 +19,6 @@ import '../utils/app_config.dart';
 import '../utils/c32check.dart';
 import '../utils/stack_tx_utils.dart';
 
-
 // ─── Address version bytes ─────────────────────────────────────────────────────
 
 const int _versionMainnetP2PKH = 22; // SP…
@@ -85,6 +84,12 @@ class StacksCoin extends Coin {
   String getPayScheme() => payScheme;
 
   static const int _stacksDecimals = 6;
+
+  @override
+  String getSwapDappUrl() => 'https://app.alexlab.co/swap';
+
+  @override
+  String getStakeDappUrl() => 'https://app.stackingdao.com';
 
   // ─── x402 support ───────────────────────────────────────────────────────────
 

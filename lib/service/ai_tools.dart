@@ -10,6 +10,7 @@ import "package:wallet_app/save_goal/usdcx_goal.dart";
 import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
+import "package:wallet_app/utils/app_config.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
@@ -25,6 +26,106 @@ class AItools {
   static Coin coin = stackCoins.first;
 
   AItools();
+
+  // ── dApp Browser URL resolver ───────────────────────────────────────────────
+
+  String _getSwapDappUrl(String coinSymbol) {
+    switch (coinSymbol.toUpperCase()) {
+      // Stacks ecosystem
+      case 'STX':
+      case 'SBTC':
+      case 'USDCX':
+        return 'https://app.alexlab.co/swap';
+
+      // EVM chains
+      case 'ETH':
+      case 'ARB':
+      case 'OP':
+      case 'BASE':
+      case 'MATIC':
+      case 'AVAX':
+        return 'https://app.uniswap.org/swap';
+
+      case 'BNB':
+        return 'https://pancakeswap.finance/swap';
+
+      // Solana
+      case 'SOL':
+        return 'https://jup.ag';
+
+      // NEAR
+      case 'NEAR':
+        return 'https://app.ref.finance';
+
+      // TON
+      case 'TON':
+        return 'https://ston.fi';
+
+      // TRON
+      case 'TRX':
+        return 'https://sun.io/?lang=en-US#/swap';
+
+      // Cosmos
+      case 'ATOM':
+        return 'https://app.osmosis.zone';
+
+      // Stellar
+      case 'XLM':
+        return 'https://stellarx.com/swap';
+
+      // Sui
+      case 'SUI':
+        return 'https://app.cetus.zone/swap';
+
+      // Aptos
+      case 'APT':
+        return 'https://app.liquidswap.com';
+
+      // MultiversX
+      case 'EGLD':
+        return 'https://xexchange.com/swap';
+
+      // Starknet
+      case 'STRK':
+        return 'https://app.ekubo.org';
+
+      default:
+        return walletDexProviderUrl;
+    }
+  }
+
+  String _getStakeDappUrl(String coinSymbol) {
+    switch (coinSymbol.toUpperCase()) {
+      case 'STX':
+        return 'https://app.stackingdao.com';
+      case 'SBTC':
+      case 'USDCX':
+        return 'https://app.alexlab.co/stake';
+      case 'ETH':
+      case 'ARB':
+      case 'OP':
+      case 'BASE':
+        return 'https://lido.fi';
+      case 'BNB':
+        return 'https://www.binance.com/en/earn';
+      case 'SOL':
+        return 'https://marinade.finance';
+      case 'ATOM':
+        return 'https://wallet.keplr.app/chains/cosmos';
+      case 'NEAR':
+        return 'https://app.ref.finance/staking';
+      case 'MATIC':
+        return 'https://staking.polygon.technology';
+      case 'AVAX':
+        return 'https://core.app/stake';
+      case 'EGLD':
+        return 'https://staking.multiversx.com';
+      case 'TRX':
+        return 'https://tronscan.org/#/sr/representatives';
+      default:
+        return stakeDexProviderUrl;
+    }
+  }
 
   Future<String?> confirmTransaction(String message) async {
     final isApproved = await Navigator.push(
@@ -367,7 +468,8 @@ class AItools {
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
           if (quote == null) {
-            return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+            return 'Swapping is not available natively for $currentCoin. '
+                'You can swap using the dApp browser at ${coin.getSwapDappUrl()}';
           }
           return 'Quote price for $tokenIn => $tokenOut $amount is ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}';
         } catch (e) {
@@ -408,7 +510,8 @@ class AItools {
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
           if (quote == null) {
-            return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+            return 'Swapping is not available natively for $currentCoin. '
+                'You can swap using the dApp browser at ${coin.getSwapDappUrl()}';
           }
           final tokenInSymbol =
               tokenIn == AIAgentService.defaultCoinTokenAddress
@@ -455,7 +558,10 @@ class AItools {
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.stakeToken(amount);
-          if (txHash == null) return 'Failed to stake $amount $currentCoin';
+          if (txHash == null) {
+            return 'Staking is not available natively for $currentCoin. '
+                'You can stake using the dApp browser at ${coin.getStakeDappUrl()}';
+          }
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Staking failed for $currentCoin $amount $e';

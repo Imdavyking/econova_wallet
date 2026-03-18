@@ -105,34 +105,27 @@ class NearCoin extends Coin {
   }
 
   @override
-  Future<String> resolveAddress(String address) async {
-    return address;
-  }
+  Future<String> resolveAddress(String address) async => address;
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
+  @override
+  String getSymbol() => symbol;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getSwapDappUrl() => 'https://app.ref.finance';
+
+  @override
+  String getStakeDappUrl() => 'https://app.ref.finance/staking';
 
   @override
   bool get supportPrivateKey => true;

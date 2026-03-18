@@ -68,6 +68,12 @@ class TonCoin extends Coin {
   }
 
   @override
+  String getSwapDappUrl() => 'https://ston.fi';
+
+  @override
+  String getStakeDappUrl() => 'https://tonstakers.com';
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'tonCoinDetails${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
