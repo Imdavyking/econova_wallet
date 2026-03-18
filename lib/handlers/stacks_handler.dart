@@ -367,8 +367,8 @@ class StacksHandler extends BaseWebViewHandler {
     StacksCoin coin,
     String sendingAddress,
   ) async {
-    final txHex = (jsData.object['transaction'] as String?) ?? '';
-    if (txHex.isEmpty) {
+    final txHexUnsign = (jsData.object['transaction'] as String?) ?? '';
+    if (txHexUnsign.isEmpty) {
       await _sendError(
           'stx_signTransaction requires a transaction hex', jsData);
       return;
@@ -377,7 +377,7 @@ class StacksHandler extends BaseWebViewHandler {
     await signMessage(
       context: context,
       messageType: '',
-      data: txHex,
+      data: txHexUnsign,
       networkIcon: null,
       name: 'Sign Transaction',
       onConfirm: () async {
@@ -386,9 +386,13 @@ class StacksHandler extends BaseWebViewHandler {
           final keyPair = await coin.importData(data);
           final privBytes = txDataToUintList(keyPair.privateKey!);
           final rawTx = Uint8List.fromList(
-              HEX.decode(txHex.startsWith('0x') ? txHex.substring(2) : txHex));
+              HEX.decode(txHexUnsign.startsWith('0x') ? txHexUnsign.substring(2) : txHexUnsign));
           final signedTx = stacksResignTx(rawTx, privBytes);
-          await _sendResponse(jsData, {'transaction': HEX.encode(signedTx)});
+          final signedHex = HEX.encode(signedTx);
+          await _sendResponse(jsData, {
+            'transaction': txHexUnsign,
+            'txHex': signedHex,
+          });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
         } finally {
