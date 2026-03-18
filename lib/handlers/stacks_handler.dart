@@ -438,6 +438,7 @@ class StacksHandler extends BaseWebViewHandler {
             'txid': result?.txHash ?? '',
             'txId': result?.txHash ?? '',
             'txRaw': result?.txRaw ?? '',
+            'transaction': result?.txRaw ?? '',
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -532,6 +533,7 @@ class StacksHandler extends BaseWebViewHandler {
             'txid': result?.txHash ?? '',
             'txId': result?.txHash ?? '',
             'txRaw': result?.txRaw ?? '',
+            'transaction': result?.txRaw ?? '',
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -657,14 +659,21 @@ class StacksHandler extends BaseWebViewHandler {
           final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
           final nameBytes = utf8.encode(contractName);
           final codeBytes = utf8.encode(codeBody);
-          final payload = (BytesBuilder()
-                ..addByte(0x01)
-                ..addByte(clarityVersion)
-                ..addByte(nameBytes.length)
-                ..add(nameBytes)
-                ..add(stacksU32BE(codeBytes.length))
-                ..add(codeBytes))
-              .toBytes();
+          final bool versioned = clarityVersion >= 2;
+          final bb = BytesBuilder();
+          if (versioned) {
+            bb
+              ..addByte(0x06) // VersionedSmartContract payload type
+              ..addByte(clarityVersion); // Clarity version byte
+          } else {
+            bb.addByte(0x01); // SmartContract payload type (no version byte)
+          }
+          bb
+            ..addByte(nameBytes.length)
+            ..add(nameBytes)
+            ..add(stacksU32BE(codeBytes.length))
+            ..add(codeBytes);
+          final payload = bb.toBytes();
           final api = coin.isTestnet
               ? 'https://api.testnet.hiro.so'
               : 'https://api.hiro.so';
