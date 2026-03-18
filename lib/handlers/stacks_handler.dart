@@ -421,10 +421,13 @@ class StacksHandler extends BaseWebViewHandler {
         (obj['amount'] as String?) ?? (obj['value'] as String?) ?? '0';
     final memo = obj['memo'] as String?;
     if (!context.mounted) return;
+    final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
+        BigInt.from(stacksMicroPerStx);
     await signMessage(
       context: context,
       messageType: '',
-      data: 'Send $amount µSTX\nTo: $to${memo != null ? '\nMemo: $memo' : ''}',
+      data:
+          'Send $displayAmount STX\nTo: $to${memo != null ? '\nMemo: $memo' : ''}',
       networkIcon: null,
       name: 'STX Transfer',
       onConfirm: () async {
@@ -509,11 +512,13 @@ class StacksHandler extends BaseWebViewHandler {
     }
 
     if (!context.mounted) return;
+    final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
+        BigInt.from(10).pow(tokenCoin.mintDecimals);
     await signMessage(
       context: context,
       messageType: '',
       data:
-          'Send $amount ${tokenCoin.symbol}\nContract: ${tokenCoin.tokenAddress()}\nTo: $to${memo != null ? '\nMemo: $memo' : ''}',
+          'Send $displayAmount ${tokenCoin.symbol}\nContract: ${tokenCoin.tokenAddress()}\nTo: $to${memo != null ? '\nMemo: $memo' : ''}',
       networkIcon: null,
       name: '${tokenCoin.symbol} Transfer',
       onConfirm: () async {
