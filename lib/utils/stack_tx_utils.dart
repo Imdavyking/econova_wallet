@@ -678,7 +678,16 @@ String? clarityParseString(String hex) {
         parts.add('$key: ${val.display}');
       }
       return (display: parts.join('\n'), bytesRead: cur - pos);
+    case 0x07: // ok
+      final inner = clarityReadValue(bytes, cur);
+      return (display: inner.display, bytesRead: 1 + inner.bytesRead);
 
+    case 0x08: // err
+      final inner = clarityReadValue(bytes, cur);
+      return (
+        display: '(err ${inner.display})',
+        bytesRead: 1 + inner.bytesRead
+      );
     default:
       return (display: '(0x${type.toRadixString(16)})', bytesRead: 1);
   }

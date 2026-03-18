@@ -783,15 +783,15 @@ Uint8List clarityStandardPrincipalFromAddress(String address) {
 // Parse the hex result of get-progress into a SavingsGoal
 SavingsGoal? _parseProgressResult(String name, String hexResult) {
   try {
-    // Result is (ok { balance: uint, target: uint, percent: uint })
-    // We parse the tuple fields from the Clarity hex
     final clean =
         hexResult.startsWith('0x') ? hexResult.substring(2) : hexResult;
     final bytes = Uint8List.fromList(HEX.decode(clean));
-    final parsed = clarityReadValue(bytes, 0);
+
+    // Skip ok wrapper (0x07) if present
+    final startPos = bytes.isNotEmpty && bytes[0] == 0x07 ? 1 : 0;
+    final parsed = clarityReadValue(bytes, startPos);
     final display = parsed.display;
 
-    // Extract balance and target from display string e.g. "balance: u1000000\ntarget: u100000000\npercent: u1"
     BigInt extract(String key) {
       final match = RegExp('$key: u(\\d+)').firstMatch(display);
       return match != null ? BigInt.parse(match.group(1)!) : BigInt.zero;
@@ -802,15 +802,14 @@ SavingsGoal? _parseProgressResult(String name, String hexResult) {
 
     return SavingsGoal(
       name: name,
-      balance: balanceUnits / BigInt.from(1000000),
-      target: targetUnits / BigInt.from(1000000),
+      balance: (balanceUnits / BigInt.from(1000000)).toDouble(),
+      target: (targetUnits / BigInt.from(1000000)).toDouble(),
       createdAt: 0,
     );
   } catch (_) {
     return null;
   }
 }
-
 // ─── Local goal name persistence ─────────────────────────────────────────────
 // Stores created goal names per address in prefs so we can fetch their progress.
 
