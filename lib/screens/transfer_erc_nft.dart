@@ -217,12 +217,12 @@ class _TransferERCNFTState extends State<TransferERCNFT> {
                             });
                           }
                           try {
-                            String? transactionHash = await coin.transferToken(
+                            final result = await coin.transferToken(
                               widget.amount,
                               widget.recipient,
                             );
 
-                            if (transactionHash == null) {
+                            if (result == null) {
                               throw Exception('Sending failed');
                             }
                             if (!context.mounted) return;
