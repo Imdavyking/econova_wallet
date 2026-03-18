@@ -259,6 +259,14 @@ class StacksHandler extends BaseWebViewHandler {
   Map<String, dynamic> _accountPayload(
           String address, AccountData d, StacksCoin coin) =>
       {
+        'addresses': [
+          {
+            'address': address,
+            'publicKey': d.publicKey,
+            'network': coin.isTestnet ? 'testnet' : 'mainnet',
+            'symbol': 'STX',
+          },
+        ],
         'accounts': [
           {
             'address': address,
