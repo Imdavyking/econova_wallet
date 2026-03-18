@@ -14,11 +14,11 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
 
 // ─── Contract config ──────────────────────────────────────────────────────────
-// Deploy usdcx-savings-goals.clar once via the demo testbed, then paste the
+// Deploy usdcx-savings-goal.clar once via the demo testbed, then paste the
 // contractId here. Format: "ST2VR...address.contract-name"
 
 const _savingsContractId =
-    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goals';
+    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goal';
 
 String get _savingsContractAddress => _savingsContractId.split('.').first;
 String get _savingsContractName => _savingsContractId.split('.').last;
@@ -27,15 +27,19 @@ String get _savingsContractName => _savingsContractId.split('.').last;
 
 class SavingsGoal {
   final String name;
-  final double balance; // in USDCx display units
-  final double target; // in USDCx display units
-  final int createdAt; // block height
+  final double balance;
+  final double target;
+  final int createdAt;
+  final String? lastTxId;
+  final String? lastTxRaw;
 
   const SavingsGoal({
     required this.name,
     required this.balance,
     required this.target,
     required this.createdAt,
+    this.lastTxId,
+    this.lastTxRaw,
   });
 
   double get percent => target > 0 ? (balance / target).clamp(0.0, 1.0) : 0.0;
@@ -43,7 +47,6 @@ class SavingsGoal {
 }
 
 // ─── USDCx Goals Page ─────────────────────────────────────────────────────────
-// Entry point — shows existing goals with progress + FAB to create new.
 
 class USDCxGoalsPage extends StatefulWidget {
   final SIP010Coin coin;
@@ -76,19 +79,16 @@ class _USDCxGoalsPageState extends State<USDCxGoalsPage> {
     }
   }
 
-  // Reads all goals for the connected address via Hiro read-only API
   Future<List<SavingsGoal>> _fetchGoals(SIP010Coin coin) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await coin.importData(data);
     final address = keyPair.address;
     final api = stacksApiUrl(coin.isTestnet);
 
-    // We store goal names in local prefs for now — the contract doesn't
-    // have an enumeration function. Call get-progress for each stored name.
     final storedNames = _loadStoredGoalNames(address);
     final goals = <SavingsGoal>[];
 
-    for (final name in storedNames) {
+    for (final name in List<String>.from(storedNames)) {
       try {
         final res = await http.post(
           Uri.parse(
@@ -102,11 +102,24 @@ class _USDCxGoalsPageState extends State<USDCxGoalsPage> {
             ],
           }),
         );
+
         if (res.statusCode ~/ 100 != 2) continue;
+
         final body = jsonDecode(res.body) as Map;
-        if (body['okay'] != true) continue;
+        if (body['okay'] != true) {
+          // Goal not found on this contract — prune stale name
+          _removeGoalName(address, name);
+          continue;
+        }
+
         final result = body['result'] as String;
-        final goal = _parseProgressResult(name, result);
+        final txInfo = _loadGoalTx(address, name);
+        final goal = _parseProgressResult(
+          name,
+          result,
+          lastTxId: txInfo?.txId,
+          lastTxRaw: txInfo?.txRaw,
+        );
         if (goal != null) goals.add(goal);
       } catch (_) {
         continue;
@@ -228,11 +241,13 @@ class _GoalCard extends StatelessWidget {
                       color: Colors.green.shade100,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('Reached 🎉',
-                        style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Reached 🎉',
+                      style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
                   ),
               ],
             ),
@@ -263,6 +278,69 @@ class _GoalCard extends StatelessWidget {
                         fontWeight: FontWeight.w600, fontSize: 13)),
               ],
             ),
+
+            // Last tx badge
+            if (goal.lastTxId != null) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () {
+                  // Show full txId/txRaw in a dialog
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Last Transaction'),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('TxID',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            SelectableText(
+                              goal.lastTxId!,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            if (goal.lastTxRaw != null) ...[
+                              const SizedBox(height: 12),
+                              const Text('Raw Tx',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                goal.lastTxRaw!,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.receipt_long_outlined,
+                        size: 12, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tx: ${goal.lastTxId!.substring(0, 12)}…',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 16),
 
             // Actions
@@ -349,23 +427,24 @@ class _CreateUSDCxGoalState extends State<CreateUSDCxGoal> {
     final targetStr = _targetCtrl.text.trim();
     if (name.isEmpty) return _err('Goal name is required');
     final target = double.tryParse(targetStr);
-    if (target == null || target <= 0)
+    if (target == null || target <= 0) {
       return _err('Enter a valid target amount');
+    }
 
     final targetUnits = BigInt.from((target * 1e6).round());
     _isLoading.value = true;
     try {
-      await _contractCall(
+      final result = await _contractCall(
         coin: widget.coin,
         functionName: 'create-goal',
         args: [_clarityStringAscii(name), clarityUInt(targetUnits)],
       );
-      // Persist goal name locally so we can fetch progress later
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final keyPair = await widget.coin.importData(data);
-      _saveGoalName(keyPair.address, name);
+      _saveGoalName(keyPair.address, name,
+          txId: result.txId, txRaw: result.txRaw);
       if (!mounted) return;
-      _ok('Goal "$name" created!');
+      _ok('Goal "$name" created!\nTx: ${result.txId.substring(0, 16)}…');
       Navigator.pop(context, true);
     } catch (e) {
       _err(e.toString());
@@ -481,13 +560,17 @@ class _SaveToUSDCxGoalState extends State<SaveToUSDCxGoal> {
     final units = BigInt.from((amount * 1e6).round());
     _isLoading.value = true;
     try {
-      await _contractCall(
+      final result = await _contractCall(
         coin: widget.coin,
         functionName: 'save',
         args: [_clarityStringAscii(widget.goalName), clarityUInt(units)],
       );
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final keyPair = await widget.coin.importData(data);
+      _saveGoalName(keyPair.address, widget.goalName,
+          txId: result.txId, txRaw: result.txRaw);
       if (!mounted) return;
-      _ok('Saved ${_amountCtrl.text} USDCx to "${widget.goalName}"!');
+      _ok('Saved ${_amountCtrl.text} USDCx to "${widget.goalName}"!\nTx: ${result.txId.substring(0, 16)}…');
       Navigator.pop(context, true);
     } catch (e) {
       _err(e.toString());
@@ -598,13 +681,17 @@ class _WithdrawFromGoalState extends State<WithdrawFromGoal> {
     final units = BigInt.from((amount * 1e6).round());
     _isLoading.value = true;
     try {
-      await _contractCall(
+      final result = await _contractCall(
         coin: widget.coin,
         functionName: 'withdraw',
         args: [_clarityStringAscii(widget.goal.name), clarityUInt(units)],
       );
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final keyPair = await widget.coin.importData(data);
+      _saveGoalName(keyPair.address, widget.goal.name,
+          txId: result.txId, txRaw: result.txRaw);
       if (!mounted) return;
-      _ok('Withdrew ${_amountCtrl.text} USDCx from "${widget.goal.name}"!');
+      _ok('Withdrew ${_amountCtrl.text} USDCx from "${widget.goal.name}"!\nTx: ${result.txId.substring(0, 16)}…');
       Navigator.pop(context, true);
     } catch (e) {
       _err(e.toString());
@@ -708,7 +795,7 @@ class _WithdrawFromGoalState extends State<WithdrawFromGoal> {
 
 // ─── Shared contract call helper ──────────────────────────────────────────────
 
-Future<String> _contractCall({
+Future<({String txId, String txRaw})> _contractCall({
   required SIP010Coin coin,
   required String functionName,
   required List<Uint8List> args,
@@ -755,7 +842,10 @@ Future<String> _contractCall({
   if (res.statusCode ~/ 100 != 2) {
     throw Exception('Contract call failed: ${res.body}');
   }
-  return jsonDecode(res.body) as String;
+  return (
+    txId: jsonDecode(res.body) as String,
+    txRaw: HEX.encode(txBytes),
+  );
 }
 
 // ─── Clarity helpers ──────────────────────────────────────────────────────────
@@ -769,10 +859,8 @@ Uint8List _clarityStringAscii(String value) {
       .toBytes();
 }
 
-// Serialize a Clarity value to hex string for read-only call arguments
 String _hexSerialize(Uint8List bytes) => '0x${HEX.encode(bytes)}';
 
-// Build a Clarity standard-principal from a Stacks address string
 Uint8List clarityStandardPrincipalFromAddress(String address) {
   final decoded = c32checkDecode(address.substring(1));
   final version = decoded[0] as int;
@@ -780,8 +868,12 @@ Uint8List clarityStandardPrincipalFromAddress(String address) {
   return clarityStandardPrincipal(version, hash160);
 }
 
-// Parse the hex result of get-progress into a SavingsGoal
-SavingsGoal? _parseProgressResult(String name, String hexResult) {
+SavingsGoal? _parseProgressResult(
+  String name,
+  String hexResult, {
+  String? lastTxId,
+  String? lastTxRaw,
+}) {
   try {
     final clean =
         hexResult.startsWith('0x') ? hexResult.substring(2) : hexResult;
@@ -805,26 +897,52 @@ SavingsGoal? _parseProgressResult(String name, String hexResult) {
       balance: (balanceUnits / BigInt.from(1000000)).toDouble(),
       target: (targetUnits / BigInt.from(1000000)).toDouble(),
       createdAt: 0,
+      lastTxId: lastTxId,
+      lastTxRaw: lastTxRaw,
     );
   } catch (_) {
     return null;
   }
 }
-// ─── Local goal name persistence ─────────────────────────────────────────────
-// Stores created goal names per address in prefs so we can fetch their progress.
+
+// ─── Local persistence ────────────────────────────────────────────────────────
+
+String _goalKey(String address) =>
+    'stx_savings_goals_$address$_savingsContractId';
+
+String _txKey(String address, String name) =>
+    'stx_goal_tx_${address}_${_savingsContractId}_$name';
 
 List<String> _loadStoredGoalNames(String address) {
-  final key = 'stx_savings_goals_$address';
-  final raw = pref.get(key) as String?;
+  final raw = pref.get(_goalKey(address)) as String?;
   if (raw == null) return [];
   return List<String>.from(jsonDecode(raw));
 }
 
-void _saveGoalName(String address, String name) {
-  final key = 'stx_savings_goals_$address';
+void _saveGoalName(String address, String name, {String? txId, String? txRaw}) {
   final names = _loadStoredGoalNames(address);
-  if (!names.contains(name)) {
-    names.add(name);
-    pref.put(key, jsonEncode(names));
+  if (!names.contains(name)) names.add(name);
+  pref.put(_goalKey(address), jsonEncode(names));
+
+  if (txId != null) {
+    pref.put(_txKey(address, name),
+        jsonEncode({'txId': txId, 'txRaw': txRaw ?? ''}));
   }
+}
+
+void _removeGoalName(String address, String name) {
+  final names = _loadStoredGoalNames(address);
+  names.remove(name);
+  pref.put(_goalKey(address), jsonEncode(names));
+  pref.delete(_txKey(address, name));
+}
+
+({String txId, String txRaw})? _loadGoalTx(String address, String name) {
+  final raw = pref.get(_txKey(address, name)) as String?;
+  if (raw == null) return null;
+  final map = jsonDecode(raw) as Map;
+  return (
+    txId: map['txId'] as String,
+    txRaw: map['txRaw'] as String,
+  );
 }
