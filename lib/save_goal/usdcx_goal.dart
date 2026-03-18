@@ -14,11 +14,11 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
 
 // ─── Contract config ──────────────────────────────────────────────────────────
-// Deploy usdcx-savings-goal.clar once via the demo testbed, then paste the
+// Deploy usdcx-savings-goal-v2.clar once via the demo testbed, then paste the
 // contractId here. Format: "ST2VR...address.contract-name"
 
 const _savingsContractId =
-    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goal';
+    'ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS.usdcx-savings-goal-v2';
 
 String get _savingsContractAddress => _savingsContractId.split('.').first;
 String get _savingsContractName => _savingsContractId.split('.').last;
@@ -565,6 +565,7 @@ class _SaveToUSDCxGoalState extends State<SaveToUSDCxGoal> {
         functionName: 'save',
         args: [_clarityStringAscii(widget.goalName), clarityUInt(units)],
       );
+
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final keyPair = await widget.coin.importData(data);
       _saveGoalName(keyPair.address, widget.goalName,
