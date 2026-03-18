@@ -6,22 +6,19 @@ const walletAbbr = 'ECA';
 const walletName = 'Econova';
 const walletURL = "https://econova.vercel.app";
 const walletIconURL = "$walletURL/img/logo.png";
-const walletDexProviderUrl =
-    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
+const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
+
 const String fallbackMessage =
     "Unspecified error message. This is a bug, please report it.";
-const stakeDexProviderUrl =
-    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
-const fiatDexProviderUrl = 'https://paxful.com/';
-// const browserUrl =
-//     'https://sepolia.voyager.online/contract/0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b#readContract';
-const browserUrl = 'http://localhost:5173/demo';
-const oneInchApi = "https://api.1inch.dev";
-const oneInceApiKey = 'cc7YbgSI5NA9t5KGLa00uNdklhGFxJhi';
+const walletDexProviderUrl =
+    'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
+const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
+// const browserUrl = 'http://localhost:5173/demo';
+const browserUrl = 'https://app.alexlab.co';
 
 // dapp links
-const blogUrl = "https://www.starknet.io/blog/";
-const marketPlaceUrl = 'https://unframed.co/';
+const blogUrl = "https://www.stacks.co/blog";
+const marketPlaceUrl = 'https://gamma.io/';
 
 // social media links
 const telegramLink = '';
@@ -235,8 +232,3 @@ const faLength = 6;
 const maximumTransactionToSave = 30;
 const maximumBrowserHistoryToSave = 20;
 const swapSlippage = 10;
-
-const oneInchHeaders = {
-  'accept': 'application/json',
-  'Authorization': 'Bearer $oneInceApiKey',
-};
