@@ -5,7 +5,19 @@ Instead of navigating complex crypto interfaces, you just talk to it —
 EcoNova handles the fragmentation of multi-chain crypto through a single
 natural language interface.
 
-> Built for the **Stacks Buidl Battle 2026** — the only mobile submission.
+> Built for the **Stacks Buidl Battle 2026**.
+
+---
+
+## 🏆 Bounty Alignment
+
+EcoNova is a direct submission for all three Buidl Battle bounties:
+
+| Bounty                             | How EcoNova qualifies                                                                                                                                                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🥇 **Best Use of USDCx**           | Native USDCx send/receive + Clarity 2 savings goals vault — users create named saving plans, deposit USDCx incrementally, and track progress. All built without stacks.js.                                      |
+| 🥇 **Most Innovative Use of sBTC** | First mobile wallet with native sBTC support. Send, receive, and hold sBTC through a conversational AI interface. No browser extension needed.                                                                  |
+| 🥇 **Best x402 Integration**       | The AI pays for paywalled APIs autonomously using STX, sBTC, or USDCx via x402. Multi-version (v0/v1/v2), separate signing paths for STX and SIP-010 tokens. The first mobile wallet where the AI funds itself. |
 
 ---
 
@@ -38,7 +50,7 @@ and it happens. No chain-switching. No ABI reading. No address copying.
 Everything in EcoNova is built Stacks-first. The entire Stacks signing stack
 is implemented natively in Flutter/Dart with zero JavaScript dependencies —
 RFC 6979 deterministic ECDSA, SHA-512/256, SIP-010 contract calls,
-c32check address encoding, and BNS resolution are all ported from scratch.
+c32check address encoding, and BNS resolution all ported from scratch.
 
 ### 💠 STX Transfers
 
@@ -47,66 +59,91 @@ matching `@stacks/transactions` exactly), memo support, and automatic nonce
 
 - fee fetching from the Hiro API.
 
-### 🟡 sBTC Support
+### 🟡 sBTC _(Most Innovative Use of sBTC bounty)_
 
 Hold and transfer sBTC — Bitcoin on Stacks. The AI understands
-Bitcoin-denominated instructions and maps them to sBTC operations on
-`SM3VDXK3...sbtc-token`. EcoNova is one of the first mobile wallets with
-native sBTC support.
+Bitcoin-denominated instructions and maps them to sBTC operations.
+EcoNova is one of the first mobile wallets with native sBTC support —
+no browser extension, no desktop required.
 
-### 💵 USDCx Support
+### 💵 USDCx _(Best Use of USDCx bounty)_
 
-Send and receive USDCx (USDC bridged to Stacks). Spend in dollars, settle
-on Bitcoin security. Full SIP-010 `transfer` contract call built natively —
-no stacks.js.
+Send and receive USDCx (USDC bridged to Stacks). Spend in dollars,
+settle on Bitcoin security. Full SIP-010 `transfer` contract call built
+natively — no stacks.js.
 
-### 🏦 USDCx Savings Goals _(Hackathon Feature)_
+### 🏦 USDCx Savings Goals _(Best Use of USDCx bounty)_
 
 A native savings vault powered by a Clarity 2 smart contract deployed on
 Stacks. Users create named goals with a target amount, deposit USDCx
 incrementally, and withdraw at any time — no lockups, no penalties.
 
 - Progress bar per goal showing balance vs. target
-- `create-goal`, `save`, and `withdraw` signed and broadcast natively
+- `create-goal`, `save`, and `withdraw` signed and broadcast natively in Dart
 - Goal names persisted locally per user address + contract version
 - Last `txId` and raw signed bytes stored per goal for auditability
 - Shared contract — deployed once, all users scoped by `tx-sender`
 - Ask the AI: _"Save 10 USDCx to my holiday fund"_
+
+```clarity
+;; Users can withdraw anytime — no lockup
+(define-public (withdraw (name (string-ascii 50)) (amount uint))
+  (let ((caller tx-sender) ...)
+    (try! (as-contract (contract-call?
+            'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usdcx
+            transfer amount tx-sender caller none)))
+    (ok true)))
+```
 
 ### 🌐 BNS Name Resolution
 
 Send to `.btc` names instead of raw addresses. _"Send 5 STX to bob.btc"_
 resolves through the Hiro BNS API automatically.
 
-### 🔗 dApp Browser — Full Leather + Xverse Compatibility
+### 🔗 dApp Browser — Full Leather + Xverse + Multi-Chain
 
-EcoNova's WebView injects a complete Leather-compatible provider bridge so
-any Stacks dApp works out of the box:
+EcoNova's WebView injects provider bridges for all major ecosystems
+simultaneously — open any dApp and it just works:
 
-**Modern `LeatherProvider.request()` API:**
+| Chain          | Provider                             | Compatibility                                  |
+| -------------- | ------------------------------------ | ---------------------------------------------- |
+| **Stacks**     | `LeatherProvider` + `StacksProvider` | Leather v8 + Xverse / hiroWallet\*             |
+| **EVM**        | `window.ethereum`                    | MetaMask-compatible, EIP-1193, chain switching |
+| **Solana**     | `window.solana`                      | Phantom-compatible                             |
+| **Starknet**   | `window.starknet`                    | Argent X / Braavos compatible                  |
+| **MultiversX** | `window.elrondWallet`                | xPortal compatible                             |
+| **NEAR**       | `window.near`                        | NEAR wallet selector compatible                |
+
+Six provider bridges injected in parallel. Most mobile wallets inject one.
+
+**Stacks dApp browser specifics:**
+
+Modern `LeatherProvider.request()`:
 `stx_transferStx`, `stx_transferSip10Ft`, `stx_callContract`,
 `stx_deployContract`, `stx_signMessage`, `stx_signStructuredMessage`,
 `stx_signTransaction`, `stx_getAddresses`, `stx_getAccounts`,
 `stx_getNetworks`
 
-**Legacy `hiroWallet*` path:**
-Old `@stacks/connect` / Xverse dApps work without modification. JWT
-authentication response built as a proper ES256K-signed token matching
-Leather's exact format so `decodeToken()` works immediately on the dApp side.
+Legacy `hiroWallet*` path for old `@stacks/connect` / Xverse dApps —
+works without modification. JWT auth response as proper ES256K-signed token
+so `decodeToken()` works on the dApp side immediately.
 
-**SIP-018 structured message display:**
-Clarity hex decoded to human-readable tuples before the user signs — same
-display as Leather and Xverse.
+SIP-018 structured message display — Clarity hex decoded to human-readable
+tuples in the confirmation UI.
 
-### ⚡ x402 Autonomous Payments
+### ⚡ x402 Autonomous Payments _(Best x402 Integration bounty)_
 
 EcoNova supports the x402 HTTP payment protocol using STX, sBTC, and USDCx.
 When the AI needs to access a paywalled API, it pays autonomously —
 no human intervention required.
 
-The first mobile wallet where the AI funds itself. Multi-version support
-(v0, v1, v2), method-aware retry, and separate `signX402Payment`
-implementations for STX (token transfer) and SIP-010 tokens (contract call).
+The first mobile wallet where the AI funds itself. Features:
+
+- Multi-version support (v0, v1, v2)
+- Method-aware retry on `402` responses
+- Separate `signX402Payment` for STX (token transfer payload) and
+  SIP-010 tokens (contract call payload)
+- EIP-3009 signing for EVM-side x402 payments
 
 ---
 
@@ -119,7 +156,6 @@ and executes on-chain actions autonomously:
 - _"Save 5 USDCx to my holiday fund"_
 - _"What's my sBTC balance?"_
 - _"Pay for this API"_
-- _"Bridge my USDC to Stacks"_
 - _"Swap \$20 STX to USDCx"_
 - _"Send \$10 USDCx to Wisdom"_ ← using saved contacts
 
@@ -128,37 +164,44 @@ No addresses. No gas confusion. No chain switching. No coding required.
 **🎙️ Voice Recognition** — Use your voice to execute wallet actions.
 _"Send 0.1 STX to alice.btc"_ works hands-free on mobile.
 
-**👥 Saved Contacts** — Save trusted addresses with nicknames and send using
-friendly commands. _"Send 20 STX to Mom"_ — no copying long addresses.
+**👥 Saved Contacts** — Save trusted addresses with nicknames.
+_"Send 20 STX to Mom"_ — no copying long addresses.
 
-**📚 Blockchain Docs Search** — Instantly search Stacks documentation and
-developer references from within the app.
+---
+
+## 🎯 Judging Criteria Alignment
+
+| Criterion                    | How EcoNova delivers                                                       |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| **Innovation**               | AI that pays itself via x402 · sBTC on mobile · savings goals via Clarity  |
+| **Technical Implementation** | Native Dart signing stack, zero stacks.js, RFC 6979, SHA-512/256, c32check |
+| **Stacks Alignment**         | Clarity 2 contract · sBTC · USDCx · BNS · full Leather + Xverse compat     |
+| **User Experience**          | Conversational interface · voice · saved contacts · progress bars          |
+| **Impact Potential**         | Only mobile Stacks wallet with this feature set · 30+ chains unified       |
 
 ---
 
 ## 🚀 Full Feature List
 
-| Feature                             | Status |
-| ----------------------------------- | ------ |
-| STX send / receive                  | ✅     |
-| sBTC send / receive                 | ✅     |
-| USDCx send / receive                | ✅     |
-| USDCx savings goals (Clarity 2)     | ✅     |
-| BNS (.btc) name resolution          | ✅     |
-| x402 autonomous payments            | ✅     |
-| dApp browser — Leather API          | ✅     |
-| dApp browser — Xverse / legacy      | ✅     |
-| SIP-018 structured message signing  | ✅     |
-| Contract call + deploy from browser | ✅     |
-| Transaction history                 | ✅     |
-| Voice recognition                   | ✅     |
-| Saved contacts                      | ✅     |
-| Portfolio overview                  | ✅     |
-| Staking                             | ✅     |
-| Meme coin deployment                | ✅     |
-| Liquidity management                | ✅     |
-| AI natural language agent           | ✅     |
-| Multi-chain (ETH, SOL, Base, TON…)  | ✅     |
+| Feature                                              | Status |
+| ---------------------------------------------------- | ------ |
+| STX send / receive                                   | ✅     |
+| sBTC send / receive                                  | ✅     |
+| USDCx send / receive                                 | ✅     |
+| USDCx savings goals (Clarity 2)                      | ✅     |
+| BNS (.btc) name resolution                           | ✅     |
+| x402 autonomous payments (STX / sBTC / USDCx)        | ✅     |
+| dApp browser — Leather / Xverse API                  | ✅     |
+| dApp browser — EVM (MetaMask-compat)                 | ✅     |
+| dApp browser — Solana / Starknet / NEAR / MultiversX | ✅     |
+| SIP-018 structured message signing                   | ✅     |
+| Contract call + deploy from browser                  | ✅     |
+| Transaction history                                  | ✅     |
+| Voice recognition                                    | ✅     |
+| Saved contacts                                       | ✅     |
+| Portfolio overview                                   | ✅     |
+| AI natural language agent                            | ✅     |
+| Multi-chain (ETH, SOL, Base, TON, and 25+ more)      | ✅     |
 
 ---
 
@@ -167,11 +210,10 @@ developer references from within the app.
 Stacks is the focus — but EcoNova also supports:
 
 **EVM** — Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base
-and ~15 more EVM networks with full ERC-20 support.
+and ~15 more EVM networks.
 
-**Other L1s** — Solana (SPL tokens), NEAR (NEP-141), TON, TRON (TRC-20),
-MultiversX (ESDT), Cosmos IBC chains, Polkadot, Sui, Aptos, Harmony,
-Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
+**Other L1s** — Solana, NEAR, TON, TRON, MultiversX, Cosmos IBC chains,
+Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
 > All chains. One wallet. No MetaMask switching.
 
@@ -179,21 +221,18 @@ Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
 ## 🛠 Technical Highlights
 
-- **Native Stacks signing** — RFC 6979, SHA-512/256, secp256k1 with
-  recovery ID, SIP-010 contract calls, VersionedSmartContract deploy —
-  all pure Dart, zero stacks.js
+- **Native Stacks signing** — RFC 6979, SHA-512/256, secp256k1 recovery,
+  SIP-010 contract calls, VersionedSmartContract deploy — pure Dart, zero stacks.js
 - **c32check** — Stacks address encoding/decoding ported from TypeScript
-- **Clarity decoder** — hex → human-readable Clarity values (tuples, uint,
-  string-ascii, principals, ok/err wrappers) for confirmation UIs
-- **Two-phase Stacks signing** — exactly mirrors `@stacks/transactions`
-  presign hash pattern
-- **JWT auth response** — ES256K-signed JWT with correct
-  `profile.stxAddress` structure so `decodeToken()` works on dApp side
+- **Clarity decoder** — hex → human-readable (tuples, uint, string-ascii,
+  principals, ok/err) for confirmation UIs matching Leather/Xverse display
+- **Two-phase signing** — matches `@stacks/transactions` presign hash pattern exactly
+- **JWT auth response** — ES256K-signed with correct `profile.stxAddress`
+  so `decodeToken()` works on the dApp side
+- **Clarity 2 savings contract** — literal principal in `contract-call?`,
+  `tx-sender` captured before `as-contract` for correct withdraw destination
 - **x402 multi-version** — v0/v1/v2 with method-aware retry
 - **EIP-3009 signing** — for EVM-side x402 payments
-- **Clarity 2 savings contract** — `contract-call?` with literal principal
-  (fixes `ContractCallExpectName`), `tx-sender` capture before `as-contract`
-  for correct withdraw destination
 
 ---
 
@@ -237,17 +276,12 @@ Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 | sBTC                      | First mobile wallet with native sBTC support         |
 | AI-powered interfaces     | Early-stage, high-demand UX differentiator           |
 | Multi-chain fragmentation | 30+ chains, one interface                            |
-| Retail onboarding         | Growing demand for simplified crypto apps            |
 
 ---
 
 ## 🤝 Contributing & Feedback
 
-We welcome contributions from developers, designers, and crypto enthusiasts!
-
-- Found a bug? Open an issue
-- Have a feature request? Submit a PR
-- Want to help prioritize voice control, multi-chain support, or AI improvements? Share your feedback!
+Found a bug? Open an issue. Have a feature request? Submit a PR.
 
 ---
 
