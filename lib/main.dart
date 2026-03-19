@@ -4,14 +4,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
-import 'package:wallet_app/coins/bitcoin_coin.dart';
+import 'package:wallet_app/coins/utxo_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
-import 'package:wallet_app/coins/native_btc_coin.dart';
+import 'package:wallet_app/coins/btc_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
@@ -101,7 +101,7 @@ List<StacksCoin> stackCoins = [
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
-    ...getBitCoinPOSBlockchains(),
+    ...getUtxoCoins(),
     ...getTonFungibleCoins(),
     ...tonChains,
     ...evmChains,

@@ -21,7 +21,7 @@ import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 
-import '../coins/bitcoin_coin.dart';
+import '../coins/utxo_coin.dart';
 import '../coins/ethereum_coin.dart';
 import '../model/seed_phrase_root.dart';
 import 'abis.dart';
@@ -116,8 +116,8 @@ EthereumCoin? evmFromChainId(int chainId) {
   return null;
 }
 
-BitcoinCoin? bitcoinFromNetwork(NetworkType network) {
-  for (final c in getBitCoinPOSBlockchains()) {
+UtxoCoin? bitcoinFromNetwork(NetworkType network) {
+  for (final c in getUtxoCoins()) {
     if (c.POSNetwork == network) return c;
   }
   return null;

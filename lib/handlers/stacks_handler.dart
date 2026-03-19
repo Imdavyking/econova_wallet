@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
-import 'package:wallet_app/coins/native_btc_coin.dart';
+import 'package:wallet_app/coins/btc_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
