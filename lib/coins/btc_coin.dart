@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:wallet_app/utils/bech32m.dart';
 import 'package:wallet_app/utils/segwit_tx.dart';
 import 'package:bech32/bech32.dart';
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
@@ -78,10 +79,10 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   // Strip 02/03 prefix byte → 32-byte x-only pubkey
   final xOnlyPubkey = Uint8List.fromList(node.publicKey.sublist(1));
 
-  // Encode as bech32m with witness version 1 — no tapTweak
-  final address = const SegwitCodec().encode(
-    Segwit(args.hrp, 1, xOnlyPubkey),
-  );
+  // Convert 8-bit witness program to 5-bit words, prepend witness version 1,
+  // then encode with bech32m (BIP350) -- required for witness version 1+.
+  final words = _convertBits(xOnlyPubkey, 8, 5, true);
+  final address = bech32mEncode(args.hrp, [1, ...words]);
 
   return {
     'address': address,
@@ -89,6 +90,22 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
     'publicKey': HEX.encode(node.publicKey),
     'tweakedPublicKey': HEX.encode(xOnlyPubkey),
   };
+}
+
+List<int> _convertBits(List<int> data, int from, int to, bool pad) {
+  int acc = 0, bits = 0;
+  final result = <int>[];
+  final maxv = (1 << to) - 1;
+  for (final value in data) {
+    acc = ((acc << from) | value) & 0xfff;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      result.add((acc >> bits) & maxv);
+    }
+  }
+  if (pad && bits > 0) result.add((acc << (to - bits)) & maxv);
+  return result;
 }
 
 // ─── P2WPKH (tb1q / bc1q) ─────────────────────────────────────────────────────
@@ -405,7 +422,7 @@ class TaprootBtcCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     // v3 — bumped to bust stale cache from tapTweak era
-    final saveKey = 'nativeBtcP2TRv3$isTestnet${walletImportType.name}';
+    final saveKey = 'nativeBtcP2TRv3i$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
