@@ -151,7 +151,7 @@ class AIAgentService {
         When a tool returns an error, copy the exact error string to the user
         without any rewording, softening, or summarizing. Show every detail
         including exception type, field names, and nested causes exactly as
-        returned. Never replace a specific error with a generic phrase.
+        returned. Never replace a specific error with a generic phrase(users should not need to ask for more details).
         ''';
   }
 

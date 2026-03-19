@@ -1,9 +1,6 @@
 import express from "express";
 import axios from "axios";
-import {
-  paymentMiddleware,
-  USDCxToMicroUSDCx,
-} from "x402-stacks";
+import { paymentMiddleware, USDCxToMicroUSDCx } from "x402-stacks";
 import { StacksMainnet, StacksTestnet } from "@stacks/network";
 import {
   broadcastTransaction,
@@ -13,13 +10,14 @@ import "dotenv/config";
 
 const PORT = process.env.PORT ?? 3000;
 const NETWORK = process.env.NETWORK === "mainnet" ? "mainnet" : "testnet";
-const PAY_TO = process.env.PAY_TO!;
-const FACILITATOR_URL = process.env.FACILITATOR_URL ?? `http://localhost:${PORT}`;
+const PAY_TO =
+  process.env.PAY_TO ?? "ST2VRPAPFN63CWA9HZQF8TNK678JCZAX71JJJQWGS";
+const FACILITATOR_URL =
+  process.env.FACILITATOR_URL ?? `http://localhost:${PORT}`;
 const PRICE = USDCxToMicroUSDCx(0.1);
 
-const stacksNetwork = NETWORK === "mainnet"
-  ? new StacksMainnet()
-  : new StacksTestnet();
+const stacksNetwork =
+  NETWORK === "mainnet" ? new StacksMainnet() : new StacksTestnet();
 
 const app = express();
 app.use(express.json());
@@ -69,7 +67,7 @@ app.post("/settle", async (req, res) => {
     }
 
     console.log(
-      `[settle] txid=${result.txid} payer=${paymentPayload.accepted?.from}`
+      `[settle] txid=${result.txid} payer=${paymentPayload.accepted?.from}`,
     );
 
     return res.json({
@@ -114,7 +112,7 @@ app.get("/api/market", paywall, async (_, res) => {
           price_change_percentage: "1h,24h,7d",
         },
         timeout: 8000,
-      }
+      },
     );
 
     const fmt = (coin: any) => ({
