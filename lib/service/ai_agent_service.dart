@@ -141,7 +141,17 @@ class AIAgentService {
           different blockchain is required), use CMD_switchCoin then retry
           CMD_x402Pay automatically without asking the user.
         - If CMD_x402Pay fails for any other reason, report it — do NOT retry
-          with CMD_transferBalance.''';
+          with CMD_transferBalance
+      ── PREMIUM DATA FEEDS — x402 GATED ─────────────────────────────────
+The following endpoints require payment via CMD_x402Pay.
+Use QRY_httpRequest first — if it returns 402, call CMD_x402Pay automatically.
+
+$stacksDefiYieldsUrl → Live APR, TVL, and 24h volume for Stacks DeFi pools
+  on Alex Lab. Use when the user asks about yields, APR, pool returns,
+  or earning opportunities on Stacks.
+  Example triggers: "best yields on Stacks", "what's the APR on Alex",
+  "where can I earn with my STX", "show me Stacks DeFi pools".
+      .''';
   }
 
   // ── LLM ─────────────────────────────────────────────────────────────────────
