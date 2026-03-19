@@ -774,7 +774,7 @@ Future<({String txId, String txRaw})> contractCallGoal({
   final data = WalletService.getActiveKey(walletImportType)!.data;
   final keyPair = await coin.importData(data);
   final privBytes = txDataToUintList(keyPair.privateKey!);
-  final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+  final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
   final isTestnet = coin.isTestnet;
 
   final nonce = await stacksFetchNonce(isTestnet, keyPair.address);

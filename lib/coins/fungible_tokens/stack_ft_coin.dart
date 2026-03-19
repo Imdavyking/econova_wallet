@@ -96,7 +96,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
       final walletData = WalletService.getActiveKey(walletImportType)!.data;
       final accountData = await importData(walletData);
       final privBytes = txDataToUintList(accountData.privateKey!);
-      final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+      final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
 
       final txHex = await buildSip010TransferHex(
         option: option,
@@ -253,7 +253,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     final keyPair = await importData(data);
 
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+    final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
     final nonce = await stacksFetchNonce(isTestnet, keyPair.address);
     final feeRate = await stacksFetchFeeRate(isTestnet);
     final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);

@@ -114,7 +114,7 @@ class StacksNFTCoin extends StacksCoin {
     final keyPair = await importData(data);
 
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+    final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
     final nonce = await stacksFetchNonce(isTestnet, keyPair.address);
     final feeRate = await stacksFetchFeeRate(isTestnet);
     final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);

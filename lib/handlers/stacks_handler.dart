@@ -691,8 +691,7 @@ class StacksHandler extends BaseWebViewHandler {
           final data = WalletService.getActiveKey(walletImportType)!.data;
           final keyPair = await coin.importData(data);
           final privBytes = txDataToUintList(keyPair.privateKey!);
-          final senderHash160 =
-              stacksHash160(stacksCompressedPubKey(privBytes));
+          final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
           final nonce = await _fetchNonce(coin);
           final feeRate = await _fetchFeeRate(coin);
           final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
@@ -1054,7 +1053,7 @@ class StacksHandler extends BaseWebViewHandler {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await coin.importData(data);
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+    final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
     final nonce = await _fetchNonce(coin);
     final feeRate = await _fetchFeeRate(coin);
     final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);

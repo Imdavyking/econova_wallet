@@ -115,7 +115,7 @@ class StacksCoin extends Coin {
       final walletData = WalletService.getActiveKey(walletImportType)!.data;
       final accountData = await importData(walletData);
       final privBytes = txDataToUintList(accountData.privateKey!);
-      final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+      final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
 
       final txHex = await buildStxTransferHex(
         option: option,
@@ -299,7 +299,7 @@ class StacksCoin extends Coin {
     final privBytes = txDataToUintList(privateKey);
     final pubBytes = stacksCompressedPubKey(privBytes);
     final address =
-        'S${c32checkEncode(_addrVersion, HEX.encode(stacksHash160(pubBytes)))}';
+        'S${c32checkEncode(_addrVersion, HEX.encode(hash160(pubBytes)))}';
     return AccountData(
       address: address,
       privateKey: privateKey,
@@ -386,7 +386,7 @@ class StacksCoin extends Coin {
     final keyPair = await importData(data);
 
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final senderHash160 = stacksHash160(stacksCompressedPubKey(privBytes));
+    final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
 
     final nonce = await stacksFetchNonce(isTestnet, keyPair.address);
     final feeRate = await stacksFetchFeeRate(isTestnet);
@@ -453,9 +453,10 @@ class StacksDeriveArgs {
 Map<String, dynamic> calculateStacksKey(StacksDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
   final pubKeyBytes = stacksCompressedPubKey(node.privateKey!);
-  final hash160 = stacksHash160(pubKeyBytes);
+
   return {
-    'address': 'S${c32checkEncode(args.addressVersion, HEX.encode(hash160))}',
+    'address':
+        'S${c32checkEncode(args.addressVersion, HEX.encode(hash160(pubKeyBytes)))}',
     'privateKey': '0x${HEX.encode(node.privateKey!)}',
     'publicKey': HEX.encode(pubKeyBytes),
   };

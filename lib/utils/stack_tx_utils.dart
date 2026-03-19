@@ -85,7 +85,7 @@ Uint8List stacksHmacSha256(Uint8List key, Uint8List data) {
 }
 
 /// RIPEMD-160(SHA-256(data)) — the standard hash160 used in P2PKH addresses.
-Uint8List stacksHash160(Uint8List pubKey) {
+Uint8List hash160(Uint8List pubKey) {
   final shaOut = stacksSha256(pubKey);
   final rmd = pc.RIPEMD160Digest()..update(shaOut, 0, shaOut.length);
   final out = Uint8List(20);

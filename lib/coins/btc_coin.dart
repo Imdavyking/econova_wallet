@@ -285,8 +285,9 @@ class NativeBtcCoin extends Coin {
         Uint8List.fromList([0x00, 0x14, ...hash160]);
 
 // P2WPKH scriptCode for sighash: OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
-    final pubKeyHash = stacksHash160(
-        privBytes.length == 32 ? stacksCompressedPubKey(privBytes) : privBytes);
+    final pubKeyHash = hash160(
+      privBytes.length == 32 ? stacksCompressedPubKey(privBytes) : privBytes,
+    );
 
     final scriptCode = Uint8List.fromList([
       0x19,
@@ -299,7 +300,7 @@ class NativeBtcCoin extends Coin {
     ]);
 
 // Decode output scripts
-    final toScript = p2wpkhScript(stacksHash160(
+    final toScript = p2wpkhScript(hash160(
       // resolve address to hash160 via bech32 decode
       (() {
         final dec = const SegwitCodec().decode(to);
@@ -307,7 +308,7 @@ class NativeBtcCoin extends Coin {
       })(),
     ));
     final changeScript = change > 546
-        ? p2wpkhScript(stacksHash160((() {
+        ? p2wpkhScript(hash160((() {
             final dec = const SegwitCodec().decode(address);
             return Uint8List.fromList(dec.program);
           })()))
