@@ -346,7 +346,7 @@ class TaprootBtcCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nativeBtcP2TR$isTestnet${walletImportType.name}';
+    final saveKey = 'nativeBtcP2TR$isTestnet${walletImportType.name}r';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {

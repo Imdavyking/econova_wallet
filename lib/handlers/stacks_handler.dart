@@ -275,7 +275,7 @@ class StacksHandler extends BaseWebViewHandler {
 
     final tweakedPubKey = taprootData.tweakedPublicKey ?? '';
 
-    return {
+    final addressesData = {
       'addresses': [
         {
           'symbol': 'BTC',
@@ -299,6 +299,10 @@ class StacksHandler extends BaseWebViewHandler {
         },
       ],
     };
+
+    debugPrint(jsonEncode(addressesData));
+
+    return addressesData;
   }
 
   Future<Map<String, dynamic>> _accountPayload(
