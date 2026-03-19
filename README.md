@@ -169,7 +169,7 @@ No addresses. No gas confusion. No chain switching. No coding required.
 _"Send 0.1 STX to alice.btc"_ works hands-free on mobile.
 
 **👥 Saved Contacts** — Save trusted addresses with nicknames.
-_"Send 20 STX to Mom"_ — no copying long addresses.
+_"Send 20 dollars worth of STX to Mom"_ — no copying long addresses.
 
 ---
 
