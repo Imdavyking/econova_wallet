@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
+import 'package:wallet_app/coins/native_btc_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
@@ -184,7 +185,7 @@ class StacksHandler extends BaseWebViewHandler {
     final existing = await getWeb3Address('stacks', sendingAddress);
     if (existing != null) {
       await _sendResponse(
-          jsData, _addressPayload(sendingAddress, accountDetail));
+          jsData, await _addressPayload(sendingAddress, accountDetail));
       return;
     }
     if (!context.mounted) return;
@@ -194,7 +195,7 @@ class StacksHandler extends BaseWebViewHandler {
       onConfirm: () async {
         try {
           await _sendResponse(
-              jsData, _addressPayload(sendingAddress, accountDetail));
+              jsData, await _addressPayload(sendingAddress, accountDetail));
           await saveWeb3Address('stacks', sendingAddress);
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -220,7 +221,7 @@ class StacksHandler extends BaseWebViewHandler {
     final existing = await getWeb3Address('stacks', sendingAddress);
     if (existing != null) {
       await _sendResponse(
-          jsData, _accountPayload(sendingAddress, accountDetail, coin));
+          jsData, await _accountPayload(sendingAddress, accountDetail, coin));
       return;
     }
     if (!context.mounted) return;
@@ -229,8 +230,8 @@ class StacksHandler extends BaseWebViewHandler {
       url: jsData.url,
       onConfirm: () async {
         try {
-          await _sendResponse(
-              jsData, _accountPayload(sendingAddress, accountDetail, coin));
+          await _sendResponse(jsData,
+              await _accountPayload(sendingAddress, accountDetail, coin));
           await saveWeb3Address('stacks', sendingAddress);
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -245,37 +246,80 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  Map<String, dynamic> _addressPayload(String address, AccountData d) => {
-        'addresses': [
-          {
-            'symbol': 'STX',
-            'type': 'p2pkh',
-            'address': address,
-            'publicKey': d.publicKey
-          },
-        ],
-      };
+  // ── Address / account payload builders ───────────────────────────────────
+  //
+  // Returns the same shape Leather returns from getAddresses:
+  // - BTC p2wpkh  (tb1q / bc1q)  m/84'/1'/0'/0/0
+  // - BTC p2tr    (tb1p / bc1p)  m/86'/1'/0'/0/0
+  // - STX
+  //
+  // Both BTC derivations are done in background isolates inside
+  // NativeBtcCoin / TaprootBtcCoin — no UI jank.
 
-  Map<String, dynamic> _accountPayload(
-          String address, AccountData d, StacksCoin coin) =>
-      {
-        'addresses': [
-          {
-            'address': address,
-            'publicKey': d.publicKey,
-            'network': coin.isTestnet ? 'testnet' : 'mainnet',
-            'symbol': 'STX',
-          },
-        ],
-        'accounts': [
-          {
-            'address': address,
-            'publicKey': d.publicKey,
-            'network': coin.isTestnet ? 'testnet' : 'mainnet',
-            'symbol': 'STX',
-          },
-        ],
-      };
+  Future<Map<String, dynamic>> _addressPayload(
+    String stxAddress,
+    AccountData stxDetail,
+  ) async {
+    final isTestnet = getStacksBlockchains().first.isTestnet;
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+
+    // Derive P2WPKH (tb1q / bc1q)
+    final segwitCoin = getNativeBtcCoins().first;
+    final segwitData = await segwitCoin.importData(walletData);
+    final segwitPath = isTestnet ? "m/84'/1'/0'/0/0" : "m/84'/0'/0'/0/0";
+
+    // Derive P2TR (tb1p / bc1p)
+    final taprootCoin = getTaprootBtcCoins().first;
+    final taprootData = await taprootCoin.importData(walletData);
+    final taprootPath = isTestnet ? "m/86'/1'/0'/0/0" : "m/86'/0'/0'/0/0";
+
+    final tweakedPubKey = taprootData.tweakedPublicKey ?? '';
+
+    return {
+      'addresses': [
+        {
+          'symbol': 'BTC',
+          'type': 'p2wpkh',
+          'address': segwitData.address,
+          'publicKey': segwitData.publicKey ?? '',
+          'derivationPath': segwitPath,
+        },
+        {
+          'symbol': 'BTC',
+          'type': 'p2tr',
+          'address': taprootData.address,
+          'publicKey': taprootData.publicKey ?? '',
+          'tweakedPublicKey': tweakedPubKey,
+          'derivationPath': taprootPath,
+        },
+        {
+          'symbol': 'STX',
+          'address': stxAddress,
+          'publicKey': stxDetail.publicKey ?? '',
+        },
+      ],
+    };
+  }
+
+  Future<Map<String, dynamic>> _accountPayload(
+    String stxAddress,
+    AccountData stxDetail,
+    StacksCoin coin,
+  ) async {
+    // Reuse _addressPayload so BTC addresses are always included
+    final addrPayload = await _addressPayload(stxAddress, stxDetail);
+    return {
+      ...addrPayload, // carries 'addresses' with BTC p2wpkh + p2tr + STX
+      'accounts': [
+        {
+          'address': stxAddress,
+          'publicKey': stxDetail.publicKey ?? '',
+          'network': coin.isTestnet ? 'testnet' : 'mainnet',
+          'symbol': 'STX',
+        },
+      ],
+    };
+  }
 
   // ── stx_signMessage ───────────────────────────────────────────────────────
 
@@ -390,8 +434,8 @@ class StacksHandler extends BaseWebViewHandler {
           final signedTx = stacksResignTx(rawTx, privBytes);
           final signedHex = HEX.encode(signedTx);
           await _sendResponse(jsData, {
-            'transaction': inputTx, // original unsigned — echoed back
-            'txHex': signedHex, // signed result
+            'transaction': inputTx,
+            'txHex': signedHex,
           });
         } catch (e) {
           await _sendError(e.toString().replaceAll('"', "'"), jsData);
@@ -459,7 +503,6 @@ class StacksHandler extends BaseWebViewHandler {
   ) async {
     final obj = jsData.object;
 
-    // ── Parse asset field (request() path) or legacy fields ──────────────
     String contractAddress;
     String contractName;
     final assetField = obj['asset'] as String?;
@@ -549,7 +592,6 @@ class StacksHandler extends BaseWebViewHandler {
   Future<void> _callContract(_StacksMessage jsData, StacksCoin coin) async {
     final obj = jsData.object;
 
-    // ── Parse contract field (request() path) or legacy fields ──────────────
     String contractAddress;
     String contractName;
     final contractField = obj['contract'] as String?;
@@ -620,7 +662,6 @@ class StacksHandler extends BaseWebViewHandler {
 
   Future<void> _deployContract(_StacksMessage jsData, StacksCoin coin) async {
     final obj = jsData.object;
-    // Support both request() path (name/clarityCode) and legacy (contractName/codeBody)
     final contractName =
         obj['name'] as String? ?? obj['contractName'] as String? ?? '';
     final codeBody =
@@ -657,10 +698,10 @@ class StacksHandler extends BaseWebViewHandler {
           final bb = BytesBuilder();
           if (versioned) {
             bb
-              ..addByte(0x06) // VersionedSmartContract payload type
-              ..addByte(clarityVersion); // Clarity version byte
+              ..addByte(0x06)
+              ..addByte(clarityVersion);
           } else {
-            bb.addByte(0x01); // SmartContract payload type (no version byte)
+            bb.addByte(0x01);
           }
           bb
             ..addByte(nameBytes.length)
@@ -755,7 +796,6 @@ class StacksHandler extends BaseWebViewHandler {
           final txHex = decoded?['txHex'] as String?;
 
           if (txHex != null && txHex.isNotEmpty) {
-            // ── Path 1: pre-built txHex — resign and broadcast ─────────────
             final privBytes = txDataToUintList(accountDetail.privateKey!);
             final rawTx = Uint8List.fromList(HEX
                 .decode(txHex.startsWith('0x') ? txHex.substring(2) : txHex));
@@ -772,7 +812,6 @@ class StacksHandler extends BaseWebViewHandler {
             txHash = jsonDecode(res.body) as String;
             txRaw = HEX.encode(signedTx);
           } else if (txType == 'token_transfer' && recipient.isNotEmpty) {
-            // ── Path 2: STX transfer ───────────────────────────────────────
             final displayAmount = (BigInt.tryParse(amount) ?? BigInt.zero) /
                 BigInt.from(stacksMicroPerStx);
             final result =
@@ -783,7 +822,6 @@ class StacksHandler extends BaseWebViewHandler {
               contractAddress.isNotEmpty &&
               contractName.isNotEmpty &&
               functionName.isNotEmpty) {
-            // ── Path 3: contract_call without txHex — build it here ────────
             final result = await _buildAndBroadcastContractCall(
               coin: coin,
               contractAddress: contractAddress,
@@ -998,14 +1036,6 @@ class StacksHandler extends BaseWebViewHandler {
     } catch (_) {
       return null;
     }
-  }
-
-  static String _buildUnsecuredJwt(Map<String, dynamic> payload) {
-    String b64url(String input) =>
-        base64Url.encode(utf8.encode(input)).replaceAll('=', '');
-    final header = b64url('{"typ":"JWT","alg":"none"}');
-    final pay = b64url(json.encode(payload));
-    return '$header.$pay.';
   }
 
   // ── Shared contract-call builder / broadcaster ────────────────────────────

@@ -223,12 +223,14 @@ class AccountData {
   final String? privateKey;
   final String? publicKey;
   final String? hex_address;
+  final String? tweakedPublicKey; // P2TR only — BIP341 tweaked x-only key
 
   AccountData({
     required this.address,
     this.privateKey,
     this.publicKey,
     this.hex_address,
+    this.tweakedPublicKey,
   });
 
   Map<String, dynamic> toJson() {
@@ -237,6 +239,7 @@ class AccountData {
       'privateKey': privateKey,
       'publicKey': publicKey,
       'hex_address': hex_address,
+      if (tweakedPublicKey != null) 'tweakedPublicKey': tweakedPublicKey,
     };
   }
 
@@ -246,6 +249,7 @@ class AccountData {
       privateKey: json['privateKey'],
       publicKey: json['publicKey'],
       hex_address: json['hex_address'],
+      tweakedPublicKey: json['tweakedPublicKey'] as String?,
     );
   }
 }
