@@ -27,8 +27,8 @@ const mediumLink = '';
 const discordLink = '';
 const instagramLink =
     'https://www.instagram.com/econova?igsh=ZTJidG9kNTQwemp1&utm_source=qr';
-const stacksDefiYieldsUrl = 
-    'https://your-deployed-server.com/api/defi-yields';
+const stacksMarketUrl = 'https://your-server.com/api/market';
+
 
 // color
 const settingIconColor = Colors.white;
