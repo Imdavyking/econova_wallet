@@ -281,26 +281,27 @@ class NativeBtcCoin extends Coin {
     // ── Step 2: build tx ──────────────────────────────────────────────────
     final txb = TransactionBuilder(network: _network)..setVersion(2);
 
-    // Add all inputs with scriptPubKey (required for segwit)
+// For native P2WPKH — do NOT pass script to addInput
+// Pass it as redeemScript in sign() instead
     for (final utxo in selectedUtxos) {
       txb.addInput(
         utxo['txid'] as String,
         utxo['vout'] as int,
-        null, // sequence — null = default
-        script, // scriptPubKey — required for P2WPKH witness construction
       );
     }
 
-    // Add outputs BEFORE signing (BIP143 sighash commits to outputs)
+// Add outputs BEFORE signing (BIP143 sighash commits to outputs)
     txb.addOutput(to, satoshiToSend);
     if (change > 546) txb.addOutput(address, change);
 
-    // Sign each input
+// Sign — pass the P2WPKH output script as redeemScript
+// This is what hashForWitnessV0 needs to build the BIP143 sighash
     for (int i = 0; i < selectedUtxos.length; i++) {
       txb.sign(
         vin: i,
         keyPair: ecPair,
         witnessValue: selectedUtxos[i]['value'] as int,
+        redeemScript: script, // P2WPKH output script (OP_0 <20-byte-hash>)
       );
     }
 
