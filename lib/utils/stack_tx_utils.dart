@@ -335,7 +335,7 @@ Uint8List stacksSignMessage(Uint8List privKey, String message,
 
   final hash = stacksSha256(Uint8List.fromList([
     ...utf8.encode(prefix),
-    ..._varuint(msgBytes.length),
+    ...varuint(msgBytes.length),
     ...msgBytes,
   ]));
 
@@ -348,7 +348,7 @@ Uint8List stacksSignMessage(Uint8List privKey, String message,
   return Uint8List.fromList([...r, ...s, recoveryId]);
 }
 
-Uint8List _varuint(int value) {
+Uint8List varuint(int value) {
   if (value < 0xfd) {
     return Uint8List.fromList([value]);
   } else if (value <= 0xffff) {

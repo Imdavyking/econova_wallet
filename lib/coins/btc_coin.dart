@@ -238,23 +238,6 @@ class NativeBtcCoin extends Coin {
     final feeRate = await _getFeeRate();
     final privBytes = txDataToUintList(keyPair.privateKey!);
 
-    // compressed: true is required — without it publicKey is null
-    // and txb.sign() throws "Null check operator used on a null value"
-    final ecPair = ECPair.fromPrivateKey(
-      privBytes,
-      network: _network,
-      compressed: true,
-    );
-
-    // Derive P2WPKH scriptPubKey — required as 4th arg of addInput
-    // so bitcoin_flutter knows this is a segwit input and constructs
-    // the witness correctly
-    final p2wpkh = P2WPKH(
-      data: PaymentData(pubkey: ecPair.publicKey),
-      network: _network,
-    );
-    final script = p2wpkh.data.output!;
-
     // ── Step 1: select UTXOs ──────────────────────────────────────────────
     int totalIn = 0;
     final selectedUtxos = <Map<String, dynamic>>[];
@@ -289,20 +272,10 @@ class NativeBtcCoin extends Coin {
 
     Uint8List le64(int v) {
       final b = Uint8List(8);
-      for (int i = 0; i < 8; i++) b[i] = (v >> (8 * i)) & 0xff;
+      for (int i = 0; i < 8; i++) {
+        b[i] = (v >> (8 * i)) & 0xff;
+      }
       return b;
-    }
-
-    Uint8List varint(int v) {
-      if (v < 0xfd) return Uint8List.fromList([v]);
-      if (v <= 0xffff) return Uint8List.fromList([0xfd, v & 0xff, v >> 8]);
-      return Uint8List.fromList([
-        0xfe,
-        v & 0xff,
-        (v >> 8) & 0xff,
-        (v >> 16) & 0xff,
-        (v >> 24) & 0xff
-      ]);
     }
 
     Uint8List dsha256(Uint8List d) => stacksSha256(stacksSha256(d));
@@ -353,11 +326,11 @@ class NativeBtcCoin extends Coin {
 
     final outputs = BytesBuilder();
     outputs.add(le64(satoshiToSend));
-    outputs.add(varint(toScript.length));
+    outputs.add(varuint(toScript.length));
     outputs.add(toScript);
     if (changeScript != null) {
       outputs.add(le64(change));
-      outputs.add(varint(changeScript.length));
+      outputs.add(varuint(changeScript.length));
       outputs.add(changeScript);
     }
     final hashOutputs = dsha256(outputs.toBytes());
@@ -398,7 +371,9 @@ class NativeBtcCoin extends Coin {
         final hex = v.toRadixString(16).padLeft(64, '0');
         final bytes = HEX.decode(hex);
         int start = 0;
-        while (start < bytes.length - 1 && bytes[start] == 0) start++;
+        while (start < bytes.length - 1 && bytes[start] == 0) {
+          start++;
+        }
         final stripped = bytes.sublist(start);
         return Uint8List.fromList(
           stripped[0] & 0x80 != 0 ? [0x00, ...stripped] : stripped,
@@ -428,7 +403,7 @@ class NativeBtcCoin extends Coin {
     rawTx.add(le32(2)); // version
     rawTx.addByte(0x00); // marker
     rawTx.addByte(0x01); // flag
-    rawTx.add(varint(selectedUtxos.length)); // input count
+    rawTx.add(varuint(selectedUtxos.length)); // input count
     for (final utxo in selectedUtxos) {
       rawTx.add(HEX.decode(utxo['txid'] as String).reversed.toList());
       rawTx.add(le32(utxo['vout'] as int));
@@ -437,20 +412,20 @@ class NativeBtcCoin extends Coin {
     }
 // outputs
     final outCount = changeScript != null ? 2 : 1;
-    rawTx.add(varint(outCount));
+    rawTx.add(varuint(outCount));
     rawTx.add(le64(satoshiToSend));
-    rawTx.add(varint(toScript.length));
+    rawTx.add(varuint(toScript.length));
     rawTx.add(toScript);
     if (changeScript != null) {
       rawTx.add(le64(change));
-      rawTx.add(varint(changeScript.length));
+      rawTx.add(varuint(changeScript.length));
       rawTx.add(changeScript);
     }
 // witness for each input
     for (final w in witnesses) {
-      rawTx.add(varint(w.length));
+      rawTx.add(varuint(w.length));
       for (final item in w) {
-        rawTx.add(varint(item.length));
+        rawTx.add(varuint(item.length));
         rawTx.add(item);
       }
     }
