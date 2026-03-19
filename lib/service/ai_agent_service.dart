@@ -143,15 +143,10 @@ class AIAgentService {
         - If CMD_x402Pay fails for any other reason, report it — do NOT retry
           with CMD_transferBalance
       ── PREMIUM DATA FEEDS — x402 GATED ─────────────────────────────────
-The following endpoints require payment via CMD_x402Pay.
-Use QRY_httpRequest first — if it returns 402, call CMD_x402Pay automatically.
-
-$stacksDefiYieldsUrl → Live APR, TVL, and 24h volume for Stacks DeFi pools
-  on Alex Lab. Use when the user asks about yields, APR, pool returns,
-  or earning opportunities on Stacks.
-  Example triggers: "best yields on Stacks", "what's the APR on Alex",
-  "where can I earn with my STX", "show me Stacks DeFi pools".
-      .''';
+$stacksMarketUrl → Full market report for STX, BTC, and ETH.
+Includes price, 1h/24h/7d change, market cap, volume, and ATH.
+Use QRY_httpRequest first. If 402 returned, call CMD_x402Pay automatically.
+Triggers: "market report", "full STX analysis", "how is the market today".''';
   }
 
   // ── LLM ─────────────────────────────────────────────────────────────────────
