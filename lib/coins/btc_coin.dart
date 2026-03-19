@@ -300,18 +300,15 @@ class NativeBtcCoin extends Coin {
     ]);
 
 // Decode output scripts
-    final toScript = p2wpkhScript(hash160(
-      // resolve address to hash160 via bech32 decode
-      (() {
-        final dec = const SegwitCodec().decode(to);
-        return Uint8List.fromList(dec.program);
-      })(),
-    ));
+    final toScript = p2wpkhScript((() {
+      final dec = const SegwitCodec().decode(to);
+      return Uint8List.fromList(dec.program);
+    })());
     final changeScript = change > 546
-        ? p2wpkhScript(hash160((() {
+        ? p2wpkhScript((() {
             final dec = const SegwitCodec().decode(address);
             return Uint8List.fromList(dec.program);
-          })()))
+          })())
         : null;
 
 // BIP143 preimage components
