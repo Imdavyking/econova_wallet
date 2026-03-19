@@ -3,13 +3,13 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
+
 import 'package:bech32/bech32.dart';
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
-import 'package:pointycastle/export.dart' as pc;
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -18,12 +18,15 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 
+// Testnet4 is the current active Bitcoin testnet.
+// Mempool.space supports it at /testnet4/api.
+// HRP is still 'tb', derivation coin_type is still 1.
 const _mempoolMain = 'https://mempool.space/api';
 const _mempoolTest = 'https://mempool.space/testnet4/api';
 
 // ─── Isolate args & top-level compute functions ───────────────────────────────
-// Must be top-level (not instance methods) so Flutter's compute() can send
-// them across isolate boundaries.
+// Must be top-level so Flutter's compute() can send them across isolate
+// boundaries.
 
 class NativeBtcDeriveArgs {
   final SeedPhraseRoot seedRoot;
@@ -65,38 +68,25 @@ class TaprootBtcDeriveArgs {
 }
 
 /// Runs in a separate isolate — derives P2TR (tb1p / bc1p) address.
+///
+/// Leather uses the raw x-only pubkey as the witness program directly —
+/// no BIP341 tapTweak applied. tweakedPublicKey == x-only pubkey.
 Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
+
+  // Strip 02/03 prefix byte → 32-byte x-only pubkey
   final xOnlyPubkey = Uint8List.fromList(node.publicKey.sublist(1));
 
-  // BIP341 tagged hash
-  const tag = 'TapTweak';
-  final tagBytes = Uint8List.fromList(tag.codeUnits);
-  final tagHash = sha256.convert(tagBytes).bytes;
-  final toHash = Uint8List.fromList([...tagHash, ...tagHash, ...xOnlyPubkey]);
-  final tweak = Uint8List.fromList(sha256.convert(toHash).bytes);
-
-  // Q = P + tweak*G
-  final params = pc.ECDomainParameters('secp256k1');
-  final G = params.G;
-  final compressed = Uint8List(33)..[0] = 0x02;
-  compressed.setRange(1, 33, xOnlyPubkey);
-  final P = params.curve.decodePoint(compressed)!;
-  final t = BigInt.parse(HEX.encode(tweak), radix: 16);
-  final Q = P + (G * t)!;
-  if (Q == null || Q.isInfinity) throw Exception('Point at infinity');
-  final tweakedKey = Uint8List.fromList(Q.getEncoded(true).sublist(1));
-
-  // bech32m encode — witness version 1 triggers bech32m checksum
+  // Encode as bech32m with witness version 1 — no tapTweak
   final address = const SegwitCodec().encode(
-    Segwit(args.hrp, 1, tweakedKey),
+    Segwit(args.hrp, 1, xOnlyPubkey),
   );
 
   return {
     'address': address,
     'privateKey': '0x${HEX.encode(node.privateKey!)}',
     'publicKey': HEX.encode(node.publicKey),
-    'tweakedPublicKey': HEX.encode(tweakedKey),
+    'tweakedPublicKey': HEX.encode(xOnlyPubkey),
   };
 }
 
@@ -121,7 +111,8 @@ class NativeBtcCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nativeBtcP2WPKH$isTestnet${walletImportType.name}';
+    // v2 — bumped to bust stale cache
+    final saveKey = 'nativeBtcP2WPKHv2$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
@@ -131,8 +122,6 @@ class NativeBtcCoin extends Coin {
       }
     }
 
-    // Offload derivePath + P2WPKH address generation to a separate isolate
-    // to avoid janking the UI thread.
     final result = await compute(
       calculateNativeBtcKey,
       NativeBtcDeriveArgs(
@@ -160,9 +149,6 @@ class NativeBtcCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final res = await http.get(Uri.parse('$_api/address/$address'));
-    print('$_api/address/$address');
-    print('btc');
-    print(res.body);
     if (res.statusCode ~/ 100 != 2) {
       throw Exception('NativeBTC balance fetch failed: ${res.statusCode}');
     }
@@ -215,6 +201,18 @@ class NativeBtcCoin extends Coin {
   }
 
   // ─── Send ────────────────────────────────────────────────────────────────────
+  //
+  // amount is a BTC string e.g. "0.0001" — converted to satoshis internally.
+  //
+  // IMPORTANT — segwit signing order:
+  //   1. addInput  (all inputs, with scriptPubKey)
+  //   2. addOutput (all outputs — recipient + change)
+  //   3. sign      (each input with witnessValue)
+  //   4. build + broadcast
+  //
+  // The BIP143 sighash commits to outputs, so outputs must exist before
+  // signing. Also ECPair must be created with compressed: true or
+  // publicKey will be null and sign() will throw.
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
@@ -222,7 +220,10 @@ class NativeBtcCoin extends Coin {
     String to, {
     String? memo,
   }) async {
+    // amount is BTC — convert to satoshis
     final satoshiToSend = (double.parse(amount) * pow(10, 8)).toInt();
+    if (kDebugMode) print('BTC satoshiToSend: $satoshiToSend');
+
     if (satoshiToSend < 546) throw Exception('Amount below dust limit');
 
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -234,21 +235,39 @@ class NativeBtcCoin extends Coin {
 
     final feeRate = await _getFeeRate();
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final ecPair = ECPair.fromPrivateKey(privBytes, network: _network);
-    final txb = TransactionBuilder(network: _network)..setVersion(2);
 
+    // compressed: true is required — without it publicKey is null
+    // and txb.sign() throws "Null check operator used on a null value"
+    final ecPair = ECPair.fromPrivateKey(
+      privBytes,
+      network: _network,
+      compressed: true,
+    );
+
+    // Derive P2WPKH scriptPubKey — required as 4th arg of addInput
+    // so bitcoin_flutter knows this is a segwit input and constructs
+    // the witness correctly
+    final p2wpkh = P2WPKH(
+      data: PaymentData(pubkey: ecPair.publicKey),
+      network: _network,
+    );
+    final script = p2wpkh.data.output!;
+
+    // ── Step 1: select UTXOs ──────────────────────────────────────────────
     int totalIn = 0;
-    int fee = 0;
-    int inputCount = 0;
+    final selectedUtxos = <Map<String, dynamic>>[];
 
     for (final utxo in utxos) {
-      final value = utxo['value'] as int;
-      txb.addInput(utxo['txid'] as String, utxo['vout'] as int);
-      txb.sign(vin: inputCount, keyPair: ecPair, witnessValue: value);
-      totalIn += value;
-      inputCount++;
-      fee = _estimateFee(inputCount, 2, feeRate);
+      selectedUtxos.add(utxo);
+      totalIn += utxo['value'] as int;
+      final fee = _estimateFee(selectedUtxos.length, 2, feeRate);
       if (totalIn >= satoshiToSend + fee) break;
+    }
+
+    final fee = _estimateFee(selectedUtxos.length, 2, feeRate);
+    if (kDebugMode) {
+      print(
+          'BTC totalIn: $totalIn  fee: $fee  change: ${totalIn - satoshiToSend - fee}');
     }
 
     if (totalIn < satoshiToSend + fee) {
@@ -256,12 +275,38 @@ class NativeBtcCoin extends Coin {
           'Insufficient balance (need ${satoshiToSend + fee} sat, have $totalIn)');
     }
 
-    txb.addOutput(to, satoshiToSend);
     final change = totalIn - satoshiToSend - fee;
+
+    // ── Step 2: build tx ──────────────────────────────────────────────────
+    final txb = TransactionBuilder(network: _network)..setVersion(2);
+
+    // Add all inputs with scriptPubKey (required for segwit)
+    for (final utxo in selectedUtxos) {
+      txb.addInput(
+        utxo['txid'] as String,
+        utxo['vout'] as int,
+        null, // sequence — null = default
+        script, // scriptPubKey — required for P2WPKH witness construction
+      );
+    }
+
+    // Add outputs BEFORE signing (BIP143 sighash commits to outputs)
+    txb.addOutput(to, satoshiToSend);
     if (change > 546) txb.addOutput(address, change);
 
-    final txHex = txb.build().toHex();
+    // Sign each input
+    for (int i = 0; i < selectedUtxos.length; i++) {
+      txb.sign(
+        vin: i,
+        keyPair: ecPair,
+        witnessValue: selectedUtxos[i]['value'] as int,
+      );
+    }
 
+    final txHex = txb.build().toHex();
+    if (kDebugMode) print('BTC txHex: $txHex');
+
+    // ── Step 3: broadcast ─────────────────────────────────────────────────
     final res = await http.post(
       Uri.parse('$_api/tx'),
       headers: {'Content-Type': 'text/plain'},
@@ -294,7 +339,7 @@ class NativeBtcCoin extends Coin {
   String getImage() => image;
 
   @override
-  String getName() => isTestnet ? 'Bitcoin (SegWit)' : 'Bitcoin';
+  String getName() => isTestnet ? 'Bitcoin (SegWit Test4)' : 'Bitcoin';
 
   @override
   String getPayScheme() => 'bitcoin';
@@ -304,6 +349,9 @@ class NativeBtcCoin extends Coin {
 
   @override
   String getSymbol() => 'BTC';
+
+  @override
+  bool get isRpcWorking => true;
 
   @override
   Future<String?> resolveAddress(String address) async => null;
@@ -346,7 +394,8 @@ class TaprootBtcCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nativeBtcP2TR$isTestnet${walletImportType.name}r';
+    // v3 — bumped to bust stale cache from tapTweak era
+    final saveKey = 'nativeBtcP2TRv3$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
@@ -356,8 +405,6 @@ class TaprootBtcCoin extends Coin {
       }
     }
 
-    // Offload derivePath + taproot tweak + bech32m encoding to isolate.
-    // All the heavy EC math (derivePath, _addTweak) runs off the UI thread.
     final result = await compute(
       calculateTaprootBtcKey,
       TaprootBtcDeriveArgs(
@@ -411,9 +458,7 @@ class TaprootBtcCoin extends Coin {
 
   // ─── Send ─────────────────────────────────────────────────────────────────────
   // Taproot spending requires BIP340 Schnorr signing which bitcoin_flutter
-  // does not yet support. P2TR is currently receive-only — users send via
-  // the P2WPKH (tb1q) address. This is consistent with how Leather handles
-  // it for most dApps.
+  // does not yet support. P2TR is receive-only — users send via tb1q address.
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
@@ -448,7 +493,8 @@ class TaprootBtcCoin extends Coin {
   String getImage() => image;
 
   @override
-  String getName() => 'Bitcoin (Taproot)';
+  String getName() =>
+      isTestnet ? 'Bitcoin (Taproot Test4)' : 'Bitcoin (Taproot)';
 
   @override
   String getPayScheme() => 'bitcoin';
@@ -458,6 +504,9 @@ class TaprootBtcCoin extends Coin {
 
   @override
   String getSymbol() => 'BTC';
+
+  @override
+  bool get isRpcWorking => true;
 
   @override
   Future<String?> resolveAddress(String address) async => null;
@@ -487,7 +536,7 @@ List<NativeBtcCoin> getNativeBtcCoins() {
       NativeBtcCoin(
         isTestnet: true,
         blockExplorer:
-            'https://mempool.space/testnet/tx/$blockExplorerPlaceholder',
+            'https://mempool.space/testnet4/tx/$blockExplorerPlaceholder',
         image: 'assets/bitcoin.jpg',
       ),
     ];
@@ -507,7 +556,7 @@ List<TaprootBtcCoin> getTaprootBtcCoins() {
       TaprootBtcCoin(
         isTestnet: true,
         blockExplorer:
-            'https://mempool.space/testnet/tx/$blockExplorerPlaceholder',
+            'https://mempool.space/testnet4/tx/$blockExplorerPlaceholder',
         image: 'assets/bitcoin.jpg',
       ),
     ];
