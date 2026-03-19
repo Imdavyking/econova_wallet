@@ -13,8 +13,7 @@ const String fallbackMessage =
 const walletDexProviderUrl =
     'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
 const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
-// const browserUrl = 'http://localhost:5173/demo';
-const browserUrl = 'https://app.alexlab.co';
+const browserUrl = 'http://localhost:5173/demo';
 
 // dapp links
 const blogUrl = "https://www.stacks.co/blog";
@@ -28,7 +27,6 @@ const discordLink = '';
 const instagramLink =
     'https://www.instagram.com/econova?igsh=ZTJidG9kNTQwemp1&utm_source=qr';
 const stacksMarketUrl = 'https://your-server.com/api/market';
-
 
 // color
 const settingIconColor = Colors.white;
