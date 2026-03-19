@@ -113,7 +113,7 @@ class NativeBtcCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     // v2 — bumped to bust stale cache
-    final saveKey = 'nativeBtcP2WPKHv2$isTestnet${walletImportType.name}';
+    final saveKey = 'nativeBtcP2WPKHv2i$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
