@@ -153,23 +153,26 @@ The first mobile wallet where the AI funds itself. Features:
 EcoNova's core is a conversational AI agent that understands your intent
 and executes on-chain actions autonomously:
 
-- _"Send 10 STX to alice.btc"_
-- _"Save 5 USDCx to my holiday fund"_
-- _"Show my savings goals"_
-- _"How much have I saved for my holiday fund?"_
-- _"Withdraw all from my holiday fund"_
-- _"What's my sBTC balance?"_
-- _"Pay for this API"_
-- _"Swap \$20 STX to USDCx"_
-- _"Send \$10 STX to Wisdom"_ ← using saved contacts
+- "Send 10 STX to alice.btc"  
+- "Send $10 worth of STX to Mum" ← fetches live price, calculates equivalent (~38–40 STX), uses saved contact  
+- "Send $10 USDCx to Wisdom" ← using saved contacts  
+- "Save 5 USDCx to my holiday fund"  
+- "Show my savings goals"  
+- "How much have I saved for my holiday fund?"  
+- "Withdraw all from my holiday fund"  
+- "What's my sBTC balance?"  
+- "Pay for this API" ← autonomous x402 payment using your funds  
+- "Swap $20 STX to USDCx"
 
-No addresses. No gas confusion. No chain switching. No coding required.
+**No addresses. No gas confusion. No chain switching. No coding required.**
 
-**🎙️ Voice Recognition** — Use your voice to execute wallet actions.
-_"Send 0.1 STX to alice.btc"_ works hands-free on mobile.
+**🎙️ Voice Recognition**  
+Use your voice for hands-free commands on mobile.  
+_"Send 0.1 STX to alice.btc"_ or _"Send 20 dollars worth of STX to Mom"_ works instantly.
 
-**👥 Saved Contacts** — Save trusted addresses with nicknames.
-_"Send 20 dollars worth of STX to Mom"_ — no copying long addresses.
+**👥 Saved Contacts**  
+Save trusted people with nicknames once — then just say their name.  
+No more copying long addresses or checking explorers.
 
 ---
 
