@@ -27,7 +27,7 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
   Timer? timer;
   BlockchainPrice? cryptoInfo;
   bool useCache = true;
-  ValueNotifier<double> coinWorth = ValueNotifier<double>(0);
+  final ValueNotifier<double> coinWorth = ValueNotifier<double>(0);
   late Coin coin;
 
   @override
@@ -51,6 +51,7 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
   @override
   void dispose() {
     timer?.cancel();
+    coinWorth.dispose();
     super.dispose();
   }
 
