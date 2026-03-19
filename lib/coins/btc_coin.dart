@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/utils/stack_tx_utils.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -278,34 +279,184 @@ class NativeBtcCoin extends Coin {
 
     final change = totalIn - satoshiToSend - fee;
 
-    // ── Step 2: build tx ──────────────────────────────────────────────────
-    final txb = TransactionBuilder(network: _network)..setVersion(2);
+    // ── Step 2: build raw segwit tx (BIP141/143) ──────────────────────────────
 
-// For native P2WPKH — do NOT pass script to addInput
-// Pass it as redeemScript in sign() instead
+    Uint8List le32(int v) => Uint8List(4)
+      ..[0] = v & 0xff
+      ..[1] = (v >> 8) & 0xff
+      ..[2] = (v >> 16) & 0xff
+      ..[3] = (v >> 24) & 0xff;
+
+    Uint8List le64(int v) {
+      final b = Uint8List(8);
+      for (int i = 0; i < 8; i++) b[i] = (v >> (8 * i)) & 0xff;
+      return b;
+    }
+
+    Uint8List varint(int v) {
+      if (v < 0xfd) return Uint8List.fromList([v]);
+      if (v <= 0xffff) return Uint8List.fromList([0xfd, v & 0xff, v >> 8]);
+      return Uint8List.fromList([
+        0xfe,
+        v & 0xff,
+        (v >> 8) & 0xff,
+        (v >> 16) & 0xff,
+        (v >> 24) & 0xff
+      ]);
+    }
+
+    Uint8List dsha256(Uint8List d) => stacksSha256(stacksSha256(d));
+
+// P2WPKH scriptPubKey: OP_0 <20-byte-hash>
+    Uint8List p2wpkhScript(Uint8List hash160) =>
+        Uint8List.fromList([0x00, 0x14, ...hash160]);
+
+// P2WPKH scriptCode for sighash: OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
+    final pubKeyHash = stacksHash160(
+        privBytes.length == 32 ? stacksCompressedPubKey(privBytes) : privBytes);
+
+    final scriptCode = Uint8List.fromList([
+      0x19,
+      0x76,
+      0xa9,
+      0x14,
+      ...pubKeyHash,
+      0x88,
+      0xac,
+    ]);
+
+// Decode output scripts
+    final toScript = p2wpkhScript(stacksHash160(
+      // resolve address to hash160 via bech32 decode
+      (() {
+        final dec = const SegwitCodec().decode(to);
+        return Uint8List.fromList(dec.program);
+      })(),
+    ));
+    final changeScript = change > 546
+        ? p2wpkhScript(stacksHash160((() {
+            final dec = const SegwitCodec().decode(address);
+            return Uint8List.fromList(dec.program);
+          })()))
+        : null;
+
+// BIP143 preimage components
+    final prevouts = BytesBuilder();
+    final sequences = BytesBuilder();
     for (final utxo in selectedUtxos) {
-      txb.addInput(
-        utxo['txid'] as String,
-        utxo['vout'] as int,
-      );
+      prevouts.add(HEX.decode(utxo['txid'] as String).reversed.toList());
+      prevouts.add(le32(utxo['vout'] as int));
+      sequences.add(le32(0xffffffff));
     }
+    final hashPrevouts = dsha256(prevouts.toBytes());
+    final hashSequence = dsha256(sequences.toBytes());
 
-// Add outputs BEFORE signing (BIP143 sighash commits to outputs)
-    txb.addOutput(to, satoshiToSend);
-    if (change > 546) txb.addOutput(address, change);
+    final outputs = BytesBuilder();
+    outputs.add(le64(satoshiToSend));
+    outputs.add(varint(toScript.length));
+    outputs.add(toScript);
+    if (changeScript != null) {
+      outputs.add(le64(change));
+      outputs.add(varint(changeScript.length));
+      outputs.add(changeScript);
+    }
+    final hashOutputs = dsha256(outputs.toBytes());
 
-// Sign — pass the P2WPKH output script as redeemScript
-// This is what hashForWitnessV0 needs to build the BIP143 sighash
+    const sighashAll = 0x01;
+
+// Sign each input
+    final witnesses = <List<Uint8List>>[];
     for (int i = 0; i < selectedUtxos.length; i++) {
-      txb.sign(
-        vin: i,
-        keyPair: ecPair,
-        witnessValue: selectedUtxos[i]['value'] as int,
-        redeemScript: script, // P2WPKH output script (OP_0 <20-byte-hash>)
-      );
+      final txid =
+          HEX.decode(selectedUtxos[i]['txid'] as String).reversed.toList();
+      final vout = selectedUtxos[i]['vout'] as int;
+      final value = selectedUtxos[i]['value'] as int;
+
+      // BIP143 sighash preimage
+      final preimage = (BytesBuilder()
+            ..add(le32(2)) // version
+            ..add(hashPrevouts)
+            ..add(hashSequence)
+            ..add(txid) // outpoint txid
+            ..add(le32(vout)) // outpoint index
+            ..add(scriptCode) // scriptCode (includes length prefix 0x19)
+            ..add(le64(value)) // input value
+            ..add(le32(0xffffffff)) // sequence
+            ..add(hashOutputs)
+            ..add(le32(0)) // locktime
+            ..add(le32(sighashAll)) // sighash type
+          )
+          .toBytes();
+
+      final sigHash = dsha256(preimage);
+
+      // Sign using our RFC6979 implementation
+      final (ecSig, _) = stacksSecp256k1Sign(privBytes, sigHash);
+
+      // DER encode
+      Uint8List derInt(BigInt v) {
+        final hex = v.toRadixString(16).padLeft(64, '0');
+        final bytes = HEX.decode(hex);
+        int start = 0;
+        while (start < bytes.length - 1 && bytes[start] == 0) start++;
+        final stripped = bytes.sublist(start);
+        return Uint8List.fromList(
+          stripped[0] & 0x80 != 0 ? [0x00, ...stripped] : stripped,
+        );
+      }
+
+      final rDer = derInt(ecSig.r);
+      final sDer = derInt(ecSig.s);
+      final der = Uint8List.fromList([
+        0x30,
+        rDer.length + sDer.length + 4,
+        0x02,
+        rDer.length,
+        ...rDer,
+        0x02,
+        sDer.length,
+        ...sDer,
+        sighashAll,
+      ]);
+
+      final pubKey = stacksCompressedPubKey(privBytes);
+      witnesses.add([der, pubKey]);
     }
 
-    final txHex = txb.build().toHex();
+// Serialize segwit transaction
+    final rawTx = BytesBuilder();
+    rawTx.add(le32(2)); // version
+    rawTx.addByte(0x00); // marker
+    rawTx.addByte(0x01); // flag
+    rawTx.add(varint(selectedUtxos.length)); // input count
+    for (final utxo in selectedUtxos) {
+      rawTx.add(HEX.decode(utxo['txid'] as String).reversed.toList());
+      rawTx.add(le32(utxo['vout'] as int));
+      rawTx.addByte(0x00); // empty scriptSig
+      rawTx.add(le32(0xffffffff)); // sequence
+    }
+// outputs
+    final outCount = changeScript != null ? 2 : 1;
+    rawTx.add(varint(outCount));
+    rawTx.add(le64(satoshiToSend));
+    rawTx.add(varint(toScript.length));
+    rawTx.add(toScript);
+    if (changeScript != null) {
+      rawTx.add(le64(change));
+      rawTx.add(varint(changeScript.length));
+      rawTx.add(changeScript);
+    }
+// witness for each input
+    for (final w in witnesses) {
+      rawTx.add(varint(w.length));
+      for (final item in w) {
+        rawTx.add(varint(item.length));
+        rawTx.add(item);
+      }
+    }
+    rawTx.add(le32(0)); // locktime
+
+    final txHex = HEX.encode(rawTx.toBytes());
     if (kDebugMode) print('BTC txHex: $txHex');
 
     // ── Step 3: broadcast ─────────────────────────────────────────────────
@@ -570,4 +721,16 @@ List<TaprootBtcCoin> getTaprootBtcCoins() {
       image: 'assets/bitcoin.jpg',
     ),
   ];
+}
+
+// DER-encode each integer — strip leading zeros, prepend 0x00 if high bit set
+Uint8List derInt(Uint8List bytes) {
+  int start = 0;
+  while (start < bytes.length - 1 && bytes[start] == 0) {
+    start++;
+  }
+  final stripped = bytes.sublist(start);
+  return (stripped[0] & 0x80 != 0)
+      ? Uint8List.fromList([0x00, ...stripped])
+      : stripped;
 }
