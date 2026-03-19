@@ -503,9 +503,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
       PolkadotCoin(
         blockExplorer:
             'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'DOT',
+        symbol: 'WND',
         name: 'Polkadot(Westend)',
-        default_: 'DOT',
+        default_: 'WND',
         image: 'assets/polkadot.png',
         api: 'https://westend-rpc.polkadot.io',
         coinDecimals: 12,
