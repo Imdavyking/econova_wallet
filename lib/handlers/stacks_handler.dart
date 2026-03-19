@@ -9,6 +9,7 @@ import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/coins/btc_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
 import 'package:wallet_app/utils/c32check.dart';
 import '../coins/stack_coin.dart';
@@ -945,13 +946,20 @@ class StacksHandler extends BaseWebViewHandler {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final header = b64url('{"typ":"JWT","alg":"ES256K"}');
 
+    final identityResult = await compute(
+      calculateIdentityKey,
+      seedPhraseRoot,
+    );
+    final identityPubBytes = Uint8List.fromList(
+      HEX.decode(identityResult['publicKey'] as String),
+    );
+
     final payloadData = json.encode({
       'jti': '${now}_auth_response',
       'iat': now,
       'exp': now + 86400,
-      'iss':
-          'did:btc-addr:${_pubkeyToP2pkh(Uint8List.fromList(HEX.decode(segwitData.publicKey ?? '')))}',
-      'public_keys': [pubKey],
+      'iss': 'did:btc-addr:${_pubkeyToP2pkh(identityPubBytes)}',
+      'public_keys': [identityResult['publicKey']],
       'profile': {
         'stxAddress': {
           'mainnet': isTestnet ? null : sendingAddress,
@@ -1277,4 +1285,12 @@ class _StacksMessage {
       legacyResponseName: json['legacyResponseName'] as String?,
     );
   }
+}
+
+Map<String, dynamic> calculateIdentityKey(SeedPhraseRoot seedRoot) {
+  final node = seedRoot.root.derivePath("m/888'/0'/0'");
+  return {
+    'publicKey': HEX.encode(node.publicKey),
+    'privateKey': '0x${HEX.encode(node.privateKey!)}',
+  };
 }
