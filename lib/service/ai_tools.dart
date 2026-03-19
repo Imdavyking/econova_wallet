@@ -10,7 +10,6 @@ import "package:wallet_app/save_goal/usdcx_goal.dart";
 import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
-import "package:wallet_app/utils/app_config.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
@@ -51,7 +50,10 @@ class AItools {
 // Opens the browser immediately if approved; returns a polite decline message
 // if the user says no.
 
-  Future<String> _offerDappBrowser(String url, String action) async {
+  Future<String> _offerDappBrowser(String? url, String action) async {
+    if (url == null) {
+      return '$action is not available for ${coin.getName()} at the moment.';
+    }
     final confirmation = await confirmTransaction(
       '$action is not available natively.\n\n'
       'Would you like to open the dApp browser to continue?\n\n'
