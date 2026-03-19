@@ -82,12 +82,12 @@ class EthereumCoin extends Coin {
 
   @override
   List<Coin> get networkTokens => getERC20Coins();
-  
-  @override
-  String getSwapDappUrl() => 'https://app.uniswap.org/swap';
 
   @override
-  String getStakeDappUrl() => 'https://lido.fi';
+  String? getSwapDappUrl() => 'https://app.uniswap.org/swap';
+
+  @override
+  String? getStakeDappUrl() => 'https://lido.fi';
 
   // ── x402 support ─────────────────────────────────────────────────────────────
 

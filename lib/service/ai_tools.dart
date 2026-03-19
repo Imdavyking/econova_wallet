@@ -27,105 +27,7 @@ class AItools {
 
   AItools();
 
-  // ── dApp Browser URL resolver ───────────────────────────────────────────────
-
-  String _getSwapDappUrl(String coinSymbol) {
-    switch (coinSymbol.toUpperCase()) {
-      // Stacks ecosystem
-      case 'STX':
-      case 'SBTC':
-      case 'USDCX':
-        return 'https://app.alexlab.co/swap';
-
-      // EVM chains
-      case 'ETH':
-      case 'ARB':
-      case 'OP':
-      case 'BASE':
-      case 'MATIC':
-      case 'AVAX':
-        return 'https://app.uniswap.org/swap';
-
-      case 'BNB':
-        return 'https://pancakeswap.finance/swap';
-
-      // Solana
-      case 'SOL':
-        return 'https://jup.ag';
-
-      // NEAR
-      case 'NEAR':
-        return 'https://app.ref.finance';
-
-      // TON
-      case 'TON':
-        return 'https://ston.fi';
-
-      // TRON
-      case 'TRX':
-        return 'https://sun.io/?lang=en-US#/swap';
-
-      // Cosmos
-      case 'ATOM':
-        return 'https://app.osmosis.zone';
-
-      // Stellar
-      case 'XLM':
-        return 'https://stellarx.com/swap';
-
-      // Sui
-      case 'SUI':
-        return 'https://app.cetus.zone/swap';
-
-      // Aptos
-      case 'APT':
-        return 'https://app.liquidswap.com';
-
-      // MultiversX
-      case 'EGLD':
-        return 'https://xexchange.com/swap';
-
-      // Starknet
-      case 'STRK':
-        return 'https://app.ekubo.org';
-
-      default:
-        return walletDexProviderUrl;
-    }
-  }
-
-  String _getStakeDappUrl(String coinSymbol) {
-    switch (coinSymbol.toUpperCase()) {
-      case 'STX':
-        return 'https://app.stackingdao.com';
-      case 'SBTC':
-      case 'USDCX':
-        return 'https://app.alexlab.co/stake';
-      case 'ETH':
-      case 'ARB':
-      case 'OP':
-      case 'BASE':
-        return 'https://lido.fi';
-      case 'BNB':
-        return 'https://www.binance.com/en/earn';
-      case 'SOL':
-        return 'https://marinade.finance';
-      case 'ATOM':
-        return 'https://wallet.keplr.app/chains/cosmos';
-      case 'NEAR':
-        return 'https://app.ref.finance/staking';
-      case 'MATIC':
-        return 'https://staking.polygon.technology';
-      case 'AVAX':
-        return 'https://core.app/stake';
-      case 'EGLD':
-        return 'https://staking.multiversx.com';
-      case 'TRX':
-        return 'https://tronscan.org/#/sr/representatives';
-      default:
-        return stakeDexProviderUrl;
-    }
-  }
+  // ── Confirm transaction helper ──────────────────────────────────────────────
 
   Future<String?> confirmTransaction(String message) async {
     final isApproved = await Navigator.push(
@@ -140,6 +42,37 @@ class AItools {
     }
 
     return null;
+  }
+
+// ── dApp browser offer helper ───────────────────────────────────────────────
+//
+// Prompts the user via the confirmation dialog whether they want to open the
+// in-app dApp browser as a fallback when a native action is unavailable.
+// Opens the browser immediately if approved; returns a polite decline message
+// if the user says no.
+
+  Future<String> _offerDappBrowser(String url, String action) async {
+    final confirmation = await confirmTransaction(
+      '$action is not available natively.\n\n'
+      'Would you like to open the dApp browser to continue?\n\n'
+      '🌐 $url',
+    );
+
+    // confirmTransaction returns non-null when the user declined
+    if (confirmation != null) {
+      return 'Okay, let me know if you need anything else.';
+    }
+
+    try {
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null || !context.mounted) {
+        return 'Could not open dApp browser. Visit: $url';
+      }
+      await navigateToDappBrowser(context, url);
+      return 'Opened dApp browser at $url';
+    } catch (e) {
+      return 'Could not open dApp browser. Visit: $url';
+    }
   }
 
   List<Tool> getTools() {
@@ -468,13 +401,18 @@ class AItools {
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
           if (quote == null) {
-            return 'Swapping is not available natively for $currentCoin. '
-                'You can swap using the dApp browser at ${coin.getSwapDappUrl()}';
+            return await _offerDappBrowser(
+              coin.getSwapDappUrl(),
+              'Getting a swap quote for $currentCoin',
+            );
           }
           return 'Quote price for $tokenIn => $tokenOut $amount is ${UserQuote.fromJson(jsonDecode(quote)).quoteAmount}';
         } catch (e) {
           debugPrint('Error getting quote: $e');
-          return 'Failed to get quote for $tokenIn => $tokenOut $amount';
+          return await _offerDappBrowser(
+            coin.getSwapDappUrl(),
+            'Getting a swap quote for $currentCoin',
+          );
         }
       },
       getInputFromJson: _GetSwapInput.fromJson,
@@ -510,8 +448,10 @@ class AItools {
         try {
           final quote = await coin.getQuote(tokenIn, tokenOut, amount);
           if (quote == null) {
-            return 'Swapping is not available natively for $currentCoin. '
-                'You can swap using the dApp browser at ${coin.getSwapDappUrl()}';
+            return await _offerDappBrowser(
+              coin.getSwapDappUrl(),
+              'Swapping $currentCoin',
+            );
           }
           final tokenInSymbol =
               tokenIn == AIAgentService.defaultCoinTokenAddress
@@ -529,11 +469,17 @@ class AItools {
 
           String? txHash = await coin.swapTokens(tokenIn, tokenOut, amount);
           if (txHash == null) {
-            return 'Swapping not available for $tokenIn => $tokenOut $amount';
+            return await _offerDappBrowser(
+              coin.getSwapDappUrl(),
+              'Swapping $currentCoin',
+            );
           }
           return 'Swapped $tokenIn => $tokenOut $amount $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'Swapping not available for $tokenIn => $tokenOut $amount';
+          return await _offerDappBrowser(
+            coin.getSwapDappUrl(),
+            'Swapping $currentCoin',
+          );
         }
       },
       getInputFromJson: _GetSwapInput.fromJson,
@@ -559,12 +505,17 @@ class AItools {
           if (confirmation != null) return confirmation;
           final txHash = await coin.stakeToken(amount);
           if (txHash == null) {
-            return 'Staking is not available natively for $currentCoin. '
-                'You can stake using the dApp browser at ${coin.getStakeDappUrl()}';
+            return await _offerDappBrowser(
+              coin.getStakeDappUrl(),
+              'Staking $currentCoin',
+            );
           }
           return 'Staked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'Staking failed for $currentCoin $amount $e';
+          return await _offerDappBrowser(
+            coin.getStakeDappUrl(),
+            'Staking $currentCoin',
+          );
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
@@ -589,10 +540,18 @@ class AItools {
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.unstakeToken(amount);
-          if (txHash == null) return 'Failed to unstake $amount $currentCoin';
+          if (txHash == null) {
+            return await _offerDappBrowser(
+              coin.getStakeDappUrl(),
+              'Unstaking $currentCoin',
+            );
+          }
           return 'Unstaked $amount $currentCoin $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
-          return 'Unstaking failed for $currentCoin $amount $e';
+          return await _offerDappBrowser(
+            coin.getStakeDappUrl(),
+            'Unstaking $currentCoin',
+          );
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
@@ -645,14 +604,46 @@ class AItools {
           final confirmation = await confirmTransaction(message);
           if (confirmation != null) return confirmation;
           final txHash = await coin.claimRewards(amount);
-          if (txHash == null)
+          if (txHash == null) {
             return 'Failed to claim $amount $currentCoin rewards';
+          }
           return 'Claimed $amount $currentCoin rewards $txHash ${coin.formatTxHash(txHash)}';
         } catch (e) {
           return 'Claim rewards failed for $currentCoin $amount $e';
         }
       },
       getInputFromJson: _GetStakeInput.fromJson,
+    );
+
+    // ── CMD_openDappBrowser ─────────────────────────────────────────────────────
+
+    final openDappBrowserTool =
+        Tool.fromFunction<_OpenDappBrowserInput, String>(
+      name: 'CMD_openDappBrowser',
+      description: 'Opens the in-app dApp browser at a given URL. '
+          'Use this when the user explicitly asks to open a dApp or website. '
+          'Do NOT use this as a fallback for failed swaps/stakes — '
+          'those tools handle browser opening automatically.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'url': {
+            'type': 'string',
+            'description': 'The dApp URL to open in the browser',
+          },
+        },
+        'required': ['url'],
+      },
+      func: (final _OpenDappBrowserInput toolInput) async {
+        try {
+          final context = NavigationService.navigatorKey.currentContext!;
+          await navigateToDappBrowser(context, toolInput.url);
+          return 'Opened dApp browser at ${toolInput.url}';
+        } catch (e) {
+          return 'Failed to open dApp browser: $e';
+        }
+      },
+      getInputFromJson: _OpenDappBrowserInput.fromJson,
     );
 
     // ── CMD_switchCoin ──────────────────────────────────────────────────────────
@@ -1280,6 +1271,7 @@ class AItools {
       resolveUserContactTool,
       getTokenPriceTool,
       stakeTool,
+      openDappBrowserTool,
       switchCoinTool,
       unstakeTool,
       claimRewardsTool,
@@ -1521,4 +1513,12 @@ class _WithdrawFromGoalInput {
         goalName: json['goalName'] as String,
         amount: (json['amount'] as num).toDouble(),
       );
+}
+
+class _OpenDappBrowserInput {
+  final String url;
+  _OpenDappBrowserInput({required this.url});
+  factory _OpenDappBrowserInput.fromJson(Map<String, dynamic> json) {
+    return _OpenDappBrowserInput(url: json['url'] as String);
+  }
 }

@@ -126,13 +126,13 @@ abstract class Coin {
 
   Future<double?> getTotalStaked() async => null;
 
-  /// Returns the native DEX dApp URL for this coin.
+  /// Returns null for this coin.
   /// Override in each coin implementation to point to the correct DEX.
-  String getSwapDappUrl() => walletDexProviderUrl;
+  String? getSwapDappUrl() => null;
 
-  /// Returns the native staking dApp URL for this coin.
+  /// Returns null for this coin.
   /// Override in each coin implementation to point to the correct staking dApp.
-  String getStakeDappUrl() => stakeDexProviderUrl;
+  String? getStakeDappUrl() => null;
 
   Future<String?> getQuote(
     String tokenIn,

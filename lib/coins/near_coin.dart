@@ -122,10 +122,10 @@ class NearCoin extends Coin {
   String getSymbol() => symbol;
 
   @override
-  String getSwapDappUrl() => 'https://app.ref.finance';
+  String? getSwapDappUrl() => 'https://app.ref.finance';
 
   @override
-  String getStakeDappUrl() => 'https://app.ref.finance/staking';
+  String? getStakeDappUrl() => 'https://app.ref.finance/staking';
 
   @override
   bool get supportPrivateKey => true;

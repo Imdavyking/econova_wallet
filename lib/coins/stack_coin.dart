@@ -86,10 +86,10 @@ class StacksCoin extends Coin {
   static const int _stacksDecimals = 6;
 
   @override
-  String getSwapDappUrl() => 'https://app.alexlab.co/swap';
+  String? getSwapDappUrl() => 'https://app.alexlab.co/swap';
 
   @override
-  String getStakeDappUrl() => 'https://app.stackingdao.com';
+  String? getStakeDappUrl() => 'https://app.stackingdao.com';
 
   // ─── x402 support ───────────────────────────────────────────────────────────
 

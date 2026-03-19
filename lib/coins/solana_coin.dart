@@ -46,10 +46,10 @@ class SolanaCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
-  String getSwapDappUrl() => 'https://jup.ag';
+  String? getSwapDappUrl() => 'https://jup.ag';
 
   @override
-  String getStakeDappUrl() => 'https://marinade.finance';
+  String? getStakeDappUrl() => 'https://marinade.finance';
 
   @override
   String getExplorer() {
