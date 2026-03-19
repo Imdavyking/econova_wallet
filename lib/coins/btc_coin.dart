@@ -69,6 +69,82 @@ class TaprootBtcDeriveArgs {
   });
 }
 
+BigInt _modP(BigInt x) =>
+    x %
+    BigInt.parse(
+        'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F',
+        radix: 16);
+
+BigInt _powModP(BigInt base, BigInt exp) => base.modPow(
+    exp,
+    BigInt.parse(
+        'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F',
+        radix: 16));
+
+(BigInt, BigInt)? _pointAdd((BigInt, BigInt)? p1, (BigInt, BigInt)? p2) {
+  if (p1 == null) return p2;
+  if (p2 == null) return p1;
+  final P = BigInt.parse(
+      'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F',
+      radix: 16);
+  BigInt m;
+  if (p1.$1 == p2.$1) {
+    if (p1.$2 != p2.$2) return null;
+    m = (BigInt.from(3) * p1.$1 * p1.$1) *
+        _powModP(BigInt.two * p1.$2, P - BigInt.two) %
+        P;
+  } else {
+    m = (p2.$2 - p1.$2) * _powModP(p2.$1 - p1.$1, P - BigInt.two) % P;
+  }
+  final x = _modP(m * m - p1.$1 - p2.$1);
+  final y = _modP(m * (p1.$1 - x) - p1.$2);
+  return (x, y);
+}
+
+(BigInt, BigInt)? _pointMul(BigInt k, (BigInt, BigInt) pt) {
+  (BigInt, BigInt)? r;
+  var p = pt;
+  while (k > BigInt.zero) {
+    if (k.isOdd) r = _pointAdd(r, p);
+    p = _pointAdd(p, p)!;
+    k >>= 1;
+  }
+  return r;
+}
+
+/// BIP341 tapTweak — key-path only (no script tree).
+/// Returns the x-only tweaked public key as 32 bytes.
+Uint8List _tapTweak(Uint8List internalKey) {
+  // taggedHash("TapTweak", internalKey)
+  final tag = utf8.encode('TapTweak');
+  final tagHash = sha256Bytes(Uint8List.fromList(tag));
+  final preimage = Uint8List.fromList([...tagHash, ...tagHash, ...internalKey]);
+  final t = sha256Bytes(preimage);
+  final tInt = BigInt.parse(HEX.encode(t), radix: 16);
+
+  // lift_x: get the even-y point for internalKey
+  final P = BigInt.parse(
+      'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F',
+      radix: 16);
+  final x = BigInt.parse(HEX.encode(internalKey), radix: 16);
+  final ySq = _modP(x.modPow(BigInt.from(3), P) + BigInt.from(7));
+  var y = _powModP(ySq, (P + BigInt.one) ~/ BigInt.from(4));
+  if (y.isOdd) y = P - y;
+
+  final G = (
+    BigInt.parse(
+        '79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798',
+        radix: 16),
+    BigInt.parse(
+        '483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8',
+        radix: 16),
+  );
+
+  final tweaked = _pointAdd((x, y), _pointMul(tInt, G))!;
+  final xBytes = tweaked.$1.toRadixString(16).padLeft(64, '0');
+  return Uint8List.fromList(HEX.decode(xBytes));
+}
+
 /// Runs in a separate isolate — derives P2TR (tb1p / bc1p) address.
 ///
 /// Leather uses the raw x-only pubkey as the witness program directly —
@@ -76,19 +152,23 @@ class TaprootBtcDeriveArgs {
 Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
 
-  // Strip 02/03 prefix byte → 32-byte x-only pubkey
-  final xOnlyPubkey = Uint8List.fromList(node.publicKey.sublist(1));
+  // Strip 02/03 prefix → 32-byte x-only internal key
+  final internalKey = Uint8List.fromList(node.publicKey.sublist(1));
 
-  // Convert 8-bit witness program to 5-bit words, prepend witness version 1,
-  // then encode with bech32m (BIP350) -- required for witness version 1+.
-  final words = _convertBits(xOnlyPubkey, 8, 5, true);
+  // BIP341 tapTweak (key-path only, no script tree):
+  //   t = taggedHash("TapTweak", internalKey)
+  //   tweakedKey = internalKey + t·G  (x-only)
+  final tweakedKey = _tapTweak(internalKey);
+
+  // Encode tweaked key as bech32m with witness version 1
+  final words = _convertBits(tweakedKey, 8, 5, true);
   final address = bech32mEncode(args.hrp, [1, ...words]);
 
   return {
     'address': address,
     'privateKey': '0x${HEX.encode(node.privateKey!)}',
     'publicKey': HEX.encode(node.publicKey),
-    'tweakedPublicKey': HEX.encode(xOnlyPubkey),
+    'tweakedPublicKey': HEX.encode(internalKey), // matches Leather's field name
   };
 }
 
@@ -422,7 +502,7 @@ class TaprootBtcCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     // v3 — bumped to bust stale cache from tapTweak era
-    final saveKey = 'nativeBtcP2TRv3i$isTestnet${walletImportType.name}';
+    final saveKey = 'nativeBtcP2TRv42$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
