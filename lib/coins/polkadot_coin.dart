@@ -44,22 +44,34 @@ class PolkadotCoin extends Coin {
   String payScheme;
 
   @override
-  String getExplorer() => blockExplorer;
+  String getExplorer() {
+    return blockExplorer;
+  }
 
   @override
-  String getDefault() => default_;
+  String getDefault() {
+    return default_;
+  }
 
   @override
-  String getImage() => image;
+  String getImage() {
+    return image;
+  }
 
   @override
-  String getName() => name;
+  String getName() {
+    return name;
+  }
 
   @override
-  String getSymbol() => symbol;
+  String getSymbol() {
+    return symbol;
+  }
 
   @override
-  int decimals() => coinDecimals;
+  int decimals() {
+    return coinDecimals;
+  }
 
   @override
   bool get supportPrivateKey => true;
@@ -83,7 +95,9 @@ class PolkadotCoin extends Coin {
     );
 
     privateKeyMap[privateKey] = keys.toJson();
+
     await pref.put(saveKey, jsonEncode(privateKeyMap));
+
     return keys;
   }
 
@@ -105,13 +119,18 @@ class PolkadotCoin extends Coin {
       ss58Prefix: ss58Prefix,
     );
     final keys = await compute(calculatePolkadotKey, args);
+
     mnemonicMap[mnemonic] = keys;
+
     await pref.put(saveKey, jsonEncode(mnemonicMap));
+
     return AccountData.fromJson(keys);
   }
 
   @override
-  String savedTransKey() => '$default_$api Details';
+  String savedTransKey() {
+    return '$default_$api Details';
+  }
 
   Future<int> _getNonce() async {
     const nonce = 0;
@@ -120,12 +139,11 @@ class PolkadotCoin extends Coin {
         final result = await _queryRpc('rpc_methods', []);
         rpcMethods = result!['result']['methods'];
       }
-
       String? getHead =
           rpcMethods!.firstWhere((element) => element == 'chain_getHead');
+
       getHead ??=
           rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
-
       final blockHashRes = await _queryRpc(getHead!, []);
       final String address = await getAddress();
       final decodedAddr = decodeDOTAddress(address);
@@ -134,6 +152,7 @@ class PolkadotCoin extends Coin {
 
       String? getStorageAt =
           rpcMethods!.firstWhere((element) => element == 'state_getStorageAt');
+
       getStorageAt ??=
           rpcMethods!.firstWhere((element) => element == 'state_getStorage');
 
@@ -142,8 +161,9 @@ class PolkadotCoin extends Coin {
       String storageData = storageResult!['result'];
       storageData = storageData.replaceFirst('0x', '');
 
-      final input = Input.fromHex(storageData.substring(0, 8));
-      return U32Codec.codec.decode(input);
+      final input = Input.fromHex(storageData.substring(0, 0 + 4));
+
+      return U16Codec.codec.decode(input);
     } catch (_) {
       return nonce;
     }
@@ -155,42 +175,60 @@ class PolkadotCoin extends Coin {
       final result = await _queryRpc('rpc_methods', []);
       rpcMethods = result!['result']['methods'];
     }
-
     String? getHead =
         rpcMethods!.firstWhere((element) => element == 'chain_getHead');
+
     getHead ??=
         rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
-
     final blockHashRes = await _queryRpc(getHead!, []);
-    final String addr = await getAddress();
-    final decodedAddr = decodeDOTAddress(addr);
+    final String address = await getAddress();
+    final decodedAddr = decodeDOTAddress(address);
     final storageName = blake2_128_concat(decodedAddr);
     final storageKey = '$systemAccount${HEX.encode(storageName)}';
 
-    String? getStorageAt =
-        rpcMethods!.firstWhere((element) => element == 'state_getStorageAt');
-    getStorageAt ??=
-        rpcMethods!.firstWhere((element) => element == 'state_getStorage');
+    String? getStorageAt = rpcMethods!.firstWhere(
+      (element) => element == 'state_getStorageAt',
+    );
 
-    final storageResult =
-        await _queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
+    getStorageAt ??= rpcMethods!.firstWhere(
+      (element) => element == 'state_getStorage',
+    );
+
+    final storageResult = await _queryRpc(
+      getStorageAt!,
+      [
+        storageKey,
+        blockHashRes!['result'],
+      ],
+    );
     String storageData = storageResult!['result'];
+
     storageData = storageData.replaceFirst('0x', '');
 
     final input = Input.fromHex(storageData.substring(32, 32 + 48));
+
     final BigInt balanceBigInt = U128Codec.codec.decode(input);
+
     final base = BigInt.from(10);
+
     return balanceBigInt / base.pow(decimals());
   }
 
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'polBal$address$api$ss58Prefix';
+    final key = 'polkadotAddressBalance$address$api$ss58Prefix';
+
     final storedBalance = pref.get(key);
+
     double savedBalance = 0;
-    if (storedBalance != null) savedBalance = storedBalance;
+
+    if (storedBalance != null) {
+      savedBalance = storedBalance;
+    }
+
     if (useCache) return savedBalance;
+
     try {
       double userBal = await getUserBalance(address: address);
       await pref.put(key, userBal);
@@ -201,7 +239,9 @@ class PolkadotCoin extends Coin {
   }
 
   @override
-  Future<double> getTransactionFee(String amount, String to) async => 0;
+  Future<double> getTransactionFee(String amount, String to) async {
+    return 0;
+  }
 
   PolkadotCoin({
     required this.blockExplorer,
@@ -236,34 +276,35 @@ class PolkadotCoin extends Coin {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'default': default_,
-        'symbol': symbol,
-        'name': name,
-        'blockExplorer': blockExplorer,
-        'image': image,
-        'api': api,
-        'coinDecimals': coinDecimals,
-        'ss58Prefix': ss58Prefix,
-        'path': path,
-        'geckoID': geckoID,
-        'rampID': rampID,
-        'payScheme': payScheme,
-      };
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+
+    data['default'] = default_;
+    data['symbol'] = symbol;
+    data['name'] = name;
+    data['blockExplorer'] = blockExplorer;
+    data['image'] = image;
+    data['api'] = api;
+    data['coinDecimals'] = coinDecimals;
+    data['ss58Prefix'] = ss58Prefix;
+    data['path'] = path;
+    data['geckoID'] = geckoID;
+    data['rampID'] = rampID;
+    data['payScheme'] = payScheme;
+
+    return data;
+  }
 
   Future<Map?> _queryRpc(String rpcMethod, List params) async {
     try {
-      final body = json.encode({
-        "jsonrpc": "2.0",
-        "id": "1",
-        "method": rpcMethod,
-        "params": params,
-      });
+      final body = json.encode(
+          {"jsonrpc": "2.0", "id": "1", "method": rpcMethod, "params": params});
       final response = await post(
         Uri.parse(api),
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
+
       final responseBody = response.body;
       if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
         throw Exception(responseBody);
@@ -293,13 +334,14 @@ class PolkadotCoin extends Coin {
     String? memo,
   }) async {
     final planck = amount.toBigIntDec(decimals());
-    final decodedAddr = decodeDOTAddress(to);
-    final nonce = await _getNonce();
 
+    final decodedAddr = decodeDOTAddress(to);
+
+    final nonce = await _getNonce();
     final metaData = await _queryRpc('state_getMetadata', []);
-    final DecodedMetadata decodedMeta =
-        MetadataDecoder.instance.decode(metaData!['result']);
-    final chainInfo = await compute(_decodeMetadata, decodedMeta);
+    DecodedMetadata data = MetadataDecoder.instance.decode(metaData!['result']);
+
+    final chainInfo = await compute(_decodeMetadata, data);
 
     final transferArgument = MapEntry(
       'Balances',
@@ -313,32 +355,18 @@ class PolkadotCoin extends Coin {
     );
 
     final ByteOutput output = ByteOutput();
+
     chainInfo.scaleCodec.registry.codecs['Call']!
         .encodeTo(transferArgument, output);
+
     final encodedData = HEX.encode(output.toBytes());
-    debugPrint('Encoded call: $encodedData');
 
     final data_service = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data_service);
     final privatekey = HEX.decode(response.privateKey!);
     final registry = chainInfo.scaleCodec.registry;
     final signables = registry.signedExtensions;
-
-    // ── Detect signed extension variants ─────────────────────────────────────
     final checkMetaHash = signables.containsKey('CheckMetadataHash');
-
-    // Asset Hub and other system parachains use ChargeAssetTxPayment instead
-    // of ChargeTransactionPayment. This extension encodes an extra
-    // Option<AssetId> byte (0x00 = None) after the tip.
-    // Sending only the tip byte without this Option byte shifts all subsequent
-    // bytes by one, causing the runtime to hit an unreachable branch during
-    // transaction validation.
-    final chargeAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
-
-    debugPrint(
-        'Signed extensions — checkMetaHash: $checkMetaHash, chargeAssetTxPayment: $chargeAssetTxPayment');
-    debugPrint('All signed extensions: ${signables.keys.toList()}');
-
     final signaturePayload = await _signaturePayload(
       _SigParams(
         call: encodedData,
@@ -346,19 +374,6 @@ class PolkadotCoin extends Coin {
         registry: registry,
       ),
     );
-
-    // ── Extrinsic version ─────────────────────────────────────────────────────
-    // Relay chains (Polkadot, Westend, Kusama) use specVersion < 1_000_000
-    // and extrinsic version 4 (0x84).
-    // Parachains (Asset Hub, etc.) use specVersion >= 1_000_000
-    // and extrinsic version 5 (0x85).
-    final int specVersion = (runTimeResult?['specVersion'] as int?) ?? 0;
-    final int extrinsicVersion = specVersion >= 1000000 ? 5 : 4;
-    final String extrinsicVersionHex =
-        (0x80 | extrinsicVersion).toRadixString(16).padLeft(2, '0');
-
-    debugPrint(
-        'specVersion: $specVersion → extrinsicVersion: $extrinsicVersion (0x$extrinsicVersionHex)');
 
     final publicKey = HEX.decode(response.publicKey!);
     final signature = await compute(
@@ -369,66 +384,39 @@ class PolkadotCoin extends Coin {
       ),
     );
 
-    // ── Build extrinsic bytes ─────────────────────────────────────────────────
-    // Layout:
-    //   <version> | <pubkey> | <sig_type:00=Ed25519> | <sig> |
-    //   <era:00=immortal> | <nonce> | <tip:00> |
-    //   [asset_id:00 — only if ChargeAssetTxPayment] |
-    //   [CheckMetadataHash:00 — only if present] |
-    //   <call>
-    String txSubmission = extrinsicVersionHex;
+    String txSubmission = '84';
     txSubmission += HEX.encode(publicKey);
-    txSubmission += '00'; // signature type: Ed25519
+
+    txSubmission += '00';
     txSubmission += HEX.encode(signature);
-    txSubmission += '00'; // era: immortal
+
+    txSubmission += '00';
     txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
-    txSubmission += '00'; // tip: 0
-
-    if (chargeAssetTxPayment) {
-      // Option<AssetId>::None — required by ChargeAssetTxPayment on Asset Hub.
-      // Without this byte the transaction bytes are off by one and the runtime
-      // panics with an unreachable branch in validate_transaction.
-      txSubmission += '00';
-    }
-
     if (checkMetaHash) {
-      final encoded = signables['CheckMetadataHash']!.encode('Disabled');
-      debugPrint('CheckMetadataHash encoded: ${HEX.encode(encoded)}');
-      txSubmission += HEX.encode(encoded);
+      txSubmission += HEX.encode(
+        signables['CheckMetadataHash']!.encode('Disabled'),
+      );
     }
-
+    txSubmission += '00';
     txSubmission += encodedData;
 
-    final int txLength = HEX.decode(txSubmission).length;
+    int txLength = HEX.decode(txSubmission).length;
+
     txSubmission =
         HEX.encode(CompactCodec.codec.encode(txLength)) + txSubmission;
 
-    debugPrint('tx hex: 0x$txSubmission');
+    final submitResult =
+        await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
 
-    try {
-      final submitResult =
-          await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
-      debugPrint('submit result: $submitResult');
-
-      return (
-        txHash: submitResult!['result'] as String,
-        txRaw: null,
-      );
-    } catch (e) {
-      debugPrint('submit error: $e');
-      return null;
-    } finally {
-      runTimeResult = null;
-      genesisHash = null;
-      rpcMethods = null;
-    }
+    return (
+      txHash: submitResult!['result'] as String,
+      txRaw: null,
+    );
   }
 
   Future<String> _signaturePayload(_SigParams param) async {
     final signables = param.registry.signedExtensions;
     final checkMetaHash = signables.containsKey('CheckMetadataHash');
-    final chargeAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
-
     if (runTimeResult == null) {
       final runTimeVersion = await _queryRpc('chain_getRuntimeVersion', []);
       runTimeResult = runTimeVersion!['result'];
@@ -439,33 +427,23 @@ class PolkadotCoin extends Coin {
       genesisHash = genesisHashRes!['result'];
     }
 
-    // ── Signature payload layout ──────────────────────────────────────────────
-    // call | era | nonce | tip | [asset_id if ChargeAssetTxPayment] |
-    // [CheckMetadataHash mode] | specVersion | transactionVersion |
-    // genesisHash | blockHash | [CheckMetadataHash extra]
     String payload = '0x${param.call}';
-    payload += '00'; // era: immortal
-    payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
-    payload += '00'; // tip: 0
 
-    if (chargeAssetTxPayment) {
-      // Option<AssetId>::None — must mirror the extrinsic encoding exactly
-      payload += '00';
-    }
+    payload += '00';
+    payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
 
     if (checkMetaHash) {
       final mode = signables['CheckMetadataHash']!.encode('Disabled');
       payload += HEX.encode(mode);
     }
 
+    payload += '00';
     payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
     payload +=
         HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
     payload += genesisHash!.replaceFirst('0x', '');
-    payload += genesisHash!
-        .replaceFirst('0x', ''); // blockHash = genesisHash for immortal era
-
-    if (checkMetaHash) payload += '00'; // CheckMetadataHash extra: no hash
+    payload += genesisHash!.replaceFirst('0x', '');
+    if (checkMetaHash) payload += '00';
 
     final hexPayload = HEX.decode(strip0x(payload));
 
@@ -499,8 +477,6 @@ class PolkadotCoin extends Coin {
   String getRampID() => rampID;
 }
 
-// ── Checksum ──────────────────────────────────────────────────────────────────
-
 List _polkaChecksum(Uint8List decoded) {
   final ss58Length = (decoded[0] & 64) != 0 ? 2 : 1;
   final ss58Decoded = ss58Length == 1
@@ -518,64 +494,6 @@ List _polkaChecksum(Uint8List decoded) {
           : decoded[decoded.length - 1] == hash[0]);
   return [isValid, length, ss58Length, ss58Decoded];
 }
-
-// ── Address decoding ──────────────────────────────────────────────────────────
-
-Uint8List decodeDOTAddress(String address) {
-  final decoded = base58.decode(address);
-  final checksum = _polkaChecksum(decoded);
-  final bool isValid = checksum[0];
-  final int endPos = checksum[1];
-  final int ss58Length = checksum[2];
-  if (!isValid) throw Exception('Invalid decoded address checksum');
-  return decoded.sublist(ss58Length, endPos);
-}
-
-// ── Seed helpers ──────────────────────────────────────────────────────────────
-
-Future<List<int>> bip39ToMiniSeed(mnemonic) async {
-  final entropy = HEX.decode(mnemonicToEntropy(mnemonic));
-  final salt = StrCodec.codec.encode('mnemonic').sublist(1);
-  final pdkd = Pbkdf2(
-    macAlgorithm: Hmac.sha512(),
-    iterations: 2048,
-    bits: 256,
-  );
-  final keys = await pdkd.deriveKey(secretKey: SecretKey(entropy), nonce: salt);
-  return await keys.extractBytes();
-}
-
-List<int> sshash(Uint8List bytes) {
-  const SS58_PREFIX = [83, 83, 53, 56, 80, 82, 69];
-  return blake2bHash(
-    Uint8List.fromList([...SS58_PREFIX, ...bytes]),
-    digestSize: 64,
-  );
-}
-
-String xxhashAsHex(String data) {
-  return HEX.encode(xxh128(data).toList());
-}
-
-List<int> blake2_128_concat(List<int> data) {
-  return blake2bHash(data, digestSize: 16) + data;
-}
-
-Uint8List xxh128(String data) {
-  List<int> storage_key1 = XXH64
-      .digest(data: data, seed: BigInt.from(0))
-      .toUint8List()
-      .reversed
-      .toList();
-  List<int> storage_key2 = XXH64
-      .digest(data: data, seed: BigInt.from(1))
-      .toUint8List()
-      .reversed
-      .toList();
-  return Uint8List.fromList(storage_key1 + storage_key2);
-}
-
-// ── Chain list ────────────────────────────────────────────────────────────────
 
 List<PolkadotCoin> getPolkadoBlockChains() {
   List<PolkadotCoin> blockChains = [];
@@ -595,22 +513,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         path: "m/44'/354'/0'/0'/0'",
         geckoID: 'polkadot',
         payScheme: 'polkadot',
-        rampID: 'POLKADOT_DOT',
-      ),
-      PolkadotCoin(
-        blockExplorer:
-            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'WND',
-        name: 'Westend Asset Hub',
-        default_: 'WND',
-        image: 'assets/polkadot.png',
-        api: 'https://westend-asset-hub-rpc.polkadot.io',
-        coinDecimals: 12,
-        ss58Prefix: 42,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: 'polkadot',
-        payScheme: 'polkadot',
-        rampID: 'POLKADOT_DOT',
+        rampID: "POLKADOT_DOT",
       ),
       PolkadotCoin(
         blockExplorer:
@@ -625,8 +528,8 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         path: "m/44'/354'/0'/0'/0'",
         geckoID: '',
         payScheme: '',
-        rampID: '',
-      ),
+        rampID: "",
+      )
     ]);
   } else {
     blockChains.addAll([
@@ -643,7 +546,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         path: "m/44'/354'/0'/0'/0'",
         geckoID: 'polkadot',
         payScheme: 'polkadot',
-        rampID: 'POLKADOT_DOT',
+        rampID: "POLKADOT_DOT",
       ),
       PolkadotCoin(
         blockExplorer:
@@ -656,9 +559,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         coinDecimals: 12,
         ss58Prefix: 2,
         path: "m/44'/434'/0'/0'/0'",
-        geckoID: 'kusama',
-        payScheme: 'kusama',
-        rampID: 'KUSAMA_KSM',
+        geckoID: "kusama",
+        payScheme: "kusama",
+        rampID: "KUSAMA_KSM",
       ),
       PolkadotCoin(
         blockExplorer:
@@ -667,21 +570,57 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         name: 'Acala',
         default_: 'ACA',
         image: 'assets/acala.png',
-        api: 'https://acala-rpc.dwellir.com',
+        api: "https://acala-rpc.dwellir.com",
         coinDecimals: 12,
         ss58Prefix: 10,
         path: "m/44'/787'/0'/0'/0'",
-        geckoID: 'acala',
-        payScheme: 'acala',
-        rampID: '',
-      ),
+        geckoID: "acala",
+        payScheme: "acala",
+        rampID: "",
+      )
     ]);
   }
 
   return blockChains;
 }
 
-// ── Key derivation ────────────────────────────────────────────────────────────
+Uint8List decodeDOTAddress(String address) {
+  final decoded = base58.decode(address);
+  final checksum = _polkaChecksum(decoded);
+  final bool isValid = checksum[0];
+  final int endPos = checksum[1];
+  final int ss58Length = checksum[2];
+
+  if (!isValid) {
+    throw Exception('Invalid decoded address checksum');
+  }
+  return decoded.sublist(ss58Length, endPos);
+}
+
+Future<List<int>> bip39ToMiniSeed(mnemonic) async {
+  final entropy = HEX.decode(mnemonicToEntropy(mnemonic));
+  final salt = StrCodec.codec.encode('mnemonic').sublist(1);
+  final pdkd = Pbkdf2(
+    macAlgorithm: Hmac.sha512(),
+    iterations: 2048,
+    bits: 256,
+  );
+
+  final keys = await pdkd.deriveKey(secretKey: SecretKey(entropy), nonce: salt);
+  return await keys.extractBytes();
+}
+
+List<int> sshash(Uint8List bytes) {
+  const SS58_PREFIX = [83, 83, 53, 56, 80, 82, 69];
+  return blake2bHash(
+    Uint8List.fromList([...SS58_PREFIX, ...bytes]),
+    digestSize: 64,
+  );
+}
+
+String xxhashAsHex(String data) {
+  return HEX.encode(xxh128(data).toList());
+}
 
 class PolkadotArgs {
   final SeedPhraseRoot seedRoot;
@@ -701,13 +640,17 @@ class _PolkadotDerive {
     required int ss58Prefix,
   }) async {
     final publicKey = await ED25519_HD_KEY.getPublicKey(privateKey);
+
     List<int> prefix = [ss58Prefix, ...publicKey.sublist(1)];
+
     final address = base58.encode(
-      Uint8List.fromList([
-        ...prefix,
-        ...sshash(Uint8List.fromList(prefix))
-            .sublist(0, [32, 33].contains(publicKey.length) ? 2 : 1),
-      ]),
+      Uint8List.fromList(
+        [
+          ...prefix,
+          ...sshash(Uint8List.fromList(prefix))
+              .sublist(0, [32, 33].contains(publicKey.length) ? 2 : 1)
+        ],
+      ),
     );
     return AccountData(
       address: address,
@@ -718,12 +661,14 @@ class _PolkadotDerive {
 }
 
 calculatePolkadotKey(PolkadotArgs config) async {
+  SeedPhraseRoot seedRoot_ = config.seedRoot;
   final derivedKey =
-      await ED25519_HD_KEY.derivePath(config.path, config.seedRoot.seed);
+      await ED25519_HD_KEY.derivePath(config.path, seedRoot_.seed);
   final results = await _PolkadotDerive.fromPrivateKey(
     privateKey: derivedKey.key,
     ss58Prefix: config.ss58Prefix,
   );
+
   return {
     'address': results.address,
     'publicKey': results.publicKey,
@@ -731,7 +676,25 @@ calculatePolkadotKey(PolkadotArgs config) async {
   };
 }
 
-// ── Supporting classes ────────────────────────────────────────────────────────
+List<int> blake2_128_concat(List<int> data) {
+  return blake2bHash(data, digestSize: 16) + data;
+}
+
+Uint8List xxh128(String data) {
+  List<int> storage_key1 = XXH64
+      .digest(data: data, seed: BigInt.from(0))
+      .toUint8List()
+      .reversed
+      .toList();
+
+  List<int> storage_key2 = XXH64
+      .digest(data: data, seed: BigInt.from(1))
+      .toUint8List()
+      .reversed
+      .toList();
+
+  return Uint8List.fromList(storage_key1 + storage_key2);
+}
 
 class EDSignature {
   final String signaturePayload;

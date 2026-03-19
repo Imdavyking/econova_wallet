@@ -23,7 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  enableTestNet = false;
+  enableTestNet = true;
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
