@@ -114,7 +114,7 @@ BigInt _powModP(BigInt base, BigInt exp) => base.modPow(
 
 /// BIP341 tapTweak — key-path only (no script tree).
 /// Returns the x-only tweaked public key as 32 bytes.
-Uint8List _tapTweak(Uint8List internalKey) {
+Uint8List tapTweak(Uint8List internalKey) {
   // taggedHash("TapTweak", internalKey)
   final tag = utf8.encode('TapTweak');
   final tagHash = sha256Bytes(Uint8List.fromList(tag));
@@ -158,10 +158,10 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   // BIP341 tapTweak (key-path only, no script tree):
   //   t = taggedHash("TapTweak", internalKey)
   //   tweakedKey = internalKey + t·G  (x-only)
-  final tweakedKey = _tapTweak(internalKey);
+  final tweakedKey = tapTweak(internalKey);
 
   // Encode tweaked key as bech32m with witness version 1
-  final words = _convertBits(tweakedKey, 8, 5, true);
+  final words = convertBits(tweakedKey, 8, 5, true);
   final address = bech32mEncode(args.hrp, [1, ...words]);
 
   return {
@@ -172,7 +172,7 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   };
 }
 
-List<int> _convertBits(List<int> data, int from, int to, bool pad) {
+List<int> convertBits(List<int> data, int from, int to, bool pad) {
   int acc = 0, bits = 0;
   final result = <int>[];
   final maxv = (1 << to) - 1;

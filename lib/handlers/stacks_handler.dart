@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bech32/bech32.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
@@ -884,7 +885,7 @@ class StacksHandler extends BaseWebViewHandler {
         try {
           await saveWeb3Address('stacks', sendingAddress);
 
-          final authResponseJwt = _buildSignedAuthResponse(
+          final authResponseJwt = await _buildSignedAuthResponse(
             accountDetail: accountDetail,
             sendingAddress: sendingAddress,
             requestJwt: jwtValue,
@@ -909,22 +910,33 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
-  String _buildSignedAuthResponse({
+  Future<String> _buildSignedAuthResponse({
     required AccountData accountDetail,
     required String sendingAddress,
     required String requestJwt,
-  }) {
+  }) async {
     final privBytes = txDataToUintList(accountDetail.privateKey!);
     final pubKey = accountDetail.publicKey;
+    final isTestnet = getStacksBlockchains().first.isTestnet;
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
 
+    // ── Derive BTC addresses dynamically ─────────────────────────────────────
+    final segwitCoin = getNativeBtcCoins().first;
+    final segwitData = await segwitCoin.importData(walletData);
+
+    final taprootCoin = getTaprootBtcCoins().first;
+    final taprootData = await taprootCoin.importData(walletData);
+    final segwitAddress = segwitData.address;
+    final taprootAddress = taprootData.address;
+
+    // ── Build JWT ─────────────────────────────────────────────────────────────
     String b64url(String s) =>
         base64Url.encode(utf8.encode(s)).replaceAll('=', '');
 
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final header = b64url('{"typ":"JWT","alg":"ES256K"}');
-    final isTestnet = stackCoins.first.isTestnet;
 
-    final payload = b64url(json.encode({
+    final payloadData = json.encode({
       'jti': '${now}_auth_response',
       'iat': now,
       'exp': now + 86400,
@@ -935,6 +947,26 @@ class StacksHandler extends BaseWebViewHandler {
           'mainnet': isTestnet ? null : sendingAddress,
           'testnet': isTestnet ? sendingAddress : null,
         },
+        'btcAddress': {
+          'p2tr': {
+            'mainnet': isTestnet ? null : taprootAddress,
+            'testnet': isTestnet ? taprootAddress : null,
+            'signet': isTestnet ? taprootAddress : null,
+          },
+          'p2wpkh': {
+            'mainnet': isTestnet ? null : segwitAddress,
+            'testnet': isTestnet ? segwitAddress : null,
+            'signet': isTestnet ? segwitAddress : null,
+          },
+        },
+        'btcPublicKey': {
+          'p2tr': taprootData.publicKey ?? '',
+          'p2wpkh': segwitData.publicKey ?? '',
+        },
+        'btcPublicKeyTestnet': {
+          'p2tr': taprootData.publicKey ?? '',
+          'p2wpkh': segwitData.publicKey ?? '',
+        },
         'walletProvider': walletName,
       },
       'core_token': null,
@@ -942,7 +974,11 @@ class StacksHandler extends BaseWebViewHandler {
       'profile_url': null,
       'hubUrl': 'https://hub.hiro.so',
       'version': '1.4.0',
-    }));
+    });
+
+    debugPrint(payloadData);
+
+    final payload = b64url(payloadData);
 
     final signingInput = '$header.$payload';
     final hash = sha256Bytes(Uint8List.fromList(utf8.encode(signingInput)));
@@ -950,6 +986,14 @@ class StacksHandler extends BaseWebViewHandler {
     final sig = base64Url.encode(sigBytes).replaceAll('=', '');
 
     return '$signingInput.$sig';
+  }
+
+  /// Re-encodes a compressed public key as a P2WPKH (bc1q / tb1q) address.
+  String _pubkeyToP2wpkh(List<int> compressedPub, {required bool mainnet}) {
+    final h160 = hash160(Uint8List.fromList(compressedPub));
+    final words = convertBits(h160, 8, 5, true);
+    final hrp = mainnet ? 'bc' : 'tb';
+    return bech32.encode(Bech32(hrp, [0, ...words]));
   }
 
   Future<void> _legacySignatureRequest(
