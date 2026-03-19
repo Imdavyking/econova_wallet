@@ -2,22 +2,20 @@
 
 import 'dart:convert';
 import 'dart:math';
-import '../extensions/big_int_ext.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
+
 import '../service/wallet_service.dart';
 import 'package:bech32/bech32.dart';
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:bs58check/bs58check.dart' as bs58check;
-import 'package:http/http.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:bitbox/bitbox.dart' as bitbox;
 
-import 'package:http/http.dart';
 import 'package:wallet_app/utils/pos_networks.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:http/http.dart' as http;
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -25,12 +23,32 @@ import '../model/seed_phrase_root.dart';
 import '../utils/alt_ens.dart';
 import '../utils/app_config.dart';
 
-const sochainApi = 'https://sochain.com/api/v2/';
+// sochain.com/api/v2 — DEAD (moved to v3, now paid)
+// const sochainApi = 'https://sochain.com/api/v2/';
+
 const bitCoinDecimals = 8;
 
-class BitcoinCoin extends Coin {
+// ─── API endpoints ────────────────────────────────────────────────────────────
+// LTC: litecoinspace.org — free, Esplora format, run by mempool.space team
+const _ltcApi = 'https://litecoinspace.org/api';
+
+// BCH: rest.bitcoin.com — DEAD
+// const _bchApi = 'https://rest.bitcoin.com/v2/';
+// Alternative: fullstack.cash — requires signup, skip for now
+
+// DOGE: No reliable free public API
+// dogechain.info — DEAD (404)
+// chain.so — DEAD (moved to paid)
+
+// DASH: insight.dash.org — DEAD
+// No reliable free alternative
+
+// ZEC: zecblockexplorer.com — unreliable, often down
+// No reliable free alternative
+
+class UtxoCoin extends Coin {
   NetworkType POSNetwork;
-  bool P2WPKH;
+  bool isP2WPKH;
   String derivationPath;
   String blockExplorer;
   String symbol;
@@ -40,12 +58,13 @@ class BitcoinCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
-  BitcoinCoin({
+
+  UtxoCoin({
     required this.blockExplorer,
     required this.symbol,
     required this.default_,
     required this.image,
-    required this.P2WPKH,
+    required this.isP2WPKH,
     required this.derivationPath,
     required this.POSNetwork,
     required this.name,
@@ -54,11 +73,11 @@ class BitcoinCoin extends Coin {
     required this.payScheme,
   });
 
-  factory BitcoinCoin.fromJson(Map<String, dynamic> json) {
-    return BitcoinCoin(
+  factory UtxoCoin.fromJson(Map<String, dynamic> json) {
+    return UtxoCoin(
       POSNetwork: json['POSNetwork'],
       derivationPath: json['derivationPath'],
-      P2WPKH: json['P2WPKH'],
+      isP2WPKH: json["P2WPKH"],
       blockExplorer: json['blockExplorer'],
       default_: json['default'],
       symbol: json['symbol'],
@@ -71,7 +90,9 @@ class BitcoinCoin extends Coin {
   }
 
   @override
-  bool get isRpcWorking => false;
+  // LTC is working via litecoinspace.org
+  // BCH/DOGE/DASH/ZEC APIs are all dead — keep false for those
+  bool get isRpcWorking => symbol == 'LTC';
 
   @override
   Future<String> addressExplorer() async {
@@ -87,7 +108,7 @@ class BitcoinCoin extends Coin {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['POSNetwork'] = POSNetwork;
-    data['P2WPKH'] = P2WPKH;
+    data["P2WPKH"] = isP2WPKH;
     data['default'] = default_;
     data['symbol'] = symbol;
     data['name'] = name;
@@ -97,7 +118,6 @@ class BitcoinCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
-
     return data;
   }
 
@@ -114,20 +134,17 @@ class BitcoinCoin extends Coin {
       }
     }
 
-    final args = BitcoinDeriveArgs(
+    final args = UtxoDeriveArgs(
       seedRoot: seedPhraseRoot,
       derivationPath: derivationPath,
-      P2WPKH: P2WPKH,
+      isP2WPKH: isP2WPKH,
       POSNetwork: POSNetwork,
       default_: default_,
     );
 
-    final keys = await compute(calculateBitCoinKey, args);
-
+    final keys = await compute(calculateUtxoKey, args);
     mnemonicMap[mnemonic] = keys;
-
     await pref.put(saveKey, jsonEncode(mnemonicMap));
-
     return AccountData.fromJson(keys);
   }
 
@@ -137,50 +154,73 @@ class BitcoinCoin extends Coin {
       domainName: address,
       currency: getDefault(),
     );
-
-    if (resolver['success']) {
-      return resolver['msg'];
-    }
+    if (resolver['success']) return resolver['msg'];
     return null;
   }
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    if (symbol == 'BCH') {
-      final addressDetails = await bitbox.Address.details(address);
-      return addressDetails['balance'];
-    } else {
-      final url =
-          'https://rest.cryptoapis.io/addresses-latest/utxo/$symbol/${enableTestNet ? 'testnet' : 'mainnet'}/$address/balance';
-      final response = await get(Uri.parse(url), headers: {
-        'x-api-key': utxoApiKey,
-        'Content-Type': 'application/json',
-      });
-      final data = response.body;
-      return double.parse(jsonDecode(data)['data']['confirmed_balance']);
+    if (symbol == 'LTC') {
+      return _getLtcBalance(address);
     }
+
+    // BCH — rest.bitcoin.com DEAD, bitbox calls dead API
+    // if (symbol == 'BCH') {
+    //   final addressDetails = await bitbox.Address.details(address);
+    //   return addressDetails['balance'];
+    // }
+
+    // DOGE/DASH/ZEC — all APIs dead, no free alternative
+    // Previously used:
+    //   cryptoapis.io — paid, requires utxoApiKey
+    //   sochain.com/v2 — dead
+    //   dogechain.info — dead
+    //   insight.dash.org — dead
+    // final url =
+    //     'https://rest.cryptoapis.io/addresses-latest/utxo/$symbol/...'
+    //     requires: 'x-api-key': utxoApiKey
+
+    throw UnimplementedError(
+      '$symbol balance not available — no free public API. '
+      'Re-enable when a working free API is found.',
+    );
+  }
+
+  // ── LTC balance via litecoinspace.org (mempool.space fork, free) ──────────
+  Future<double> _getLtcBalance(String address) async {
+    try {
+      // Primary — litecoinspace.org
+      final res = await http.get(
+        Uri.parse('$_ltcApi/address/$address'),
+      );
+      if (res.statusCode ~/ 100 == 2) {
+        final stats =
+            jsonDecode(res.body)['chain_stats'] as Map<String, dynamic>;
+        final funded = stats['funded_txo_sum'] as int;
+        final spent = stats['spent_txo_sum'] as int;
+        return (funded - spent) / pow(10, 8);
+      }
+    } catch (_) {}
+
+    // Fallback — blockcypher (running since 2014, free unauthed)
+    final res = await http.get(
+      Uri.parse(
+          'https://api.blockcypher.com/v1/ltc/main/addrs/$address/balance'),
+    );
+    if (res.statusCode ~/ 100 != 2) throw Exception('LTC balance failed');
+    return (jsonDecode(res.body)['final_balance'] as int) / pow(10, 8);
   }
 
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-
     final key = '${symbol}AddressBalance$address';
     final storedBalance = pref.get(key);
-
-    double savedBalance = 0;
-
-    if (storedBalance != null) {
-      savedBalance = storedBalance;
-    }
-
+    double savedBalance = storedBalance ?? 0.0;
     if (useCache) return savedBalance;
-
     try {
-      double balance = await getUserBalance(address: address);
-
+      final balance = await getUserBalance(address: address);
       await pref.put(key, balance);
-
       return balance;
     } catch (e) {
       return savedBalance;
@@ -188,40 +228,133 @@ class BitcoinCoin extends Coin {
   }
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getSymbol() => symbol;
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
       String amount, String to,
       {String? memo}) async {
-    final satoshi = amount.toBigIntDec(bitCoinDecimals);
+    if (symbol == 'LTC') {
+      return _sendLtc(amount, to);
+    }
 
-    int amountToSend = satoshi.toInt();
+    // BCH — bitbox send uses dead rest.bitcoin.com
+    // DOGE/DASH/ZEC — sochain send API dead
+    // Previously: _sendBTCType() via sochain — DEAD
+    throw UnimplementedError(
+      '$symbol send not available — no free public API.',
+    );
+  }
 
-    final result = await _sendBTCType(to, amountToSend);
-    return (txHash: result.txHash, txRaw: result.txRaw);
+  // ── LTC send via litecoinspace.org ────────────────────────────────────────
+  // Same Esplora format as mempool.space. Output-before-sign order required
+  // for P2WPKH (BIP143 sighash commits to outputs).
+  Future<({String txHash, String? txRaw})> _sendLtc(
+      String amount, String to) async {
+    final satoshiToSend = amount.toBigIntDec(decimals()).toInt();
+    if (satoshiToSend < 546) throw Exception('Amount below dust limit');
+
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final keyPair = await importData(data);
+    final address = keyPair.address;
+
+    // Fetch UTXOs
+    final utxoRes = await http.get(
+      Uri.parse('$_ltcApi/address/$address/utxo'),
+    );
+    if (utxoRes.statusCode ~/ 100 != 2) {
+      throw Exception('LTC UTXO fetch failed');
+    }
+    final utxos =
+        (jsonDecode(utxoRes.body) as List).cast<Map<String, dynamic>>();
+    if (utxos.isEmpty) throw Exception('No UTXOs available');
+
+    // Fee rate
+    int feeRate = 5;
+    try {
+      final feeRes = await http.get(Uri.parse('$_ltcApi/v1/fees/recommended'));
+      if (feeRes.statusCode ~/ 100 == 2) {
+        feeRate = jsonDecode(feeRes.body)['halfHourFee'] as int;
+      }
+    } catch (_) {}
+
+    int estimateFee(int inputs, int outputs) =>
+        (inputs * 68 + outputs * 31 + 10) * feeRate;
+
+    // Select UTXOs
+    int totalIn = 0;
+    final selected = <Map<String, dynamic>>[];
+    for (final utxo in utxos) {
+      selected.add(utxo);
+      totalIn += utxo['value'] as int;
+      if (totalIn >= satoshiToSend + estimateFee(selected.length, 2)) break;
+    }
+
+    final fee = estimateFee(selected.length, 2);
+    if (totalIn < satoshiToSend + fee) {
+      throw Exception('Insufficient LTC balance');
+    }
+    final change = totalIn - satoshiToSend - fee;
+
+    // Build tx
+    final privBytes = txDataToUintList(keyPair.privateKey!);
+    final ecPair = ECPair.fromPrivateKey(
+      privBytes,
+      network: POSNetwork,
+      compressed: true,
+    );
+    final p2wpkh = P2WPKH(
+      data: PaymentData(pubkey: ecPair.publicKey),
+      network: POSNetwork,
+    );
+    final script = p2wpkh.data.output!;
+
+    final txb = TransactionBuilder(network: POSNetwork)..setVersion(2);
+
+    // Inputs first
+    for (final utxo in selected) {
+      txb.addInput(utxo['txid'] as String, utxo['vout'] as int, null, script);
+    }
+
+    // Outputs before signing (BIP143)
+    txb.addOutput(to, satoshiToSend);
+    if (change > 546) txb.addOutput(address, change);
+
+    // Sign
+    for (int i = 0; i < selected.length; i++) {
+      txb.sign(
+        vin: i,
+        keyPair: ecPair,
+        witnessValue: selected[i]['value'] as int,
+      );
+    }
+
+    final txHex = txb.build().toHex();
+
+    // Broadcast
+    final res = await http.post(
+      Uri.parse('$_ltcApi/tx'),
+      headers: {'Content-Type': 'text/plain'},
+      body: txHex,
+    );
+    if (res.statusCode ~/ 100 != 2) {
+      if (kDebugMode) print('LTC broadcast error: ${res.body}');
+      throw Exception('LTC broadcast failed: ${res.body}');
+    }
+
+    return (txHash: res.body.trim(), txRaw: txHex);
   }
 
   @override
@@ -230,26 +363,22 @@ class BitcoinCoin extends Coin {
       bitbox.Address.detectFormat(address);
       return;
     }
-
-    if (Address.validateAddress(address, POSNetwork)) {
-      return;
-    }
+    if (Address.validateAddress(address, POSNetwork)) return;
 
     bool canReceivePayment = false;
-
     try {
       final base58DecodeRecipient = bs58check.decode(address);
-
       final pubHashString = base58DecodeRecipient[0].toRadixString(16) +
           base58DecodeRecipient[1].toRadixString(16);
-
       canReceivePayment =
           hexToInt(pubHashString).toInt() == POSNetwork.pubKeyHash;
     } catch (_) {}
 
     if (!canReceivePayment) {
-      Bech32 sel = bech32.decode(address);
-      canReceivePayment = POSNetwork.bech32 == sel.hrp;
+      try {
+        final Bech32 sel = bech32.decode(address);
+        canReceivePayment = POSNetwork.bech32 == sel.hrp;
+      } catch (_) {}
     }
 
     if (!canReceivePayment) {
@@ -257,133 +386,32 @@ class BitcoinCoin extends Coin {
     }
   }
 
-  Future<int> _getNetworkFee(int satoshiToSend, List userUnspentInput) async {
-    int inputCount = 0;
-    int outputCount = 2;
-    int transactionSize = 0;
-    int totalAmountAvailable = 0;
-    int fee = 0;
-
-    for (int i = 0; i < userUnspentInput.length; i++) {
-      transactionSize = inputCount * 146 + outputCount * 34 + 10 - inputCount;
-      fee = transactionSize * 20;
-      final value = userUnspentInput[i]['value'];
-      double utxAvailable = double.parse(value) * pow(10, bitCoinDecimals);
-      totalAmountAvailable += utxAvailable.toInt();
-      inputCount += 1;
-      if (totalAmountAvailable - satoshiToSend - fee >= 0) break;
-    }
-    return fee;
-  }
-
-  Future<List> _getUnspentTXs() async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final keyPair = await importData(data);
-    final url = "${sochainApi}get_tx_unspent/$symbol/${keyPair.address}";
-    final request = await http.get(Uri.parse(url));
-
-    if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
-      throw Exception('Request failed');
-    }
-
-    return jsonDecode(request.body)['data']['txs'];
-  }
-
-  Future<({String txHash, String txRaw})> _sendBTCType(
-      String destinationAddress, int satoshiToSend) async {
-    if (satoshiToSend < satoshiDustAmount) {
-      throw Exception('dust amount given, bitcoin too small to send');
-    }
-    int totalAmt = 0;
-    int fee = 0;
-
-    List userUnspentInput = await _getUnspentTXs();
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final keyPair = await importData(data);
-    final sender = ECPair.fromPrivateKey(
-      txDataToUintList(keyPair.privateKey!),
-      network: POSNetwork,
-    );
-
-    final txb = TransactionBuilder();
-    txb.setVersion(1);
-    txb.network = POSNetwork;
-
-    for (int i = 0; i < userUnspentInput.length; i++) {
-      final scriptHex = userUnspentInput[i]['script_hex'];
-      final txHash = userUnspentInput[i]['txid'];
-      int vout = userUnspentInput[i]['output_no'];
-      final value = userUnspentInput[i]['value'];
-      double utxAvailable = double.parse(value) * pow(10, bitCoinDecimals);
-      txb.addInput(
-        txHash,
-        vout,
-        null,
-        txDataToUintList('0x$scriptHex'),
-      );
-
-      txb.sign(
-        vin: i,
-        keyPair: sender,
-        witnessValue: utxAvailable.toInt(),
-      );
-      totalAmt += utxAvailable.toInt();
-
-      fee = await _getNetworkFee(satoshiToSend, userUnspentInput);
-      if (totalAmt - satoshiToSend - fee >= 0) break;
-    }
-
-    if (totalAmt - satoshiToSend - fee < 0) {
-      throw Exception('not enough fee for transfer');
-    }
-    final address = await getAddress();
-    txb.addOutput(destinationAddress, satoshiToSend);
-    txb.addOutput(address, totalAmt - satoshiToSend - fee);
-
-    String hexBuilt = txb.build().toHex();
-
-    final sendTransaction = await http.post(
-      Uri.parse("${sochainApi}send_tx/$symbol"),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'tx_hex': hexBuilt}),
-    );
-
-    if (sendTransaction.statusCode ~/ 100 == 4 ||
-        sendTransaction.statusCode ~/ 100 == 5) {
-      if (kDebugMode) {
-        print(sendTransaction.body);
-      }
-      throw Exception('Request failed');
-    }
-
-    if (kDebugMode) {
-      print(sendTransaction.body);
-    }
-
-    return (
-      txHash: json.decode(sendTransaction.body)['data']['txid'] as String,
-      txRaw: hexBuilt,
-    );
-  }
-
   @override
-  int decimals() {
-    return bitCoinDecimals;
-  }
+  int decimals() => bitCoinDecimals;
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    List getUnspentOutput;
-    int fee = 0;
-    num satoshi = double.parse(amount) * pow(10, 8);
-    int satoshiToSend = satoshi.toInt();
+    if (symbol == 'LTC') {
+      final address = await getAddress();
+      final utxoRes =
+          await http.get(Uri.parse('$_ltcApi/address/$address/utxo'));
+      if (utxoRes.statusCode ~/ 100 != 2) return 0.0;
+      final utxos = jsonDecode(utxoRes.body) as List;
+      int feeRate = 5;
+      try {
+        final feeRes =
+            await http.get(Uri.parse('$_ltcApi/v1/fees/recommended'));
+        if (feeRes.statusCode ~/ 100 == 2) {
+          feeRate = jsonDecode(feeRes.body)['halfHourFee'] as int;
+        }
+      } catch (_) {}
+      final fee = (utxos.length.clamp(1, 5) * 68 + 2 * 31 + 10) * feeRate;
+      return fee / pow(10, 8);
+    }
 
-    getUnspentOutput = await _getUnspentTXs();
-    fee = await _getNetworkFee(satoshiToSend, getUnspentOutput);
-
-    double feeInBitcoin = fee / pow(10, bitCoinDecimals);
-
-    return feeInBitcoin;
+    // DOGE/DASH/ZEC/BCH — APIs dead, cannot estimate fee
+    // Previously used sochain _getUnspentTXs() + _getNetworkFee() — DEAD
+    return 0.0;
   }
 
   @override
@@ -396,140 +424,137 @@ class BitcoinCoin extends Coin {
   String getRampID() => rampID;
 }
 
-List<BitcoinCoin> getBitCoinPOSBlockchains() {
-  List<BitcoinCoin> blockChains = [];
+// ─── Factory ──────────────────────────────────────────────────────────────────
 
+List<UtxoCoin> getUtxoCoins() {
   if (enableTestNet) {
-    blockChains.addAll([
-      BitcoinCoin(
-        name: 'ZCash(Test)',
-        symbol: 'ZEC',
-        default_: 'ZEC',
-        blockExplorer:
-            'https://blockexplorer.one/zcash/testnet/tx/$blockExplorerPlaceholder',
-        image: 'assets/zcash.png',
-        POSNetwork: zcashTestnet,
-        P2WPKH: false,
-        derivationPath: "m/44'/133'/0'/0/0",
-        geckoID: 'zcash',
-        rampID: '',
-        payScheme: 'zcash',
-      ),
-    ]);
-  } else {
-    blockChains.addAll([
-      BitcoinCoin(
-        symbol: 'BCH',
-        name: 'BitcoinCash',
-        default_: 'BCH',
-        blockExplorer:
-            'https://www.blockchain.com/explorer/transactions/bch/$blockExplorerPlaceholder',
-        image: 'assets/bitcoin_cash.png',
-        POSNetwork: bitcoincash,
-        P2WPKH: false,
-        derivationPath: "m/44'/145'/0'/0/0",
-        geckoID: 'bitcoin-cash',
-        rampID: 'BCH_BCH',
-        payScheme: 'bitcoincash',
-      ),
-      BitcoinCoin(
-        name: 'Litecoin',
-        symbol: 'LTC',
-        default_: 'LTC',
-        blockExplorer:
-            'https://live.blockcypher.com/ltc/tx/$blockExplorerPlaceholder',
-        image: 'assets/litecoin.png',
-        POSNetwork: litecoin,
-        P2WPKH: true,
-        derivationPath: "m/84'/2'/0'/0/0",
-        geckoID: "litecoin",
-        rampID: 'LTC_LTC',
-        payScheme: 'litecoin',
-      ),
-      BitcoinCoin(
-        name: 'Dash',
-        symbol: 'DASH',
-        default_: 'DASH',
-        blockExplorer:
-            'https://live.blockcypher.com/dash/tx/$blockExplorerPlaceholder',
-        image: 'assets/dash.png',
-        POSNetwork: dash,
-        P2WPKH: false,
-        derivationPath: "m/44'/5'/0'/0/0",
-        geckoID: 'dash',
-        rampID: '',
-        payScheme: 'dash',
-      ),
-      BitcoinCoin(
-        name: 'ZCash',
-        symbol: 'ZEC',
-        default_: 'ZEC',
-        blockExplorer:
-            'https://blockexplorer.one/zcash/mainnet/tx/$blockExplorerPlaceholder',
-        image: 'assets/zcash.png',
-        POSNetwork: zcash,
-        P2WPKH: false,
-        derivationPath: "m/44'/133'/0'/0/0",
-        geckoID: 'zcash',
-        rampID: '',
-        payScheme: 'zcash',
-      ),
-      BitcoinCoin(
-        name: 'Dogecoin',
-        symbol: 'DOGE',
-        default_: 'DOGE',
-        blockExplorer:
-            'https://live.blockcypher.com/doge/tx/$blockExplorerPlaceholder',
-        image: 'assets/dogecoin.png',
-        POSNetwork: dogecoin,
-        P2WPKH: false,
-        derivationPath: "m/44'/3'/0'/0/0",
-        geckoID: "dogecoin",
-        rampID: 'DOGE_DOGE',
-        payScheme: 'doge',
-      ),
-    ]);
+    // No UTXO testnet coins — BTC testnet handled by NativeBtcCoin/TaprootBtcCoin
+    // ZEC testnet API (blockexplorer.one) — unreliable, skipped
+    return [];
   }
 
-  return blockChains;
+  return [
+    // ── Working ──────────────────────────────────────────────────────────────
+
+    UtxoCoin(
+      name: 'Litecoin',
+      symbol: 'LTC',
+      default_: 'LTC',
+      blockExplorer: 'https://litecoinspace.org/tx/$blockExplorerPlaceholder',
+      image: 'assets/litecoin.png',
+      POSNetwork: litecoin,
+      isP2WPKH: true,
+      derivationPath: "m/84'/2'/0'/0/0",
+      geckoID: 'litecoin',
+      rampID: 'LTC_LTC',
+      payScheme: 'litecoin',
+    ),
+
+    // ── Dead APIs — commented out until free alternatives are found ───────────
+
+    // BCH — rest.bitcoin.com DEAD, bitbox package calls dead API
+    // Free alternative: fullstack.cash (requires signup)
+    // UtxoCoin(
+    //   symbol: 'BCH',
+    //   name: 'BitcoinCash',
+    //   default_: 'BCH',
+    //   blockExplorer:
+    //       'https://www.blockchain.com/explorer/transactions/bch/$blockExplorerPlaceholder',
+    //   image: 'assets/bitcoin_cash.png',
+    //   POSNetwork: bitcoincash,
+    //   isP2WPKH: false,
+    //   derivationPath: "m/44'/145'/0'/0/0",
+    //   geckoID: 'bitcoin-cash',
+    //   rampID: 'BCH_BCH',
+    //   payScheme: 'bitcoincash',
+    // ),
+
+    // DASH — insight.dash.org DEAD, no free alternative
+    // UtxoCoin(
+    //   name: 'Dash',
+    //   symbol: 'DASH',
+    //   default_: 'DASH',
+    //   blockExplorer:
+    //       'https://live.blockcypher.com/dash/tx/$blockExplorerPlaceholder',
+    //   image: 'assets/dash.png',
+    //   POSNetwork: dash,
+    //   isP2WPKH: false,
+    //   derivationPath: "m/44'/5'/0'/0/0",
+    //   geckoID: 'dash',
+    //   rampID: '',
+    //   payScheme: 'dash',
+    // ),
+
+    // ZEC — zecblockexplorer.com unreliable, no free alternative
+    // UtxoCoin(
+    //   name: 'ZCash',
+    //   symbol: 'ZEC',
+    //   default_: 'ZEC',
+    //   blockExplorer:
+    //       'https://blockexplorer.one/zcash/mainnet/tx/$blockExplorerPlaceholder',
+    //   image: 'assets/zcash.png',
+    //   POSNetwork: zcash,
+    //   isP2WPKH: false,
+    //   derivationPath: "m/44'/133'/0'/0/0",
+    //   geckoID: 'zcash',
+    //   rampID: '',
+    //   payScheme: 'zcash',
+    // ),
+
+    // DOGE — dogechain.info DEAD, chain.so DEAD (moved to paid)
+    // No reliable free public API currently
+    // UtxoCoin(
+    //   name: 'Dogecoin',
+    //   symbol: 'DOGE',
+    //   default_: 'DOGE',
+    //   blockExplorer:
+    //       'https://live.blockcypher.com/doge/tx/$blockExplorerPlaceholder',
+    //   image: 'assets/dogecoin.png',
+    //   POSNetwork: dogecoin,
+    //   isP2WPKH: false,
+    //   derivationPath: "m/44'/3'/0'/0/0",
+    //   geckoID: 'dogecoin',
+    //   rampID: 'DOGE_DOGE',
+    //   payScheme: 'doge',
+    // ),
+  ];
 }
 
-class BitcoinDeriveArgs {
+// ─── Derive args & compute function ──────────────────────────────────────────
+
+class UtxoDeriveArgs {
   final SeedPhraseRoot seedRoot;
   final String derivationPath;
-  final bool P2WPKH;
+  final bool isP2WPKH;
   final NetworkType POSNetwork;
   final String default_;
 
-  const BitcoinDeriveArgs({
+  const UtxoDeriveArgs({
     required this.seedRoot,
     required this.derivationPath,
-    required this.P2WPKH,
+    required this.isP2WPKH,
     required this.POSNetwork,
     required this.default_,
   });
 }
 
-Map calculateBitCoinKey(BitcoinDeriveArgs config) {
-  SeedPhraseRoot seedRoot_ = config.seedRoot;
+Map calculateUtxoKey(UtxoDeriveArgs config) {
+  final seedRoot_ = config.seedRoot;
   final node = seedRoot_.root.derivePath(config.derivationPath);
 
   String address;
-  if (config.P2WPKH) {
+  if (config.isP2WPKH) {
     address = P2WPKH(
-      data: PaymentData(
-        pubkey: node.publicKey,
-      ),
+      data: PaymentData(pubkey: node.publicKey),
       network: config.POSNetwork,
     ).data.address!;
   } else {
     address = P2PKH(
-      data: PaymentData(
-        pubkey: node.publicKey,
-      ),
+      data: PaymentData(pubkey: node.publicKey),
       network: config.POSNetwork,
     ).data.address!;
   }
+
   if (config.default_ == 'BCH') {
     if (bitbox.Address.detectFormat(address) == bitbox.Address.formatLegacy) {
       address = bitbox.Address.toCashAddress(address).split(':')[1];
@@ -539,17 +564,14 @@ Map calculateBitCoinKey(BitcoinDeriveArgs config) {
   if (config.default_ == 'ZEC') {
     final baddr = [...bs58check.decode(address)];
     baddr.removeAt(0);
-
     final taddr = Uint8List(22);
-
     taddr.setAll(2, baddr);
     taddr.setAll(0, [0x1c, 0xb8]);
-
     address = bs58check.encode(taddr);
   }
 
   return {
     'address': address,
-    'privateKey': "0x${HEX.encode(node.privateKey!)}"
+    'privateKey': '0x${HEX.encode(node.privateKey!)}',
   };
 }

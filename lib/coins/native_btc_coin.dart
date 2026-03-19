@@ -10,6 +10,7 @@ import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
+import 'package:wallet_app/extensions/big_int_ext.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -221,7 +222,7 @@ class NativeBtcCoin extends Coin {
     String? memo,
   }) async {
     // amount is BTC — convert to satoshis
-    final satoshiToSend = (double.parse(amount) * pow(10, 8)).toInt();
+    final satoshiToSend = amount.toBigIntDec(decimals()).toInt();
     if (kDebugMode) print('BTC satoshiToSend: $satoshiToSend');
 
     if (satoshiToSend < 546) throw Exception('Amount below dust limit');
