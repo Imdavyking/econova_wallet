@@ -54,7 +54,7 @@ Uint8List stacksSha512_256(Uint8List data) {
 }
 
 /// Plain SHA-256.
-Uint8List stacksSha256(Uint8List data) {
+Uint8List sha256Bytes(Uint8List data) {
   final d = pc.SHA256Digest()..update(data, 0, data.length);
   final out = Uint8List(32);
   d.doFinal(out, 0);
@@ -65,7 +65,7 @@ Uint8List stacksSha256(Uint8List data) {
 Uint8List stacksHmacSha256(Uint8List key, Uint8List data) {
   const blockSize = 64;
 
-  Uint8List k = key.length > blockSize ? stacksSha256(key) : key;
+  Uint8List k = key.length > blockSize ? sha256Bytes(key) : key;
   if (k.length < blockSize) {
     final padded = Uint8List(blockSize);
     padded.setRange(0, k.length, k);
@@ -79,14 +79,14 @@ Uint8List stacksHmacSha256(Uint8List key, Uint8List data) {
     opad[i] = k[i] ^ 0x5C;
   }
   ipad.setRange(blockSize, blockSize + data.length, data);
-  final inner = stacksSha256(ipad);
+  final inner = sha256Bytes(ipad);
   opad.setRange(blockSize, blockSize + 32, inner);
-  return stacksSha256(opad);
+  return sha256Bytes(opad);
 }
 
 /// RIPEMD-160(SHA-256(data)) — the standard hash160 used in P2PKH addresses.
 Uint8List hash160(Uint8List pubKey) {
-  final shaOut = stacksSha256(pubKey);
+  final shaOut = sha256Bytes(pubKey);
   final rmd = pc.RIPEMD160Digest()..update(shaOut, 0, shaOut.length);
   final out = Uint8List(20);
   rmd.doFinal(out, 0);
@@ -96,7 +96,7 @@ Uint8List hash160(Uint8List pubKey) {
 // ─── Key helpers ──────────────────────────────────────────────────────────────
 
 /// Compressed SEC-encoded public key derived from raw 32-byte private key.
-Uint8List stacksCompressedPubKey(Uint8List privKey) {
+Uint8List compressedPubKey(Uint8List privKey) {
   final params = pc.ECDomainParameters('secp256k1');
   final d = BigInt.parse(HEX.encode(privKey), radix: 16);
   return (params.G * d)!.getEncoded(true);
@@ -204,7 +204,7 @@ pc.ECPoint? stacksRecoverPubKey(int recId, pc.ECSignature sig, Uint8List hash,
 
 /// Deterministic secp256k1 ECDSA (RFC 6979) with low-S normalisation.
 /// Returns (ECSignature, recoveryId) where recoveryId ∈ {0, 1}.
-(pc.ECSignature, int) stacksSecp256k1Sign(Uint8List privKey, Uint8List hash) {
+(pc.ECSignature, int) secp256k1Sign(Uint8List privKey, Uint8List hash) {
   final params = pc.ECDomainParameters('secp256k1');
   final n = params.n;
   final d = BigInt.parse(HEX.encode(privKey), radix: 16);
@@ -293,7 +293,7 @@ Uint8List stacksBuildSignedTx({
   final presignHash = stacksSha512_256(preSignInput);
 
   // Sign
-  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, presignHash);
+  final (sig, recoveryId) = secp256k1Sign(privKey, presignHash);
   final sigBytes = Uint8List(65)
     ..[0] = recoveryId
     ..setRange(1, 33, stacksBigIntTo32Bytes(sig.r))
@@ -333,13 +333,13 @@ Uint8List stacksSignMessage(Uint8List privKey, String message,
 
   final msgBytes = utf8.encode(message);
 
-  final hash = stacksSha256(Uint8List.fromList([
+  final hash = sha256Bytes(Uint8List.fromList([
     ...utf8.encode(prefix),
     ...varuint(msgBytes.length),
     ...msgBytes,
   ]));
 
-  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
+  final (sig, recoveryId) = secp256k1Sign(privKey, hash);
 
   final r = stacksBigIntTo32Bytes(sig.r);
   final s = stacksBigIntTo32Bytes(sig.s);
@@ -373,7 +373,7 @@ Uint8List varuint(int value) {
 /// Returns 65 bytes: [ r (32) | s (32) | recId (1) ] — RSV format,
 /// matching signMessageHashRsv output expected by Stacks.js verifiers.
 Uint8List stacksSignRaw(Uint8List privKey, Uint8List hash) {
-  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, hash);
+  final (sig, recoveryId) = secp256k1Sign(privKey, hash);
   final r = stacksBigIntTo32Bytes(sig.r);
   final s = stacksBigIntTo32Bytes(sig.s);
   return Uint8List.fromList([...r, ...s, recoveryId]); // RSV
@@ -421,7 +421,7 @@ Uint8List stacksResignTx(Uint8List rawTx, Uint8List privKey) {
 
   // CHANGED: use stacksSecp256k1Sign instead of _secp256k1SignRecoverable
   // to match noble/secp256k1 output exactly (same k derivation)
-  final (sig, recoveryId) = stacksSecp256k1Sign(privKey, sigHash);
+  final (sig, recoveryId) = secp256k1Sign(privKey, sigHash);
 
   final sigBytes = Uint8List(65)
     ..[0] = recoveryId

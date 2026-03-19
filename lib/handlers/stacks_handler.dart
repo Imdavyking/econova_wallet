@@ -385,9 +385,9 @@ class StacksHandler extends BaseWebViewHandler {
           final domBytes = HEX.decode(
               domainHex.startsWith('0x') ? domainHex.substring(2) : domainHex);
           const prefix = [0x53, 0x49, 0x50, 0x30, 0x31, 0x38];
-          final domHash = stacksSha256(Uint8List.fromList(domBytes));
-          final msgHash = stacksSha256(Uint8List.fromList(msgBytes));
-          final hash = stacksSha256(
+          final domHash = sha256Bytes(Uint8List.fromList(domBytes));
+          final msgHash = sha256Bytes(Uint8List.fromList(msgBytes));
+          final hash = sha256Bytes(
               Uint8List.fromList([...prefix, ...domHash, ...msgHash]));
           final privBytes = txDataToUintList(accountDetail.privateKey!);
           final sigBytes = stacksSignRaw(privBytes, hash);
@@ -691,7 +691,7 @@ class StacksHandler extends BaseWebViewHandler {
           final data = WalletService.getActiveKey(walletImportType)!.data;
           final keyPair = await coin.importData(data);
           final privBytes = txDataToUintList(keyPair.privateKey!);
-          final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
+          final senderHash160 = hash160(compressedPubKey(privBytes));
           final nonce = await _fetchNonce(coin);
           final feeRate = await _fetchFeeRate(coin);
           final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);
@@ -945,7 +945,7 @@ class StacksHandler extends BaseWebViewHandler {
     }));
 
     final signingInput = '$header.$payload';
-    final hash = stacksSha256(Uint8List.fromList(utf8.encode(signingInput)));
+    final hash = sha256Bytes(Uint8List.fromList(utf8.encode(signingInput)));
     final sigBytes = stacksSignRaw(privBytes, hash);
     final sig = base64Url.encode(sigBytes).replaceAll('=', '');
 
@@ -995,9 +995,9 @@ class StacksHandler extends BaseWebViewHandler {
                 ? domainHex.substring(2)
                 : domainHex);
             const prefix = [0x53, 0x49, 0x50, 0x30, 0x31, 0x38];
-            final domHash = stacksSha256(Uint8List.fromList(domBytes));
-            final msgHash = stacksSha256(Uint8List.fromList(msgBytes));
-            final hash = stacksSha256(
+            final domHash = sha256Bytes(Uint8List.fromList(domBytes));
+            final msgHash = sha256Bytes(Uint8List.fromList(msgBytes));
+            final hash = sha256Bytes(
                 Uint8List.fromList([...prefix, ...domHash, ...msgHash]));
             sigBytes = stacksSignRaw(privBytes, hash);
           } else {
@@ -1053,7 +1053,7 @@ class StacksHandler extends BaseWebViewHandler {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await coin.importData(data);
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final senderHash160 = hash160(stacksCompressedPubKey(privBytes));
+    final senderHash160 = hash160(compressedPubKey(privBytes));
     final nonce = await _fetchNonce(coin);
     final feeRate = await _fetchFeeRate(coin);
     final fee = BigInt.from(feeRate * stacksEstimatedContractCallBytes);

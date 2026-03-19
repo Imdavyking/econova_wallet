@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/utils/stack_tx_utils.dart';
 
 import '../service/wallet_service.dart';
 import 'package:bech32/bech32.dart';
@@ -13,9 +14,9 @@ import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:web3dart/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:bitbox/bitbox.dart' as bitbox;
-
 import 'package:wallet_app/utils/pos_networks.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/segwit_tx.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -23,28 +24,10 @@ import '../model/seed_phrase_root.dart';
 import '../utils/alt_ens.dart';
 import '../utils/app_config.dart';
 
-// sochain.com/api/v2 — DEAD (moved to v3, now paid)
-// const sochainApi = 'https://sochain.com/api/v2/';
-
 const bitCoinDecimals = 8;
 
 // ─── API endpoints ────────────────────────────────────────────────────────────
-// LTC: litecoinspace.org — free, Esplora format, run by mempool.space team
 const _ltcApi = 'https://litecoinspace.org/api';
-
-// BCH: rest.bitcoin.com — DEAD
-// const _bchApi = 'https://rest.bitcoin.com/v2/';
-// Alternative: fullstack.cash — requires signup, skip for now
-
-// DOGE: No reliable free public API
-// dogechain.info — DEAD (404)
-// chain.so — DEAD (moved to paid)
-
-// DASH: insight.dash.org — DEAD
-// No reliable free alternative
-
-// ZEC: zecblockexplorer.com — unreliable, often down
-// No reliable free alternative
 
 class UtxoCoin extends Coin {
   NetworkType POSNetwork;
@@ -90,8 +73,6 @@ class UtxoCoin extends Coin {
   }
 
   @override
-  // LTC is working via litecoinspace.org
-  // BCH/DOGE/DASH/ZEC APIs are all dead — keep false for those
   bool get isRpcWorking => symbol == 'LTC';
 
   @override
@@ -160,39 +141,15 @@ class UtxoCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    if (symbol == 'LTC') {
-      return _getLtcBalance(address);
-    }
-
-    // BCH — rest.bitcoin.com DEAD, bitbox calls dead API
-    // if (symbol == 'BCH') {
-    //   final addressDetails = await bitbox.Address.details(address);
-    //   return addressDetails['balance'];
-    // }
-
-    // DOGE/DASH/ZEC — all APIs dead, no free alternative
-    // Previously used:
-    //   cryptoapis.io — paid, requires utxoApiKey
-    //   sochain.com/v2 — dead
-    //   dogechain.info — dead
-    //   insight.dash.org — dead
-    // final url =
-    //     'https://rest.cryptoapis.io/addresses-latest/utxo/$symbol/...'
-    //     requires: 'x-api-key': utxoApiKey
-
+    if (symbol == 'LTC') return _getLtcBalance(address);
     throw UnimplementedError(
-      '$symbol balance not available — no free public API. '
-      'Re-enable when a working free API is found.',
+      '$symbol balance not available — no free public API.',
     );
   }
 
-  // ── LTC balance via litecoinspace.org (mempool.space fork, free) ──────────
   Future<double> _getLtcBalance(String address) async {
     try {
-      // Primary — litecoinspace.org
-      final res = await http.get(
-        Uri.parse('$_ltcApi/address/$address'),
-      );
+      final res = await http.get(Uri.parse('$_ltcApi/address/$address'));
       if (res.statusCode ~/ 100 == 2) {
         final stats =
             jsonDecode(res.body)['chain_stats'] as Map<String, dynamic>;
@@ -202,11 +159,9 @@ class UtxoCoin extends Coin {
       }
     } catch (_) {}
 
-    // Fallback — blockcypher (running since 2014, free unauthed)
-    final res = await http.get(
-      Uri.parse(
-          'https://api.blockcypher.com/v1/ltc/main/addrs/$address/balance'),
-    );
+    // Fallback — blockcypher
+    final res = await http.get(Uri.parse(
+        'https://api.blockcypher.com/v1/ltc/main/addrs/$address/balance'));
     if (res.statusCode ~/ 100 != 2) throw Exception('LTC balance failed');
     return (jsonDecode(res.body)['final_balance'] as int) / pow(10, 8);
   }
@@ -246,21 +201,12 @@ class UtxoCoin extends Coin {
   Future<({String txHash, String? txRaw})?> transferToken(
       String amount, String to,
       {String? memo}) async {
-    if (symbol == 'LTC') {
-      return _sendLtc(amount, to);
-    }
-
-    // BCH — bitbox send uses dead rest.bitcoin.com
-    // DOGE/DASH/ZEC — sochain send API dead
-    // Previously: _sendBTCType() via sochain — DEAD
+    if (symbol == 'LTC') return _sendLtc(amount, to);
     throw UnimplementedError(
-      '$symbol send not available — no free public API.',
-    );
+        '$symbol send not available — no free public API.');
   }
 
-  // ── LTC send via litecoinspace.org ────────────────────────────────────────
-  // Same Esplora format as mempool.space. Output-before-sign order required
-  // for P2WPKH (BIP143 sighash commits to outputs).
+  // ── LTC send (BIP141/143 manual serialization) ────────────────────────────
   Future<({String txHash, String? txRaw})> _sendLtc(
       String amount, String to) async {
     final satoshiToSend = amount.toBigIntDec(decimals()).toInt();
@@ -270,10 +216,8 @@ class UtxoCoin extends Coin {
     final keyPair = await importData(data);
     final address = keyPair.address;
 
-    // Fetch UTXOs
-    final utxoRes = await http.get(
-      Uri.parse('$_ltcApi/address/$address/utxo'),
-    );
+    // ── Fetch UTXOs ──────────────────────────────────────────────────────────
+    final utxoRes = await http.get(Uri.parse('$_ltcApi/address/$address/utxo'));
     if (utxoRes.statusCode ~/ 100 != 2) {
       throw Exception('LTC UTXO fetch failed');
     }
@@ -281,7 +225,7 @@ class UtxoCoin extends Coin {
         (jsonDecode(utxoRes.body) as List).cast<Map<String, dynamic>>();
     if (utxos.isEmpty) throw Exception('No UTXOs available');
 
-    // Fee rate
+    // ── Fee rate ─────────────────────────────────────────────────────────────
     int feeRate = 5;
     try {
       final feeRes = await http.get(Uri.parse('$_ltcApi/v1/fees/recommended'));
@@ -293,7 +237,7 @@ class UtxoCoin extends Coin {
     int estimateFee(int inputs, int outputs) =>
         (inputs * 68 + outputs * 31 + 10) * feeRate;
 
-    // Select UTXOs
+    // ── Select UTXOs ─────────────────────────────────────────────────────────
     int totalIn = 0;
     final selected = <Map<String, dynamic>>[];
     for (final utxo in utxos) {
@@ -308,42 +252,68 @@ class UtxoCoin extends Coin {
     }
     final change = totalIn - satoshiToSend - fee;
 
-    // Build tx
+    if (kDebugMode) {
+      print('LTC totalIn: $totalIn  fee: $fee  change: $change');
+    }
+
+    // ── Output scripts ───────────────────────────────────────────────────────
+    // Witness program from bech32 decode IS already the hash160 — do not re-hash.
+    final toScript = p2wpkhScript(
+      Uint8List.fromList(const SegwitCodec().decode(to).program),
+    );
+    final changeScript = change > 546
+        ? p2wpkhScript(
+            Uint8List.fromList(const SegwitCodec().decode(address).program),
+          )
+        : null;
+
+    // ── BIP143 shared hashes ─────────────────────────────────────────────────
     final privBytes = txDataToUintList(keyPair.privateKey!);
-    final ecPair = ECPair.fromPrivateKey(
-      privBytes,
-      network: POSNetwork,
-      compressed: true,
+
+    final hashPrevouts = buildHashPrevouts(selected);
+    final hashSequence = buildHashSequence(selected.length);
+    final hashOutputs = buildHashOutputs(
+      satoshiToSend: satoshiToSend,
+      toScript: toScript,
+      change: change,
+      changeScript: changeScript,
     );
-    final p2wpkh = P2WPKH(
-      data: PaymentData(pubkey: ecPair.publicKey),
-      network: POSNetwork,
+
+    // scriptCode is derived from our own pubkey — hash the pubkey, not an address
+    final scriptCode = p2wpkhScriptCode(
+      hash160(compressedPubKey(privBytes)),
     );
-    final script = p2wpkh.data.output!;
 
-    final txb = TransactionBuilder(network: POSNetwork)..setVersion(2);
-
-    // Inputs first
-    for (final utxo in selected) {
-      txb.addInput(utxo['txid'] as String, utxo['vout'] as int, null, script);
-    }
-
-    // Outputs before signing (BIP143)
-    txb.addOutput(to, satoshiToSend);
-    if (change > 546) txb.addOutput(address, change);
-
-    // Sign
+    // ── Sign each input ───────────────────────────────────────────────────────
+    final witnesses = <List<Uint8List>>[];
     for (int i = 0; i < selected.length; i++) {
-      txb.sign(
-        vin: i,
-        keyPair: ecPair,
-        witnessValue: selected[i]['value'] as int,
+      final txid = HEX.decode(selected[i]['txid'] as String).reversed.toList();
+      final preimage = bip143Preimage(
+        hashPrevouts: hashPrevouts,
+        hashSequence: hashSequence,
+        txid: txid,
+        vout: selected[i]['vout'] as int,
+        scriptCode: scriptCode,
+        value: selected[i]['value'] as int,
+        hashOutputs: hashOutputs,
       );
+      witnesses.add(buildInputWitness(
+        privBytes: privBytes,
+        sigHash: dsha256(preimage),
+      ));
     }
 
-    final txHex = txb.build().toHex();
+    // ── Serialize & broadcast ─────────────────────────────────────────────────
+    final txHex = buildSegwitTxHex(
+      inputs: selected,
+      satoshiToSend: satoshiToSend,
+      toScript: toScript,
+      change: change,
+      changeScript: changeScript,
+      witnesses: witnesses,
+    );
+    if (kDebugMode) print('LTC txHex: $txHex');
 
-    // Broadcast
     final res = await http.post(
       Uri.parse('$_ltcApi/tx'),
       headers: {'Content-Type': 'text/plain'},
@@ -381,9 +351,7 @@ class UtxoCoin extends Coin {
       } catch (_) {}
     }
 
-    if (!canReceivePayment) {
-      throw Exception('Invalid $symbol address');
-    }
+    if (!canReceivePayment) throw Exception('Invalid $symbol address');
   }
 
   @override
@@ -408,9 +376,6 @@ class UtxoCoin extends Coin {
       final fee = (utxos.length.clamp(1, 5) * 68 + 2 * 31 + 10) * feeRate;
       return fee / pow(10, 8);
     }
-
-    // DOGE/DASH/ZEC/BCH — APIs dead, cannot estimate fee
-    // Previously used sochain _getUnspentTXs() + _getNetworkFee() — DEAD
     return 0.0;
   }
 
@@ -427,15 +392,9 @@ class UtxoCoin extends Coin {
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 List<UtxoCoin> getUtxoCoins() {
-  if (enableTestNet) {
-    // No UTXO testnet coins — BTC testnet handled by NativeBtcCoin/TaprootBtcCoin
-    // ZEC testnet API (blockexplorer.one) — unreliable, skipped
-    return [];
-  }
+  if (enableTestNet) return [];
 
   return [
-    // ── Working ──────────────────────────────────────────────────────────────
-
     UtxoCoin(
       name: 'Litecoin',
       symbol: 'LTC',
@@ -449,74 +408,6 @@ List<UtxoCoin> getUtxoCoins() {
       rampID: 'LTC_LTC',
       payScheme: 'litecoin',
     ),
-
-    // ── Dead APIs — commented out until free alternatives are found ───────────
-
-    // BCH — rest.bitcoin.com DEAD, bitbox package calls dead API
-    // Free alternative: fullstack.cash (requires signup)
-    // UtxoCoin(
-    //   symbol: 'BCH',
-    //   name: 'BitcoinCash',
-    //   default_: 'BCH',
-    //   blockExplorer:
-    //       'https://www.blockchain.com/explorer/transactions/bch/$blockExplorerPlaceholder',
-    //   image: 'assets/bitcoin_cash.png',
-    //   POSNetwork: bitcoincash,
-    //   isP2WPKH: false,
-    //   derivationPath: "m/44'/145'/0'/0/0",
-    //   geckoID: 'bitcoin-cash',
-    //   rampID: 'BCH_BCH',
-    //   payScheme: 'bitcoincash',
-    // ),
-
-    // DASH — insight.dash.org DEAD, no free alternative
-    // UtxoCoin(
-    //   name: 'Dash',
-    //   symbol: 'DASH',
-    //   default_: 'DASH',
-    //   blockExplorer:
-    //       'https://live.blockcypher.com/dash/tx/$blockExplorerPlaceholder',
-    //   image: 'assets/dash.png',
-    //   POSNetwork: dash,
-    //   isP2WPKH: false,
-    //   derivationPath: "m/44'/5'/0'/0/0",
-    //   geckoID: 'dash',
-    //   rampID: '',
-    //   payScheme: 'dash',
-    // ),
-
-    // ZEC — zecblockexplorer.com unreliable, no free alternative
-    // UtxoCoin(
-    //   name: 'ZCash',
-    //   symbol: 'ZEC',
-    //   default_: 'ZEC',
-    //   blockExplorer:
-    //       'https://blockexplorer.one/zcash/mainnet/tx/$blockExplorerPlaceholder',
-    //   image: 'assets/zcash.png',
-    //   POSNetwork: zcash,
-    //   isP2WPKH: false,
-    //   derivationPath: "m/44'/133'/0'/0/0",
-    //   geckoID: 'zcash',
-    //   rampID: '',
-    //   payScheme: 'zcash',
-    // ),
-
-    // DOGE — dogechain.info DEAD, chain.so DEAD (moved to paid)
-    // No reliable free public API currently
-    // UtxoCoin(
-    //   name: 'Dogecoin',
-    //   symbol: 'DOGE',
-    //   default_: 'DOGE',
-    //   blockExplorer:
-    //       'https://live.blockcypher.com/doge/tx/$blockExplorerPlaceholder',
-    //   image: 'assets/dogecoin.png',
-    //   POSNetwork: dogecoin,
-    //   isP2WPKH: false,
-    //   derivationPath: "m/44'/3'/0'/0/0",
-    //   geckoID: 'dogecoin',
-    //   rampID: 'DOGE_DOGE',
-    //   payScheme: 'doge',
-    // ),
   ];
 }
 
