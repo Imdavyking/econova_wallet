@@ -29,6 +29,7 @@ import 'package:http/http.dart' as http;
 // 2. Legacy hiroWallet* path — old @stacks/connect / Xverse
 //    id = JWT string, name = 'hiroWalletStacksTransactionRequest' etc.
 //    Response via: window.legacySendResponse(responseName, payload)
+import 'package:bs58check/bs58check.dart' as bs58check;
 
 class StacksHandler extends BaseWebViewHandler {
   StacksHandler({required super.context});
@@ -910,6 +911,14 @@ class StacksHandler extends BaseWebViewHandler {
     );
   }
 
+  String _pubkeyToP2pkh(Uint8List compressedPub) {
+    final h160 = hash160(compressedPub);
+    // version byte 0x00 = mainnet P2PKH
+    final versioned = Uint8List(21)..[0] = 0x00;
+    versioned.setRange(1, 21, h160);
+    return bs58check.encode(versioned);
+  }
+
   Future<String> _buildSignedAuthResponse({
     required AccountData accountDetail,
     required String sendingAddress,
@@ -940,7 +949,8 @@ class StacksHandler extends BaseWebViewHandler {
       'jti': '${now}_auth_response',
       'iat': now,
       'exp': now + 86400,
-      'iss': 'did:btc-addr:$sendingAddress',
+      'iss':
+          'did:btc-addr:${_pubkeyToP2pkh(Uint8List.fromList(HEX.decode(segwitData.publicKey ?? '')))}',
       'public_keys': [pubKey],
       'profile': {
         'stxAddress': {
@@ -959,14 +969,16 @@ class StacksHandler extends BaseWebViewHandler {
             'signet': isTestnet ? segwitAddress : null,
           },
         },
-        'btcPublicKey': {
-          'p2tr': taprootData.publicKey ?? '',
-          'p2wpkh': segwitData.publicKey ?? '',
-        },
-        'btcPublicKeyTestnet': {
-          'p2tr': taprootData.publicKey ?? '',
-          'p2wpkh': segwitData.publicKey ?? '',
-        },
+        if (isTestnet)
+          'btcPublicKeyTestnet': {
+            'p2tr': taprootData.publicKey ?? '',
+            'p2wpkh': segwitData.publicKey ?? '',
+          }
+        else
+          'btcPublicKey': {
+            'p2tr': taprootData.publicKey ?? '',
+            'p2wpkh': segwitData.publicKey ?? '',
+          },
         'walletProvider': walletName,
       },
       'core_token': null,
