@@ -17,21 +17,14 @@ const PAY_TO = process.env.PAY_TO!;
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? `http://localhost:${PORT}`;
 const PRICE = USDCxToMicroUSDCx(0.1);
 
-const stacksNetwork = NETWORK === "mainnet" ? new StacksMainnet() : new StacksTestnet();
-const ALEX_API = "https://api.alexgo.io";
-
-const FEATURED_POOLS: Record<string, number> = {
-  "STX-ALEX": 1,
-  "STX-USDA": 4,
-  "STX-xBTC": 5,
-  "ALEX-USDA": 6,
-  "STX-aBTC": 13,
-};
+const stacksNetwork = NETWORK === "mainnet"
+  ? new StacksMainnet()
+  : new StacksTestnet();
 
 const app = express();
 app.use(express.json());
 
-// ── Facilitator ───────────────────────────────────────────────────────────────
+// ── Facilitator ───────────────────────────────────────────────────
 
 app.get("/supported", (_, res) => {
   res.json({
@@ -75,20 +68,26 @@ app.post("/settle", async (req, res) => {
       });
     }
 
-    console.log(`[settle] txid=${result.txid} payer=${paymentPayload.accepted?.from}`);
+    console.log(
+      `[settle] txid=${result.txid} payer=${paymentPayload.accepted?.from}`
+    );
 
     return res.json({
       success: true,
       payer: paymentPayload.accepted?.from ?? "unknown",
       transaction: result.txid,
-      network: paymentRequirements?.network ?? `stacks:${NETWORK === "mainnet" ? 1 : 2147483648}`,
+      network:
+        paymentRequirements?.network ??
+        `stacks:${NETWORK === "mainnet" ? 1 : 2147483648}`,
     });
   } catch (e: any) {
-    return res.status(500).json({ success: false, error: e?.message ?? `${e}` });
+    return res
+      .status(500)
+      .json({ success: false, error: e?.message ?? `${e}` });
   }
 });
 
-// ── Paywall ───────────────────────────────────────────────────────────────────
+// ── Paywall ───────────────────────────────────────────────────────
 
 const paywall = paymentMiddleware({
   amount: PRICE,
@@ -98,124 +97,72 @@ const paywall = paymentMiddleware({
   facilitatorUrl: FACILITATOR_URL,
 });
 
-// GET /api/defi-yields
-// Live APR + TVL for top Stacks pools on Alex Lab
-// Demo: "What are the best yields on Stacks right now?"
-app.get("/api/defi-yields", paywall, async (_, res) => {
+// GET /api/market
+// Full market report: STX, BTC, ETH
+// Price, 1h/24h/7d change, market cap, volume, ATH
+// Demo: "Give me a full market report on STX"
+app.get("/api/market", paywall, async (_, res) => {
   try {
-    const poolResults = await Promise.allSettled(
-      Object.entries(FEATURED_POOLS).map(async ([name, poolId]) => {
-        const { data } = await axios.get(
-          `${ALEX_API}/v1/pool_stats/${poolId}`,
-          { params: { limit: 1 }, timeout: 8000 }
-        );
-
-        const latest = data?.pool_status?.[0];
-        if (!latest) return null;
-
-        return {
-          pool: name,
-          pool_id: poolId,
-          apr_pct: latest.pool_token_lp_apr != null
-            ? Number((latest.pool_token_lp_apr * 100).toFixed(2))
-            : null,
-          tvl_usd: latest.pool_tvl != null
-            ? Number(latest.pool_tvl.toFixed(2))
-            : null,
-          volume_24h_usd: latest.volume_24h != null
-            ? Number(latest.volume_24h.toFixed(2))
-            : null,
-          block_height: latest.block_height,
-        };
-      })
+    const { data } = await axios.get(
+      "https://api.coingecko.com/api/v3/coins/markets",
+      {
+        params: {
+          vs_currency: "usd",
+          ids: "blockstack,bitcoin,ethereum",
+          order: "market_cap_desc",
+          sparkline: false,
+          price_change_percentage: "1h,24h,7d",
+        },
+        timeout: 8000,
+      }
     );
 
-    const pools = poolResults
-      .filter((r) => r.status === "fulfilled" && r.value !== null)
-      .map((r) => (r as PromiseFulfilledResult<any>).value)
-      .sort((a, b) => (b.apr_pct ?? 0) - (a.apr_pct ?? 0));
+    const fmt = (coin: any) => ({
+      symbol: coin.symbol?.toUpperCase(),
+      name: coin.name,
+      price_usd: coin.current_price,
+      change_1h_pct:
+        coin.price_change_percentage_1h_in_currency?.toFixed(2) ?? null,
+      change_24h_pct:
+        coin.price_change_percentage_24h_in_currency?.toFixed(2) ?? null,
+      change_7d_pct:
+        coin.price_change_percentage_7d_in_currency?.toFixed(2) ?? null,
+      market_cap_usd: coin.market_cap,
+      volume_24h_usd: coin.total_volume,
+      ath_usd: coin.ath,
+      ath_change_pct: coin.ath_change_percentage?.toFixed(2) ?? null,
+      last_updated: coin.last_updated,
+    });
 
     return res.json({
       timestamp: new Date().toISOString(),
-      source: "Alex Lab (api.alexgo.io)",
-      network: "Stacks Mainnet",
-      note: "APR reflects LP fee rebates. Does not include impermanent loss.",
-      pools,
+      source: "CoinGecko",
+      market: data.map(fmt),
     });
   } catch (e: any) {
-    return res.status(502).json({ error: "Failed to fetch yield data", detail: e?.message });
+    return res
+      .status(502)
+      .json({ error: "Failed to fetch market data", detail: e?.message });
   }
 });
 
-// GET /api/pool/:name
-// Detailed stats for a single pool e.g. /api/pool/STX-ALEX
-app.get("/api/pool/:name", paywall, async (req, res) => {
-  const name = req.params.name.toUpperCase();
-  const poolId = FEATURED_POOLS[name];
-
-  if (!poolId) {
-    return res.status(404).json({
-      error: `Pool "${name}" not found`,
-      available: Object.keys(FEATURED_POOLS),
-    });
-  }
-
-  try {
-    const { data } = await axios.get(`${ALEX_API}/v1/pool_stats/${poolId}`, {
-      params: { limit: 5 },
-      timeout: 8000,
-    });
-
-    const latest = data?.pool_status?.[0];
-    const history = data?.pool_status?.map((s: any) => ({
-      block_height: s.block_height,
-      apr_pct: s.pool_token_lp_apr != null
-        ? Number((s.pool_token_lp_apr * 100).toFixed(2))
-        : null,
-      tvl_usd: s.pool_tvl != null
-        ? Number(s.pool_tvl.toFixed(2))
-        : null,
-    }));
-
-    return res.json({
-      timestamp: new Date().toISOString(),
-      source: "Alex Lab (api.alexgo.io)",
-      pool: name,
-      pool_id: poolId,
-      current: {
-        apr_pct: latest?.pool_token_lp_apr != null
-          ? Number((latest.pool_token_lp_apr * 100).toFixed(2))
-          : null,
-        tvl_usd: latest?.pool_tvl != null
-          ? Number(latest.pool_tvl.toFixed(2))
-          : null,
-        block_height: latest?.block_height,
-      },
-      recent_history: history,
-    });
-  } catch (e: any) {
-    return res.status(502).json({ error: "Failed to fetch pool data", detail: e?.message });
-  }
-});
-
-// ── Health ────────────────────────────────────────────────────────────────────
+// ── Health ────────────────────────────────────────────────────────
 
 app.get("/health", (_, res) => {
   res.json({
     status: "ok",
     network: NETWORK,
     payTo: PAY_TO,
-    endpoints: ["/api/defi-yields", "/api/pool/:name"],
-    available_pools: Object.keys(FEATURED_POOLS),
+    price: "0.1 USDCx per request",
+    endpoints: ["/api/market"],
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`x402 DeFi yields server on port ${PORT}`);
+  console.log(`x402 server on port ${PORT}`);
   console.log(`Network : ${NETWORK}`);
   console.log(`Pay to  : ${PAY_TO}`);
   console.log(`Price   : 0.1 USDCx per request`);
-  console.log(`Pools   : ${Object.keys(FEATURED_POOLS).join(", ")}`);
 });
