@@ -16,7 +16,6 @@ EcoNova is a direct submission for all three Buidl Battle bounties:
 | Bounty                             | How EcoNova qualifies                                                                                                                                                                                           |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🥇 **Best Use of USDCx**           | Native USDCx send/receive + Clarity 2 savings goals vault — users create named saving plans, deposit USDCx incrementally, and track progress. All built without stacks.js.                                      |
-| 🥇 **Most Innovative Use of sBTC** | First mobile wallet with native sBTC support. Send, receive, and hold sBTC through a conversational AI interface. No browser extension needed.                                                                  |
 | 🥇 **Best x402 Integration**       | The AI pays for paywalled APIs autonomously using STX, sBTC, or USDCx via x402. Multi-version (v0/v1/v2), separate signing paths for STX and SIP-010 tokens. The first mobile wallet where the AI funds itself. |
 
 ---
@@ -56,8 +55,7 @@ c32check address encoding, and BNS resolution all ported from scratch.
 
 Send and receive STX natively. Full two-phase signing (pre-sign hash pattern
 matching `@stacks/transactions` exactly), memo support, and automatic nonce
-
-- fee fetching from the Hiro API.
+and fee fetching from the Hiro API.
 
 ### 🟡 sBTC _(Most Innovative Use of sBTC bounty)_
 
@@ -85,7 +83,6 @@ incrementally, and withdraw at any time — no lockups, no penalties.
 - Shared contract — deployed once, all users scoped by `tx-sender`
 - Ask the AI: _"Save 10 USDCx to my holiday fund"_, _"Show my savings goals"_, _"Withdraw 5 USDCx from my holiday fund"_
 
-
 ```clarity
 ;; Users can withdraw anytime — no lockup
 (define-public (withdraw (name (string-ascii 50)) (amount uint))
@@ -100,6 +97,27 @@ incrementally, and withdraw at any time — no lockups, no penalties.
 
 Send to `.btc` names instead of raw addresses. _"Send 5 STX to bob.btc"_
 resolves through the Hiro BNS API automatically.
+
+### ₿ Native Bitcoin — Send, Receive, and Identity
+
+EcoNova derives both BTC address types from the same seed, matching
+Leather and Xverse exactly — and both are fully functional:
+
+| Type            | Format                | Capability                  |
+| --------------- | --------------------- | --------------------------- |
+| P2WPKH (SegWit) | `bc1q...` / `tb1q...` | ✅ Send + Receive           |
+| P2TR (Taproot)  | `bc1p...` / `tb1p...` | ✅ Receive (Ordinals/Runes) |
+
+- Native BTC SegWit sends — BIP141/143 manual serialization in pure Dart,
+  no bitcoin library used for signing
+- BIP341 tapTweak implemented in pure Dart — correct Taproot address
+  derivation matching Leather/Xverse exactly
+- bech32m encoding (BIP350) for Taproot — not bech32, which produces wrong
+  addresses for witness v1
+- `getAddresses` response matches Leather exactly — dApps that verify BTC
+  identity work without modification
+- Taproot address is Ordinals/Runes-compatible — users can receive
+  inscriptions directly to their EcoNova wallet
 
 ### 🔗 dApp Browser — Full Leather + Xverse + Multi-Chain
 
@@ -161,18 +179,18 @@ and executes on-chain actions autonomously:
 - "How much have I saved for my holiday fund?"
 - "Withdraw all from my holiday fund"
 - "What's my sBTC balance?"
+- "Send 0.0001 BTC to tb1q..." ← native SegWit BTC transfer
 - "Pay for this API" ← autonomous x402 payment using your funds
 - "Swap $20 STX to USDCx" ← asks permission to open Alex Lab DEX in the dApp browser for seamless completion
 
-
 **No addresses. No gas confusion. No chain switching. No coding required.**
 
-**🎙️ Voice Recognition**  
-Use your voice for hands-free commands on mobile.  
+**🎙️ Voice Recognition**
+Use your voice for hands-free commands on mobile.
 _"Send 0.1 STX to alice.btc"_ or _"Send 20 dollars worth of STX to Mom"_ works instantly.
 
-**👥 Saved Contacts**  
-Save trusted people with nicknames once — then just say their name.  
+**👥 Saved Contacts**
+Save trusted people with nicknames once — then just say their name.
 No more copying long addresses or checking explorers.
 
 ---
@@ -191,32 +209,36 @@ No more copying long addresses or checking explorers.
 
 ## 🚀 Full Feature List
 
-| Feature                                              | Status |
-| ---------------------------------------------------- | ------ |
-| STX send / receive                                   | ✅     |
-| sBTC send / receive                                  | ✅     |
-| USDCx send / receive                                 | ✅     |
-| USDCx savings goals (Clarity 2)                      | ✅     |
-| BNS (.btc) name resolution                           | ✅     |
-| x402 autonomous payments (STX / sBTC / USDCx)        | ✅     |
-| dApp browser — Leather / Xverse API                  | ✅     |
-| dApp browser — EVM (MetaMask-compat)                 | ✅     |
-| dApp browser — Solana / Starknet / NEAR / MultiversX | ✅     |
-| SIP-018 structured message signing                   | ✅     |
-| Contract call + deploy from browser                  | ✅     |
-| Transaction history                                  | ✅     |
-| Voice recognition                                    | ✅     |
-| Saved contacts                                       | ✅     |
-| Portfolio overview                                   | ✅     |
-| AI natural language agent                            | ✅     |
-| Multi-chain (ETH, SOL, Base, TON, and 25+ more)      | ✅     |
-| USDCx savings goals (Clarity 2) — create, save, view, withdraw | ✅ |
+| Feature                                                        | Status |
+| -------------------------------------------------------------- | ------ |
+| STX send / receive                                             | ✅     |
+| sBTC send / receive                                            | ✅     |
+| USDCx send / receive                                           | ✅     |
+| USDCx savings goals (Clarity 2) — create, save, view, withdraw | ✅     |
+| BNS (.btc) name resolution                                     | ✅     |
+| x402 autonomous payments (STX / sBTC / USDCx)                  | ✅     |
+| Native BTC SegWit send / receive (P2WPKH, BIP143)              | ✅     |
+| Native BTC Taproot receive — Ordinals / Runes (P2TR, BIP341)   | ✅     |
+| dApp browser — Leather / Xverse API                            | ✅     |
+| dApp browser — EVM (MetaMask-compat)                           | ✅     |
+| dApp browser — Solana / Starknet / NEAR / MultiversX           | ✅     |
+| SIP-018 structured message signing                             | ✅     |
+| Contract call + deploy from browser                            | ✅     |
+| Transaction history                                            | ✅     |
+| Voice recognition                                              | ✅     |
+| Saved contacts                                                 | ✅     |
+| Portfolio overview                                             | ✅     |
+| AI natural language agent                                      | ✅     |
+| Multi-chain (ETH, SOL, Base, TON, and 25+ more)                | ✅     |
 
 ---
 
 ## 🌐 Multi-Chain Support
 
 Stacks is the focus — but EcoNova also supports:
+
+**Bitcoin** — Native P2WPKH SegWit send/receive and P2TR Taproot receive,
+both derived from the same seed as Leather and Xverse.
 
 **EVM** — Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base
 and ~15 more EVM networks.
@@ -237,11 +259,21 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
   principals, ok/err) for confirmation UIs matching Leather/Xverse display
 - **Two-phase signing** — matches `@stacks/transactions` presign hash pattern exactly
 - **JWT auth response** — ES256K-signed with correct `profile.stxAddress`
-  so `decodeToken()` works on the dApp side
+  and BTC addresses so `decodeToken()` works on the dApp side
 - **Clarity 2 savings contract** — literal principal in `contract-call?`,
   `tx-sender` captured before `as-contract` for correct withdraw destination
 - **x402 multi-version** — v0/v1/v2 with method-aware retry
 - **EIP-3009 signing** — for EVM-side x402 payments
+- **Native BTC SegWit signing** — BIP141/143 manual transaction serialization
+  in pure Dart — UTXO selection, sighash preimage, DER signature encoding,
+  witness construction — no bitcoin library used for signing
+- **BIP341 tapTweak** — secp256k1 point arithmetic in pure Dart for correct
+  Taproot address derivation — `taggedHash("TapTweak", internalKey)` applied
+  before bech32m encoding
+- **bech32m (BIP350)** — self-contained encoder for witness v1 (Taproot),
+  distinct from bech32 (BIP173) used for witness v0 (SegWit)
+- **Leather-compatible `getAddresses`** — P2WPKH + P2TR + STX returned with
+  correct public keys, tweaked keys, and derivation paths matching Leather exactly
 
 ---
 
@@ -278,13 +310,14 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
 ## 📈 Market Opportunity
 
-| Segment                   | Opportunity                                          |
-| ------------------------- | ---------------------------------------------------- |
-| Crypto wallets            | \$48B market by 2030                                 |
-| Stacks ecosystem          | Only mobile wallet with full Leather + Xverse compat |
-| sBTC                      | First mobile wallet with native sBTC support         |
-| AI-powered interfaces     | Early-stage, high-demand UX differentiator           |
-| Multi-chain fragmentation | 30+ chains, one interface                            |
+| Segment                    | Opportunity                                          |
+| -------------------------- | ---------------------------------------------------- |
+| Crypto wallets             | \$48B market by 2030                                 |
+| Stacks ecosystem           | Only mobile wallet with full Leather + Xverse compat |
+| sBTC                       | First mobile wallet with native sBTC support         |
+| Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing  |
+| AI-powered interfaces      | Early-stage, high-demand UX differentiator           |
+| Multi-chain fragmentation  | 30+ chains, one interface                            |
 
 ---
 

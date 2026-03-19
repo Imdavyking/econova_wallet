@@ -1,6 +1,7 @@
 {
   "name": "x402-stacks",
   "scripts": {
+    "dev": "ts-node index.ts",
     "start": "ts-node index.ts",
     "pay": "ts-node pay.ts"
   },

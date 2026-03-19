@@ -26,7 +26,7 @@ const mediumLink = '';
 const discordLink = '';
 const instagramLink =
     'https://www.instagram.com/econova?igsh=ZTJidG9kNTQwemp1&utm_source=qr';
-const stacksMarketUrl = 'https://your-server.com/api/market';
+const stacksMarketUrl = 'http://localhost:3000/api/market';
 
 // color
 const settingIconColor = Colors.white;
