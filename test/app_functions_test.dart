@@ -531,6 +531,12 @@ void main() async {
             '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
           );
           break;
+        case 'STX':
+          expect(
+            cryptoKeys.address,
+            '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+          );
+          break;
         case 'ICP':
           expect(
             cryptoKeys.address,
@@ -553,7 +559,7 @@ void main() async {
           if (blockchainInfo.getName() == 'Bitcoin') {
             expect(cryptoKeys.address,
                 'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf');
-          } else if (blockchainInfo.getName() == 'Bitcoin(Test)') {
+          } else if (blockchainInfo.getName() == 'Bitcoin (SegWit Test4)') {
             expect(
               cryptoKeys.address,
               'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
@@ -722,12 +728,18 @@ void main() async {
           if (blockchainInfo.getName() == 'Bitcoin') {
             expect(cryptoKeys.address,
                 'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf');
-          } else if (blockchainInfo.getName() == 'Bitcoin(Test)') {
+          } else if (blockchainInfo.getName() == 'Bitcoin (SegWit Test4)') {
             expect(
               cryptoKeys.address,
               'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
             );
           }
+          break;
+        case 'STX':
+          expect(
+            cryptoKeys.address,
+            '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+          );
           break;
         case 'ETH':
           expect(
