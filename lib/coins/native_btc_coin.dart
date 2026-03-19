@@ -19,7 +19,7 @@ import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 
 const _mempoolMain = 'https://mempool.space/api';
-const _mempoolTest = 'https://mempool.space/testnet/api';
+const _mempoolTest = 'https://mempool.space/testnet4/api';
 
 // ─── Isolate args & top-level compute functions ───────────────────────────────
 // Must be top-level (not instance methods) so Flutter's compute() can send
@@ -160,6 +160,9 @@ class NativeBtcCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final res = await http.get(Uri.parse('$_api/address/$address'));
+    print('$_api/address/$address');
+    print('btc');
+    print(res.body);
     if (res.statusCode ~/ 100 != 2) {
       throw Exception('NativeBTC balance fetch failed: ${res.statusCode}');
     }
@@ -301,9 +304,6 @@ class NativeBtcCoin extends Coin {
 
   @override
   String getSymbol() => 'BTC';
-
-  @override
-  bool get isRpcWorking => false;
 
   @override
   Future<String?> resolveAddress(String address) async => null;
@@ -458,9 +458,6 @@ class TaprootBtcCoin extends Coin {
 
   @override
   String getSymbol() => 'BTC';
-
-  @override
-  bool get isRpcWorking => false;
 
   @override
   Future<String?> resolveAddress(String address) async => null;
