@@ -1,5 +1,6 @@
 class EthereumBlockies {
-  final List randseed = []..length = 4;
+  // Fixed: was []..length = 4 which produces [null, null, null, null]
+  final List<int> randseed = List.filled(4, 0);
 
   final int size = 8;
   final javaMaxInteger = 2147483647;
@@ -74,7 +75,6 @@ class EthereumBlockies {
     int height = size;
 
     double dataWidth = (width / 2).ceil().toDouble();
-
     double mirrorWidth = width - dataWidth;
 
     List<double> data = List.filled(size * size, 0, growable: true);
@@ -108,6 +108,7 @@ class HSL {
   double h, s, l;
 
   HSL(this.h, this.s, this.l);
+
   @override
   String toString() {
     return 'H: $h S: $s L: $l';
