@@ -272,7 +272,7 @@ class StacksCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final cacheKey =
-        'stackscDetail$default_${walletImportType.name}$derivationPath';
+        'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet';
     Map<String, dynamic> cached = {};
 
     if (pref.containsKey(cacheKey)) {

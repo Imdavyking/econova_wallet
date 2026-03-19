@@ -926,7 +926,6 @@ class StacksHandler extends BaseWebViewHandler {
     required String requestJwt,
   }) async {
     final privBytes = txDataToUintList(accountDetail.privateKey!);
-    final pubKey = accountDetail.publicKey;
     final isTestnet = getStacksBlockchains().first.isTestnet;
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
 
