@@ -153,16 +153,17 @@ The first mobile wallet where the AI funds itself. Features:
 EcoNova's core is a conversational AI agent that understands your intent
 and executes on-chain actions autonomously:
 
-- "Send 10 STX to alice.btc"  
-- "Send $10 worth of STX to Mum" ← fetches live price, calculates equivalent (~38–40 STX), uses saved contact  
-- "Send $10 USDCx to Wisdom" ← using saved contacts  
-- "Save 5 USDCx to my holiday fund"  
-- "Show my savings goals"  
-- "How much have I saved for my holiday fund?"  
-- "Withdraw all from my holiday fund"  
-- "What's my sBTC balance?"  
-- "Pay for this API" ← autonomous x402 payment using your funds  
-- "Swap $20 STX to USDCx"
+- "Send 10 STX to alice.btc"
+- "Send $10 worth of STX to Mum" ← fetches live price, calculates equivalent, uses saved contact
+- "Send $10 USDCx to Wisdom" ← using saved contacts
+- "Save 5 USDCx to my holiday fund"
+- "Show my savings goals"
+- "How much have I saved for my holiday fund?"
+- "Withdraw all from my holiday fund"
+- "What's my sBTC balance?"
+- "Pay for this API" ← autonomous x402 payment using your funds
+- "Swap $20 STX to USDCx" ← asks permission to open Alex Lab DEX in the dApp browser for seamless completion
+
 
 **No addresses. No gas confusion. No chain switching. No coding required.**
 
