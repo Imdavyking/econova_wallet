@@ -142,11 +142,17 @@ class AIAgentService {
           CMD_x402Pay automatically without asking the user.
         - If CMD_x402Pay fails for any other reason, report it — do NOT retry
           with CMD_transferBalance
-      ── PREMIUM DATA FEEDS — x402 GATED ─────────────────────────────────
-$stacksMarketUrl → Full market report for STX, BTC, and ETH.
-Includes price, 1h/24h/7d change, market cap, volume, and ATH.
-Use QRY_httpRequest first. If 402 returned, call CMD_x402Pay automatically.
-Triggers: "market report", "full STX analysis", "how is the market today".''';
+        ── PREMIUM DATA FEEDS — x402 GATED ─────────────────────────────────
+        $stacksMarketUrl → Full market report for STX, BTC, and ETH.
+        Includes price, 1h/24h/7d change, market cap, volume, and ATH.
+        Use QRY_httpRequest first. If 402 returned, call CMD_x402Pay automatically.
+        Triggers: "market report", "full STX analysis", "how is the market today".
+        ── ERROR REPORTING — STRICT ──────────────────────────────────────────
+        When a tool returns an error, copy the exact error string to the user
+        without any rewording, softening, or summarizing. Show every detail
+        including exception type, field names, and nested causes exactly as
+        returned. Never replace a specific error with a generic phrase.
+        ''';
   }
 
   // ── LLM ─────────────────────────────────────────────────────────────────────

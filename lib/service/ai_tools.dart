@@ -875,6 +875,7 @@ class AItools {
           };
 
           final http.Response response;
+
           switch (input.method.toUpperCase()) {
             case 'GET':
               response = await http.get(uri, headers: headers);
@@ -959,6 +960,7 @@ class AItools {
             method: toolInput.method ?? 'GET',
             body: toolInput.body,
           );
+
           if (probeResult == null) {
             return await service.fetchWithPayment(
               toolInput.resourceUrl,
