@@ -161,7 +161,7 @@ and executes on-chain actions autonomously:
 - _"What's my sBTC balance?"_
 - _"Pay for this API"_
 - _"Swap \$20 STX to USDCx"_
-- _"Send \$10 USDCx to Wisdom"_ ← using saved contacts
+- _"Send \$10 STX to Wisdom"_ ← using saved contacts
 
 No addresses. No gas confusion. No chain switching. No coding required.
 
