@@ -23,7 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  enableTestNet = true;
+  enableTestNet = false;
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
@@ -564,7 +564,7 @@ void main() async {
           if (blockchainInfo.getName() == 'Stacks') {
             expect(
               cryptoKeys.address,
-              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+              'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
             );
           } else if (blockchainInfo.getName() == 'Stacks(Test)') {
             expect(
