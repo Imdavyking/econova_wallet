@@ -2,9 +2,9 @@
 
 import 'dart:convert';
 import 'package:web3dart/crypto.dart';
-
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
+import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:bip39/bip39.dart';
 import 'package:bs58check/bs58check.dart' hide getAddress;
 import '../utils/blake2bhash.dart';
@@ -200,6 +200,9 @@ class PolkadotCoin extends Coin {
       return savedBalance;
     }
   }
+
+  @override
+  List<Coin> get networkTokens => getPolkadotFungibleCoins();
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0;
