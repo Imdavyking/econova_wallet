@@ -376,8 +376,6 @@ class PolkadotCoin extends Coin {
 
     final hasAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
 
-    final versionByte = hasAssetTxPayment ? '85' : '84';
-
     final publicKey = HEX.decode(response.publicKey!);
     final signature = await compute(
       _signEd25519,
@@ -387,7 +385,7 @@ class PolkadotCoin extends Coin {
       ),
     );
 
-    String txSubmission = versionByte;
+    String txSubmission = '84';
     txSubmission += HEX.encode(publicKey);
     txSubmission += '00';
     txSubmission += HEX.encode(signature);
@@ -408,8 +406,6 @@ class PolkadotCoin extends Coin {
 
     final submitResult =
         await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
-
-    print(submitResult);
 
     return (
       txHash: submitResult!['result'] as String,
