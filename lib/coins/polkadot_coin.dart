@@ -103,7 +103,7 @@ class PolkadotCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'polkadotDetails${walletImportType.name}$ss58Prefix';
+    final saveKey = 'polkadotDetailss${walletImportType.name}$ss58Prefix';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -119,6 +119,8 @@ class PolkadotCoin extends Coin {
       ss58Prefix: ss58Prefix,
     );
     final keys = await compute(calculatePolkadotKey, args);
+
+    print(keys);
 
     mnemonicMap[mnemonic] = keys;
 
