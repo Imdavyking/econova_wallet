@@ -186,6 +186,8 @@ dependency_overrides:
     path: ./starknet-0.2.0
   starknet_provider:
     path: ./starknet_provider-0.2.0
+  substrate_metadata:
+    path: ./substrate_metadata
 
 dev_dependencies:
   flutter_test:

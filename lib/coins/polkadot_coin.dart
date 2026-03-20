@@ -315,7 +315,9 @@ class PolkadotCoin extends Coin {
   }
 
   ChainInfo _decodeMetadata(DecodedMetadata metadata) {
-    return ChainInfo.fromMetadata(metadata);
+    return ChainInfo.fromMetadata(
+      metadata,
+    );
   }
 
   Uint8List _signEd25519(EDSignature signature) {
