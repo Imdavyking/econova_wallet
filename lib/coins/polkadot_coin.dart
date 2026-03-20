@@ -392,14 +392,14 @@ class PolkadotCoin extends Coin {
     txSubmission += HEX.encode(publicKey);
     txSubmission += '00';
     txSubmission += HEX.encode(signature);
-    txSubmission += '00';
+    txSubmission += '00'; // era
     txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
+    txSubmission += '00'; // tip
+    if (hasAssetTxPayment) txSubmission += '00'; // Option<AssetId> = None
     if (checkMetaHash) {
       txSubmission +=
           HEX.encode(signables['CheckMetadataHash']!.encode('Disabled'));
     }
-    txSubmission += '00'; // tip
-    if (hasAssetTxPayment) txSubmission += '00'; // Option<AssetId> = None
     txSubmission += encodedData;
 
     int txLength = HEX.decode(txSubmission).length;
@@ -434,18 +434,14 @@ class PolkadotCoin extends Coin {
     }
 
     String payload = '0x${param.call}';
-
-    payload += '00'; // era (immortal)
+    payload += '00'; // era
     payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
-
+    payload += '00'; // tip
+    if (hasAssetTxPayment) payload += '00'; // Option<AssetId> = None
     if (checkMetaHash) {
       final mode = signables['CheckMetadataHash']!.encode('Disabled');
       payload += HEX.encode(mode);
     }
-
-    payload += '00'; // tip
-    if (hasAssetTxPayment) payload += '00'; // Option<AssetId> = None — ADD
-
     payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
     payload +=
         HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
@@ -454,11 +450,9 @@ class PolkadotCoin extends Coin {
     if (checkMetaHash) payload += '00';
 
     final hexPayload = HEX.decode(strip0x(payload));
-
     if (hexPayload.length > 256) {
       return HEX.encode(blake2bHash256(hexPayload));
     }
-
     return payload;
   }
 
