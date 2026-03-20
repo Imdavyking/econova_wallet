@@ -120,8 +120,6 @@ class PolkadotCoin extends Coin {
     );
     final keys = await compute(calculatePolkadotKey, args);
 
-    print(keys);
-
     mnemonicMap[mnemonic] = keys;
 
     await pref.put(saveKey, jsonEncode(mnemonicMap));
