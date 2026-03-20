@@ -375,6 +375,10 @@ class PolkadotCoin extends Coin {
       ),
     );
 
+    final hasAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
+
+    final versionByte = hasAssetTxPayment ? '85' : '84';
+
     final publicKey = HEX.decode(response.publicKey!);
     final signature = await compute(
       _signEd25519,
@@ -384,20 +388,18 @@ class PolkadotCoin extends Coin {
       ),
     );
 
-    String txSubmission = '84';
+    String txSubmission = versionByte;
     txSubmission += HEX.encode(publicKey);
-
     txSubmission += '00';
     txSubmission += HEX.encode(signature);
-
     txSubmission += '00';
     txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
     if (checkMetaHash) {
-      txSubmission += HEX.encode(
-        signables['CheckMetadataHash']!.encode('Disabled'),
-      );
+      txSubmission +=
+          HEX.encode(signables['CheckMetadataHash']!.encode('Disabled'));
     }
-    txSubmission += '00';
+    txSubmission += '00'; // tip
+    if (hasAssetTxPayment) txSubmission += '00'; // Option<AssetId> = None
     txSubmission += encodedData;
 
     int txLength = HEX.decode(txSubmission).length;
@@ -417,6 +419,8 @@ class PolkadotCoin extends Coin {
   Future<String> _signaturePayload(_SigParams param) async {
     final signables = param.registry.signedExtensions;
     final checkMetaHash = signables.containsKey('CheckMetadataHash');
+    final hasAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
+
     if (runTimeResult == null) {
       final runTimeVersion = await _queryRpc('chain_getRuntimeVersion', []);
       runTimeResult = runTimeVersion!['result'];
@@ -429,7 +433,7 @@ class PolkadotCoin extends Coin {
 
     String payload = '0x${param.call}';
 
-    payload += '00';
+    payload += '00'; // era (immortal)
     payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
 
     if (checkMetaHash) {
@@ -437,7 +441,9 @@ class PolkadotCoin extends Coin {
       payload += HEX.encode(mode);
     }
 
-    payload += '00';
+    payload += '00'; // tip
+    if (hasAssetTxPayment) payload += '00'; // Option<AssetId> = None — ADD
+
     payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
     payload +=
         HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
