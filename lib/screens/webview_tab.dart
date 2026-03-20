@@ -1,51 +1,32 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
-import 'dart:math';
-import 'package:solana/encoder.dart';
-import 'package:wallet_app/coins/near_coin.dart';
-import 'package:wallet_app/coins/starknet_coin.dart';
-import 'package:wallet_app/components/sign_solana_ui.dart';
-import 'package:wallet_app/interface/coin.dart';
-import 'package:hex/hex.dart';
-import 'package:starknet/starknet.dart';
-import 'package:sui/utils/sha.dart';
-import 'package:wallet_app/model/sol_token_info.dart';
-import 'package:wallet_app/model/solana_transaction_versioned.dart';
-import 'package:wallet_app/utils/slide_up_panel.dart';
-import "../utils/starknet_call.dart";
-import '../model/near_message_borsh.dart';
-import '../model/near_trx_obj.dart';
-import '../service/wallet_connect_service.dart';
-import '../service/wallet_service.dart';
 import 'dart:ui';
-import 'package:bs58check/bs58check.dart';
-import 'package:wallet_app/api/notification_api.dart';
-import 'package:pinput/pinput.dart';
-import 'package:wallet_app/coins/multiversx_coin.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:multiversx_sdk/multiversx.dart' as multiversx;
-import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:eth_sig_util/eth_sig_util.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:http/http.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
-import 'package:web3dart/crypto.dart';
-import 'package:web3dart/web3dart.dart' as web3dart;
-import '../coins/ethereum_coin.dart';
+import 'package:wallet_app/api/notification_api.dart';
+import 'package:pinput/pinput.dart';
 import '../main.dart';
-import '../model/multix_sign_model.dart' hide Transaction;
+import '../service/wallet_connect_service.dart';
 import '../utils/app_config.dart';
-import '../utils/json_model_callback.dart';
+import '../utils/rpc_urls.dart';
 import '../utils/web_notifications.dart';
-import 'package:wallet_app/model/solana_transaction_legacy.dart';
-import 'package:solana/solana.dart' hide signTransaction;
-import 'package:wallet_app/coins/solana_coin.dart';
-import 'package:solana/solana.dart' as solana;
+import '../handlers/base_handler.dart';
+import '../handlers/crypto_handler.dart';
+import '../handlers/ethereum_handler.dart';
+import '../handlers/multiversx_handler.dart';
+import '../handlers/near_handler.dart';
+import '../handlers/solana_handler.dart';
+import '../handlers/stacks_handler.dart';
+import '../handlers/starknet_handler.dart';
+
+// ─── Public widget ────────────────────────────────────────────────────────────
 
 class WebViewTab extends StatefulWidget {
   final String? url;
@@ -56,2681 +37,677 @@ class WebViewTab extends StatefulWidget {
   final String webNotifier;
 
   final Function() onStateUpdated;
-  final Function(CreateWindowAction createWindowAction) onCreateTabRequested;
+  final Function(CreateWindowAction) onCreateTabRequested;
   final Function() onCloseTabRequested;
 
-  String? get currentUrl {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._url;
-  }
+  // ── Accessors forwarded to state ──────────────────────────────────────────
 
-  bool? get isSecure {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._isSecure;
-  }
+  String? get currentUrl =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.url;
+  bool? get isSecure =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.isSecure;
+  InAppWebViewController? get controller =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.controller;
+  TextEditingController? get browserController =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.browserController;
+  Uint8List? get screenshot =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.screenshot;
+  String? get title =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.title;
+  Favicon? get favicon =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.favicon;
 
-  InAppWebViewController? get controller {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._controller;
-  }
-
-  TextEditingController? get browserController {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._browserController;
-  }
-
-  Uint8List? get screenshot {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-
-    return state?._screenshot;
-  }
-
-  String? get title {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._title;
-  }
-
-  Favicon? get favicon {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return state?._favicon;
-  }
-
-  const WebViewTab(
-      {GlobalKey? key,
-      required this.url,
-      required this.onStateUpdated,
-      required this.onCloseTabRequested,
-      required this.onCreateTabRequested,
-      required this.data,
-      required this.provider,
-      required this.webNotifier,
-      required this.init,
-      this.windowId})
-      : super(key: key);
+  const WebViewTab({
+    GlobalKey? key,
+    required this.url,
+    required this.onStateUpdated,
+    required this.onCloseTabRequested,
+    required this.onCreateTabRequested,
+    required this.data,
+    required this.provider,
+    required this.webNotifier,
+    required this.init,
+    this.windowId,
+  }) : super(key: key);
 
   @override
   State<WebViewTab> createState() => _WebViewTabState();
 
-  Future<void> updateScreenshot() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.updateScreenshot();
-  }
-
-  Future<void> pause() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.pause();
-  }
-
-  Future<void> resume() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.resume();
-  }
-
-  Future<bool> canGoBack() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return await state?.canGoBack() ?? false;
-  }
-
-  Future<void> goBack() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.goBack();
-  }
-
-  Future<bool> canGoForward() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    return await state?.canGoForward() ?? false;
-  }
-
-  Future<void> goForward() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.goForward();
-  }
-
-  Future<void> readloadWeb3_() async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.reloadWeb3_();
-  }
-
-  Future<void> switchWeb3(int chainId, String rpc) async {
-    final state = (key as GlobalKey).currentState as _WebViewTabState?;
-    await state?.switchWeb3_(chainId, rpc);
-  }
+  Future<void> updateScreenshot() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)
+          ?.updateScreenshot();
+  Future<void> pause() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.pause();
+  Future<void> resume() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.resume();
+  Future<bool> canGoBack() async =>
+      await ((key as GlobalKey).currentState as _WebViewTabState?)
+          ?.canGoBack() ??
+      false;
+  Future<void> goBack() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.goBack();
+  Future<bool> canGoForward() async =>
+      await ((key as GlobalKey).currentState as _WebViewTabState?)
+          ?.canGoForward() ??
+      false;
+  Future<void> goForward() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.goForward();
+  Future<void> readloadWeb3_() async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)?.reloadWeb3_();
+  Future<void> switchWeb3(int chainId, String rpc) async =>
+      ((key as GlobalKey).currentState as _WebViewTabState?)
+          ?.switchWeb3_(chainId, rpc);
 }
 
+// ─── State ────────────────────────────────────────────────────────────────────
+
 class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
-  InAppWebViewController? _controller;
-  final _browserController = TextEditingController();
-  Uint8List? _screenshot;
-  String _url = '';
-  bool _isSecure = false;
-  String _title = '';
-  Favicon? _favicon;
+  // ── Public accessors used by WebViewTab getters ───────────────────────────
+  InAppWebViewController? controller;
+  final browserController = TextEditingController();
+  Uint8List? screenshot;
+  String url = '';
+  bool isSecure = false;
+  String title = '';
+  Favicon? favicon;
+
+  // ── Private state ─────────────────────────────────────────────────────────
   final ValueNotifier<double> _progress = ValueNotifier(0);
-  String initJs = '';
-  final jsonNotification =
+  String _initJs = '';
+  final _jsonNotification =
       jsonEncode(WebNotificationPermissionDb.getPermissions());
-  WebNotificationController? webNotificationController;
-  late List<UserScript> webNotification;
+  WebNotificationController? _webNotificationController;
+  late List<UserScript> _webNotification;
 
   final ReceivePort _port = ReceivePort();
-  final TextEditingController _httpAuthUsernameController =
-      TextEditingController();
-  final TextEditingController _httpAuthPasswordController =
-      TextEditingController();
+  final _httpAuthUsername = TextEditingController();
+  final _httpAuthPassword = TextEditingController();
   late PullToRefreshController _pullToRefreshController;
-  final FindInteractionController _findInteractionController =
-      FindInteractionController();
-  InAppWebViewSettings inappViewSettings = InAppWebViewSettings(
-    useShouldOverrideUrlLoading: true,
-    isFraudulentWebsiteWarningEnabled: true,
-    safeBrowsingEnabled: true,
-    mediaPlaybackRequiresUserGesture: false,
-    allowsInlineMediaPlayback: true,
-    useOnDownloadStart: true,
-    useHybridComposition: true,
-    resourceCustomSchemes: ["wc"],
-  );
+  final _findInteraction = FindInteractionController();
+  final List<ContentBlocker> _contentBlockers = [];
+
+  InAppWebViewSettings get _settings => InAppWebViewSettings(
+        useShouldOverrideUrlLoading: true,
+        isFraudulentWebsiteWarningEnabled: true,
+        safeBrowsingEnabled: true,
+        mediaPlaybackRequiresUserGesture: false,
+        allowsInlineMediaPlayback: true,
+        useOnDownloadStart: true,
+        useHybridComposition: true,
+        resourceCustomSchemes: ['wc'],
+        forceDark: Theme.of(context).brightness == Brightness.dark
+            ? ForceDark.ON
+            : ForceDark.OFF,
+      );
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  late final EthereumHandler _ethHandler;
+  late final SolanaHandler _solHandler;
+  late final CryptoHandler _cryptoHandler;
+  late final MultiversxHandler _multiversxHandler;
+  late final NearHandler _nearHandler;
+  late final StarknetHandler _starknetHandler;
+  late final StacksHandler _stacksHandler;
+
+  List<BaseWebViewHandler> get _allHandlers => [
+        _cryptoHandler,
+        _multiversxHandler,
+        _nearHandler,
+        _starknetHandler,
+        _stacksHandler,
+      ];
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    initJs = widget.init;
+    _initJs = widget.init;
 
-    webNotification = [
+    _webNotification = [
       UserScript(
-          source: widget.webNotifier,
-          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
-      UserScript(source: """
-    (function(window) {
-      var notificationPermissionDb = $jsonNotification;
-      if (notificationPermissionDb[window.location.host] === 'granted') {
-        Notification._permission = 'granted';
-      } 
-    })(window);
-    """, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START)
+        source: widget.webNotifier,
+        injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+      ),
+      UserScript(
+        source: '''
+(function(window) {
+  var db = $_jsonNotification;
+  if (db[window.location.host] === 'granted') {
+    Notification._permission = 'granted';
+  }
+})(window);
+''',
+        injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+      ),
     ];
+
+    // Initialise handlers (controller set later in onWebViewCreated)
+    _ethHandler = EthereumHandler(
+      context: context,
+      onSwitchChain: (chainId, rpc) => setupWebViewWalletBridge(chainId, rpc),
+    );
+    _solHandler = SolanaHandler(context: context);
+    _cryptoHandler = CryptoHandler(
+      context: context,
+      ethHandler: _ethHandler,
+      solHandler: _solHandler,
+    );
+    _multiversxHandler = MultiversxHandler(context: context);
+    _nearHandler = NearHandler(context: context);
+    _starknetHandler = StarknetHandler(context: context);
+    _stacksHandler = StacksHandler(context: context);
+
     WidgetsBinding.instance.addObserver(this);
     IsolateNameServer.registerPortWithName(
         _port.sendPort, 'downloader_send_port');
     _port.listen((dynamic data) {
-      String id = data[0];
-      DownloadTaskStatus status = data[1];
-      int progress = data[2];
-      if (kDebugMode) {
-        print("Download progress: $progress%");
-      }
+      final id = data[0] as String;
+      final status = data[1] as DownloadTaskStatus;
+      final progress = data[2] as int;
+      if (kDebugMode) print('Download $id: $progress%');
       if (status == DownloadTaskStatus.complete) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Download $id completed!"),
-        ));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Download $id completed!')));
       }
     });
+
     _pullToRefreshController = PullToRefreshController(
       settings: PullToRefreshSettings(color: Colors.blue),
-      onRefresh: () async {
-        reloadWeb3_();
-      },
+      onRefresh: reloadWeb3_,
     );
-    FlutterDownloader.registerCallback(downloadCallback);
-    _url = widget.url ?? '';
+
+    FlutterDownloader.registerCallback(_downloadCallback);
+    url = widget.url ?? '';
   }
 
   @pragma('vm:entry-point')
-  static void downloadCallback(String id, int status, int progress) {
-    final SendPort? send =
-        IsolateNameServer.lookupPortByName('downloader_send_port');
-    send?.send([id, status, progress]);
+  static void _downloadCallback(String id, int status, int progress) {
+    IsolateNameServer.lookupPortByName('downloader_send_port')
+        ?.send([id, status, progress]);
   }
 
   @override
   void dispose() {
-    _controller = null;
+    controller = null;
     WidgetsBinding.instance.removeObserver(this);
     IsolateNameServer.removePortNameMapping('downloader_send_port');
-    _httpAuthUsernameController.dispose();
-    _httpAuthPasswordController.dispose();
+    _httpAuthUsername.dispose();
+    _httpAuthPassword.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!kIsWeb) {
-      if (state == AppLifecycleState.resumed) {
-        resume();
-        _controller?.resumeTimers();
-      } else {
-        pause();
-        _controller?.pauseTimers();
-      }
+    if (kIsWeb) return;
+    if (state == AppLifecycleState.resumed) {
+      resume();
+      controller?.resumeTimers();
+    } else {
+      pause();
+      controller?.pauseTimers();
     }
   }
 
-  Future<HttpAuthResponseAction> createHttpAuthDialog(
-      URLAuthenticationChallenge challenge) async {
-    HttpAuthResponseAction action = HttpAuthResponseAction.CANCEL;
+  // ── WebView callbacks ─────────────────────────────────────────────────────
 
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Login"),
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(challenge.protectionSpace.host),
-              TextField(
-                decoration: const InputDecoration(labelText: "Username"),
-                controller: _httpAuthUsernameController,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: "Password"),
-                controller: _httpAuthPasswordController,
-                obscureText: true,
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            ElevatedButton(
-              child: const Text("Cancel"),
-              onPressed: () {
-                action = HttpAuthResponseAction.CANCEL;
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: const Text("Ok"),
-              onPressed: () {
-                action = HttpAuthResponseAction.PROCEED;
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+  Future<void> _onWebViewCreated(InAppWebViewController ctrl) async {
+    controller = ctrl;
+    await _changeUserAgent();
+    await _blockAds(false);
+
+    _webNotificationController = WebNotificationController(ctrl);
+
+    // Register notification handlers
+    ctrl.addJavaScriptHandler(
+      handlerName: 'Notification.requestPermission',
+      callback: (_) async =>
+          (await _onNotificationRequestPermission()).name.toLowerCase(),
+    );
+    ctrl.addJavaScriptHandler(
+      handlerName: 'Notification.show',
+      callback: (args) =>
+          _onShowNotification(WebNotification.fromJson(args[0], ctrl)),
+    );
+    ctrl.addJavaScriptHandler(
+      handlerName: 'Notification.close',
+      callback: (args) => _onCloseNotification(args[0] as int),
     );
 
-    return action;
-  }
-
-  String _addChain(EthereumCoin switchChain, String sendingAddress) {
-    String source = '''
-        window.ethereum.setConfig({
-          ethereum:{
-            chainId: ${switchChain.chainId},
-            rpcUrl: "${switchChain.rpc}",
-            address: "$sendingAddress"
-            }
-          }
-        )
-        ''';
-    return source;
-  }
-
-  Future<void> _sendError(String network, String message, int methodId) {
-    String script = "window.$network.sendError($methodId, \"$message\")";
-    return _controller!.evaluateJavascript(source: script);
-  }
-
-  Future<void> _sendNearError(String message, int methodId) {
-    String script = "window.nightly.near.sendError($methodId, \"$message\")";
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future<void> _sendNearResult(String message, int methodId) {
-    String script = "window.nightly.near.sendResponse($methodId, '$message')";
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _setEthereumAddress(id, sendingAddress) async {
-    final setAddress = "window.ethereum.setAddress(\"$sendingAddress\");";
-
-    String callback =
-        "window.ethereum.sendResponse($id, [\"$sendingAddress\"])";
-
-    await _sendCustomResponse(setAddress);
-
-    await _sendCustomResponse(callback);
-  }
-
-  Future _setSolanaAddress(id, sendingAddress) async {
-    final setAddress = '''
-if (typeof trustwallet !== "undefined" && 
-    typeof trustwallet.solana !== "undefined" && 
-    typeof trustwallet.solana.setAddress === "function") {
-  trustwallet.solana.setAddress("$sendingAddress");
-} else {
-  console.warn("trustwallet.solana.setAddress is not defined");
-}
-''';
-
-    String callback =
-        "trustwallet.solana.sendResponse($id, [\"$sendingAddress\"])";
-
-    await _sendCustomResponse(setAddress);
-
-    await _sendCustomResponse(callback);
-  }
-
-  String localStorageKey({required String network, required String address}) =>
-      'walletName-$network-$address';
-
-  Future<void> _saveWeb3Address(String network, String address) {
-    final key = localStorageKey(network: network, address: address);
-    return _controller!
-        .evaluateJavascript(
-            source: "localStorage.setItem('$key','$walletName')")
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _getWeb3Address(String network, String address) {
-    final key = localStorageKey(network: network, address: address);
-    return _controller!
-        .evaluateJavascript(source: "localStorage.getItem('$key')");
-  }
-
-  Future _removeWeb3Address(String network, String address) {
-    final key = localStorageKey(network: network, address: address);
-    return _controller!
-        .evaluateJavascript(source: "localStorage.removeItem('$key')");
-  }
-
-  Future<void> _sendResult(String network, String message, int methodId) {
-    String script = "window.$network.sendResponse($methodId, \"$message\")";
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) {
-      debugPrint(error.toString());
-    });
-  }
-
-  Future _switchWeb3ChainRequest({
-    required EthereumCoin currentChain,
-    required EthereumCoin switchChain,
-    required String initString,
-    required JsCallbackModel jsData,
-    bool haveNotExecuted = true,
-  }) async {
-    switchEthereumChain(
-      context: context,
-      currentChain: currentChain,
-      switchChain: switchChain,
-      onConfirm: () async {
-        initJs = await setupWebViewWalletBridge(
-          switchChain.chainId,
-          switchChain.rpc,
-        );
-        await _sendCustomResponse(initString);
-        await _emitChange(switchChain.chainId);
-        await _sendNull(
-          "ethereum",
-          jsData.id ?? 0,
-        );
-
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-      },
-      onReject: () async {
-        if (haveNotExecuted) {
-          _sendError("ethereum", 'canceled', jsData.id ?? 0);
-        }
-
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  Future _emitChange(int chainId) {
-    final chain16 = "0x${chainId.toRadixString(16)}";
-    String script = "trustwallet.ethereum.emitChainChanged(\"$chain16\");";
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) => debugPrint(error.toString()));
-  }
-
-  Future<void> _sendNull(String network, int methodId) {
-    String script = "window.$network.sendResponse($methodId, null)";
-    debugPrint(script);
-    return _controller!
-        .evaluateJavascript(source: script)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) => debugPrint(error.toString()));
-  }
-
-  Future<void> _blockAds(bool blockAds) async {
-    if (!blockAds) return;
-    final adUrlFilters = [
-      ".*.doubleclick.net/.*",
-      ".*.ads.pubmatic.com/.*",
-      ".*.googlesyndication.com/.*",
-      ".*.google-analytics.com/.*",
-      ".*.adservice.google.*/.*",
-      ".*.adbrite.com/.*",
-      ".*.exponential.com/.*",
-      ".*.quantserve.com/.*",
-      ".*.scorecardresearch.com/.*",
-      ".*.zedo.com/.*",
-      ".*.adsafeprotected.com/.*",
-      ".*.teads.tv/.*",
-      ".*.outbrain.com/.*"
-    ];
-
-    for (final adUrlFilter in adUrlFilters) {
-      contentBlockers.add(
-        ContentBlocker(
-          trigger: ContentBlockerTrigger(
-            urlFilter: adUrlFilter,
-          ),
-          action: ContentBlockerAction(
-            type: ContentBlockerActionType.BLOCK,
-          ),
-        ),
-      );
-    }
-
-    contentBlockers.add(
-      ContentBlocker(
-        trigger: ContentBlockerTrigger(
-          urlFilter: ".*",
-        ),
-        action: ContentBlockerAction(
-          type: ContentBlockerActionType.CSS_DISPLAY_NONE,
-          selector: ".banner, .banners, .ads, .ad, .advert",
-        ),
-      ),
-    );
-
-    await _controller?.setSettings(
-      settings: inappViewSettings..contentBlockers = contentBlockers,
-    );
-  }
-
-  Future<void> _sendCustomResponse(String response) {
-    return _controller!
-        .evaluateJavascript(source: response)
-        .then((value) => debugPrint(value))
-        .onError((error, stackTrace) => debugPrint(error.toString()));
-  }
-
-  Future<void> _changeUserAgent() async {
-    final defaultUserAgent = await InAppWebViewController.getDefaultUserAgent();
-    if (kDebugMode) {
-      print("Default User Agent: $defaultUserAgent");
-    }
-
-    String? newUserAgent;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        // Remove "wv" from the Android WebView default user agent
-        // https://developer.chrome.com/docs/multidevice/user-agent/#webview-on-android
-        newUserAgent = defaultUserAgent.replaceFirst("; wv)", ")");
-        break;
-      case TargetPlatform.iOS:
-        // Add Safari/604.1 at the end of the iOS WKWebView default user agent
-        newUserAgent = "$defaultUserAgent Safari/604.1";
-        break;
-      default:
-        newUserAgent = null;
-    }
-
-    await _controller?.setSettings(
-      settings: inappViewSettings..userAgent = newUserAgent,
-    );
-  }
-
-  Future<void> handleStarknetRequest({
-    required String requestType,
-    required String origin,
-    required String requestId,
-    required String chainId,
-    required AccountData coinData,
-    required Map<String, dynamic> request,
-  }) async {
-    // Helper to send JSON response back to JS
-    Future<void> sendResponse(Map<String, dynamic> data) async {
-      final responseJson = json.encode(data);
-      final jsMessage =
-          'window.starknet.sendResponse("$requestId", $responseJson)';
-      await _controller!.evaluateJavascript(source: jsMessage);
-    }
-
-    // Helper to send error response
-    Future<void> sendError(String errorMessage) async {
-      await sendResponse({'error': errorMessage});
-    }
-
-    final badTypes = [
-      'wallet_addStarknetChain',
-      'wallet_switchStarknetChain',
-      'wallet_watchAsset',
-    ];
-
-    try {
-      if (requestType == 'wallet_requestAccounts' ||
-          requestType == 'wallet_requestChainId') {
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-        };
-
-        if (requestType == 'wallet_requestAccounts') {
-          final existingAddress =
-              await _getWeb3Address('starknet', coinData.address);
-          if (existingAddress != null) {
-            await sendResponse(responseData);
-            return;
-          }
-          if (!mounted) return;
-          await connectWalletModal(
-            context: context,
-            url: origin,
-            onConfirm: () async {
-              try {
-                await _controller!.evaluateJavascript(
-                  source:
-                      'window.starknet.sendResponse("$requestId", ${json.encode(responseData)})',
-                );
-                await _saveWeb3Address('starknet', coinData.address);
-              } catch (e) {
-                await sendError(e.toString().replaceAll('"', '\''));
-              } finally {
-                if (mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-              }
-            },
-            onReject: () async {
-              await sendError('user rejected connection');
-              if (mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-          );
-          return;
-        }
-        await sendResponse(responseData);
-      } else if (requestType == 'wallet_deploymentData') {
-        final coin = starkNetCoins.first;
-        final deployData = await coin.getDeploymentData();
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "requestType": requestType,
-          "address": coinData.address,
-          "class_hash": deployData.classHash,
-          "salt": deployData.addressSalt,
-          "calldata": deployData.constructorCalldata,
-          "version": deployData.version
-        };
-        await sendResponse(responseData);
-      } else if (requestType == 'wallet_addDeclareTransaction') {
-        final params = request['params'];
-        final coin = starkNetCoins.first;
-        final declareResult = await coin
-            .addDeclareDapp(AddDeclareTransactionParameters.fromJson(params));
-
-        if (declareResult == null) {
-          await sendError('Failed to declare contract');
-          return;
-        }
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-          "txHash": declareResult.transactionHash.toHexString(),
-          "classHash": declareResult.classHash.toHexString(),
-        };
-        await sendResponse(responseData);
-      } else if (requestType == 'wallet_addInvokeTransaction') {
-        final params = request['params'];
-        final List calls = params['calls'] ?? [];
-
-        final List<StarknetCall> dapCalls =
-            calls.map((call) => StarknetCall.fromJson(call)).toList();
-
-        final coin = starkNetCoins.first;
-
-        await signStarkNetTransaction(
-          from: coinData.address,
-          networkIcon: null,
-          context: context,
-          symbol: coin.symbol,
-          dapCalls: dapCalls,
-          name: '',
-          onConfirm: () async {
-            try {
-              final txHash = await coin.executeInvokeDapp(dapCalls);
-
-              final responseData = {
-                "origin": origin,
-                "requestId": requestId,
-                "chainId": chainId,
-                "address": coinData.address,
-                "requestType": requestType,
-                "txHash": txHash,
-              };
-
-              await sendResponse(responseData);
-            } catch (e) {
-              await sendError(e.toString().replaceAll('"', '\''));
-            } finally {
-              if (mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            }
-          },
-          onReject: () async {
-            await sendError('user rejected transaction');
-            if (mounted && Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-          title: 'Sign Transaction',
-        );
-      } else if (requestType == 'wallet_getPermissions') {
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-          "permissions": ['accounts'],
-        };
-        await sendResponse(responseData);
-      } else if (requestType == 'wallet_supportedSpecs') {
-        final responseData = {
-          "origin": origin,
-          "requestId": requestId,
-          "chainId": chainId,
-          "address": coinData.address,
-          "requestType": requestType,
-          "specs": ["0.6", "0.7"],
-        };
-        await sendResponse(responseData);
-      } else if (requestType == 'wallet_signTypedData') {
-        final params = request['params'];
-
-        final data = SignTypedDomain.fromJson(
-          params ?? {},
-        );
-
-        if (data.chainId != BigInt.parse(chainId).toInt()) {
-          await sendError('${data.chainId} can not be signed on $chainId');
-          return;
-        }
-
-        await signMessage(
-          context: context,
-          messageType: typedMessageSignKey,
-          data: json.encode(params),
-          networkIcon: null,
-          name: null,
-          onConfirm: () async {
-            try {
-              final typedData = TypedData.fromJson(params);
-
-              final hash = typedData.hash(Felt.fromHexString(coinData.address));
-
-              final signature = starknetSign(
-                privateKey: BigInt.parse(coinData.privateKey!),
-                messageHash: hash,
-              );
-
-              final responseData = {
-                "origin": origin,
-                "requestId": requestId,
-                "chainId": chainId,
-                "address": coinData.address,
-                "requestType": requestType,
-                "signature": [
-                  signature.r.toString(),
-                  signature.s.toString(),
-                ],
-              };
-
-              await sendResponse(responseData);
-            } catch (e) {
-              await sendError(e.toString().replaceAll('"', '\''));
-            } finally {
-              if (mounted && Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            }
-          },
-          onReject: () async {
-            await sendError('user rejected signature');
-            if (mounted && Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-        );
-      } else if (badTypes.contains(requestType)) {
-        await sendError('Unsupported request type: $requestType');
-      } else {
-        await sendError('Unknown request type: $requestType');
-      }
-    } catch (e) {
-      await sendError(e.toString().replaceAll('"', '\''));
+    // Attach all blockchain handlers and keep context fresh
+    for (final h in _allHandlers) {
+      h.context = context;
+      h.attach(ctrl);
     }
   }
 
-  final List<ContentBlocker> contentBlockers = [];
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    inappViewSettings.forceDark =
-        Theme.of(context).brightness == Brightness.dark
-            ? ForceDark.ON
-            : ForceDark.OFF;
-    return Column(children: <Widget>[
+    // Keep handler contexts fresh on rebuilds
+    for (final h in _allHandlers) {
+      h.context = context;
+    }
+
+    return Column(children: [
       Expanded(
-        child: Stack(
-          children: [
-            Container(
-              color: Colors.white,
-            ),
-            InAppWebView(
-              findInteractionController: _findInteractionController,
-              pullToRefreshController: _pullToRefreshController,
-              initialUrlRequest:
-                  URLRequest(url: WebUri(widget.data ?? walletURL)),
-              initialSettings: inappViewSettings,
-              onPermissionRequest: (controller, request) async {
-                final resources = <PermissionResourceType>[];
-                if (request.resources.contains(PermissionResourceType.CAMERA)) {
-                  final cameraStatus = await Permission.camera.request();
-                  if (!cameraStatus.isDenied) {
-                    resources.add(PermissionResourceType.CAMERA);
-                  }
-                }
-                if (request.resources
-                    .contains(PermissionResourceType.MICROPHONE)) {
-                  final microphoneStatus =
-                      await Permission.microphone.request();
-                  if (!microphoneStatus.isDenied) {
-                    resources.add(PermissionResourceType.MICROPHONE);
-                  }
-                }
-                // only for iOS and macOS
-                if (request.resources
-                    .contains(PermissionResourceType.CAMERA_AND_MICROPHONE)) {
-                  final cameraStatus = await Permission.camera.request();
-                  final microphoneStatus =
-                      await Permission.microphone.request();
-                  if (!cameraStatus.isDenied && !microphoneStatus.isDenied) {
-                    resources.add(PermissionResourceType.CAMERA_AND_MICROPHONE);
-                  }
-                }
-
-                return PermissionResponse(
-                  resources: resources,
-                  action: resources.isEmpty
-                      ? PermissionResponseAction.DENY
-                      : PermissionResponseAction.GRANT,
-                );
-              },
-              onUpdateVisitedHistory: (controller, url, isReload) {
-                if (url != null) {
-                  _url = url.toString();
-
-                  _browserController.setText(_url);
-                  widget.onStateUpdated.call();
-                }
-              },
-              onDownloadStartRequest: (
-                InAppWebViewController contrl,
-                DownloadStartRequest downReq,
-              ) async {
-                _tryDownloadFile(
-                  '${downReq.url}',
-                  downReq.suggestedFilename,
-                );
-              },
-              shouldOverrideUrlLoading: (
-                InAppWebViewController controller,
-                NavigationAction shouldOverrideUrl,
-              ) async {
-                Uri url = shouldOverrideUrl.request.url!;
-                String url_ = url.toString();
-
-                if (url_.contains('wc?uri=')) {
-                  final wcUri = Uri.parse(
-                    Uri.decodeFull(
-                      Uri.parse(url_).queryParameters['uri']!,
-                    ),
-                  );
-
-                  await WCService.qrScanHandler(wcUri.toString());
-
-                  return NavigationActionPolicy.CANCEL;
-                } else if (url_.startsWith('wc:')) {
-                  await WCService.qrScanHandler(url_);
-
-                  return NavigationActionPolicy.CANCEL;
-                }
-                List<String> allowedAction = [
-                  "http",
-                  "https",
-                  "file",
-                  "chrome",
-                  "data",
-                  "javascript",
-                  "about"
-                ];
-
-                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-                  final shouldPerformDownload =
-                      shouldOverrideUrl.shouldPerformDownload ?? false;
-                  final url = shouldOverrideUrl.request.url;
-                  if (shouldPerformDownload && url != null) {
-                    _tryDownloadFile('$url');
-                    return NavigationActionPolicy.DOWNLOAD;
-                  }
-                }
-
-                if (!allowedAction.contains(url.scheme)) {
-                  try {
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    }
-                  } catch (_) {}
-                  return NavigationActionPolicy.CANCEL;
-                }
-
-                return NavigationActionPolicy.ALLOW;
-              },
-              onWebViewCreated: (controller) async {
-                _controller = controller;
-                await _changeUserAgent();
-                await _blockAds(false);
-                final data = WalletService.getActiveKey(walletImportType)!.data;
-
-                webNotificationController =
-                    WebNotificationController(controller);
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'Notification.requestPermission',
-                  callback: (arguments) async {
-                    final permission = await onNotificationRequestPermission();
-                    return permission.name.toLowerCase();
-                  },
-                );
-
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'Notification.show',
-                  callback: (arguments) {
-                    final notification =
-                        WebNotification.fromJson(arguments[0], _controller!);
-                    onShowNotification(notification);
-                  },
-                );
-
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'Notification.close',
-                  callback: (arguments) {
-                    final notificationId = arguments[0];
-                    onCloseNotification(notificationId);
-                  },
-                );
-
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'StarknetHandler',
-                  callback: (args) async {
-                    final coin = starkNetCoins.first;
-
-                    debugPrint("geting request $args");
-
-                    final coinData = await coin.importData(data);
-                    final payload = jsonDecode(args.first);
-                    final type = payload['type'];
-                    final requestId =
-                        payload['requestId']; // Important for reply
-                    final origin = payload['url'];
-                    final chainId = await coin.getChainId();
-
-                    switch (type) {
-                      case 'request':
-                        final request = payload['args'];
-                        final requestType = request['type'];
-
-                        await handleStarknetRequest(
-                          requestType: requestType,
-                          origin: origin,
-                          requestId: requestId,
-                          chainId: chainId.toHexString(),
-                          coinData: coinData,
-                          request: request,
-                        );
-
-                        break;
-                      case 'on':
-                        // Handle subscription to events
-                        break;
-                      case 'off':
-                        // Handle unsubscription
-                        break;
-                    }
-                  },
-                );
-
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'Multiversx',
-                  callback: (callback) async {
-                    Map reponse = json.decode(
-                      callback[0],
-                    );
-
-                    final coin = getEGLBBlockchains().first;
-
-                    final multiversxRes = await coin.importData(data);
-                    multiversx.UserSecretKey signer = multiversx.UserSecretKey(
-                      HEX.decode(multiversxRes.privateKey!),
-                    );
-                    multiversx.Wallet keys = multiversx.Wallet(signer);
-
-                    switch (reponse['type']) {
-                      case "logout":
-                        {
-                          var t = json.encode({
-                            'target': "erdw-contentScript",
-                            'type': '',
-                            'data': true
-                          });
-
-                          await _controller!.evaluateJavascript(
-                            source: "window.postMessage($t, window.origin)",
-                          );
-                          break;
-                        }
-                      case "signMessage":
-                        {
-                          String message = reponse['data']['message'];
-
-                          if (context.mounted) {
-                            await signMessage(
-                              context: context,
-                              messageType: '',
-                              data: message,
-                              networkIcon: null,
-                              name: null,
-                              onReject: () async {
-                                Navigator.pop(context);
-                              },
-                              onConfirm: () async {
-                                try {
-                                  Uint8List serialized =
-                                      MultiversxCoin.serializeForSigning(
-                                    message,
-                                  );
-                                  multiversx.UserSigner signer =
-                                      keys.signer as multiversx.UserSigner;
-                                  final signature = await compute(
-                                      MultiversxCoin.signMessage, {
-                                    'signer': signer.secretKey,
-                                    'message': serialized,
-                                  });
-
-                                  var t = json.encode(
-                                    {
-                                      "target": "erdw-contentScript",
-                                      "type": "",
-                                      "data": {
-                                        "message": message,
-                                        "signature": bytesToHex(signature),
-                                      }
-                                    },
-                                  );
-
-                                  await _controller!.evaluateJavascript(
-                                    source:
-                                        "window.postMessage($t, window.origin)",
-                                  );
-                                } catch (_) {
-                                } finally {
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              },
-                            );
-                          }
-                          break;
-                        }
-                      case "signTransactions":
-                        {
-                          final jsData = MultiversXSignTransModel.fromJson(
-                            reponse['data'],
-                          );
-
-                          var allTrans = jsData.transactions!;
-
-                          for (int i = 0; i < allTrans.length; i++) {
-                            var e = allTrans[i];
-                            List<int> data = [];
-                            try {
-                              data = base64.decode(e.data!);
-                            } catch (err) {
-                              data = txDataToUintList(e.data!);
-                            }
-
-                            if (context.mounted) {
-                              await signMultiversXTransaction(
-                                gasPrice: '${e.gasPrice}',
-                                to: e.receiver,
-                                from: jsData.from,
-                                txData: e.data ?? '',
-                                value_: e.value,
-                                networkIcon: null,
-                                context: context,
-                                gasLimit: '${e.gasLimit}',
-                                symbol: 'EGLD',
-                                chainId: e.chainId,
-                                name: '',
-                                onConfirm: () async {
-                                  try {
-                                    await keys.synchronize(coin.getProxy());
-
-                                    final networkConfig = await coin
-                                        .getProxy()
-                                        .getNetworkConfiguration();
-
-                                    int nonce =
-                                        e.nonce ?? keys.account.nonce.value;
-
-                                    int gasPrice = e.gasPrice ??
-                                        networkConfig.minGasPrice.value;
-
-                                    int gasLimit = e.gasLimit ??
-                                        networkConfig.minGasLimit.value;
-
-                                    int transVersion = e.version ??
-                                        networkConfig
-                                            .minTransactionVersion.value;
-
-                                    String balance = e.value ?? '0';
-
-                                    final trans = multiversx.Transaction(
-                                      nonce: multiversx.Nonce(nonce),
-                                      chainId: multiversx.ChainId(e.chainId),
-                                      sender: multiversx.Address.fromBech32(
-                                        jsData.from,
-                                      ),
-                                      receiver: multiversx.Address.fromBech32(
-                                        e.receiver,
-                                      ),
-                                      gasPrice: multiversx.GasPrice(gasPrice),
-                                      gasLimit: multiversx.GasLimit(gasLimit),
-                                      transactionVersion:
-                                          multiversx.TransactionVersion(
-                                        transVersion,
-                                      ),
-                                      balance: multiversx.Balance(
-                                        BigInt.parse(balance),
-                                      ),
-                                      data: multiversx.TransactionPayload(data),
-                                    );
-
-                                    var signTrans = await compute(
-                                        MultiversxCoin.signTransaction, {
-                                      'signer': keys.signer,
-                                      'transaction': trans,
-                                    });
-
-                                    multiversx.Transaction txHash = signTrans;
-                                    allTrans[i].signature =
-                                        txHash.signature.hex;
-
-                                    var t = json.encode({
-                                      'target': "erdw-contentScript",
-                                      'type': '',
-                                      'data': allTrans.toList(),
-                                    });
-
-                                    await _controller!.evaluateJavascript(
-                                      source:
-                                          "window.postMessage($t, window.origin)",
-                                    );
-                                  } catch (e, sk) {
-                                    if (kDebugMode) {
-                                      print(e);
-                                      print(sk);
-                                    }
-                                  } finally {
-                                    if (context.mounted &&
-                                        Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    }
-                                  }
-                                },
-                                onReject: () async {
-                                  var t = json.encode(
-                                    {
-                                      "target": "erdw-contentScript",
-                                      "type": "",
-                                      "data": {"name": "CanceledError"}
-                                    },
-                                  );
-                                  await _controller!.evaluateJavascript(
-                                    source:
-                                        "window.postMessage($t, window.origin)",
-                                  );
-
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                },
-                              );
-                            }
-                          }
-
-                          break;
-                        }
-
-                      case "connect":
-                        {
-                          if (context.mounted) {
-                            await connectWalletModal(
-                              context: context,
-                              url: reponse['url'],
-                              authToken: reponse['data'],
-                              onConfirm: () async {
-                                try {
-                                  final String authToken = reponse['data'];
-                                  List<int> signature = [];
-
-                                  final hasToken = authToken.trim() != '';
-
-                                  if (hasToken) {
-                                    String message =
-                                        '${multiversxRes.address}$authToken{}';
-
-                                    Uint8List serialized =
-                                        MultiversxCoin.serializeForSigning(
-                                            message);
-
-                                    multiversx.UserSigner signer =
-                                        keys.signer as multiversx.UserSigner;
-
-                                    signature = await compute(
-                                        MultiversxCoin.signMessage, {
-                                      'signer': signer.secretKey,
-                                      'message': serialized,
-                                    });
-                                  }
-
-                                  final data = {
-                                    'address': multiversxRes.address,
-                                    'name': 'Main',
-                                  };
-
-                                  if (hasToken) {
-                                    data['signature'] = bytesToHex(signature);
-                                  }
-                                  var t = json.encode(
-                                    {
-                                      'target': "erdw-contentScript",
-                                      'type': 'connectResponse',
-                                      'data': data
-                                    },
-                                  );
-
-                                  await _controller!.evaluateJavascript(
-                                    source:
-                                        "window.postMessage($t, window.origin)",
-                                  );
-                                } catch (_) {
-                                } finally {
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              },
-                              onReject: () async {
-                                var t = json.encode(
-                                  {
-                                    "target": "erdw-contentScript",
-                                    "type": "connectResponse",
-                                    "data": {"name": "CanceledError"}
-                                  },
-                                );
-                                await _controller!.evaluateJavascript(
-                                  source:
-                                      "window.postMessage($t, window.origin)",
-                                );
-                                if (context.mounted &&
-                                    Navigator.canPop(context)) {
-                                  Navigator.pop(context);
-                                }
-                              },
-                            );
-                          }
-
-                          break;
-                        }
-                    }
-                  },
-                );
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'NightyHandler',
-                  callback: (callback) async {
-                    final jsData =
-                        JsCallbackModel.fromJson(json.decode(callback[0]));
-                    final coin = getNearBlockChains().first;
-
-                    final accountDetail = await coin.importData(data);
-
-                    final sendingAddress = accountDetail.address;
-
-                    switch (jsData.name) {
-                      case "disconnect":
-                        _removeWeb3Address('near', sendingAddress);
-                        break;
-                      case "signTransaction":
-                        {
-                          final trxObj = NearDappTrx.fromJson(jsData.object!);
-
-                          if (context.mounted) {
-                            await signNearTransaction(
-                              from: sendingAddress,
-                              txData: trxObj,
-                              networkIcon: null,
-                              context: context,
-                              coin: coin,
-                              symbol: coin.symbol,
-                              name: '',
-                              onConfirm: () async {
-                                try {
-                                  final nearTrx =
-                                      await coin.signDappTrx(trxObj);
-
-                                  final sigData = jsonEncode({
-                                    'signature': nearTrx.signature,
-                                  });
-
-                                  await _sendNearResult(sigData, jsData.id!);
-                                } catch (e, sk) {
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-
-                                  _sendNearError(error, jsData.id ?? 0);
-                                  if (kDebugMode) {
-                                    print(e);
-                                    print(sk);
-                                  }
-                                } finally {
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              },
-                              onReject: () async {
-                                _sendNearError(
-                                  'user rejected msg',
-                                  jsData.id ?? 0,
-                                );
-                                Navigator.pop(context);
-                              },
-                            );
-                          }
-                          break;
-                        }
-                      case "signMessage":
-                        {
-                          final data = JsNearMessageObject.fromJson(
-                            jsData.object ?? {},
-                          );
-
-                          if (context.mounted) {
-                            await signMessage(
-                              context: context,
-                              messageType: '',
-                              data: data.message,
-                              networkIcon: null,
-                              name: null,
-                              onReject: () async {
-                                _sendNearError(
-                                  'user rejected msg',
-                                  jsData.id ?? 0,
-                                );
-                                Navigator.pop(context);
-                              },
-                              onConfirm: () async {
-                                try {
-                                  final params = NearMessageBorsh(
-                                    message: data.message,
-                                    recipient: data.recipient,
-                                    nonce: data.nonce.data,
-                                    callbackUrl: data.callbackUrl,
-                                  );
-
-                                  final msg = await coin
-                                      .signMessage(sha256(params.serialize()));
-
-                                  final signedMsg = jsonEncode(
-                                    {
-                                      'accountId': sendingAddress,
-                                      'publicKey': base58.encode(
-                                        HEX.decode(sendingAddress) as Uint8List,
-                                      ),
-                                      'signature': base64.encode(msg),
-                                      'state': data.state,
-                                    },
-                                  );
-
-                                  await _sendNearResult(signedMsg, jsData.id!);
-                                } catch (e) {
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-
-                                  _sendNearError(error, jsData.id ?? 0);
-                                } finally {
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              },
-                            );
-                          }
-
-                          break;
-                        }
-                      case "connect":
-                        {
-                          final addressData = jsonEncode(
-                            {
-                              'accountId': sendingAddress,
-                              'publicKey': base58.encode(
-                                HEX.decode(sendingAddress) as Uint8List,
-                              ),
-                            },
-                          );
-                          final request = await _getWeb3Address(
-                            'near',
-                            sendingAddress,
-                          );
-
-                          if (request != null) {
-                            await _sendNearResult(addressData, jsData.id!);
-
-                            return;
-                          }
-                          if (context.mounted) {
-                            await connectWalletModal(
-                              context: context,
-                              url: jsData.url,
-                              onConfirm: () async {
-                                try {
-                                  await _sendNearResult(
-                                      addressData, jsData.id!);
-
-                                  await _saveWeb3Address(
-                                    'near',
-                                    sendingAddress,
-                                  );
-                                } catch (e) {
-                                  final error =
-                                      e.toString().replaceAll('"', '\'');
-
-                                  _sendNearError(error, jsData.id ?? 0);
-                                } finally {
-                                  if (context.mounted &&
-                                      Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                }
-                              },
-                              onReject: () async {
-                                _sendNearError(
-                                  'user rejected connection',
-                                  jsData.id ?? 0,
-                                );
-                                Navigator.pop(context);
-                              },
-                            );
-                          }
-                          break;
-                        }
-                    }
-                  },
-                );
-                _controller!.addJavaScriptHandler(
-                    handlerName: 'AITrackerHandler',
-                    callback: (callback) async {
-                      debugPrint(
-                        'AITrackerHandler called with: $callback',
-                      );
-                    });
-                _controller!.addJavaScriptHandler(
-                  handlerName: 'CryptoHandler',
-                  callback: (callback) async {
-                    final jsData =
-                        JsCallbackModel.fromJson(json.decode(callback[0]));
-
-                    if (jsData.network == 'solana') {
-                      final coin = getSolanaBlockChains().first;
-
-                      final accountDetail = await coin.importData(data);
-
-                      final privateKeyBytes =
-                          HEX.decode(accountDetail.privateKey!);
-
-                      final solanaKeyPair =
-                          await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
-                        privateKey: privateKeyBytes,
-                      );
-
-                      final sendingAddress = accountDetail.address;
-
-                      switch (jsData.name) {
-                        case "requestAccounts":
-                          {
-                            final request = await _getWeb3Address(
-                              'solana',
-                              sendingAddress,
-                            );
-
-                            if (request != null) {
-                              await _setSolanaAddress(
-                                jsData.id,
-                                sendingAddress,
-                              );
-                              return;
-                            }
-
-                            if (context.mounted) {
-                              await connectWalletModal(
-                                context: context,
-                                url: jsData.url,
-                                onConfirm: () async {
-                                  try {
-                                    await _setSolanaAddress(
-                                      jsData.id,
-                                      sendingAddress,
-                                    );
-
-                                    await _saveWeb3Address(
-                                      'solana',
-                                      sendingAddress,
-                                    );
-                                  } catch (e) {
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
-                                    _sendError("solana", error, jsData.id ?? 0);
-                                  } finally {
-                                    if (context.mounted &&
-                                        Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    }
-                                  }
-                                },
-                                onReject: () async {
-                                  _sendError(
-                                    "solana",
-                                    'user rejected connection',
-                                    jsData.id ?? 0,
-                                  );
-                                  Navigator.pop(context);
-                                },
-                              );
-                            }
-
-                            break;
-                          }
-                        case "signMessage":
-                          {
-                            try {
-                              final data = JsSolanaMessageObject.fromJson(
-                                jsData.object ?? {},
-                              );
-                              if (context.mounted) {
-                                await signMessage(
-                                  context: context,
-                                  messageType: personalSignKey,
-                                  data: data.data,
-                                  networkIcon: null,
-                                  name: null,
-                                  onConfirm: () async {
-                                    try {
-                                      final signature =
-                                          await solanaKeyPair.sign(
-                                        txDataToUintList(data.data),
-                                      );
-
-                                      _sendResult(
-                                        "solana",
-                                        base58.encode(
-                                          signature.bytes as Uint8List,
-                                        ),
-                                        jsData.id ?? 0,
-                                      );
-                                    } catch (e) {
-                                      final error =
-                                          e.toString().replaceAll('"', '\'');
-                                      _sendError(
-                                          "solana", error, jsData.id ?? 0);
-                                    } finally {
-                                      if (context.mounted &&
-                                          Navigator.canPop(context)) {
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  onReject: () {
-                                    _sendError(
-                                        "solana",
-                                        'user rejected signature',
-                                        jsData.id ?? 0);
-                                    Navigator.pop(context);
-                                  },
-                                );
-                              }
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("solana", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        case "signRawTransaction":
-                          {
-                            final data = JsSolanaTransactionObject.fromJson(
-                              jsData.object ?? {},
-                            );
-
-                            final Map<String, dynamic> decodedData =
-                                json.decode(data.data);
-
-                            late solana.Ed25519HDPublicKey from;
-                            late SolanaSimuRes simulationResult;
-
-                            final messageB64 = base64.encode(
-                              base58.decode(data.raw),
-                            );
-
-                            final signature = await solanaKeyPair.sign(
-                              base58.decode(data.raw),
-                            );
-
-                            final fee = await coin.getFeeForMessage(messageB64);
-
-                            final SignedTx signedTx = SignedTx(
-                              signatures: [signature],
-                              compiledMessage: CompiledMessage(
-                                ByteArray(
-                                  base58.decode(data.raw),
-                                ),
-                              ),
-                            );
-
-                            // 5. Now simulate the full versioned transaction
-                            final simulation = await coin.simulateTransaction(
-                              signedTx.encode(),
-                            );
-
-                            print(
-                                'sjson: ${simulation?.toJson()}'); // null also
-                            print(
-                                'simaccounts: ${simulation?.value.accounts}'); // null
-
-                            final simAccounts = simulation?.value.accounts;
-
-                            if (simAccounts != null) {
-                              for (final simAccount in simAccounts) {
-                                try {
-                                  final info = SolTokenInfo.decode(simAccount);
-                                  print('balance: ${info.balance}');
-                                } catch (e) {
-                                  print(e);
-                                }
-                              }
-                            }
-
-                            // for (List<Account>? acc in ) {
-                            //   if (acc is BinaryAccountData) {
-                            //     final info = SolTokenInfo.decode(acc as dynamic);
-                            //   }
-                            // }
-                            // final preBalance = await rpcClient
-                            //     .getAccountInfo(
-                            //       tokenAddress.toBase58(),
-                            //       commitment: Commitment.confirmed,
-                            //       encoding: Encoding.base64,
-                            //     )
-                            //     .then((e) => e.value?.data?.parseTokenBalance());
-
-                            print('simulation: $simulation');
-
-                            if (decodedData.containsKey('message')) {
-                              final SolanaTransactionVersioned solanaWeb3Res =
-                                  SolanaTransactionVersioned.fromJson(
-                                decodedData,
-                              );
-
-                              from = solana.Ed25519HDPublicKey.fromBase58(
-                                solanaWeb3Res.message.staticAccountKeys.first,
-                              );
-                              simulationResult = SolanaSimuRes(
-                                fee: fee / pow(10, solDecimals),
-                                result:
-                                    coin.dappTrxVersionedResult(solanaWeb3Res),
-                              );
-                            } else {
-                              final SolanaTransactionLegacy solanaWeb3Res =
-                                  SolanaTransactionLegacy.fromJson(decodedData);
-                              from = solana.Ed25519HDPublicKey.fromBase58(
-                                solanaWeb3Res.feePayer,
-                              );
-                              simulationResult = await dappSimulateTrx(
-                                solanaWeb3Res,
-                                solanaKeyPair,
-                                coin,
-                                coin.getSymbol(),
-                                solDecimals,
-                              );
-                            }
-
-                            ValueNotifier<bool> isSigning =
-                                ValueNotifier<bool>(false);
-                            if (context.mounted) {
-                              await slideUpPanel(
-                                context,
-                                DefaultTabController(
-                                  length: 2,
-                                  child: buildSignTransactionUI(
-                                    isSigning: isSigning,
-                                    simulationResult: simulationResult,
-                                    from: from.toBase58(),
-                                    txData: data.raw,
-                                    networkIcon: null,
-                                    context: context,
-                                    symbol: 'SOL',
-                                    name: '',
-                                    onConfirm: () async {
-                                      try {
-                                        _sendResult(
-                                          "solana",
-                                          signature.toBase58(),
-                                          jsData.id ?? 0,
-                                        );
-                                      } catch (e, sk) {
-                                        if (kDebugMode) {
-                                          print(sk);
-                                        }
-                                        final error =
-                                            e.toString().replaceAll('"', '\'');
-                                        _sendError(
-                                            "solana", error, jsData.id ?? 0);
-                                      } finally {
-                                        if (context.mounted &&
-                                            Navigator.canPop(context)) {
-                                          Navigator.pop(context);
-                                        }
-                                      }
-                                    },
-                                    onReject: () async {
-                                      _sendError(
-                                        "solana",
-                                        'user rejected transaction',
-                                        jsData.id ?? 0,
-                                      );
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ),
-                                canDismiss: false,
-                              );
-                            }
-
-                            break;
-                          }
-                      }
-                    } else if (jsData.network == 'ethereum') {
-                      int chainId = pref.get(dappChainIdKey);
-
-                      final coin = evmFromChainId(chainId)!;
-                      final web3Response = await coin.importData(data);
-
-                      final privateKey = web3Response.privateKey!;
-                      final credentials =
-                          web3dart.EthPrivateKey.fromHex(privateKey);
-
-                      final sendingAddress = web3Response.address;
-
-                      switch (jsData.name) {
-                        case "signTransaction":
-                          {
-                            final data = JsTransactionObject.fromJson(
-                                jsData.object ?? {});
-
-                            if (context.mounted) {
-                              await signEVMTransaction(
-                                gasPriceInWei_: null,
-                                to: data.to,
-                                from: sendingAddress,
-                                txData: data.data,
-                                valueInWei_: data.value,
-                                gasInWei_: null,
-                                networkIcon: null,
-                                context: context,
-                                symbol: coin.symbol,
-                                name: '',
-                                onConfirm: () async {
-                                  try {
-                                    final client = web3dart.Web3Client(
-                                      coin.rpc,
-                                      Client(),
-                                    );
-
-                                    final signedTransaction =
-                                        await client.signTransaction(
-                                      credentials,
-                                      web3dart.Transaction(
-                                        to: data.to != null
-                                            ? web3dart.EthereumAddress.fromHex(
-                                                data.to!)
-                                            : null,
-                                        value: data.value != null
-                                            ? web3dart.EtherAmount.inWei(
-                                                BigInt.parse(data.value!),
-                                              )
-                                            : null,
-                                        nonce: data.nonce != null
-                                            ? int.parse(data.nonce!)
-                                            : null,
-                                        data: data.data == null
-                                            ? null
-                                            : txDataToUintList(data.data!),
-                                        gasPrice: data.gasPrice != null
-                                            ? web3dart.EtherAmount.inWei(
-                                                BigInt.parse(
-                                                  data.gasPrice!,
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                      chainId: chainId,
-                                    );
-
-                                    final response = await client
-                                        .sendRawTransaction(signedTransaction);
-
-                                    _sendResult(
-                                      "ethereum",
-                                      response,
-                                      jsData.id ?? 0,
-                                    );
-                                  } catch (e, sk) {
-                                    if (kDebugMode) {
-                                      print(sk);
-                                    }
-
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
-                                    _sendError(
-                                        "ethereum", error, jsData.id ?? 0);
-                                  } finally {
-                                    if (context.mounted &&
-                                        Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    }
-                                  }
-                                },
-                                onReject: () async {
-                                  _sendError(
-                                    "ethereum",
-                                    'user rejected transaction',
-                                    jsData.id ?? 0,
-                                  );
-                                  Navigator.pop(context);
-                                },
-                                title: 'Sign Transaction',
-                                chainId: chainId,
-                              );
-                            }
-
-                            break;
-                          }
-                        case "signPersonalMessage":
-                          {
-                            final data =
-                                JsDataModel.fromJson(jsData.object ?? {});
-
-                            if (context.mounted) {
-                              await signMessage(
-                                context: context,
-                                messageType: personalSignKey,
-                                data: data.data,
-                                networkIcon: null,
-                                name: null,
-                                onConfirm: () async {
-                                  try {
-                                    final signedData = credentials
-                                        .signPersonalMessageToUint8List(
-                                      txDataToUintList(data.data),
-                                    );
-
-                                    _sendResult(
-                                      "ethereum",
-                                      bytesToHex(signedData, include0x: true),
-                                      jsData.id ?? 0,
-                                    );
-                                  } catch (e) {
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
-                                    _sendError(
-                                        "ethereum", error, jsData.id ?? 0);
-                                  } finally {
-                                    if (Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    }
-                                  }
-                                },
-                                onReject: () {
-                                  _sendError(
-                                      "ethereum",
-                                      'user rejected signature',
-                                      jsData.id ?? 0);
-                                  if (Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  }
-                                },
-                              );
-                            }
-
-                            break;
-                          }
-                        case "signMessage":
-                          {
-                            try {
-                              final data =
-                                  JsDataModel.fromJson(jsData.object ?? {});
-
-                              String signedDataHex;
-                              if (context.mounted) {
-                                await signMessage(
-                                  context: context,
-                                  messageType: normalSignKey,
-                                  data: data.data,
-                                  networkIcon: null,
-                                  name: null,
-                                  onConfirm: () async {
-                                    try {
-                                      try {
-                                        signedDataHex = EthSigUtil.signMessage(
-                                          privateKey: privateKey,
-                                          message: txDataToUintList(data.data),
-                                        );
-                                      } catch (e) {
-                                        Uint8List signedData = credentials
-                                            .signPersonalMessageToUint8List(
-                                          txDataToUintList(data.data),
-                                        );
-                                        signedDataHex = bytesToHex(
-                                          signedData,
-                                          include0x: true,
-                                        );
-                                      }
-                                      _sendResult("ethereum", signedDataHex,
-                                          jsData.id ?? 0);
-                                    } catch (e) {
-                                      final error =
-                                          e.toString().replaceAll('"', '\'');
-                                      _sendError(
-                                          "ethereum", error, jsData.id ?? 0);
-                                    } finally {
-                                      Navigator.pop(context);
-                                    }
-                                  },
-                                  onReject: () {
-                                    _sendError(
-                                        "ethereum",
-                                        'user rejected signature',
-                                        jsData.id ?? 0);
-                                    Navigator.pop(context);
-                                  },
-                                );
-                              }
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("ethereum", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        case "signTypedMessage":
-                          {
-                            final data = JsEthSignTypedData.fromJson(
-                              jsData.object ?? {},
-                            );
-
-                            final typedChainId = data.domain.chainId;
-
-                            if (typedChainId != chainId) {
-                              _sendError(
-                                "ethereum",
-                                "Provided chainId $typedChainId must match the active chainId $chainId",
-                                jsData.id ?? 0,
-                              );
-                              return;
-                            }
-
-                            if (context.mounted) {
-                              await signMessage(
-                                context: context,
-                                messageType: typedMessageSignKey,
-                                data: data.raw,
-                                networkIcon: null,
-                                name: null,
-                                onConfirm: () async {
-                                  try {
-                                    String signedDataHex =
-                                        EthSigUtil.signTypedData(
-                                      privateKey: privateKey,
-                                      jsonData: data.raw,
-                                      version: TypedDataVersion.V4,
-                                    );
-                                    _sendResult(
-                                      "ethereum",
-                                      signedDataHex,
-                                      jsData.id ?? 0,
-                                    );
-                                  } catch (e) {
-                                    final error =
-                                        e.toString().replaceAll('"', '\'');
-                                    _sendError(
-                                        "ethereum", error, jsData.id ?? 0);
-                                  } finally {
-                                    Navigator.pop(context);
-                                  }
-                                },
-                                onReject: () {
-                                  _sendError(
-                                      "ethereum",
-                                      'user rejected signature',
-                                      jsData.id ?? 0);
-                                  Navigator.pop(context);
-                                },
-                              );
-                            }
-
-                            break;
-                          }
-                        case "ecRecover":
-                          {
-                            final data =
-                                JsEcRecoverObject.fromJson(jsData.object ?? {});
-
-                            try {
-                              final signature =
-                                  EthSigUtil.recoverPersonalSignature(
-                                message: txDataToUintList(data.message),
-                                signature: data.signature,
-                              );
-                              _sendResult(
-                                "ethereum",
-                                signature,
-                                jsData.id ?? 0,
-                              );
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("ethereum", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        case "requestAccounts":
-                          {
-                            final request = await _getWeb3Address(
-                              'ethereum',
-                              sendingAddress,
-                            );
-                            if (request != null) {
-                              await _setEthereumAddress(
-                                jsData.id,
-                                sendingAddress,
-                              );
-                              return;
-                            }
-
-                            if (context.mounted) {
-                              await connectWalletModal(
-                                  context: context,
-                                  url: jsData.url,
-                                  onConfirm: () async {
-                                    try {
-                                      await _setEthereumAddress(
-                                        jsData.id,
-                                        sendingAddress,
-                                      );
-
-                                      await _saveWeb3Address(
-                                        'ethereum',
-                                        sendingAddress,
-                                      );
-                                    } catch (e) {
-                                      final error =
-                                          e.toString().replaceAll('"', '\'');
-                                      _sendError(
-                                          "ethereum", error, jsData.id ?? 0);
-                                    } finally {
-                                      if (context.mounted &&
-                                          Navigator.canPop(context)) {
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  onReject: () async {
-                                    _sendError(
-                                      "ethereum",
-                                      'user rejected connection',
-                                      jsData.id ?? 0,
-                                    );
-                                    Navigator.pop(context);
-                                  });
-                            }
-
-                            break;
-                          }
-                        case "watchAsset":
-                          {
-                            final data =
-                                JsWatchAsset.fromJson(jsData.object ?? {});
-
-                            try {
-                              if (data.decimals == null) {
-                                throw Exception(
-                                  'invalid asset decimals',
-                                );
-                              }
-                              if (data.symbol == null) {
-                                throw Exception(
-                                  'invalid asset symbol',
-                                );
-                              }
-                              coin.validateAddress(data.contract);
-
-                              final assetDetails = {
-                                'name': data.symbol,
-                                'symbol': data.symbol,
-                                'decimals': data.decimals.toString(),
-                                'contractAddress': data.contract,
-                                'network': coin.name,
-                                'rpc': coin.rpc,
-                                'chainId': coin.chainId,
-                                'coinType': coin.coinType,
-                                'blockExplorer': coin.blockExplorer,
-                              };
-                              if (kDebugMode) {
-                                print(assetDetails);
-                              }
-                              throw Exception('not Implemented');
-                              // _sendResult("ethereum", '', jsData.id ?? 0);
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("ethereum", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        case "addEthereumChain":
-                          {
-                            final data = JsAddEthereumChain.fromJson(
-                              jsData.object ?? {},
-                            );
-
-                            try {
-                              final switchChainId =
-                                  BigInt.parse(data.chainId).toInt();
-
-                              final currentChain = evmFromChainId(chainId)!;
-
-                              EthereumCoin? switchChain =
-                                  evmFromChainId(switchChainId);
-
-                              if (chainId == switchChainId) {
-                                _sendNull(
-                                  "ethereum",
-                                  jsData.id ?? 0,
-                                );
-                                return;
-                              }
-
-                              bool switchNetwork = true;
-                              bool haveNotExecuted = true;
-
-                              if (switchChain == null) {
-                                switchNetwork = false;
-                                haveNotExecuted = false;
-                                List blockExplorers = data.blockExplorerUrls;
-                                String blockExplorer = '';
-                                if (blockExplorers.isNotEmpty) {
-                                  blockExplorer = blockExplorers[0];
-                                  if (blockExplorer.endsWith('/')) {
-                                    blockExplorer = blockExplorer.substring(
-                                        0, blockExplorer.length - 1);
-                                  }
-                                }
-                                List rpcUrl = data.rpcUrls;
-
-                                Map addBlockChain = {};
-                                if (pref.get(newEVMChainKey) != null) {
-                                  addBlockChain = Map.from(
-                                      jsonDecode(pref.get(newEVMChainKey)));
-                                }
-
-                                if (data.symbol == null) {
-                                  _sendError(
-                                    "ethereum",
-                                    'no symbol set',
-                                    jsData.id ?? 0,
-                                  );
-                                  return;
-                                }
-                                if (data.symbol!.isEmpty) {
-                                  _sendError(
-                                    "ethereum",
-                                    'no symbol set',
-                                    jsData.id ?? 0,
-                                  );
-                                  return;
-                                }
-                                if (data.name!.isEmpty) {
-                                  _sendError(
-                                    "ethereum",
-                                    'no name set',
-                                    jsData.id ?? 0,
-                                  );
-                                  return;
-                                }
-                                if (rpcUrl.isEmpty) {
-                                  _sendError(
-                                    "ethereum",
-                                    'not rpc url set',
-                                    jsData.id ?? 0,
-                                  );
-                                  return;
-                                }
-                                if (blockExplorers.isEmpty) {
-                                  _sendError(
-                                    "ethereum",
-                                    'not explorers url set',
-                                    jsData.id ?? 0,
-                                  );
-                                  return;
-                                }
-
-                                switchChain = EthereumCoin(
-                                  rpc: rpcUrl.isNotEmpty ? rpcUrl[0] : null,
-                                  chainId: switchChainId,
-                                  blockExplorer:
-                                      '$blockExplorer/tx/$blockExplorerPlaceholder',
-                                  symbol: data.symbol!,
-                                  default_: data.symbol!,
-                                  image: 'assets/ethereum-2.png',
-                                  coinType: 60,
-                                  name: data.chainName,
-                                  geckoID: '',
-                                  rampID: '',
-                                  payScheme: '',
-                                );
-
-                                final switchJson = switchChain.toJson();
-
-                                Map details = {
-                                  data.chainName: switchJson,
-                                };
-                                addBlockChain.addAll(details);
-
-                                if (context.mounted) {
-                                  await addEthereumChain(
-                                    context: context,
-                                    jsonObj: json.encode(
-                                      Map.from({
-                                        'name': data.chainName,
-                                      })
-                                        ..addAll(switchJson)
-                                        ..remove('image')
-                                        ..remove('coinType'),
-                                    ),
-                                    onConfirm: () async {
-                                      try {
-                                        const id = 83;
-                                        final response = await post(
-                                          Uri.parse(
-                                            switchChain!.rpc,
-                                          ),
-                                          body: json.encode(
-                                            {
-                                              "jsonrpc": "2.0",
-                                              "method": "eth_chainId",
-                                              "params": [],
-                                              "id": id
-                                            },
-                                          ),
-                                          headers: {
-                                            "Content-Type": "application/json"
-                                          },
-                                        );
-                                        String responseBody = response.body;
-                                        if (response.statusCode ~/ 100 == 4 ||
-                                            response.statusCode ~/ 100 == 5) {
-                                          if (kDebugMode) {
-                                            print(responseBody);
-                                          }
-                                          throw Exception(responseBody);
-                                        }
-
-                                        final jsonResponse =
-                                            json.decode(responseBody);
-
-                                        final chainIdResponse =
-                                            BigInt.parse(jsonResponse['result'])
-                                                .toInt();
-
-                                        if (jsonResponse['id'] != id) {
-                                          throw Exception(
-                                              'invalid id returned');
-                                        } else if (chainIdResponse !=
-                                            switchChainId) {
-                                          throw Exception(
-                                            'chain Id different with eth_chainId',
-                                          );
-                                        }
-
-                                        await pref.put(
-                                          newEVMChainKey,
-                                          jsonEncode(addBlockChain),
-                                        );
-
-                                        supportedChains.add(switchChain);
-
-                                        if (context.mounted &&
-                                            Navigator.canPop(context)) {
-                                          Navigator.pop(context);
-                                        }
-                                      } catch (e) {
-                                        final error =
-                                            e.toString().replaceAll('"', '\'');
-                                        _sendError(
-                                            "ethereum", error, jsData.id ?? 0);
-
-                                        if (context.mounted &&
-                                            Navigator.canPop(context)) {
-                                          Navigator.pop(context);
-                                        }
-                                      }
-                                    },
-                                    onReject: () async {
-                                      _sendError("ethereum", 'canceled',
-                                          jsData.id ?? 0);
-
-                                      Navigator.pop(context);
-                                    },
-                                  );
-                                }
-                              }
-                              if (switchNetwork) {
-                                final initString =
-                                    _addChain(switchChain, sendingAddress);
-                                await _switchWeb3ChainRequest(
-                                  currentChain: currentChain,
-                                  switchChain: switchChain,
-                                  initString: initString,
-                                  jsData: jsData,
-                                  haveNotExecuted: haveNotExecuted,
-                                );
-                              }
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("ethereum", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        case "switchEthereumChain":
-                          {
-                            try {
-                              final data = JsSwitchEthereumChain.fromJson(
-                                jsData.object ?? {},
-                              );
-                              final switchChainId =
-                                  BigInt.parse(data.chainId).toInt();
-
-                              final currentChain = evmFromChainId(chainId)!;
-
-                              final switchChain = evmFromChainId(switchChainId);
-
-                              if (chainId == switchChainId) {
-                                _sendNull(
-                                  "ethereum",
-                                  jsData.id ?? 0,
-                                );
-
-                                return;
-                              }
-
-                              if (switchChain == null) {
-                                _sendError(
-                                  "ethereum",
-                                  'unknown chain id',
-                                  jsData.id ?? 0,
-                                );
-                              } else {
-                                final initString =
-                                    _addChain(switchChain, sendingAddress);
-                                await _switchWeb3ChainRequest(
-                                  currentChain: currentChain,
-                                  switchChain: switchChain,
-                                  initString: initString,
-                                  jsData: jsData,
-                                );
-                              }
-                            } catch (e) {
-                              final error = e.toString().replaceAll('"', '\'');
-                              _sendError("ethereum", error, jsData.id ?? 0);
-                            }
-                            break;
-                          }
-                        default:
-                          {
-                            _sendError(jsData.network.toString(),
-                                "Operation not supported", jsData.id ?? 0);
-                            break;
-                          }
-                      }
-                    }
-                  },
-                );
-              },
-              onLoadResourceWithCustomScheme: (
-                InAppWebViewController contrl,
-                WebResourceRequest req,
-              ) async {
-                if (req.url.scheme == "wc") {
-                  await contrl.stopLoading();
-                  await WCService.qrScanHandler('${req.url}');
-                  return null;
-                }
-                return null;
-              },
-              initialUserScripts: UnmodifiableListView([
-                UserScript(
-                  source: widget.provider + initJs,
-                  injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-                ),
-                ...webNotification
-              ]),
-              onLoadStart: (InAppWebViewController controller, Uri? url) async {
-                _browserController.setText(url.toString());
-
-                final documentTitle = await controller.getTitle();
-
-                List history = [
-                  {
-                    'url': url.toString(),
-                    'title': documentTitle,
-                  }
-                ];
-                final savedHistory = pref.get(historyKey);
-                if (savedHistory != null) {
-                  history.addAll(jsonDecode(savedHistory) as List);
-                }
-                history.length = maximumBrowserHistoryToSave;
-
-                _favicon = null;
-                _title = '';
-                _url = url.toString();
-                _isSecure = urlIsSecure(url!);
-                widget.onStateUpdated.call();
-                await pref.put(
-                  historyKey,
-                  jsonEncode(history),
-                );
-              },
-              onTitleChanged: (controller, title) {
-                _title = title ?? '';
-                widget.onStateUpdated.call();
-              },
-              onProgressChanged: (controller, progress) {
-                if (mounted) {
-                  _progress.value = progress / 100;
-                  if (progress == 100) {
-                    _pullToRefreshController.endRefreshing();
-                  }
-                }
-              },
-              onLoadStop: (controller, url) async {
-                updateScreenshot();
-                _pullToRefreshController.endRefreshing();
-                if (url != null) {
-                  final sslCertificate = await controller.getCertificate();
-                  _url = url.toString();
-                  _isSecure = sslCertificate != null || urlIsSecure(url);
-                }
-
-                try {
-                  final favicons = await _controller?.getFavicons();
-                  if (favicons != null && favicons.isNotEmpty) {
-                    for (final favicon in favicons) {
-                      if (_favicon == null) {
-                        _favicon = favicon;
-                      } else if (favicon.width != null &&
-                          (favicon.width ?? 0) > (_favicon?.width ?? 0)) {
-                        _favicon = favicon;
-                      }
-                    }
-                  }
-                } catch (_) {}
-
-                if (mounted) {
-                  widget.onStateUpdated.call();
-                }
-              },
-              onConsoleMessage:
-                  (InAppWebViewController controller, ConsoleMessage message) {
-                if (kDebugMode) {
-                  if (message.toString().contains('externalDetectWallets')) {
-                    return;
-                  }
-                  print(message.toString());
-                }
-              },
-              onReceivedHttpAuthRequest: (controller, challenge) async {
-                var action = await createHttpAuthDialog(challenge);
-                return HttpAuthResponse(
-                    username: _httpAuthUsernameController.text.trim(),
-                    password: _httpAuthPasswordController.text,
-                    action: action,
-                    permanentPersistence: true);
-              },
-            ),
-            ValueListenableBuilder(
-              valueListenable: _progress,
-              builder: (context, value, child) {
-                return _progress.value < 1.0
-                    ? LinearProgressIndicator(
-                        value: _progress.value,
-                      )
-                    : Container();
-              },
-            ),
-          ],
-        ),
+        child: Stack(children: [
+          Container(color: Colors.white),
+          InAppWebView(
+            findInteractionController: _findInteraction,
+            pullToRefreshController: _pullToRefreshController,
+            initialUrlRequest:
+                URLRequest(url: WebUri(widget.data ?? walletURL)),
+            initialSettings: _settings,
+            initialUserScripts: UnmodifiableListView([
+              UserScript(
+                source: widget.provider + _initJs,
+                injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+              ),
+              ..._webNotification,
+            ]),
+            onWebViewCreated: _onWebViewCreated,
+            onPermissionRequest: _onPermissionRequest,
+            onUpdateVisitedHistory: (_, newUrl, __) {
+              if (newUrl != null) {
+                url = newUrl.toString();
+                browserController.setText(url);
+                widget.onStateUpdated();
+              }
+            },
+            onDownloadStartRequest: (_, req) =>
+                _tryDownloadFile('${req.url}', req.suggestedFilename),
+            shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+            onLoadResourceWithCustomScheme: _onCustomScheme,
+            onLoadStart: _onLoadStart,
+            onTitleChanged: (_, t) {
+              title = t ?? '';
+              widget.onStateUpdated();
+            },
+            onProgressChanged: (_, progress) {
+              if (mounted) {
+                _progress.value = progress / 100;
+                if (progress == 100) _pullToRefreshController.endRefreshing();
+              }
+            },
+            onLoadStop: _onLoadStop,
+            onConsoleMessage: (_, msg) {
+              if (kDebugMode &&
+                  !msg.toString().contains('externalDetectWallets')) {
+                print(msg);
+              }
+            },
+            onReceivedHttpAuthRequest: _onHttpAuth,
+          ),
+          ValueListenableBuilder(
+            valueListenable: _progress,
+            builder: (_, value, __) => _progress.value < 1.0
+                ? LinearProgressIndicator(value: _progress.value)
+                : const SizedBox.shrink(),
+          ),
+        ]),
       ),
     ]);
   }
 
-  Future<WebNotificationPermission> onNotificationRequestPermission() async {
-    final url = await _controller!.getUrl();
+  // ── InAppWebView event handlers ───────────────────────────────────────────
 
-    if (url != null) {
-      final savedPermission =
-          WebNotificationPermissionDb.getPermission(url.host);
-      if (savedPermission != null) {
-        return savedPermission;
+  Future<PermissionResponse> _onPermissionRequest(
+      InAppWebViewController _, PermissionRequest request) async {
+    final resources = <PermissionResourceType>[];
+    if (request.resources.contains(PermissionResourceType.CAMERA)) {
+      if (!(await Permission.camera.request()).isDenied) {
+        resources.add(PermissionResourceType.CAMERA);
       }
     }
-    if (!context.mounted) return WebNotificationPermission.DEFAULT;
-    if (!mounted) return WebNotificationPermission.DEFAULT;
+    if (request.resources.contains(PermissionResourceType.MICROPHONE)) {
+      if (!(await Permission.microphone.request()).isDenied) {
+        resources.add(PermissionResourceType.MICROPHONE);
+      }
+    }
+    if (request.resources
+        .contains(PermissionResourceType.CAMERA_AND_MICROPHONE)) {
+      if (!(await Permission.camera.request()).isDenied &&
+          !(await Permission.microphone.request()).isDenied) {
+        resources.add(PermissionResourceType.CAMERA_AND_MICROPHONE);
+      }
+    }
+    return PermissionResponse(
+      resources: resources,
+      action: resources.isEmpty
+          ? PermissionResponseAction.DENY
+          : PermissionResponseAction.GRANT,
+    );
+  }
+
+  Future<NavigationActionPolicy> _shouldOverrideUrlLoading(
+      InAppWebViewController _, NavigationAction action) async {
+    final uri = action.request.url!;
+    final uriStr = uri.toString();
+
+    if (uriStr.contains('wc?uri=')) {
+      await WCService.qrScanHandler(
+          Uri.decodeFull(Uri.parse(uriStr).queryParameters['uri']!));
+      return NavigationActionPolicy.CANCEL;
+    }
+    if (uriStr.startsWith('wc:')) {
+      await WCService.qrScanHandler(uriStr);
+      return NavigationActionPolicy.CANCEL;
+    }
+
+    const allowed = [
+      'http',
+      'https',
+      'file',
+      'chrome',
+      'data',
+      'javascript',
+      'about'
+    ];
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      if ((action.shouldPerformDownload ?? false) &&
+          action.request.url != null) {
+        _tryDownloadFile('${action.request.url}');
+        return NavigationActionPolicy.DOWNLOAD;
+      }
+    }
+    if (!allowed.contains(uri.scheme)) {
+      try {
+        if (await canLaunchUrl(uri)) await launchUrl(uri);
+      } catch (_) {}
+      return NavigationActionPolicy.CANCEL;
+    }
+    return NavigationActionPolicy.ALLOW;
+  }
+
+  Future<CustomSchemeResponse?> _onCustomScheme(
+      InAppWebViewController ctrl, WebResourceRequest req) async {
+    if (req.url.scheme == 'wc') {
+      await ctrl.stopLoading();
+      await WCService.qrScanHandler('${req.url}');
+    }
+    return null;
+  }
+
+  Future<void> _onLoadStart(InAppWebViewController ctrl, Uri? u) async {
+    browserController.setText(u.toString());
+    final docTitle = await ctrl.getTitle();
+
+    List history = [
+      {'url': u.toString(), 'title': docTitle}
+    ];
+    final saved = pref.get(historyKey);
+    if (saved != null) history.addAll(jsonDecode(saved as String) as List);
+    history.length = maximumBrowserHistoryToSave;
+
+    favicon = null;
+    title = '';
+    url = u.toString();
+    isSecure = urlIsSecure(u!);
+    widget.onStateUpdated();
+    await pref.put(historyKey, jsonEncode(history));
+  }
+
+  Future<void> _onLoadStop(InAppWebViewController ctrl, Uri? u) async {
+    await updateScreenshot();
+    _pullToRefreshController.endRefreshing();
+    if (u != null) {
+      final cert = await ctrl.getCertificate();
+      url = u.toString();
+      isSecure = cert != null || urlIsSecure(u);
+    }
+    try {
+      final favicons = await controller?.getFavicons();
+      if (favicons != null && favicons.isNotEmpty) {
+        for (final f in favicons) {
+          if (favicon == null || (f.width ?? 0) > (favicon?.width ?? 0)) {
+            favicon = f;
+          }
+        }
+      }
+    } catch (_) {}
+    if (mounted) widget.onStateUpdated();
+  }
+
+  Future<HttpAuthResponse> _onHttpAuth(
+      InAppWebViewController _, URLAuthenticationChallenge challenge) async {
+    var action = HttpAuthResponseAction.CANCEL;
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Login'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(challenge.protectionSpace.host),
+          TextField(
+            decoration: const InputDecoration(labelText: 'Username'),
+            controller: _httpAuthUsername,
+          ),
+          TextField(
+            decoration: const InputDecoration(labelText: 'Password'),
+            controller: _httpAuthPassword,
+            obscureText: true,
+          ),
+        ]),
+        actions: [
+          ElevatedButton(
+            child: const Text('Cancel'),
+            onPressed: () {
+              action = HttpAuthResponseAction.CANCEL;
+              Navigator.pop(context);
+            },
+          ),
+          ElevatedButton(
+            child: const Text('Ok'),
+            onPressed: () {
+              action = HttpAuthResponseAction.PROCEED;
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+    return HttpAuthResponse(
+      username: _httpAuthUsername.text.trim(),
+      password: _httpAuthPassword.text,
+      action: action,
+      permanentPersistence: true,
+    );
+  }
+
+  // ── Notification helpers ──────────────────────────────────────────────────
+
+  Future<WebNotificationPermission> _onNotificationRequestPermission() async {
+    final u = await controller!.getUrl();
+    if (u != null) {
+      final saved = WebNotificationPermissionDb.getPermission(u.host);
+      if (saved != null) return saved;
+    }
+    if (!context.mounted || !mounted) return WebNotificationPermission.DEFAULT;
+
     final permission = await showDialog<WebNotificationPermission>(
           context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text('${url?.host} wants to show notifications'),
-              actions: [
-                ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop<WebNotificationPermission>(
-                          context, WebNotificationPermission.DENIED);
-                    },
-                    child: const Text('Deny')),
-                ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop<WebNotificationPermission>(
-                          context, WebNotificationPermission.GRANTED);
-                    },
-                    child: const Text('Grant'))
-              ],
-            );
-          },
+          builder: (_) => AlertDialog(
+            title: Text('${u?.host} wants to show notifications'),
+            actions: [
+              ElevatedButton(
+                child: const Text('Deny'),
+                onPressed: () =>
+                    Navigator.pop(context, WebNotificationPermission.DENIED),
+              ),
+              ElevatedButton(
+                child: const Text('Grant'),
+                onPressed: () =>
+                    Navigator.pop(context, WebNotificationPermission.GRANTED),
+              ),
+            ],
+          ),
         ) ??
         WebNotificationPermission.DENIED;
 
-    if (url != null) {
-      await WebNotificationPermissionDb.savePermission(url.host, permission);
+    if (u != null) {
+      await WebNotificationPermissionDb.savePermission(u.host, permission);
     }
-
     return permission;
   }
 
-  void onShowNotification(WebNotification notification) async {
-    webNotificationController?.notifications[notification.id] = notification;
+  void _onShowNotification(WebNotification notification) async {
+    _webNotificationController?.notifications[notification.id] = notification;
     Uri? iconUrl = notification.icon.trim().isNotEmpty
         ? Uri.tryParse(notification.icon)
         : null;
-    if (!iconUrl!.hasScheme) {
-      iconUrl = Uri.tryParse(
-          (await _controller?.getUrl()).toString() + iconUrl.toString());
+    if (iconUrl != null && !iconUrl.hasScheme) {
+      iconUrl =
+          Uri.tryParse('${await controller?.getUrl()}${iconUrl.toString()}');
     }
-
     await NotificationApi.showNotification(
       id: notification.id,
       title: notification.title,
       body: notification.body,
       imageUrl: iconUrl?.toString(),
-      onclick: (payload) async {
-        await notification.dispatchClick();
-      },
-      onclose: () async {
-        await notification.close();
-      },
+      onclick: (_) async => notification.dispatchClick(),
+      onclose: () async => notification.close(),
     );
-
     final vibrate = notification.vibrate;
-    final hasVibrator = await Vibration.hasVibrator();
-    if (hasVibrator && vibrate.isNotEmpty) {
-      if (vibrate.length % 2 != 0) {
-        vibrate.add(0);
-      }
-      final intensities = <int>[];
-      for (int i = 0; i < vibrate.length; i++) {
-        if (i % 2 == 0 && vibrate[i] > 0) {
-          intensities.add(255);
-        } else {
-          intensities.add(0);
-        }
-      }
+    if ((await Vibration.hasVibrator()) && vibrate.isNotEmpty) {
+      if (vibrate.length.isOdd) vibrate.add(0);
+      final intensities = [
+        for (int i = 0; i < vibrate.length; i++)
+          (i.isEven && vibrate[i] > 0) ? 255 : 0
+      ];
       await Vibration.vibrate(pattern: vibrate, intensities: intensities);
     }
   }
 
-  resetNotificationPermission() async {
-    await WebNotificationPermissionDb.clear();
-    await webNotificationController?.resetPermission();
-  }
-
-  void onCloseNotification(int id) async {
-    final notification = webNotificationController?.notifications[id];
+  void _onCloseNotification(int id) async {
+    final n = _webNotificationController?.notifications[id];
     await NotificationApi.closeNotification(id: id);
-    if (notification != null) {
-      await NotificationApi.closeNotification(id: id);
-      webNotificationController?.notifications.remove(id);
+    if (n != null) {
+      _webNotificationController?.notifications.remove(id);
     }
   }
 
+  // ── User agent / ad-blocking ──────────────────────────────────────────────
+
+  Future<void> _changeUserAgent() async {
+    final def = await InAppWebViewController.getDefaultUserAgent();
+    String? ua;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        ua = def.replaceFirst('; wv)', ')');
+        break;
+      case TargetPlatform.iOS:
+        ua = '$def Safari/604.1';
+        break;
+      default:
+        ua = null;
+    }
+    await controller?.setSettings(
+        settings: InAppWebViewSettings(userAgent: ua));
+  }
+
+  Future<void> _blockAds(bool block) async {
+    if (!block) return;
+    const filters = [
+      '.*.doubleclick.net/.*',
+      '.*.ads.pubmatic.com/.*',
+      '.*.googlesyndication.com/.*',
+      '.*.google-analytics.com/.*',
+      '.*.adservice.google.*/.*',
+      '.*.adbrite.com/.*',
+      '.*.exponential.com/.*',
+      '.*.quantserve.com/.*',
+      '.*.scorecardresearch.com/.*',
+      '.*.zedo.com/.*',
+      '.*.adsafeprotected.com/.*',
+      '.*.teads.tv/.*',
+      '.*.outbrain.com/.*',
+    ];
+    for (final f in filters) {
+      _contentBlockers.add(ContentBlocker(
+        trigger: ContentBlockerTrigger(urlFilter: f),
+        action: ContentBlockerAction(type: ContentBlockerActionType.BLOCK),
+      ));
+    }
+    _contentBlockers.add(ContentBlocker(
+      trigger: ContentBlockerTrigger(urlFilter: '.*'),
+      action: ContentBlockerAction(
+        type: ContentBlockerActionType.CSS_DISPLAY_NONE,
+        selector: '.banner, .banners, .ads, .ad, .advert',
+      ),
+    ));
+    await controller?.setSettings(
+        settings: InAppWebViewSettings(contentBlockers: _contentBlockers));
+  }
+
+  // ── Navigation helpers ────────────────────────────────────────────────────
+
   Future<void> updateScreenshot() async {
-    final scshot = await _controller!
+    screenshot = await controller!
         .takeScreenshot(
           screenshotConfiguration: ScreenshotConfiguration(
             compressFormat: CompressFormat.JPEG,
             quality: 20,
           ),
         )
-        .timeout(
-          const Duration(milliseconds: 1500),
-          onTimeout: () => null,
-        );
-    _screenshot = scshot;
+        .timeout(const Duration(milliseconds: 1500), onTimeout: () => null);
   }
 
   Future<void> pause() async {
-    if (!kIsWeb) {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await _controller?.setAllMediaPlaybackSuspended(suspended: true);
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        await _controller?.pause();
-      }
+    if (kIsWeb) return;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await controller?.setAllMediaPlaybackSuspended(suspended: true);
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      await controller?.pause();
     }
   }
 
   Future<void> resume() async {
-    if (!kIsWeb) {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await _controller?.setAllMediaPlaybackSuspended(suspended: false);
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        await _controller?.resume();
-      }
+    if (kIsWeb) return;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await controller?.setAllMediaPlaybackSuspended(suspended: false);
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      await controller?.resume();
     }
   }
 
-  Future<bool> canGoBack() async {
-    return await _controller?.canGoBack() ?? false;
-  }
-
+  Future<bool> canGoBack() async => await controller?.canGoBack() ?? false;
   Future<void> goBack() async {
-    if (await canGoBack()) {
-      await _controller?.goBack();
-    }
+    if (await canGoBack()) await controller?.goBack();
   }
 
-  Future<bool> canGoForward() async {
-    return await _controller?.canGoForward() ?? false;
-  }
-
+  Future<bool> canGoForward() async =>
+      await controller?.canGoForward() ?? false;
   Future<void> goForward() async {
-    if (await canGoForward()) {
-      await _controller?.goForward();
-    }
+    if (await canGoForward()) await controller?.goForward();
   }
 
-  switchWeb3_(int chainId, String rpc) async {
-    initJs = await setupWebViewWalletBridge(chainId, rpc);
+  Future<void> switchWeb3_(int chainId, String rpc) async {
+    _initJs = await setupWebViewWalletBridge(chainId, rpc) as String;
     await reloadWeb3_();
   }
 
-  reloadWeb3_() async {
-    await _controller!.removeAllUserScripts();
-    await _controller!.addUserScripts(userScripts: [
+  Future<void> reloadWeb3_() async {
+    await controller!.removeAllUserScripts();
+    await controller!.addUserScripts(userScripts: [
       UserScript(
-        source: widget.provider + initJs,
+        source: widget.provider + _initJs,
         injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
       ),
-      ...webNotification
+      ..._webNotification,
     ]);
-    await _controller!.reload();
+    await controller!.reload();
   }
 
-  void _tryDownloadFile(String url, [String? filename]) {
+  void _tryDownloadFile(String fileUrl, [String? filename]) {
     final snack = ScaffoldMessenger.of(context);
     snack.clearSnackBars();
-    SnackBar snackBar = SnackBar(
-      content: Text(
-        'Allow download $url?',
-      ),
+    snack.showSnackBar(SnackBar(
+      content: Text('Allow download $fileUrl?'),
       action: SnackBarAction(
         label: 'Ok',
-        onPressed: () async {
-          await downloadFile(
-            url,
-            filename,
-          );
-        },
+        onPressed: () => downloadFile(fileUrl, filename),
       ),
-    );
-    snack.showSnackBar(snackBar);
+    ));
   }
 }

@@ -2,11 +2,11 @@
 
 import 'dart:convert';
 
-import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:flutter/material.dart';
-
 import '../main.dart';
 
 enum WalletType {
@@ -36,21 +36,61 @@ abstract class Coin {
   Future<String> addressExplorer();
   Map toJson();
   Future<double> getBalance(bool useCache);
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
   });
 
+  Coin? findToken(String symbolOrAddress) {
+    if (symbolOrAddress.isEmpty) return null;
+    final key = symbolOrAddress.toLowerCase();
+
+    return networkTokens.firstWhereOrNull((t) {
+      final sym = t.getSymbol().toLowerCase();
+      final contract = t.tokenAddress()?.toLowerCase();
+
+      // Exact symbol match — e.g. "usdc"
+      if (sym == key) return true;
+
+      // Exact contract address match — e.g. "0x036cbd..."
+      if (contract != null && contract == key) return true;
+
+      // Contract tail match — e.g. key "usdcx" matches ".usdcx"
+      if (contract != null && contract.split('.').last == key) return true;
+
+      // Key is a full contract identifier — match by tail
+      // e.g. "ST1PQHQ....usdcx" → tail "usdcx" vs sym "usdcx"
+      final keyTail = key.split('.').last;
+      if (sym == keyTail) return true;
+      if (contract != null && contract.split('.').last == keyTail) return true;
+
+      return false;
+    });
+  }
+
   String getRampID();
   String getPayScheme();
 
+  /// Sign an x402 payment for [option].
+  ///
+  /// [version] mirrors the `x402Version` field from the server's 402 response
+  /// so each coin implementation can choose the correct typed-data schema:
+  ///   0 – legacy draft  (same EIP-3009, legacy JSON key names)
+  ///   1 – current spec  (default)
+  ///   2 – extended spec (adds native-ETH path, Optimism/Arbitrum networks)
+  Future<String?> signX402Payment(
+    X402PaymentOption option, {
+    int version = 1,
+  }) async =>
+      null;
+
+  /// Returns true if this coin supports x402 payments.
+  bool get supportsX402 => false;
   bool get supportKeystore => false;
   bool get supportPrivateKey => false;
   bool get isRpcWorking => true;
   Future<bool> needDeploy() async => false;
-
-  Future listenForBalanceChange() async {}
   Future deployAccount() async {}
   Future<Map> getTransactions() async {
     final address = await getAddress();
@@ -80,33 +120,33 @@ abstract class Coin {
     return getExplorer().replaceFirst(blockExplorerPlaceholder, txHash);
   }
 
-  Future<String?> unstakeToken(String amount) async {
-    return null;
-  }
+  Future<String?> unstakeToken(String amount) async => null;
 
-  Future<String?> claimRewards(String amount) async {
-    return null;
-  }
+  Future<String?> claimRewards(String amount) async => null;
 
-  Future<double?> getTotalStaked() async {
-    return null;
-  }
+  Future<double?> getTotalStaked() async => null;
+
+  /// Returns null for this coin.
+  /// Override in each coin implementation to point to the correct DEX.
+  String? getSwapDappUrl() => null;
+
+  /// Returns null for this coin.
+  /// Override in each coin implementation to point to the correct staking dApp.
+  String? getStakeDappUrl() => null;
 
   Future<String?> getQuote(
     String tokenIn,
     String tokenOut,
     String amount,
-  ) async {
-    return null;
-  }
+  ) async =>
+      null;
 
   Future<String?> swapTokens(
     String tokenIn,
     String tokenOut,
     String amount,
-  ) async {
-    return null;
-  }
+  ) async =>
+      null;
 
   Widget? getGoalPage() => null;
 
@@ -118,11 +158,11 @@ abstract class Coin {
   String getSymbol();
   String getExplorer();
   String getDefault();
+  List<Coin> get networkTokens => [];
 
   Future<String> getAddress() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
-
     return details.address;
   }
 
@@ -183,12 +223,14 @@ class AccountData {
   final String? privateKey;
   final String? publicKey;
   final String? hex_address;
+  final String? tweakedPublicKey; // P2TR only — BIP341 tweaked x-only key
 
   AccountData({
     required this.address,
     this.privateKey,
     this.publicKey,
     this.hex_address,
+    this.tweakedPublicKey,
   });
 
   Map<String, dynamic> toJson() {
@@ -197,6 +239,7 @@ class AccountData {
       'privateKey': privateKey,
       'publicKey': publicKey,
       'hex_address': hex_address,
+      if (tweakedPublicKey != null) 'tweakedPublicKey': tweakedPublicKey,
     };
   }
 
@@ -206,6 +249,19 @@ class AccountData {
       privateKey: json['privateKey'],
       publicKey: json['publicKey'],
       hex_address: json['hex_address'],
+      tweakedPublicKey: json['tweakedPublicKey'] as String?,
     );
   }
+}
+
+class DeployMeme {
+  final String? liquidityTx;
+  final String? tokenAddress;
+  final String? deployTokenTx;
+
+  const DeployMeme({
+    required this.liquidityTx,
+    required this.tokenAddress,
+    required this.deployTokenTx,
+  });
 }

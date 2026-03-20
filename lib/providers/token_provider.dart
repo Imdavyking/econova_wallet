@@ -1,10 +1,8 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../interface/coin.dart';
-import '../main.dart';
 import '../utils/app_config.dart';
 import '../utils/format_money.dart';
 import '../utils/rpc_urls.dart';
@@ -31,36 +29,22 @@ class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
     try {
       if (coin.getGeckoId().isEmpty) return;
 
-      final currencyWithSymbol = jsonDecode(currencyJson) as Map;
-      final String defaultCurrency = pref.get('defaultCurrency') ?? "USD";
+      final cryptoPrice = await getCryptoPrice(useCache: useCache);
+      if (useCache) useCache = false;
 
-      final String symbol = (currencyWithSymbol[defaultCurrency]['symbol']);
-
-      Map allCryptoPrice = jsonDecode(
-        await getCryptoPrice(
-          useCache: useCache,
-        ),
-      ) as Map;
-
-      final Map cryptoMarket = allCryptoPrice[coin.getGeckoId()];
-
-      final deCurrLow = defaultCurrency.toLowerCase();
-
-      final currPrice = cryptoMarket[deCurrLow] as num;
-
-      num? change = cryptoMarket['${deCurrLow}_24h_change'];
-      final currChange = change ?? 0;
+      final currPrice = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0.0;
+      final currChange = cryptoPrice.getChange(coin.getGeckoId()) ?? 0.0;
 
       Color color = Colors.grey;
-
       if (currChange > 0) {
         color = green;
       } else if (currChange < 0) {
         color = red;
       }
+
       state = BlockchainInfo(
-        pricewithSym: symbol + formatMoney(currPrice, true),
-        change: currChange.toDouble(),
+        pricewithSym: cryptoPrice.symbol + formatMoney(currPrice, true),
+        change: currChange,
         changeSign: currChange > 0 ? '+' : '',
         color: color,
       );

@@ -5,27 +5,18 @@ import '../utils/app_config.dart';
 
 class RoninCoin extends EthereumCoin {
   RoninCoin({
-    required String blockExplorer,
-    required int chainId,
-    required String symbol,
-    required String default_,
-    required String image,
-    required int coinType,
-    required String rpc,
-    required String name,
-    required String geckoID,
+    required super.blockExplorer,
+    required super.chainId,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.coinType,
+    required super.rpc,
+    required super.name,
+    required super.geckoID,
   }) : super(
           rampID: 'RONIN_RON',
           payScheme: 'ronin',
-          blockExplorer: blockExplorer,
-          chainId: chainId,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          coinType: coinType,
-          rpc: rpc,
-          name: name,
-          geckoID: geckoID,
         );
 
   factory RoninCoin.fromJson(Map<String, dynamic> json) {

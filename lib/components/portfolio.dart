@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -39,27 +38,17 @@ class _PortfolioState extends State<Portfolio> {
 
   Future getUserBalance() async {
     try {
-      final allCryptoPrice = jsonDecode(
-        await getCryptoPrice(
-          useCache: true,
-        ),
-      ) as Map<String, dynamic>;
-
-      final currencyWithSymbol = jsonDecode(currencyJson);
-
-      final defaultCurrency = pref.get('defaultCurrency') ?? "USD";
-
-      final symbol = currencyWithSymbol[defaultCurrency]['symbol'];
+      final cryptoPrice = await getCryptoPrice(useCache: true);
 
       double balance = await totalCryptoBalance(
-        defaultCurrency: defaultCurrency,
-        allCryptoPrice: allCryptoPrice,
+        cryptoPrice: cryptoPrice,
       );
+
       if (mounted) {
         setState(() {
           userBalance = {
             'balance': balance,
-            'symbol': symbol,
+            'symbol': cryptoPrice.symbol,
           };
         });
       }

@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/coins/fungible_tokens/near_fungible_coin.dart';
+
 import '../extensions/big_int_ext.dart';
 import '../model/near_trx_obj.dart' as near_trx_obj;
 import '../service/wallet_service.dart';
@@ -27,14 +29,14 @@ class NearDappTxResponse {
   const NearDappTxResponse({required this.signature});
 }
 
-class _NearTokenMetaData {
+class NearTokenMetaData {
   String name;
   String symbol;
   int decimals;
   String spec;
   String icon;
 
-  _NearTokenMetaData({
+  NearTokenMetaData({
     required this.name,
     required this.symbol,
     required this.decimals,
@@ -103,34 +105,27 @@ class NearCoin extends Coin {
   }
 
   @override
-  Future<String> resolveAddress(String address) async {
-    return address;
-  }
+  Future<String> resolveAddress(String address) async => address;
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
+  @override
+  String getSymbol() => symbol;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String? getSwapDappUrl() => 'https://app.ref.finance';
+
+  @override
+  String? getStakeDappUrl() => 'https://app.ref.finance/staking';
 
   @override
   bool get supportPrivateKey => true;
@@ -187,7 +182,7 @@ class NearCoin extends Coin {
     return ed.sign(account.keyPair.privateKey, message);
   }
 
-  Future<_NearTokenMetaData?> getMetaData(String contractID) async {
+  Future<NearTokenMetaData?> getMetaData(String contractID) async {
     final account = await getAccount();
 
     String method = 'ft_metadata';
@@ -202,7 +197,7 @@ class NearCoin extends Coin {
 
     final decoded = json.decode(ascii.decode(blRst));
 
-    return _NearTokenMetaData(
+    return NearTokenMetaData(
       name: decoded['name'],
       symbol: decoded['symbol'],
       decimals: decoded['decimals'],
@@ -240,6 +235,9 @@ class NearCoin extends Coin {
 
     return balance / base.pow(decimals());
   }
+
+  @override
+  List<Coin> get networkTokens => getNearFungibles();
 
   @override
   Future<double> getBalance(bool useCache) async {
@@ -427,7 +425,7 @@ class NearCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -442,7 +440,12 @@ class NearCoin extends Coin {
 
     String transactionHash = trans['result']['transaction']['hash'];
 
-    return transactionHash.replaceAll('\n', '');
+    final txHash = transactionHash.replaceAll('\n', '');
+
+    return (
+      txHash: txHash,
+      txRaw: null,
+    );
   }
 
   @override

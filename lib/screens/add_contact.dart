@@ -1,4 +1,4 @@
-import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

@@ -4,10 +4,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
+import 'package:wallet_app/coins/utxo_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
+import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
+import 'package:wallet_app/coins/btc_coin.dart';
+import 'package:wallet_app/coins/stack_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
@@ -57,7 +63,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 List<Coin> supportedChains = [];
 late String currencyJson;
 late String currencyJsonSearch;
-late String provider;
+late String trustWalletProvider;
+late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
 List<EthereumCoin> evmChains = [
@@ -88,10 +95,15 @@ List<ERCFungibleCoin> erc20Coins = [
 List<StarknetCoin> starkNetCoins = [
   ...getStarknetBlockchains(),
 ];
+List<StacksCoin> stackCoins = [
+  ...getStacksBlockchains(),
+];
 
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
+    ...getUtxoCoins(),
+    ...getPolkadotFungibleCoins(),
     ...getTonFungibleCoins(),
     ...tonChains,
     ...evmChains,
@@ -99,6 +111,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...tronChains,
     ...solanaChains,
     ...multiversXchains,
+    ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
     ...getFUSEBlockchains(),
     ...getZilliqaBlockChains(),
@@ -118,6 +131,12 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
+
+  blockchains.insertAll(0, [
+    ...stackCoins,
+    ...getSIP010Coins(),
+    ...getNativeBtcCoins(),
+  ]);
 
   return blockchains;
 }
@@ -179,7 +198,8 @@ void main() async {
   );
   walletImportType = WalletService.getType();
 
-  provider = await rootBundle.loadString('js/trust.min.js');
+  trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
+  leatherWalletProvider = await rootBundle.loadString('js/leather.stx.min.js');
   nightly = await rootBundle.loadString('js/nightly.min.js');
   webNotifer = await rootBundle.loadString('js/web_notification.js');
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
@@ -187,7 +207,7 @@ void main() async {
   await WebNotificationPermissionDb.loadSavedPermissions();
   if (WalletService.isPharseKey()) {
     await reInstianteSeedRoot();
-    print('Reinstantiated seed root');
+    debugPrint('Reinstantiated seed root');
   }
   supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {

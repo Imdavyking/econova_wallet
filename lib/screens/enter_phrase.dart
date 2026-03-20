@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/import_shamir_secret.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';

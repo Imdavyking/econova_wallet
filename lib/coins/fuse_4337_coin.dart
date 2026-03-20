@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/save_goal/create_goal.dart';
 import 'package:wallet_app/screens/stake_token.dart';
 import 'package:wallet_app/utils/abis.dart';
@@ -60,7 +61,8 @@ class FuseCoin extends Coin {
   bool get supportKeystore => true;
   @override
   bool get supportPrivateKey => true;
-
+  @override
+  List<Coin> get networkTokens => getFUSEFTBlockchains();
   @override
   String getExplorer() {
     return blockExplorer;
@@ -463,7 +465,8 @@ class FuseCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final fuseSdk = await getSdk();
     final wei = amount.toBigIntDec(decimals());
@@ -477,7 +480,13 @@ class FuseCoin extends Coin {
       wei,
     );
     final ev = await res.wait();
-    return ev?.transactionHash;
+
+    if (ev == null) return null;
+
+    return (
+      txHash: ev.transactionHash as String,
+      txRaw: null,
+    );
   }
 
   @override

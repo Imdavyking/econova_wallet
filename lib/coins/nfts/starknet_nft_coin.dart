@@ -3,7 +3,6 @@ import 'package:starknet/starknet.dart';
 import 'package:starknet_provider/starknet_provider.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/service/wallet_service.dart';
-import '../../extensions//uint256_starknet.dart';
 import '../../main.dart';
 
 class StarknetTTypes {
@@ -96,7 +95,8 @@ class StarknetNFTCoin extends StarknetCoin {
   String get badgeImage => starkNetCoins.first.image;
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(walletData);
@@ -137,7 +137,10 @@ class StarknetNFTCoin extends StarknetCoin {
     ]);
     return tx.when(
       result: (result) {
-        return result.transaction_hash;
+        return (
+          txHash: result.transaction_hash,
+          txRaw: null,
+        );
       },
       error: (error) {
         throw Exception(
@@ -193,7 +196,7 @@ class StarknetNFTCoin extends StarknetCoin {
     );
     final base = BigInt.from(10);
 
-    return maxFee.maxFee.toBigInt() / base.pow(decimals());
+    return maxFee.overallFee.toBigInt() / base.pow(decimals());
   }
 
   @override

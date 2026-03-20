@@ -125,6 +125,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
           IconButton(
             onPressed: () async {
               final addressUrl = await coin.addressExplorer();
+              print(addressUrl);
               if (!context.mounted) return;
               await launchPageUrl(context: context, url: addressUrl);
 

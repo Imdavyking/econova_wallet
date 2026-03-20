@@ -338,8 +338,8 @@ class JsSwitchEthereumChain {
 class JsAddEthereumChain {
   String chainId;
   String chainName;
-  List rpcUrls;
-  List blockExplorerUrls;
+  List<String> rpcUrls;
+  List<String> blockExplorerUrls;
   String? symbol;
   String? name;
 

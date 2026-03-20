@@ -6,22 +6,18 @@ const walletAbbr = 'ECA';
 const walletName = 'Econova';
 const walletURL = "https://econova.vercel.app";
 const walletIconURL = "$walletURL/img/logo.png";
-const walletDexProviderUrl =
-    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
+const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
+
 const String fallbackMessage =
     "Unspecified error message. This is a bug, please report it.";
-const stakeDexProviderUrl =
-    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
-const fiatDexProviderUrl = 'https://paxful.com/';
-// const browserUrl =
-//     'https://sepolia.voyager.online/contract/0x07134aad6969880f11b2d50e57c6e8d38ceef3a6b02bd9ea44837bd257023f6b#readContract';
-const browserUrl = 'http://10.0.2.2:5173';
-const oneInchApi = "https://api.1inch.dev";
-const oneInceApiKey = 'cc7YbgSI5NA9t5KGLa00uNdklhGFxJhi';
+const walletDexProviderUrl =
+    'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
+const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
+const browserUrl = 'http://localhost:5173/demo';
 
 // dapp links
-const blogUrl = "https://www.starknet.io/blog/";
-const marketPlaceUrl = 'https://unframed.co/';
+const blogUrl = "https://www.stacks.co/blog";
+const marketPlaceUrl = 'https://gamma.io/';
 
 // social media links
 const telegramLink = '';
@@ -30,6 +26,7 @@ const mediumLink = '';
 const discordLink = '';
 const instagramLink =
     'https://www.instagram.com/econova?igsh=ZTJidG9kNTQwemp1&utm_source=qr';
+const stacksMarketUrl = 'http://localhost:3000/api/market';
 
 // color
 const settingIconColor = Colors.white;
@@ -134,11 +131,12 @@ const coinMarketCapApiKey = "c354e715-9e18-4fee-806d-ae32d38d5d5c";
 const newEVMChainKey = '5500a-8077-420a-a1cf-9aa7';
 const blastApiProjectId = '2f6ccf07-7b89-4bf4-be14-7a26f2eae72d';
 const appUnlockTime = 'applockksksietimeal382';
+const utxoApiKey = '07ddba0bd184344993fbc2a4a3d7059213e13469';
 // template tags
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
 // enable
-bool enableTestNet = false;
+bool enableTestNet = true;
 const orange1 = Color.fromARGB(255, 233, 183, 9);
 
 // app theme
@@ -234,8 +232,3 @@ const faLength = 6;
 const maximumTransactionToSave = 30;
 const maximumBrowserHistoryToSave = 20;
 const swapSlippage = 10;
-
-const oneInchHeaders = {
-  'accept': 'application/json',
-  'Authorization': 'Bearer $oneInceApiKey',
-};

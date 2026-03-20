@@ -229,7 +229,7 @@ class _TransferTokenState extends State<TransferToken> {
                                   });
                                 }
                                 try {
-                                  String? transactionHash =
+                                  final result =
                                       await widget.coin.transferToken(
                                     widget.amount,
                                     widget.recipient,
@@ -242,7 +242,7 @@ class _TransferTokenState extends State<TransferToken> {
 
                                   String trnxKey = widget.coin.savedTransKey();
 
-                                  if (transactionHash == null) {
+                                  if (result == null) {
                                     throw Exception('Sending failed');
                                   }
                                   if (!context.mounted) return;
@@ -281,7 +281,7 @@ class _TransferTokenState extends State<TransferToken> {
                                         ) *
                                         pow(10, coinDecimals),
                                     'decimal': coinDecimals,
-                                    'transactionHash': transactionHash
+                                    'transactionHash': result.txHash
                                   };
 
                                   List userTransactions = [];

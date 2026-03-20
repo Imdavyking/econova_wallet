@@ -1,6 +1,7 @@
 import 'package:bs58check/bs58check.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';

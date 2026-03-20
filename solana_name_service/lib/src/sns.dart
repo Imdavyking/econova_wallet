@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
@@ -32,7 +31,7 @@ Future<String?> fetchSolanaNameServiceName(String publicKey,
       return domainName;
     }
   } catch (e) {
-    print(e);
+    debugPrint(e.toString());
   }
   return null;
 }
@@ -74,7 +73,7 @@ Future<String?> findFavoriteDomainName(Ed25519HDPublicKey owner,
     return await performReverseLookup(favoriteDomain.nameAccount,
         environment: environment);
   } catch (e) {
-    print(e);
+    debugPrint(e.toString());
   }
   return null;
 }

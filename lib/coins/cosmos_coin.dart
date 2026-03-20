@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:aptos/aptos.dart';
-
+import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
@@ -248,6 +248,9 @@ class CosmosCoin extends Coin {
 
     return BigInt.parse(balance) / base.pow(decimals());
   }
+
+  @override
+  List<Coin> get networkTokens => getCosmosFungibleCoins();
 
   @override
   Future<double> getBalance(bool useCache) async {
@@ -526,7 +529,8 @@ class CosmosCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final networkInfo = getNetworkInfo();
     final uatomToSend = amount.toBigIntDec(decimals());
@@ -561,12 +565,16 @@ class CosmosCoin extends Coin {
       isEthSecp256: cosmos.Wallet.isEthSecp256(path),
       pubKeyTypeUrl: pubKeyTypeUrl,
     );
+    final txBytes = tx.writeToBuffer(); // protobuf bytes
 
     final txSender = cosmos.TxSender.fromNetworkInfo(networkInfo);
     final response = await txSender.broadcastTx(tx);
 
     if (response.isSuccessful) {
-      return response.txhash;
+      return (
+        txHash: response.txhash,
+        txRaw: HEX.encode(txBytes),
+      );
     }
     if (kDebugMode) {
       print(response.toString());
@@ -590,7 +598,7 @@ class CosmosCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
-    return 0.001;
+    return 0.01;
   }
 
   cosmos.NetworkInfo getNetworkInfo() {
@@ -692,7 +700,7 @@ List<CosmosCoin> getCosmosBlockChains() {
         coinDecimals: 6,
         chainId: "osmo-test-5",
         denom: 'uosmo',
-        grpcPort: 9090,
+        grpcPort: 443,
         geckoID: 'osmosis',
         pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
         payScheme: 'osmosis',
@@ -895,5 +903,6 @@ Map calculateCosmosKey(CosmosDeriveArgs config) {
 }
 
 
-// pubKey does not match signer address inj12zd4wvdln9ksnq3czu6kn0fj3zu4ar2lh4aymv with signer index: 0: invalid pubkey
-// solution: use correct typeurl /injective.crypto.v1beta1.ethsecp256k1.PubKey 
+
+// peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
+// usdt injective

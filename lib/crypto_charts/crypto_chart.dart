@@ -38,10 +38,6 @@ String getMarketData({
   return "$coinGeckoBaseurl/coins/$coinGeckoId/market_chart?vs_currency=$defaultCurrency&days=$days";
 }
 
-String getMarketInfo(String coinGeckoId) {
-  return "$coinGeckoBaseurl/coins/$coinGeckoId";
-}
-
 class _CryptoChartState extends State<CryptoChart> {
   late List<charts.Series<List, num>> series;
   List<List<dynamic>> chartData = [];
@@ -56,61 +52,60 @@ class _CryptoChartState extends State<CryptoChart> {
   }
 
   ValueNotifier<String> priceNotifier = ValueNotifier<String>('');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text('${coin.getName()} (${coin.getSymbol()})'),
-        ),
-        body: SizedBox(
-          height: double.infinity,
-          child: RefreshIndicator(
-            onRefresh: () async {
-              await Future.delayed(const Duration(seconds: 2));
-              setState(() {});
-            },
-            child: SafeArea(
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(25),
-                  child: Column(
-                    children: [
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 10.0),
-                              child: ValueListenableBuilder<String>(
-                                valueListenable: priceNotifier,
-                                builder: ((context, value, child) {
-                                  return ChartPrice(
-                                    chartPriceData: ChartPriceParam(
-                                      price: value,
-                                    ),
-                                  );
-                                }),
-                              ),
+      appBar: AppBar(
+        title: Text('${coin.getName()} (${coin.getSymbol()})'),
+      ),
+      body: SizedBox(
+        height: double.infinity,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Clear cache so fresh data is fetched on refresh
+            savedData.clear();
+            await Future.delayed(const Duration(seconds: 2));
+            setState(() {});
+          },
+          child: SafeArea(
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(25),
+                child: Column(
+                  children: [
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10.0),
+                            child: ValueListenableBuilder<String>(
+                              valueListenable: priceNotifier,
+                              builder: ((context, value, child) {
+                                return ChartPrice(
+                                  chartPriceData: ChartPriceParam(
+                                    price: value,
+                                  ),
+                                );
+                              }),
                             ),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 250,
-                              child:
-                                  FutureBuilder<_ChartResult>(future: () async {
-                                String defaultCurrency =
+                          ),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 250,
+                            child: FutureBuilder<_ChartResult>(
+                              future: () async {
+                                final String defaultCurrency =
                                     pref.get('defaultCurrency') ?? "usd";
 
-                                Map viewportY = {
-                                  'min': 0,
-                                  'max': 0,
-                                };
-                                Map viewportX = {
-                                  'min': 0,
-                                  'max': 0,
-                                };
+                                double viewportYMin = double.infinity;
+                                double viewportYMax = double.negativeInfinity;
+                                double viewportXMin = double.infinity;
+                                double viewportXMax = double.negativeInfinity;
 
                                 final currencyWithSymbol =
                                     jsonDecode(currencyJson);
@@ -139,37 +134,24 @@ class _CryptoChartState extends State<CryptoChart> {
                                   savedData[days] = request.body;
                                 }
 
-                                int currentIndex = 0;
-
                                 final jsonDecodedPrices =
-                                    jsonDecode(savedData[days])['prices'];
+                                    jsonDecode(savedData[days])['prices']
+                                        as List;
 
-                                priceNotifier.value = '$symbol${formatMoney([
-                                  jsonDecodedPrices[
-                                      (jsonDecodedPrices as List).length - 1]
-                                ][0][1])}';
+                                // Set initial price display to latest price
+                                priceNotifier.value =
+                                    '$symbol${formatMoney(jsonDecodedPrices.last[1])}';
 
-                                chartData =
-                                    (jsonDecodedPrices as Iterable).map((e) {
-                                  if (currentIndex == 0) {
-                                    viewportX['max'] = e[0];
-                                    viewportX['min'] = e[0];
-                                    viewportY['min'] = e[0];
-                                    viewportY['min'] = e[0];
-                                  }
-                                  if (viewportX['max'] < e[0]) {
-                                    viewportX['max'] = e[0];
-                                  }
-                                  if (viewportX['min'] > e[0]) {
-                                    viewportX['min'] = e[0];
-                                  }
-                                  if (viewportY['max'] < e[1]) {
-                                    viewportY['max'] = e[1];
-                                  }
-                                  if (viewportY['min'] > e[1]) {
-                                    viewportY['min'] = e[1];
-                                  }
-                                  currentIndex++;
+                                chartData = jsonDecodedPrices.map((e) {
+                                  final double x = (e[0] as num).toDouble();
+                                  final double y = (e[1] as num).toDouble();
+
+                                  // ── FIX: correctly track both X and Y viewports ──
+                                  if (x < viewportXMin) viewportXMin = x;
+                                  if (x > viewportXMax) viewportXMax = x;
+                                  if (y < viewportYMin) viewportYMin = y;
+                                  if (y > viewportYMax) viewportYMax = y;
+
                                   return List<dynamic>.from(e);
                                 }).toList();
 
@@ -186,12 +168,16 @@ class _CryptoChartState extends State<CryptoChart> {
                                             appPrimaryColor),
                                   )
                                 ];
+
                                 return _ChartResult(
-                                  viewportY: viewportY,
-                                  viewportX: viewportX,
+                                  viewportYMin: viewportYMin,
+                                  viewportYMax: viewportYMax,
+                                  viewportXMin: viewportXMin,
+                                  viewportXMax: viewportXMax,
                                   symbol: symbol,
                                 );
-                              }(), builder: (context, snapshot) {
+                              }(),
+                              builder: (context, snapshot) {
                                 if (snapshot.hasError) {
                                   if (kDebugMode) {
                                     print(snapshot.error);
@@ -209,42 +195,44 @@ class _CryptoChartState extends State<CryptoChart> {
                                     series,
                                     selectionModels: [
                                       charts.SelectionModelConfig(
-                                          type: charts.SelectionModelType.info,
-                                          changedListener:
-                                              (charts.SelectionModel model) {
-                                            if (model.hasDatumSelection) {
-                                              final millis = model
-                                                  .selectedDatum[0].datum[0];
+                                        type: charts.SelectionModelType.info,
+                                        changedListener:
+                                            (charts.SelectionModel model) {
+                                          if (model.hasDatumSelection) {
+                                            final millis =
+                                                model.selectedDatum[0].datum[0];
 
-                                              final dt = DateTime
-                                                  .fromMillisecondsSinceEpoch(
-                                                      millis);
+                                            final dt = DateTime
+                                                .fromMillisecondsSinceEpoch(
+                                                    millis);
 
-                                              final date = DateFormat('hh:mm a')
-                                                  .format(dt);
+                                            final date = DateFormat('hh:mm a')
+                                                .format(dt);
 
-                                              final price = model
-                                                  .selectedSeries[0]
-                                                  .measureFn(model
-                                                      .selectedDatum[0].index);
-                                              CustomCircleSymbolRenderer
-                                                      .backgroundColor =
-                                                  Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium!
-                                                      .color!;
-                                              CustomCircleSymbolRenderer
-                                                      .textColor =
-                                                  Theme.of(context)
-                                                      .scaffoldBackgroundColor;
+                                            final price = model
+                                                .selectedSeries[0]
+                                                .measureFn(model
+                                                    .selectedDatum[0].index);
 
-                                              priceNotifier.value =
-                                                  '${snapshot.data!.symbol}${formatMoney(price)}';
+                                            CustomCircleSymbolRenderer
+                                                    .backgroundColor =
+                                                Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium!
+                                                    .color!;
+                                            CustomCircleSymbolRenderer
+                                                    .textColor =
+                                                Theme.of(context)
+                                                    .scaffoldBackgroundColor;
 
-                                              CustomCircleSymbolRenderer.value =
-                                                  '$date\n${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-                                            }
-                                          })
+                                            priceNotifier.value =
+                                                '${snapshot.data!.symbol}${formatMoney(price)}';
+
+                                            CustomCircleSymbolRenderer.value =
+                                                '$date\n${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+                                          }
+                                        },
+                                      )
                                     ],
                                     behaviors: [
                                       charts.SelectNearest(
@@ -263,15 +251,15 @@ class _CryptoChartState extends State<CryptoChart> {
                                           zeroBound: false),
                                       renderSpec: const charts.NoneRenderSpec(),
                                       viewport: charts.NumericExtents(
-                                        snapshot.data!.viewportX['min'],
-                                        snapshot.data!.viewportX['max'],
+                                        snapshot.data!.viewportXMin,
+                                        snapshot.data!.viewportXMax,
                                       ),
                                     ),
                                     primaryMeasureAxis: charts.NumericAxisSpec(
                                       renderSpec: const charts.NoneRenderSpec(),
                                       viewport: charts.NumericExtents(
-                                        snapshot.data!.viewportY['min'],
-                                        snapshot.data!.viewportY['max'],
+                                        snapshot.data!.viewportYMin,
+                                        snapshot.data!.viewportYMax,
                                       ),
                                     ),
                                     animate: false,
@@ -284,139 +272,97 @@ class _CryptoChartState extends State<CryptoChart> {
                                     ],
                                   );
                                 }
-                              }),
+                              },
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                left: 20,
-                                right: 20,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        days = 1;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            width: 5,
-                                            color: days == 1
-                                                ? appPrimaryColor
-                                                : Colors.transparent,
-                                          ),
-                                        ),
-                                      ),
-                                      width: 50,
-                                      height: 30,
-                                      child: const Center(
-                                        child: Text(
-                                          '1D',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        days = 7;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            width: 5,
-                                            color: days == 7
-                                                ? appPrimaryColor
-                                                : Colors.transparent,
-                                          ),
-                                        ),
-                                      ),
-                                      width: 50,
-                                      height: 30,
-                                      child: const Center(
-                                        child: Text(
-                                          '1W',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        days = 30;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            width: 5,
-                                            color: days == 30
-                                                ? appPrimaryColor
-                                                : Colors.transparent,
-                                          ),
-                                        ),
-                                      ),
-                                      width: 50,
-                                      height: 30,
-                                      child: const Center(
-                                        child: Text(
-                                          '1M',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        days = 365;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            width: 5,
-                                            color: days == 365
-                                                ? appPrimaryColor
-                                                : Colors.transparent,
-                                          ),
-                                        ),
-                                      ),
-                                      width: 50,
-                                      height: 30,
-                                      child: const Center(
-                                        child: Text(
-                                          '1Y',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 20,
+                              right: 20,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _DayButton(
+                                  label: '1D',
+                                  value: 1,
+                                  selectedDays: days,
+                                  onTap: () => setState(() => days = 1),
+                                ),
+                                _DayButton(
+                                  label: '1W',
+                                  value: 7,
+                                  selectedDays: days,
+                                  onTap: () => setState(() => days = 7),
+                                ),
+                                _DayButton(
+                                  label: '1M',
+                                  value: 30,
+                                  selectedDays: days,
+                                  onTap: () => setState(() => days = 30),
+                                ),
+                                _DayButton(
+                                  label: '1Y',
+                                  value: 365,
+                                  selectedDays: days,
+                                  onTap: () => setState(() => days = 365),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 }
+
+// ── Extracted day button widget to remove repetition ──────────────────────────
+
+class _DayButton extends StatelessWidget {
+  final String label;
+  final int value;
+  final int selectedDays;
+  final VoidCallback onTap;
+
+  const _DayButton({
+    required this.label,
+    required this.value,
+    required this.selectedDays,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              width: 5,
+              color:
+                  selectedDays == value ? appPrimaryColor : Colors.transparent,
+            ),
+          ),
+        ),
+        width: 50,
+        height: 30,
+        child: Center(child: Text(label)),
+      ),
+    );
+  }
+}
+
+// ── Chart tooltip renderer ────────────────────────────────────────────────────
 
 class CustomCircleSymbolRenderer extends charts.CircleSymbolRenderer {
   static late String value;
@@ -466,14 +412,20 @@ class CustomCircleSymbolRenderer extends charts.CircleSymbolRenderer {
   }
 }
 
+// ── Chart result data class ───────────────────────────────────────────────────
+
 class _ChartResult {
-  final Map viewportY;
-  final Map viewportX;
+  final double viewportYMin;
+  final double viewportYMax;
+  final double viewportXMin;
+  final double viewportXMax;
   final String symbol;
 
   const _ChartResult({
-    required this.viewportX,
-    required this.viewportY,
+    required this.viewportYMin,
+    required this.viewportYMax,
+    required this.viewportXMin,
+    required this.viewportXMax,
     required this.symbol,
   });
 }

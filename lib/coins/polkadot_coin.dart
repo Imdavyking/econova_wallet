@@ -2,9 +2,9 @@
 
 import 'dart:convert';
 import 'package:web3dart/crypto.dart';
-
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
+import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:bip39/bip39.dart';
 import 'package:bs58check/bs58check.dart' hide getAddress;
 import '../utils/blake2bhash.dart';
@@ -44,34 +44,22 @@ class PolkadotCoin extends Coin {
   String payScheme;
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getSymbol() => symbol;
 
   @override
-  int decimals() {
-    return coinDecimals;
-  }
+  int decimals() => coinDecimals;
 
   @override
   bool get supportPrivateKey => true;
@@ -95,15 +83,13 @@ class PolkadotCoin extends Coin {
     );
 
     privateKeyMap[privateKey] = keys.toJson();
-
     await pref.put(saveKey, jsonEncode(privateKeyMap));
-
     return keys;
   }
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'polkadotDetails${walletImportType.name}$ss58Prefix';
+    final saveKey = 'polkadotDetailss${walletImportType.name}$ss58Prefix';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -119,32 +105,26 @@ class PolkadotCoin extends Coin {
       ss58Prefix: ss58Prefix,
     );
     final keys = await compute(calculatePolkadotKey, args);
-
     mnemonicMap[mnemonic] = keys;
-
     await pref.put(saveKey, jsonEncode(mnemonicMap));
-
     return AccountData.fromJson(keys);
   }
 
   @override
-  String savedTransKey() {
-    return '$default_$api Details';
-  }
+  String savedTransKey() => '$default_$api Details';
 
-  Future<int> _getNonce() async {
+  Future<int> getNonce() async {
     const nonce = 0;
     try {
       if (rpcMethods == null) {
-        final result = await _queryRpc('rpc_methods', []);
+        final result = await queryRpc('rpc_methods', []);
         rpcMethods = result!['result']['methods'];
       }
       String? getHead =
           rpcMethods!.firstWhere((element) => element == 'chain_getHead');
-
       getHead ??=
           rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
-      final blockHashRes = await _queryRpc(getHead!, []);
+      final blockHashRes = await queryRpc(getHead!, []);
       final String address = await getAddress();
       final decodedAddr = decodeDOTAddress(address);
       final storageName = blake2_128_concat(decodedAddr);
@@ -152,18 +132,15 @@ class PolkadotCoin extends Coin {
 
       String? getStorageAt =
           rpcMethods!.firstWhere((element) => element == 'state_getStorageAt');
-
       getStorageAt ??=
           rpcMethods!.firstWhere((element) => element == 'state_getStorage');
 
       final storageResult =
-          await _queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
+          await queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
       String storageData = storageResult!['result'];
       storageData = storageData.replaceFirst('0x', '');
-
-      final input = Input.fromHex(storageData.substring(0, 0 + 4));
-
-      return U16Codec.codec.decode(input);
+      final input = Input.fromHex(storageData.substring(0, 8));
+      return U32Codec.codec.decode(input);
     } catch (_) {
       return nonce;
     }
@@ -172,45 +149,36 @@ class PolkadotCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     if (rpcMethods == null) {
-      final result = await _queryRpc('rpc_methods', []);
+      final result = await queryRpc('rpc_methods', []);
       rpcMethods = result!['result']['methods'];
     }
     String? getHead =
         rpcMethods!.firstWhere((element) => element == 'chain_getHead');
-
     getHead ??=
         rpcMethods!.firstWhere((element) => element == 'chain_getBlockHash');
-    final blockHashRes = await _queryRpc(getHead!, []);
-    final String address = await getAddress();
-    final decodedAddr = decodeDOTAddress(address);
+    final blockHashRes = await queryRpc(getHead!, []);
+    final String addr = await getAddress();
+    final decodedAddr = decodeDOTAddress(addr);
     final storageName = blake2_128_concat(decodedAddr);
     final storageKey = '$systemAccount${HEX.encode(storageName)}';
 
     String? getStorageAt = rpcMethods!.firstWhere(
       (element) => element == 'state_getStorageAt',
     );
-
     getStorageAt ??= rpcMethods!.firstWhere(
       (element) => element == 'state_getStorage',
     );
 
-    final storageResult = await _queryRpc(
+    final storageResult = await queryRpc(
       getStorageAt!,
-      [
-        storageKey,
-        blockHashRes!['result'],
-      ],
+      [storageKey, blockHashRes!['result']],
     );
     String storageData = storageResult!['result'];
-
     storageData = storageData.replaceFirst('0x', '');
 
     final input = Input.fromHex(storageData.substring(32, 32 + 48));
-
     final BigInt balanceBigInt = U128Codec.codec.decode(input);
-
     final base = BigInt.from(10);
-
     return balanceBigInt / base.pow(decimals());
   }
 
@@ -220,13 +188,8 @@ class PolkadotCoin extends Coin {
     final key = 'polkadotAddressBalance$address$api$ss58Prefix';
 
     final storedBalance = pref.get(key);
-
     double savedBalance = 0;
-
-    if (storedBalance != null) {
-      savedBalance = storedBalance;
-    }
-
+    if (storedBalance != null) savedBalance = storedBalance;
     if (useCache) return savedBalance;
 
     try {
@@ -239,9 +202,10 @@ class PolkadotCoin extends Coin {
   }
 
   @override
-  Future<double> getTransactionFee(String amount, String to) async {
-    return 0;
-  }
+  List<Coin> get networkTokens => getPolkadotFungibleCoins();
+
+  @override
+  Future<double> getTransactionFee(String amount, String to) async => 0;
 
   PolkadotCoin({
     required this.blockExplorer,
@@ -277,34 +241,35 @@ class PolkadotCoin extends Coin {
 
   @override
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-
-    data['default'] = default_;
-    data['symbol'] = symbol;
-    data['name'] = name;
-    data['blockExplorer'] = blockExplorer;
-    data['image'] = image;
-    data['api'] = api;
-    data['coinDecimals'] = coinDecimals;
-    data['ss58Prefix'] = ss58Prefix;
-    data['path'] = path;
-    data['geckoID'] = geckoID;
-    data['rampID'] = rampID;
-    data['payScheme'] = payScheme;
-
-    return data;
+    return {
+      'default': default_,
+      'symbol': symbol,
+      'name': name,
+      'blockExplorer': blockExplorer,
+      'image': image,
+      'api': api,
+      'coinDecimals': coinDecimals,
+      'ss58Prefix': ss58Prefix,
+      'path': path,
+      'geckoID': geckoID,
+      'rampID': rampID,
+      'payScheme': payScheme,
+    };
   }
 
-  Future<Map?> _queryRpc(String rpcMethod, List params) async {
+  Future<Map?> queryRpc(String rpcMethod, List params) async {
     try {
-      final body = json.encode(
-          {"jsonrpc": "2.0", "id": "1", "method": rpcMethod, "params": params});
+      final body = json.encode({
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": rpcMethod,
+        "params": params,
+      });
       final response = await post(
         Uri.parse(api),
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
-
       final responseBody = response.body;
       if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
         throw Exception(responseBody);
@@ -315,11 +280,11 @@ class PolkadotCoin extends Coin {
     }
   }
 
-  ChainInfo _decodeMetadata(DecodedMetadata metadata) {
+  ChainInfo decodeMetadataCompute(DecodedMetadata metadata) {
     return ChainInfo.fromMetadata(metadata);
   }
 
-  Uint8List _signEd25519(EDSignature signature) {
+  Uint8List signEd25519Compute(PolkadotEDSignature signature) {
     final signing = signature.signaturePayload.replaceFirst('0x', '');
     return signEd25519(
       message: HEX.decode(signing) as Uint8List,
@@ -327,21 +292,114 @@ class PolkadotCoin extends Coin {
     );
   }
 
+  /// Builds and submits a signed extrinsic. Shared by native + FT transfers.
+  Future<({String txHash, String? txRaw})?> buildAndSubmitExtrinsic({
+    required String encodedCall,
+    required ChainInfo chainInfo,
+    required int nonce,
+  }) async {
+    final data_service = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data_service);
+    final privatekey = HEX.decode(response.privateKey!) as Uint8List;
+    final registry = chainInfo.scaleCodec.registry;
+    final signables = registry.signedExtensions;
+    final checkMetaHash = signables.containsKey('CheckMetadataHash');
+    final hasAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
+
+    final signaturePayload = await buildSignaturePayload(
+      PolkadotSigParams(
+        call: encodedCall,
+        nonce: nonce,
+        registry: registry,
+      ),
+    );
+
+    final publicKey = HEX.decode(response.publicKey!);
+    final signature = await compute(
+      signEd25519Compute,
+      PolkadotEDSignature(
+        privatekey: privatekey,
+        signaturePayload: signaturePayload,
+      ),
+    );
+
+    String txSubmission = '84';
+    txSubmission += HEX.encode(publicKey);
+    txSubmission += '00'; // Ed25519 sig type
+    txSubmission += HEX.encode(signature);
+    txSubmission += '00'; // era (immortal)
+    txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
+    txSubmission += '00'; // tip
+    if (hasAssetTxPayment) txSubmission += '00'; // Option<AssetId> = None
+    if (checkMetaHash) {
+      txSubmission +=
+          HEX.encode(signables['CheckMetadataHash']!.encode('Disabled'));
+    }
+    txSubmission += encodedCall;
+
+    int txLength = HEX.decode(txSubmission).length;
+    txSubmission =
+        HEX.encode(CompactCodec.codec.encode(txLength)) + txSubmission;
+
+    final submitResult =
+        await queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
+
+    return (
+      txHash: submitResult!['result'] as String,
+      txRaw: null,
+    );
+  }
+
+  Future<String> buildSignaturePayload(PolkadotSigParams param) async {
+    final signables = param.registry.signedExtensions;
+    final checkMetaHash = signables.containsKey('CheckMetadataHash');
+    final hasAssetTxPayment = signables.containsKey('ChargeAssetTxPayment');
+
+    if (runTimeResult == null) {
+      final runTimeVersion = await queryRpc('chain_getRuntimeVersion', []);
+      runTimeResult = runTimeVersion!['result'];
+    }
+
+    if (genesisHash == null) {
+      final genesisHashRes = await queryRpc('chain_getBlockHash', [0]);
+      genesisHash = genesisHashRes!['result'];
+    }
+
+    String payload = '0x${param.call}';
+    payload += '00'; // era (immortal)
+    payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
+    payload += '00'; // tip
+    if (hasAssetTxPayment) payload += '00'; // Option<AssetId> = None
+    if (checkMetaHash) {
+      payload += HEX.encode(signables['CheckMetadataHash']!.encode('Disabled'));
+    }
+    payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
+    payload +=
+        HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
+    payload += genesisHash!.replaceFirst('0x', '');
+    payload += genesisHash!.replaceFirst('0x', '');
+    if (checkMetaHash) payload += '00';
+
+    final hexPayload = HEX.decode(strip0x(payload));
+    if (hexPayload.length > 256) {
+      return HEX.encode(blake2bHash256(hexPayload));
+    }
+    return payload;
+  }
+
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
   }) async {
     final planck = amount.toBigIntDec(decimals());
-
     final decodedAddr = decodeDOTAddress(to);
+    final nonce = await getNonce();
 
-    final nonce = await _getNonce();
-    final metaData = await _queryRpc('state_getMetadata', []);
-    DecodedMetadata data = MetadataDecoder.instance.decode(metaData!['result']);
-
-    final chainInfo = await compute(_decodeMetadata, data);
+    final metaData = await queryRpc('state_getMetadata', []);
+    final decoded = MetadataDecoder.instance.decode(metaData!['result']);
+    final chainInfo = await compute(decodeMetadataCompute, decoded);
 
     final transferArgument = MapEntry(
       'Balances',
@@ -355,106 +413,19 @@ class PolkadotCoin extends Coin {
     );
 
     final ByteOutput output = ByteOutput();
-
     chainInfo.scaleCodec.registry.codecs['Call']!
         .encodeTo(transferArgument, output);
+    final encodedCall = HEX.encode(output.toBytes());
 
-    final encodedData = HEX.encode(output.toBytes());
-
-    final data_service = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data_service);
-    final privatekey = HEX.decode(response.privateKey!);
-    final registry = chainInfo.scaleCodec.registry;
-    final signables = registry.signedExtensions;
-    final checkMetaHash = signables.containsKey('CheckMetadataHash');
-    final signaturePayload = await _signaturePayload(
-      _SigParams(
-        call: encodedData,
-        nonce: nonce,
-        registry: registry,
-      ),
+    return buildAndSubmitExtrinsic(
+      encodedCall: encodedCall,
+      chainInfo: chainInfo,
+      nonce: nonce,
     );
-
-    final publicKey = HEX.decode(response.publicKey!);
-    final signature = await compute(
-      _signEd25519,
-      EDSignature(
-        privatekey: privatekey as Uint8List,
-        signaturePayload: signaturePayload,
-      ),
-    );
-
-    String txSubmission = '84';
-    txSubmission += HEX.encode(publicKey);
-
-    txSubmission += '00';
-    txSubmission += HEX.encode(signature);
-
-    txSubmission += '00';
-    txSubmission += HEX.encode(CompactCodec.codec.encode(nonce));
-    if (checkMetaHash) {
-      txSubmission += HEX.encode(
-        signables['CheckMetadataHash']!.encode('Disabled'),
-      );
-    }
-    txSubmission += '00';
-    txSubmission += encodedData;
-
-    int txLength = HEX.decode(txSubmission).length;
-
-    txSubmission =
-        HEX.encode(CompactCodec.codec.encode(txLength)) + txSubmission;
-
-    final submitResult =
-        await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
-
-    return submitResult!['result'];
-  }
-
-  Future<String> _signaturePayload(_SigParams param) async {
-    final signables = param.registry.signedExtensions;
-    final checkMetaHash = signables.containsKey('CheckMetadataHash');
-    if (runTimeResult == null) {
-      final runTimeVersion = await _queryRpc('chain_getRuntimeVersion', []);
-      runTimeResult = runTimeVersion!['result'];
-    }
-
-    if (genesisHash == null) {
-      final genesisHashRes = await _queryRpc('chain_getBlockHash', [0]);
-      genesisHash = genesisHashRes!['result'];
-    }
-
-    String payload = '0x${param.call}';
-
-    payload += '00';
-    payload += HEX.encode(CompactCodec.codec.encode(param.nonce));
-
-    if (checkMetaHash) {
-      final mode = signables['CheckMetadataHash']!.encode('Disabled');
-      payload += HEX.encode(mode);
-    }
-
-    payload += '00';
-    payload += HEX.encode(U32Codec.codec.encode(runTimeResult!['specVersion']));
-    payload +=
-        HEX.encode(U32Codec.codec.encode(runTimeResult!['transactionVersion']));
-    payload += genesisHash!.replaceFirst('0x', '');
-    payload += genesisHash!.replaceFirst('0x', '');
-    if (checkMetaHash) payload += '00';
-
-    final hexPayload = HEX.decode(strip0x(payload));
-
-    if (hexPayload.length > 256) {
-      return HEX.encode(blake2bHash256(hexPayload));
-    }
-
-    return payload;
   }
 
   @override
-  validateAddress(String address) {
-    decodeDOTAddress(address);
-  }
+  validateAddress(String address) => decodeDOTAddress(address);
 
   @override
   Future<String> addressExplorer() async {
@@ -474,6 +445,30 @@ class PolkadotCoin extends Coin {
   String getRampID() => rampID;
 }
 
+// ── Shared data classes ───────────────────────────────────────────────────────
+
+class PolkadotEDSignature {
+  final String signaturePayload;
+  final Uint8List privatekey;
+  const PolkadotEDSignature({
+    required this.privatekey,
+    required this.signaturePayload,
+  });
+}
+
+class PolkadotSigParams {
+  final String call;
+  final int nonce;
+  final Registry registry;
+  const PolkadotSigParams({
+    required this.call,
+    required this.nonce,
+    required this.registry,
+  });
+}
+
+// ── Top-level helpers ─────────────────────────────────────────────────────────
+
 List _polkaChecksum(Uint8List decoded) {
   final ss58Length = (decoded[0] & 64) != 0 ? 2 : 1;
   final ss58Decoded = ss58Length == 1
@@ -492,105 +487,13 @@ List _polkaChecksum(Uint8List decoded) {
   return [isValid, length, ss58Length, ss58Decoded];
 }
 
-List<PolkadotCoin> getPolkadoBlockChains() {
-  List<PolkadotCoin> blockChains = [];
-
-  if (enableTestNet) {
-    blockChains.addAll([
-      PolkadotCoin(
-        blockExplorer:
-            'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'DOT',
-        name: 'Polkadot(Westend)',
-        default_: 'DOT',
-        image: 'assets/polkadot.png',
-        api: 'https://westend-rpc.polkadot.io',
-        coinDecimals: 12,
-        ss58Prefix: 42,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: 'polkadot',
-        payScheme: 'polkadot',
-        rampID: "POLKADOT_DOT",
-      ),
-      PolkadotCoin(
-        blockExplorer:
-            'https://paseo.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'PAS',
-        name: 'Paseo(Testnet)',
-        default_: 'PAS',
-        image: 'assets/paseo.png',
-        api: 'https://paseo.rpc.amforc.com',
-        coinDecimals: 10,
-        ss58Prefix: 42,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: '',
-        payScheme: '',
-        rampID: "",
-      )
-    ]);
-  } else {
-    blockChains.addAll([
-      PolkadotCoin(
-        blockExplorer:
-            'https://polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'DOT',
-        name: 'Polkadot',
-        default_: 'DOT',
-        image: 'assets/polkadot.png',
-        api: 'https://rpc.polkadot.io/',
-        coinDecimals: 10,
-        ss58Prefix: 0,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: 'polkadot',
-        payScheme: 'polkadot',
-        rampID: "POLKADOT_DOT",
-      ),
-      PolkadotCoin(
-        blockExplorer:
-            'https://kusama.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'KSM',
-        name: 'Kusama',
-        default_: 'KSM',
-        image: 'assets/kusama.png',
-        api: 'https://kusama-rpc.polkadot.io/',
-        coinDecimals: 12,
-        ss58Prefix: 2,
-        path: "m/44'/434'/0'/0'/0'",
-        geckoID: "kusama",
-        payScheme: "kusama",
-        rampID: "KUSAMA_KSM",
-      ),
-      PolkadotCoin(
-        blockExplorer:
-            'https://acala.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'ACA',
-        name: 'Acala',
-        default_: 'ACA',
-        image: 'assets/acala.png',
-        api: "https://acala-rpc.dwellir.com",
-        coinDecimals: 12,
-        ss58Prefix: 10,
-        path: "m/44'/787'/0'/0'/0'",
-        geckoID: "acala",
-        payScheme: "acala",
-        rampID: "",
-      )
-    ]);
-  }
-
-  return blockChains;
-}
-
 Uint8List decodeDOTAddress(String address) {
   final decoded = base58.decode(address);
   final checksum = _polkaChecksum(decoded);
   final bool isValid = checksum[0];
   final int endPos = checksum[1];
   final int ss58Length = checksum[2];
-
-  if (!isValid) {
-    throw Exception('Invalid decoded address checksum');
-  }
+  if (!isValid) throw Exception('Invalid decoded address checksum');
   return decoded.sublist(ss58Length, endPos);
 }
 
@@ -602,7 +505,6 @@ Future<List<int>> bip39ToMiniSeed(mnemonic) async {
     iterations: 2048,
     bits: 256,
   );
-
   final keys = await pdkd.deriveKey(secretKey: SecretKey(entropy), nonce: salt);
   return await keys.extractBytes();
 }
@@ -619,11 +521,28 @@ String xxhashAsHex(String data) {
   return HEX.encode(xxh128(data).toList());
 }
 
+List<int> blake2_128_concat(List<int> data) {
+  return blake2bHash(data, digestSize: 16) + data;
+}
+
+Uint8List xxh128(String data) {
+  List<int> storage_key1 = XXH64
+      .digest(data: data, seed: BigInt.from(0))
+      .toUint8List()
+      .reversed
+      .toList();
+  List<int> storage_key2 = XXH64
+      .digest(data: data, seed: BigInt.from(1))
+      .toUint8List()
+      .reversed
+      .toList();
+  return Uint8List.fromList(storage_key1 + storage_key2);
+}
+
 class PolkadotArgs {
   final SeedPhraseRoot seedRoot;
   final String path;
   final int ss58Prefix;
-
   const PolkadotArgs({
     required this.seedRoot,
     required this.path,
@@ -637,17 +556,13 @@ class _PolkadotDerive {
     required int ss58Prefix,
   }) async {
     final publicKey = await ED25519_HD_KEY.getPublicKey(privateKey);
-
     List<int> prefix = [ss58Prefix, ...publicKey.sublist(1)];
-
     final address = base58.encode(
-      Uint8List.fromList(
-        [
-          ...prefix,
-          ...sshash(Uint8List.fromList(prefix))
-              .sublist(0, [32, 33].contains(publicKey.length) ? 2 : 1)
-        ],
-      ),
+      Uint8List.fromList([
+        ...prefix,
+        ...sshash(Uint8List.fromList(prefix))
+            .sublist(0, [32, 33].contains(publicKey.length) ? 2 : 1),
+      ]),
     );
     return AccountData(
       address: address,
@@ -665,7 +580,6 @@ calculatePolkadotKey(PolkadotArgs config) async {
     privateKey: derivedKey.key,
     ss58Prefix: config.ss58Prefix,
   );
-
   return {
     'address': results.address,
     'publicKey': results.publicKey,
@@ -673,42 +587,123 @@ calculatePolkadotKey(PolkadotArgs config) async {
   };
 }
 
-List<int> blake2_128_concat(List<int> data) {
-  return blake2bHash(data, digestSize: 16) + data;
-}
+// ── Chain registry ────────────────────────────────────────────────────────────
 
-Uint8List xxh128(String data) {
-  List<int> storage_key1 = XXH64
-      .digest(data: data, seed: BigInt.from(0))
-      .toUint8List()
-      .reversed
-      .toList();
+List<PolkadotCoin> getPolkadoBlockChains() {
+  List<PolkadotCoin> blockChains = [];
 
-  List<int> storage_key2 = XXH64
-      .digest(data: data, seed: BigInt.from(1))
-      .toUint8List()
-      .reversed
-      .toList();
+  if (enableTestNet) {
+    blockChains.addAll([
+      PolkadotCoin(
+        blockExplorer:
+            'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'WND',
+        name: 'Westend',
+        default_: 'WND',
+        image: 'assets/polkadot.png',
+        api: 'https://westend-rpc.polkadot.io',
+        coinDecimals: 12,
+        ss58Prefix: 42,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: '',
+        payScheme: '',
+        rampID: '',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'WND',
+        name: 'Asset Hub Westend',
+        default_: 'WND',
+        image: 'assets/polkadot.png',
+        api: 'https://westend-asset-hub-rpc.polkadot.io',
+        coinDecimals: 12,
+        ss58Prefix: 42,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: '',
+        payScheme: '',
+        rampID: '',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://paseo.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'PAS',
+        name: 'Paseo(Testnet)',
+        default_: 'PAS',
+        image: 'assets/paseo.png',
+        api: 'https://paseo.rpc.amforc.com',
+        coinDecimals: 10,
+        ss58Prefix: 42,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: '',
+        payScheme: '',
+        rampID: '',
+      ),
+    ]);
+  } else {
+    blockChains.addAll([
+      PolkadotCoin(
+        blockExplorer:
+            'https://polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'DOT',
+        name: 'Polkadot',
+        default_: 'DOT',
+        image: 'assets/polkadot.png',
+        api: 'https://rpc.polkadot.io/',
+        coinDecimals: 10,
+        ss58Prefix: 0,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'DOT',
+        name: 'Asset Hub Polkadot',
+        default_: 'DOT',
+        image: 'assets/polkadot.png',
+        api: 'https://asset-hub-polkadot-rpc.dwellir.com',
+        coinDecimals: 10,
+        ss58Prefix: 0,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://kusama.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'KSM',
+        name: 'Kusama',
+        default_: 'KSM',
+        image: 'assets/kusama.png',
+        api: 'https://kusama-rpc.polkadot.io/',
+        coinDecimals: 12,
+        ss58Prefix: 2,
+        path: "m/44'/434'/0'/0'/0'",
+        geckoID: 'kusama',
+        payScheme: 'kusama',
+        rampID: 'KUSAMA_KSM',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://acala.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'ACA',
+        name: 'Acala',
+        default_: 'ACA',
+        image: 'assets/acala.png',
+        api: 'https://acala-rpc.dwellir.com',
+        coinDecimals: 12,
+        ss58Prefix: 10,
+        path: "m/44'/787'/0'/0'/0'",
+        geckoID: 'acala',
+        payScheme: 'acala',
+        rampID: '',
+      ),
+    ]);
+  }
 
-  return Uint8List.fromList(storage_key1 + storage_key2);
-}
-
-class EDSignature {
-  final String signaturePayload;
-  final Uint8List privatekey;
-  const EDSignature({
-    required this.privatekey,
-    required this.signaturePayload,
-  });
-}
-
-class _SigParams {
-  final String call;
-  final int nonce;
-  final Registry registry;
-  const _SigParams({
-    required this.call,
-    required this.nonce,
-    required this.registry,
-  });
+  return blockChains;
 }

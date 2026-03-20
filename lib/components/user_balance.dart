@@ -57,7 +57,7 @@ class _UserBalanceState extends State<UserBalance> {
         if (!widget.haveValue) {
           toDisplay = '- ${widget.symbol}';
         }
-        if (widget.reversed == true) {
+        if (widget.reversed) {
           toDisplay = toDisplay
               .split(' ')
               .reversed

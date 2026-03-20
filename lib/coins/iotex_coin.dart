@@ -199,7 +199,8 @@ class IOTEXCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final client = Web3Client(
       rpc,
@@ -227,7 +228,11 @@ class IOTEXCoin extends Coin {
       chainId: chainID,
     );
 
-    return await client.sendRawTransaction(trans);
+    final txHash = await client.sendRawTransaction(trans);
+    return (
+      txHash: txHash,
+      txRaw: HEX.encode(trans),
+    );
   }
 
   @override

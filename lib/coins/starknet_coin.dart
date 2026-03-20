@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
+import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import '../extensions/uint256_starknet.dart';
 import 'package:wallet_app/utils/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
@@ -477,6 +478,9 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  List<Coin> get networkTokens => getStarknetFungibleCoins();
+
+  @override
   Future<double> getBalance(bool useCache) async {
     String address = await getAddress();
 
@@ -512,7 +516,7 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(
+  Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
     String to, {
     String? memo,
@@ -538,18 +542,31 @@ class StarknetCoin extends Coin {
 
     final wei = amount.toBigIntDec(decimals());
 
-    final txHash = await fundingAccount.send(
-      recipient: Felt.fromHexString(to),
-      amount: Uint256(
-        low: Felt(
-          wei,
+    final trx = await fundingAccount.execute(
+      functionCalls: [
+        FunctionCall(
+          contractAddress: useStarkToken ? strkAddress : ethAddress,
+          entryPointSelector: getSelectorByName("transfer"),
+          calldata: [
+            Felt.fromHexString(to),
+            Felt(
+              wei,
+            ),
+            Felt.zero
+          ],
         ),
-        high: Felt.zero,
-      ),
-      useSTRKtoken: useStarkToken,
+      ],
     );
 
-    return txHash;
+    return trx.when(
+      result: (result) => (
+        txHash: result.transaction_hash,
+        txRaw: null,
+      ),
+      error: (error) {
+        throw Exception("Error transfer (${error.code}): ${error.message}");
+      },
+    );
   }
 
   Future<int> getTokenDecimals(String tokenAddress) async {
@@ -1118,10 +1135,9 @@ class StarknetCoin extends Coin {
           ],
         ),
       ],
-      useSTRKFee: useStarkToken,
     );
 
-    return maxFee.maxFee.toBigInt() / base.pow(decimals());
+    return maxFee.overallFee.toBigInt() / base.pow(decimals());
   }
 
   @override
@@ -1834,13 +1850,13 @@ List<StarknetCoin> getStarknetBlockchains() {
         multiCallAddress:
             '0x04d0390b777b424e43839cd1e744799f3de6c176c7e32c1812a41dbd9c19db6a',
         blockExplorer:
-            'https://sepolia.starkscan.co/tx/$blockExplorerPlaceholder',
+            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet (Testnet)',
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -1857,12 +1873,13 @@ List<StarknetCoin> getStarknetBlockchains() {
       StarknetCoin(
         multiCallAddress:
             '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
+        blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
         symbol: 'STRK',
         name: 'Starknet',
         default_: 'STRK',
         image: 'assets/starknet.png',
-        api: "https://starknet-mainnet.public.blastapi.io/rpc/v0_7",
+        api:
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -2284,17 +2301,6 @@ class StakeInfo {
     required this.totalStake,
     required this.pendingRewards,
     this.pendingUnstake,
-  });
-}
-
-class DeployMeme {
-  final String? liquidityTx;
-  final String? tokenAddress;
-  final String? deployTokenTx;
-  const DeployMeme({
-    required this.liquidityTx,
-    required this.tokenAddress,
-    required this.deployTokenTx,
   });
 }
 

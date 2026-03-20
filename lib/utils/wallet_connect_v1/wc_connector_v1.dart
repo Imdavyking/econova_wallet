@@ -299,7 +299,7 @@ class WcConnectorV1 {
     }
     switchEthereumChain(
       context: context,
-      currentChain: currentChain,
+      currentChain: currentChain!,
       switchChain: switchChain,
       onConfirm: () async {
         await wcClient.updateSession(chainId: chainIdNew);

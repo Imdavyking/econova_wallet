@@ -187,7 +187,8 @@ class XRPCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
 
@@ -244,6 +245,8 @@ class XRPCoin extends Coin {
       }),
     );
 
+    final txBlob = encodeXrpJson(xrpTransaction).substring(8);
+
     if (request.statusCode ~/ 100 == 4 || request.statusCode ~/ 100 == 5) {
       throw Exception(request.body);
     }
@@ -252,7 +255,7 @@ class XRPCoin extends Coin {
 
     final hash = txInfo['result']["tx_json"]['hash'];
 
-    return hash;
+    return (txHash: hash as String, txRaw: txBlob);
   }
 
   @override

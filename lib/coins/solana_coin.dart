@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
-import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
 import 'package:wallet_app/model/solana_transaction_versioned.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
@@ -44,6 +44,12 @@ class SolanaCoin extends Coin {
 
   @override
   bool get supportPrivateKey => true;
+
+  @override
+  String? getSwapDappUrl() => 'https://jup.ag';
+
+  @override
+  String? getStakeDappUrl() => 'https://marinade.finance';
 
   @override
   String getExplorer() {
@@ -117,6 +123,9 @@ class SolanaCoin extends Coin {
   }
 
   @override
+  List<Coin> get networkTokens => getSplTokens();
+
+  @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
     String saveKey = 'solanaDetailsPrivate${walletImportType.name}';
     Map<String, dynamic> privateKeyMap = {};
@@ -170,14 +179,6 @@ class SolanaCoin extends Coin {
     return AccountData.fromJson(keys);
   }
 
-  @override
-  listenForBalanceChange() async {
-    final address = await getAddress();
-    final subscription = getProxy().createSubscriptionClient();
-
-    subscription.accountSubscribe(address).listen((Account event) {});
-  }
-
   List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
     final instructions = simulation.message.compiledInstructions;
     final staticKeys = simulation.message.staticAccountKeys;
@@ -212,13 +213,11 @@ class SolanaCoin extends Coin {
           // Transfer SPL Token
           final source = staticKeys[ix.accountKeyIndexes[0]];
           final destination = staticKeys[ix.accountKeyIndexes[1]];
-          final authority = staticKeys[ix.accountKeyIndexes[2]];
           final amount = extractAmountFromSplTransfer(data);
           trxResults.add(
               "SPL Token Transfer: from $source to $destination amount: $amount tokens");
         } else if (instructionType == 4) {
           // Approve SPL Token
-          final source = staticKeys[ix.accountKeyIndexes[0]];
           final delegate = staticKeys[ix.accountKeyIndexes[1]];
           final owner = staticKeys[ix.accountKeyIndexes[2]];
           final amount = extractAmountFromSplTransfer(data);
@@ -226,7 +225,6 @@ class SolanaCoin extends Coin {
               "SPL Token Approve: owner $owner delegate $delegate amount: $amount tokens");
         } else if (instructionType == 6) {
           // Revoke SPL Token
-          final source = staticKeys[ix.accountKeyIndexes[0]];
           final owner = staticKeys[ix.accountKeyIndexes[1]];
           trxResults.add("SPL Token Revoke: owner $owner");
         } else if (instructionType == 7) {
@@ -317,21 +315,17 @@ class SolanaCoin extends Coin {
         "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg";
     const description = "A meme token created with Pump.fun";
 
-    Map allCryptoPrice = jsonDecode(
-      await getCryptoPrice(useCache: true),
-    ) as Map;
-
-    final Map cryptoMarket = allCryptoPrice[geckoID];
-
-    final currPrice = cryptoMarket['usd'] as num;
+    final cryptoPrice = await getCryptoPrice(useCache: true);
+    final currPrice = cryptoPrice.getPrice(geckoID) ?? 0.0;
 
     const dollarLiqInSol = 0.3;
 
     final options = PumpfunTokenOptions(
       initialLiquiditySol: dollarLiqInSol / currPrice,
-      slippageBps: 500, // 5%
+      slippageBps: 500,
       priorityFee: 0,
     );
+
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
 
@@ -359,7 +353,8 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
     final lamportToSend = amount.toBigIntDec(solDecimals);
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -371,13 +366,16 @@ class SolanaCoin extends Coin {
       privateKey: privateKeyBytes,
     );
 
-    final signature = await getProxy().transferLamports(
+    final txHash = await getProxy().transferLamports(
       source: keyPair,
       destination: solana.Ed25519HDPublicKey.fromBase58(to),
       lamports: lamportToSend.toInt(),
       memo: memo,
     );
-    return signature;
+    return (
+      txHash: txHash,
+      txRaw: null,
+    );
   }
 
   @override

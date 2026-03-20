@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:hex/hex.dart';
+import 'package:wallet_app/coins/fungible_tokens/esdt_coin.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -11,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:multiversx_sdk/multiversx.dart' as multiversx;
 import 'package:web3dart/crypto.dart';
-
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/multix_resolver.dart';
@@ -69,6 +69,9 @@ class MultiversxCoin extends Coin {
   String getSymbol() {
     return symbol;
   }
+
+  @override
+  List<Coin> get networkTokens => getESDTCoins();
 
   MultiversxCoin({
     required this.blockExplorer,
@@ -220,11 +223,9 @@ class MultiversxCoin extends Coin {
     }
   }
 
-  Future<String> trnsTok(_TrxCoinParams config) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
+  Future<String> trnsTok(TrxCoinParams config) async {
     multiversx.UserSecretKey signer =
-        multiversx.UserSecretKey(HEX.decode(response.privateKey!));
+        multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
 
     await wallet.synchronize(getProxy());
@@ -255,17 +256,20 @@ class MultiversxCoin extends Coin {
   }
 
   @override
-  Future<String?> transferToken(String amount, String to,
+  Future<({String txHash, String? txRaw})?> transferToken(
+      String amount, String to,
       {String? memo}) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
     final sendTransaction = await compute(
       trnsTok,
-      _TrxCoinParams(
-        to: to,
-        amount: amount,
-      ),
+      TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
-    return sendTransaction;
+    return (
+      txHash: sendTransaction,
+      txRaw: null,
+    );
   }
 
   static Uint8List serializeForSigning(String message) {
@@ -382,11 +386,13 @@ Future calculateMultiversXKey(MultiversXDeriveArgs config) async {
   };
 }
 
-class _TrxCoinParams {
+class TrxCoinParams {
   final String amount;
   final String to;
-  const _TrxCoinParams({
+  final String privateKey;
+  const TrxCoinParams({
     required this.amount,
     required this.to,
+    required this.privateKey,
   });
 }
