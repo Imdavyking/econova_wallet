@@ -10,6 +10,7 @@ import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/btc_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
@@ -102,6 +103,7 @@ Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getESDTCoins(),
     ...getUtxoCoins(),
+    ...getPolkadotFungibleCoins(),
     ...getTonFungibleCoins(),
     ...tonChains,
     ...evmChains,
