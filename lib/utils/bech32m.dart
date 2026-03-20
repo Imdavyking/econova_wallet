@@ -37,3 +37,38 @@ String bech32mEncode(String hrp, List<int> data) {
   }
   return '${hrp}1${combined.map((d) => _charset[d]).join()}';
 }
+
+class Bech32mDecoded {
+  final String hrp;
+  final List<int> data;
+
+  Bech32mDecoded(this.hrp, this.data);
+}
+
+Bech32mDecoded bech32mDecode(String addr) {
+  addr = addr.toLowerCase();
+
+  final pos = addr.lastIndexOf('1');
+  if (pos < 1 || pos + 7 > addr.length) {
+    throw Exception('Invalid bech32m format');
+  }
+
+  final hrp = addr.substring(0, pos);
+  final dataPart = addr.substring(pos + 1);
+
+  final data = <int>[];
+
+  for (final c in dataPart.split('')) {
+    final idx = _charset.indexOf(c);
+    if (idx == -1) throw Exception('Invalid character');
+    data.add(idx);
+  }
+
+  // Verify checksum
+  if (_bech32mPolymod([..._hrpExpand(hrp), ...data]) != _bech32mConst) {
+    throw Exception('Invalid checksum');
+  }
+
+  // Remove checksum (last 6 values)
+  return Bech32mDecoded(hrp, data.sublist(0, data.length - 6));
+}

@@ -464,10 +464,32 @@ class NativeBtcCoin extends Coin {
   Future<String?> resolveAddress(String address) async => null;
 
   @override
-  validateAddress(String address) {
-    final prefix = isTestnet ? 'tb1q' : 'bc1q';
-    if (!address.startsWith(prefix)) {
-      throw Exception('Expected $prefix... address');
+  void validateAddress(String address) {
+    try {
+      final decoded = const Bech32Codec().decode(address);
+
+      final expectedHrp = isTestnet ? 'tb' : 'bc';
+      if (decoded.hrp != expectedHrp) {
+        throw Exception('Invalid HRP');
+      }
+
+      final data = decoded.data;
+
+      // First byte = witness version
+      final version = data[0];
+      if (version != 0) {
+        throw Exception('Invalid witness version for P2WPKH');
+      }
+
+      // Convert from 5-bit to 8-bit
+      final program = convertBits(data.sublist(1), 5, 8, false);
+
+      // P2WPKH must be 20 bytes
+      if (program.length != 20) {
+        throw Exception('Invalid program length for P2WPKH');
+      }
+    } catch (e) {
+      throw Exception('Invalid BTC address');
     }
   }
 
@@ -619,10 +641,30 @@ class TaprootBtcCoin extends Coin {
   Future<String?> resolveAddress(String address) async => null;
 
   @override
-  validateAddress(String address) {
-    final prefix = isTestnet ? 'tb1p' : 'bc1p';
-    if (!address.startsWith(prefix)) {
-      throw Exception('Expected $prefix... taproot address');
+  void validateAddress(String address) {
+    try {
+      final decoded = bech32mDecode(address); // use your bech32m util
+
+      final expectedHrp = isTestnet ? 'tb' : 'bc';
+      if (decoded.hrp != expectedHrp) {
+        throw Exception('Invalid HRP');
+      }
+
+      final data = decoded.data;
+      final version = data[0];
+
+      if (version != 1) {
+        throw Exception('Invalid witness version for Taproot');
+      }
+
+      final program = convertBits(data.sublist(1), 5, 8, false);
+
+      // Taproot = 32 bytes
+      if (program.length != 32) {
+        throw Exception('Invalid program length for Taproot');
+      }
+    } catch (e) {
+      throw Exception('Invalid BTC Taproot address');
     }
   }
 
