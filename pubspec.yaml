@@ -119,7 +119,6 @@ dependencies:
   flutter_launcher_icons: ^0.14.3
   xxh64: ^0.0.3+1
   polkadart_scale_codec: ^1.3.0
-  substrate_metadata: ^1.3.0
   cryptography: 2.7.0
   fraction: 5.0.3
   http_parser: 4.0.2
@@ -163,6 +162,8 @@ dependencies:
     path: ./starknet-0.2.0
   starknet_provider:
     path: ./starknet_provider-0.2.0
+  substrate_metadata:
+    path: ./substrate_metadata
   reown_walletkit: "1.1.3"
   safe_device: ^1.2.0
 
