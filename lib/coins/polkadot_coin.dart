@@ -160,10 +160,9 @@ class PolkadotCoin extends Coin {
           await _queryRpc(getStorageAt!, [storageKey, blockHashRes!['result']]);
       String storageData = storageResult!['result'];
       storageData = storageData.replaceFirst('0x', '');
-
-      final input = Input.fromHex(storageData.substring(0, 0 + 4));
-
-      return U16Codec.codec.decode(input);
+      final input =
+          Input.fromHex(storageData.substring(0, 8)); // 8 hex = 4 bytes
+      return U32Codec.codec.decode(input);
     } catch (_) {
       return nonce;
     }
