@@ -295,7 +295,7 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 3. Configure your environment:
 
    ```
-   OPENAI_API_KEY=your_openai_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
    ```
 
 4. Run the app:
