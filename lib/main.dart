@@ -109,8 +109,6 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...tronChains,
     ...solanaChains,
     ...multiversXchains,
-    ...stackCoins,
-    ...getNativeBtcCoins(),
     ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
     ...getFUSEBlockchains(),
@@ -126,12 +124,17 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getCosmosBlockChains(),
     ...getFilecoinBlockChains(),
     ...starkNetCoins,
-    ...getSIP010Coins(),
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
+
+  blockchains.insertAll(0, [
+    ...stackCoins,
+    ...getSIP010Coins(),
+    ...getNativeBtcCoins(),
+  ]);
 
   return blockchains;
 }
