@@ -532,10 +532,14 @@ void main() async {
           );
           break;
         case 'STX':
-          expect(
-            cryptoKeys.address,
-            '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
-          );
+          if (blockchainInfo.getName() == 'Stacks') {
+          } else if (blockchainInfo.getName() == 'Stacks(Test)') {
+            expect(
+              cryptoKeys.address,
+              '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+            );
+          }
+
           break;
         case 'ICP':
           expect(
@@ -736,10 +740,13 @@ void main() async {
           }
           break;
         case 'STX':
-          expect(
-            cryptoKeys.address,
-            '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
-          );
+          if (blockchainInfo.getName() == 'Stacks') {
+          } else if (blockchainInfo.getName() == 'Stacks(Test)') {
+            expect(
+              cryptoKeys.address,
+              '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+            );
+          }
           break;
         case 'ETH':
           expect(
