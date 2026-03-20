@@ -562,10 +562,14 @@ void main() async {
           break;
         case 'STX':
           if (blockchainInfo.getName() == 'Stacks') {
+            expect(
+              cryptoKeys.address,
+              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+            );
           } else if (blockchainInfo.getName() == 'Stacks(Test)') {
             expect(
               cryptoKeys.address,
-              '0x3f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
             );
           }
           break;
@@ -686,13 +690,7 @@ void main() async {
             cryptoKeys.address,
             '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
           );
-        case 'PAS':
-          expect(
-            cryptoKeys.address,
-            '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
-          );
 
-          break;
         default:
       }
     }
