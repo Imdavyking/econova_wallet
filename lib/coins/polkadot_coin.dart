@@ -410,6 +410,8 @@ class PolkadotCoin extends Coin {
     final submitResult =
         await _queryRpc('author_submitExtrinsic', ['0x$txSubmission']);
 
+    print(submitResult);
+
     return (
       txHash: submitResult!['result'] as String,
       txRaw: null,
