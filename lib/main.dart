@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
+import 'package:wallet_app/coins/tezos_coin.dart';
+import 'package:wallet_app/coins/algorand_coin.dart';
 import 'package:wallet_app/coins/utxo_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
@@ -122,6 +124,8 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getStellarBlockChains(),
     ...getSuiBlockChains(),
     ...getRoninBlockchains(),
+    ...getTezosBlockchains(),
+    ...getAlgorandBlockchains(),
     ...getFUSEFTBlockchains(),
     ...getSplTokens(),
     ...erc20Coins,

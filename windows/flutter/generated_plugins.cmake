@@ -11,6 +11,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   permission_handler_windows
   rive_common
   smart_auth
+  sodium_libs
   url_launcher_windows
 )
 
