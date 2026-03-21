@@ -40,6 +40,7 @@ Future<Map<String, dynamic>> calculateCardanoKey(CardanoDeriveArgs args) async {
     network,
     args.mnemonic.split(' '),
   );
+
   final addrKit = await wallet.getPaymentAddressKit(addressIndex: 0);
   return {
     'address': addrKit.address.bech32Encoded,
@@ -167,7 +168,7 @@ class CardanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'cardanoV4${isTestnet}_${walletImportType.name}';
+    final cacheKey = 'cardanoCoin${isTestnet}_${walletImportType.name}';
     Map<String, dynamic> cached = {};
 
     if (pref.containsKey(cacheKey)) {
