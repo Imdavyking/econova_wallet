@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 String formatMoney(num? money, [bool isTwoDPlace = false]) {
   if (money == null) return '0';
@@ -19,7 +20,22 @@ String formatMoney(num? money, [bool isTwoDPlace = false]) {
     return intl.NumberFormat.compact(locale: localeString).format(actualMoney);
   }
 
+  if (actualMoney < 1) {
+    final splitted = actualMoney.toString().split('.');
+    final integerPart = splitted[0];
+    final decimalPart = splitted[1];
+    final formatted = Eip1809.eipEllipsify(str: decimalPart).ascii;
+    if (formatted != null) {
+      return '$integerPart.${formatted.substring(0, 6)}';
+    }
+  }
+
   if (actualMoney.abs() < 0.00000001) {
+    // print('yeeeeeeeee');
+    // print(actualMoney.abs().toString().split('.')[1]);
+    // print(actualMoney);
+    // print(
+    //     Eip1809.eipEllipsify(str: actualMoney.abs().toString().split('.')[1]));
     return '0';
   }
 

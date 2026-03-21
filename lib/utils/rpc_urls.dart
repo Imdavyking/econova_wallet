@@ -191,13 +191,13 @@ class Eip1809 {
 
   static Eip1809 eipEllipsify({required String str}) {
     str = str.trim();
+
     if (!str.startsWith('0')) {
       return Eip1809(str: str, ascii: null, brackets: null);
     }
 
-    final strip0x = str.substring(2);
     int totalFirstZero = 0;
-    while (totalFirstZero < strip0x.length && strip0x[totalFirstZero] == '0') {
+    while (totalFirstZero < str.length && str[totalFirstZero] == '0') {
       totalFirstZero++;
     }
 
@@ -228,8 +228,8 @@ class Eip1809 {
 
     return Eip1809(
       str: str,
-      ascii: '0${totalString.join('')}${strip0x.substring(totalFirstZero)}',
-      brackets: '0($totalFirstZero)${strip0x.substring(totalFirstZero)}',
+      ascii: '0${totalString.join('')}${str.substring(totalFirstZero)}',
+      brackets: '0($totalFirstZero)${str.substring(totalFirstZero)}',
     );
   }
 }
