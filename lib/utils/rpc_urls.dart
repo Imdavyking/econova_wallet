@@ -227,8 +227,8 @@ class Eip1809 {
 
     return Eip1809(
       str: str,
-      ascii: '0x0${totalString.join('')}${strip0x.substring(totalFirstZero)}',
-      brackets: '0x0($totalFirstZero)${strip0x.substring(totalFirstZero)}',
+      ascii: '0${totalString.join('')}${strip0x.substring(totalFirstZero)}',
+      brackets: '0($totalFirstZero)${strip0x.substring(totalFirstZero)}',
     );
   }
 }
