@@ -600,6 +600,12 @@ void main() async {
             '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
           );
           break;
+        case 'XTZ':
+          expect(
+            cryptoKeys.address,
+            'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
+          );
+          break;
         case 'ETC':
           expect(
             cryptoKeys.address,
