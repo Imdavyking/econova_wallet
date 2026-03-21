@@ -2,11 +2,9 @@
 
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
-
+// ignore: depend_on_referenced_packages
 import 'package:cardano_dart_types/cardano_dart_types.dart' hide Coin;
 import 'package:cardano_flutter_sdk/cardano_flutter_sdk.dart';
-import 'package:cbor/cbor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;

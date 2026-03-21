@@ -770,26 +770,6 @@ List<CosmosCoin> getCosmosBlockChains() {
     ]);
   } else {
     blockChains.addAll([
-      // CosmosCoin(
-      //   blockExplorer:
-      //       'https://www.mintscan.io/cosmos/tx/$blockExplorerPlaceholder',
-      //   symbol: 'ATOM',
-      //   name: 'Cosmos',
-      //   default_: 'ATOM',
-      //   image: 'assets/cosmos.png',
-      //   bech32Hrp: 'cosmos',
-      //   lcdUrl: 'https://stargate.cosmos.network',
-      //   grpcUrl: 'https://stargate.cosmos.network',
-      //   path: "m/44'/118'/0'/0/0",
-      //   coinDecimals: 6,
-      //   chainId: "cosmoshub-4",
-      //   denom: 'uatom',
-      //   geckoID: 'cosmos',
-      //   payScheme: 'cosmos',
-      //   rampID: 'COSMOS_ATOM',
-      //   pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
-      //   grpcPort: 9090,
-      // ),
       CosmosCoin(
         blockExplorer:
             'https://www.mintscan.io/osmosis/tx/$blockExplorerPlaceholder',
