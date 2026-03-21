@@ -135,6 +135,17 @@ void main() async {
     expect(solidityFunctionSig('approve(address,uint256)'), '0x095ea7b3');
     expect(solidityFunctionSig('solversk()'), '0xffb5eff0');
   });
+  test(
+    'ellipsify works',
+    () {
+      expect(
+        ellipsify(
+            str:
+                '0x00000873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2'),
+        '0x0(5)873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+      );
+    },
+  );
 
   test('get ethereum address blockie image data and colors', () {
     blockInstance.seedrand(address.toLowerCase());

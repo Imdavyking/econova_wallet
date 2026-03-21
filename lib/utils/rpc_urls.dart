@@ -178,10 +178,28 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
+String eipEllipsify({required String str, int? maxLength}) {
+  if (!str.startsWith('0x')) {
+    return str;
+  } else {
+    final strip0x = str.substring(2);
+    final cstr = strip0x.split("");
+    int totalFirstZero = 0;
+    for (String c in cstr) {
+      if (c != "0") break;
+      totalFirstZero++;
+    }
+    return '0x0($totalFirstZero)${strip0x.substring(totalFirstZero)}';
+  }
+}
+
 String ellipsify({required String str, int? maxLength}) {
   maxLength ??= 10;
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
+  if (str.startsWith('0x')) {
+    return eipEllipsify(str: str, maxLength: maxLength);
+  }
   final first = str.substring(0, maxLength ~/ 2);
   final last = str.substring((str.length - maxLength / 2).toInt(), str.length);
   return '$first...$last';
