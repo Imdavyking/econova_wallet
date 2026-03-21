@@ -154,7 +154,7 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
                           const Row(
                             children: [
                               Text(
-                                '\$-',
+                                '\$0',
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: Colors.grey,
@@ -164,7 +164,7 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
                                 width: 5,
                               ),
                               Text(
-                                '-%',
+                                '0%',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey,
