@@ -217,7 +217,10 @@ Eip1809 eipEllipsify({required String str}) {
     };
     final totalString = totalFirstZero.toString().split('');
     for (int i = 0; i < totalString.length; i++) {
-      totalString[i] = mapSub[totalString[i]]!;
+      final currentString = totalString[i];
+      if (int.tryParse(currentString) != null) {
+        totalString[i] = mapSub[totalString[i]]!;
+      }
     }
 
     return Eip1809(
@@ -236,10 +239,10 @@ String ellipsify({required String str, int? maxLength}) {
     final eipData = eipEllipsify(str: str);
     if (eipData.ascii != null) {
       str = eipData.ascii!;
-      maxLength = 20;
+      maxLength = 14;
     } else if (eipData.brackets != null) {
       str = eipData.brackets!;
-      maxLength = 20;
+      maxLength = 16;
     }
   }
   final first = str.substring(0, maxLength ~/ 2);
