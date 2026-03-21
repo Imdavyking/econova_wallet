@@ -481,10 +481,7 @@ class StacksHandler extends BaseWebViewHandler {
       name: 'STX Transfer',
       onConfirm: () async {
         try {
-          final sendAmt = (BigInt.tryParse(amount) ?? BigInt.zero) /
-              BigInt.from(stacksMicroPerStx);
-          final result =
-              await coin.transferToken(sendAmt.toString(), to, memo: memo);
+          final result = await coin.transferToken(amount, to, memo: memo);
           await _sendResponse(jsData, {
             'txid': result?.txHash ?? '',
             'transaction': result?.txRaw ?? '',
