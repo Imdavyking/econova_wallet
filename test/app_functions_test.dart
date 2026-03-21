@@ -1,7 +1,7 @@
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
-import 'package:wallet_app/utils/all_coins.dart';
+import 'package:wallet_app/utils/coingecko_ids.dart';
 import 'dart:convert';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/interface/coin.dart';

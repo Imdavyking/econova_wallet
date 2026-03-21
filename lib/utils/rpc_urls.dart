@@ -25,7 +25,7 @@ import '../coins/utxo_coin.dart';
 import '../coins/ethereum_coin.dart';
 import '../model/seed_phrase_root.dart';
 import 'abis.dart';
-import 'all_coins.dart';
+import 'coingecko_ids.dart';
 import 'alt_ens.dart';
 import 'app_config.dart';
 
