@@ -1,0 +1,158 @@
+ {
+    "id": "ontology",
+    "name": "Ontology",
+    "coinId": 1024,
+    "symbol": "ONT",
+    "decimals": 0,
+    "blockchain": "Ontology",
+    "derivation": [
+      {
+        "path": "m/44'/1024'/0'/0/0"
+      }
+    ],
+    "curve": "nist256p1",
+    "publicKeyType": "nist256p1",
+    "explorer": {
+      "url": "https://explorer.ont.io",
+      "txPath": "/transaction/",
+      "accountPath": "/address/"
+    },
+    "info": {
+      "url": "https://ont.io",
+      "source": "https://github.com/ontio/ontology",
+      "rpc": "http://dappnode1.ont.io:20336",
+      "documentation": "https://github.com/ontio/ontology/blob/master/docs/specifications/rpc_api.md"
+    }
+  },
+
+  {
+    "id": "icon",
+    "name": "ICON",
+    "coinId": 74,
+    "symbol": "ICX",
+    "decimals": 18,
+    "blockchain": "Icon",
+    "derivation": [
+      {
+        "path": "m/44'/74'/0'/0/0"
+      }
+    ],
+    "curve": "secp256k1",
+    "publicKeyType": "secp256k1Extended",
+    "explorer": {
+      "url": "https://tracker.icon.foundation",
+      "txPath": "/transaction/",
+      "accountPath": "/address/"
+    },
+    "info": {
+      "url": "https://icon.foundation",
+      "source": "https://github.com/icon-project/icon-rpc-server",
+      "rpc": "http://ctz.icxstation.com:9000/api/v3",
+      "documentation": "https://www.icondev.io/docs/icon-json-rpc-v3"
+    }
+  },
+  {
+    "id": "waves",
+    "name": "Waves",
+    "coinId": 5741564,
+    "symbol": "WAVES",
+    "decimals": 8,
+    "blockchain": "Waves",
+    "derivation": [
+      {
+        "path": "m/44'/5741564'/0'/0'/0'"
+      }
+    ],
+    "curve": "ed25519",
+    "publicKeyType": "curve25519",
+    "explorer": {
+      "url": "https://wavesexplorer.com",
+      "txPath": "/tx/",
+      "accountPath": "/address/"
+    },
+    "info": {
+      "url": "https://wavesplatform.com",
+      "source": "https://github.com/wavesplatform/Waves",
+      "rpc": "https://nodes.wavesnodes.com",
+      "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
+    }
+  },{
+    "id": "aeternity",
+    "name": "Aeternity",
+    "coinId": 457,
+    "symbol": "AE",
+    "decimals": 18,
+    "blockchain": "Aeternity",
+    "derivation": [
+      {
+        "path": "m/44'/457'/0'/0'/0'"
+      }
+    ],
+    "curve": "ed25519",
+    "publicKeyType": "ed25519",
+    "explorer": {
+      "url": "https://explorer.aepps.com",
+      "txPath": "/transactions/",
+      "accountPath": "/account/transactions/"
+    },
+    "info": {
+      "url": "https://aeternity.com",
+      "source": "https://github.com/aeternity/aeternity",
+      "rpc": "https://sdk-mainnet.aepps.com",
+      "documentation": "http://aeternity.com/api-docs/"
+    }
+  },
+
+    "id": "nebulas",
+    "name": "Nebulas",
+    "coinId": 2718,
+    "symbol": "NAS",
+    "decimals": 18,
+    "blockchain": "Nebulas",
+    "derivation": [
+      {
+        "path": "m/44'/2718'/0'/0/0"
+      }
+    ],
+    "curve": "secp256k1",
+    "publicKeyType": "secp256k1Extended",
+    "explorer": {
+      "url": "https://explorer.nebulas.io",
+      "txPath": "/#/tx/",
+      "accountPath": "/#/address/"
+    },
+    "info": {
+      "url": "https://nebulas.io",
+      "source": "https://github.com/nebulasio/go-nebulas",
+      "rpc": "https://mainnet.nebulas.io",
+      "documentation": "https://wiki.nebulas.io/en/latest/dapp-development/rpc/rpc.html"
+    }
+  },{
+    "id": "fio",
+    "name": "FIO",
+    "coinId": 235,
+    "symbol": "FIO",
+    "decimals": 9,
+    "blockchain": "FIO",
+    "derivation": [
+      {
+        "path": "m/44'/235'/0'/0/0"
+      }
+    ],
+    "curve": "secp256k1",
+    "publicKeyType": "secp256k1",
+    "url": "https://fioprotocol.io/",
+    "explorer": {
+      "url": "https://explorer.fioprotocol.io",
+      "txPath": "/transaction/",
+      "accountPath": "/account/",
+      "sampleTx": "930d1d3cf8988b39b5f64b64e9d61314a3e05a155d9e3505bdf863aab1adddf3",
+      "sampleAccount": "f5axfpgffiqz"
+    },
+    "info": {
+      "url": "https://fioprotocol.io",
+      "source": "https://github.com/fioprotocol/fio",
+      "rpc": "https://mainnet.fioprotocol.io",
+      "documentation": "https://developers.fioprotocol.io"
+    }
+  },
