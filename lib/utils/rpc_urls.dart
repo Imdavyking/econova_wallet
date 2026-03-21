@@ -182,28 +182,30 @@ class Eip1809 {
   final String? ascii;
   final String? brackets;
   final String str;
+
   const Eip1809({
     required this.ascii,
     required this.brackets,
     required this.str,
   });
-}
 
-Eip1809 eipEllipsify({required String str}) {
-  if (!str.startsWith('0x')) {
-    return Eip1809(str: str, ascii: null, brackets: null);
-  } else {
+  static Eip1809 eipEllipsify({required String str}) {
+    if (!str.startsWith('0x')) {
+      return Eip1809(str: str, ascii: null, brackets: null);
+    }
+
     final strip0x = str.substring(2);
-    final cstr = strip0x.split("");
     int totalFirstZero = 0;
-    for (String c in cstr) {
-      if (c != "0") break;
+    while (totalFirstZero < strip0x.length && strip0x[totalFirstZero] == '0') {
       totalFirstZero++;
     }
+
     if (totalFirstZero < 3) {
       return Eip1809(str: str, ascii: null, brackets: null);
     }
-    const mapSub = {
+
+    final mapSub = {
+      '0': '₀',
       '1': '₁',
       '2': '₂',
       '3': '₃',
@@ -212,9 +214,9 @@ Eip1809 eipEllipsify({required String str}) {
       '6': '₆',
       '7': '₇',
       '8': '₈',
-      '9': '₉',
-      '0': '₀',
+      '9': '₉'
     };
+
     final totalString = totalFirstZero.toString().split('');
     for (int i = 0; i < totalString.length; i++) {
       final currentString = totalString[i];
@@ -236,7 +238,7 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    final eipData = eipEllipsify(str: str);
+    final eipData = Eip1809.eipEllipsify(str: str);
     if (eipData.ascii != null) {
       str = eipData.ascii!;
       maxLength = 14;
