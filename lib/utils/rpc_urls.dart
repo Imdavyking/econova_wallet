@@ -178,7 +178,7 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
-String eipEllipsify({required String str, int? maxLength}) {
+String eipEllipsify({required String str}) {
   if (!str.startsWith('0x')) {
     return str;
   } else {
@@ -189,6 +189,7 @@ String eipEllipsify({required String str, int? maxLength}) {
       if (c != "0") break;
       totalFirstZero++;
     }
+    if (totalFirstZero < 3) return str;
     const mapSub = {
       '1': '₁',
       '2': '₂',
@@ -214,7 +215,8 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    return eipEllipsify(str: str, maxLength: maxLength);
+    str = eipEllipsify(str: str);
+    maxLength = 20;
   }
   final first = str.substring(0, maxLength ~/ 2);
   final last = str.substring((str.length - maxLength / 2).toInt(), str.length);
