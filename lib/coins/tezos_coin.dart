@@ -121,7 +121,7 @@ class TezosCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'tezosV2_${networkType.index}_${walletImportType.name}';
+    final cacheKey = 'tezosV3_${networkType.index}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(cacheKey)) {
@@ -185,6 +185,7 @@ class TezosCoin extends Coin {
     final accountData = await importData(data);
     final address = accountData.address;
     final privateKeyHex = accountData.privateKey!;
+    final publicKeyHex = accountData.publicKey!;
 
     final mutez =
         (double.parse(amount) * pow(10, tezosDecimals)).toInt().toString();
@@ -315,8 +316,7 @@ Future<String> _signOperation(
   final algorithm = Ed25519();
   final keyPair = await algorithm.newKeyPairFromSeed(privateKeyBytes);
   final sig = await algorithm.sign(watermarked, keyPair: keyPair);
-  final sigBytes = sig.bytes;
-  return HEX.encode(sigBytes);
+  return HEX.encode(sig.bytes);
 }
 
 // ── Isolate key derivation ────────────────────────────────────────────────────
@@ -334,9 +334,12 @@ Future<Map<String, dynamic>> _deriveTezosKeys(TezosArgs args) async {
 
   final privateKeyBytes = Uint8List.fromList(derived.key);
 
-  // ED25519_HD_KEY.getPublicKey returns 33 bytes: 0x00 prefix + 32-byte key
-  final pubKeyRaw = await ED25519_HD_KEY.getPublicKey(privateKeyBytes, false);
-  final publicKeyBytes = Uint8List.fromList(pubKeyRaw.sublist(1)); // 32 bytes
+  // Use cryptography's Ed25519 to derive the public key from the 32-byte seed.
+  // This matches what Tezos expects — standard ed25519 scalar multiplication.
+  final algorithm = Ed25519();
+  final keyPair = await algorithm.newKeyPairFromSeed(privateKeyBytes);
+  final pubKey = await keyPair.extractPublicKey();
+  final publicKeyBytes = Uint8List.fromList(pubKey.bytes); // 32 bytes
 
   // tz1 address: blake2b-160 of public key, then base58check with tz1 prefix
   final keyHash = blake2bHash(publicKeyBytes, digestSize: 20);
