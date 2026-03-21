@@ -243,15 +243,16 @@ class MultiversxCoin extends Coin {
     return txHash.hash;
   }
 
-  static multiversx.Transaction signTransaction(Map config) {
-    multiversx.ISigner signer = config['signer'];
-    multiversx.ISignable transaction = config['transaction'];
+  static multiversx.Transaction signTransaction(
+      MultiversDappTransaction config) {
+    multiversx.ISigner signer = config.signer;
+    multiversx.ISignable transaction = config.transaction;
     return signer.sign(transaction);
   }
 
-  static List<int> signMessage(Map config) {
-    multiversx.UserSecretKey signer = config['signer'];
-    Uint8List message = config['message'];
+  static List<int> signMessage(MultiversDappMessage config) {
+    multiversx.UserSecretKey signer = config.signer;
+    Uint8List message = config.message;
     return signer.sign(message);
   }
 
@@ -394,5 +395,23 @@ class TrxCoinParams {
     required this.amount,
     required this.to,
     required this.privateKey,
+  });
+}
+
+class MultiversDappMessage {
+  final multiversx.UserSecretKey signer;
+  final Uint8List message;
+  const MultiversDappMessage({
+    required this.signer,
+    required this.message,
+  });
+}
+
+class MultiversDappTransaction {
+  final multiversx.ISigner signer;
+  final multiversx.ISignable transaction;
+  const MultiversDappTransaction({
+    required this.signer,
+    required this.transaction,
   });
 }

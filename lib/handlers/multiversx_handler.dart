@@ -67,10 +67,13 @@ class MultiversxHandler extends BaseWebViewHandler {
         try {
           final serialized = MultiversxCoin.serializeForSigning(message);
           final userSigner = keys.signer as multiversx.UserSigner;
-          final signature = await compute(MultiversxCoin.signMessage, {
-            'signer': userSigner.secretKey,
-            'message': serialized,
-          });
+          final signature = await compute(
+            MultiversxCoin.signMessage,
+            MultiversDappMessage(
+              signer: userSigner.secretKey,
+              message: serialized,
+            ),
+          );
           await _postMessage({
             'target': 'erdw-contentScript',
             'type': '',
@@ -130,8 +133,13 @@ class MultiversxHandler extends BaseWebViewHandler {
               balance: multiversx.Balance(BigInt.parse(e.value ?? '0')),
               data: multiversx.TransactionPayload(txData),
             );
-            final signTrans = await compute(MultiversxCoin.signTransaction,
-                {'signer': keys.signer, 'transaction': trans});
+            final signTrans = await compute(
+              MultiversxCoin.signTransaction,
+              MultiversDappTransaction(
+                signer: keys.signer,
+                transaction: trans,
+              ),
+            );
             allTrans[i].signature = (signTrans).signature.hex;
             await _postMessage({
               'target': 'erdw-contentScript',
@@ -175,10 +183,13 @@ class MultiversxHandler extends BaseWebViewHandler {
             final msg = '${multiversxRes.address}$authToken{}';
             final serialized = MultiversxCoin.serializeForSigning(msg);
             final userSigner = keys.signer as multiversx.UserSigner;
-            signature = await compute(MultiversxCoin.signMessage, {
-              'signer': userSigner.secretKey,
-              'message': serialized,
-            });
+            signature = await compute(
+              MultiversxCoin.signMessage,
+              MultiversDappMessage(
+                signer: userSigner.secretKey,
+                message: serialized,
+              ),
+            );
           }
           final data = <String, dynamic>{
             'address': multiversxRes.address,

@@ -123,7 +123,6 @@ class SolanaHandler extends BaseWebViewHandler {
     final Map<String, dynamic> decodedData = json.decode(data.data);
 
     final messageB64 = base64.encode(base58.decode(data.raw));
-    final signature = await keyPair.sign(base58.decode(data.raw));
     final fee = await coin.getFeeForMessage(messageB64);
 
     late solana.Ed25519HDPublicKey from;
@@ -141,7 +140,12 @@ class SolanaHandler extends BaseWebViewHandler {
       final legacy = SolanaTransactionLegacy.fromJson(decodedData);
       from = solana.Ed25519HDPublicKey.fromBase58(legacy.feePayer);
       simulationResult = await dappSimulateTrx(
-          legacy, keyPair, coin, coin.getSymbol(), solDecimals);
+        legacy,
+        keyPair,
+        coin,
+        coin.getSymbol(),
+        solDecimals,
+      );
     }
 
     if (!context.mounted) return;
@@ -161,6 +165,7 @@ class SolanaHandler extends BaseWebViewHandler {
           name: '',
           onConfirm: () async {
             try {
+              final signature = await keyPair.sign(base58.decode(data.raw));
               sendResponse('solana', signature.toBase58(), jsData.id ?? 0);
             } catch (e) {
               if (kDebugMode) print(e);
