@@ -192,7 +192,7 @@ class CardanoCoin extends Coin {
   Future<String> addressExplorer() async {
     final address = await getAddress();
     return blockExplorer
-        .replaceFirst('/tx/', '/address/')
+        .replaceFirst('/transaction/', '/address/')
         .replaceFirst(blockExplorerPlaceholder, address);
   }
 
@@ -357,7 +357,7 @@ List<CardanoCoin> getCardanoBlockChains() {
         isTestnet: true,
         blockFrostKey: 'preprodmpCaCFGCxLihVPPxXxqEvEnp7dyFmG6J',
         blockExplorer:
-            'https://preprod.cardanoscan.io/tx/$blockExplorerPlaceholder',
+            'https://preprod.cardanoscan.io/transaction/$blockExplorerPlaceholder',
       ),
     ];
   }
@@ -365,7 +365,8 @@ List<CardanoCoin> getCardanoBlockChains() {
     CardanoCoin(
       isTestnet: false,
       blockFrostKey: 'mainnetpgkQqXqQ4HjK6gzUKaHW6VU9jcmcKEbd',
-      blockExplorer: 'https://cardanoscan.io/tx/$blockExplorerPlaceholder',
+      blockExplorer:
+          'https://cardanoscan.io/transaction/$blockExplorerPlaceholder',
     ),
   ];
 }
