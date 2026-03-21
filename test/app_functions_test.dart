@@ -515,7 +515,7 @@ void main() async {
 
     for (int i = 0; i < supportedChains.length; i++) {
       Coin blockchainInfo = supportedChains[i];
-      if (blockchainInfo.getName() == "XTZ") continue;
+      if (blockchainInfo.getSymbol() == "XTZ") continue;
       AccountData cryptoKeys = await blockchainInfo.importData(testMnemonic);
       switch (blockchainInfo.getDefault()) {
         case 'ZIL':
