@@ -1,4 +1,5 @@
- {
+[
+  {
     "id": "ontology",
     "name": "Ontology",
     "coinId": 1024,
@@ -76,7 +77,8 @@
       "rpc": "https://nodes.wavesnodes.com",
       "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
     }
-  },{
+  },
+  {
     "id": "aeternity",
     "name": "Aeternity",
     "coinId": 457,
@@ -102,7 +104,7 @@
       "documentation": "http://aeternity.com/api-docs/"
     }
   },
-
+  {
     "id": "nebulas",
     "name": "Nebulas",
     "coinId": 2718,
@@ -127,7 +129,8 @@
       "rpc": "https://mainnet.nebulas.io",
       "documentation": "https://wiki.nebulas.io/en/latest/dapp-development/rpc/rpc.html"
     }
-  },{
+  },
+  {
     "id": "fio",
     "name": "FIO",
     "coinId": 235,
@@ -155,4 +158,5 @@
       "rpc": "https://mainnet.fioprotocol.io",
       "documentation": "https://developers.fioprotocol.io"
     }
-  },
+  }
+]
