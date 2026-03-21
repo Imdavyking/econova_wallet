@@ -142,7 +142,7 @@ void main() async {
         ellipsify(
             str:
                 '0x00000873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2'),
-        '0x0(5)873e...4e3c8631a2',
+        '0x0₅873e40...4e3c8631a2',
       );
     },
   );

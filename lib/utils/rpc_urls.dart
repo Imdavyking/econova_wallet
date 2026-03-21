@@ -178,9 +178,20 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
-String eipEllipsify({required String str}) {
+class Eip1809 {
+  final String? ascii;
+  final String? brackets;
+  final String str;
+  const Eip1809({
+    required this.ascii,
+    required this.brackets,
+    required this.str,
+  });
+}
+
+Eip1809 eipEllipsify({required String str}) {
   if (!str.startsWith('0x')) {
-    return str;
+    return Eip1809(str: str, ascii: null, brackets: null);
   } else {
     final strip0x = str.substring(2);
     final cstr = strip0x.split("");
@@ -189,7 +200,9 @@ String eipEllipsify({required String str}) {
       if (c != "0") break;
       totalFirstZero++;
     }
-    if (totalFirstZero < 3) return str;
+    if (totalFirstZero < 3) {
+      return Eip1809(str: str, ascii: null, brackets: null);
+    }
     const mapSub = {
       '1': '₁',
       '2': '₂',
@@ -205,8 +218,12 @@ String eipEllipsify({required String str}) {
     for (int i = 0; i < totalString.length; i++) {
       totalString[i] = mapSub[totalString[i]]!;
     }
-    print('0x0${totalString.join('')}${strip0x.substring(totalFirstZero)}');
-    return '0x0($totalFirstZero)${strip0x.substring(totalFirstZero)}';
+
+    return Eip1809(
+      str: str,
+      ascii: '0x0${totalString.join('')}${strip0x.substring(totalFirstZero)}',
+      brackets: '0x0($totalFirstZero)${strip0x.substring(totalFirstZero)}',
+    );
   }
 }
 
@@ -215,8 +232,14 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    str = eipEllipsify(str: str);
-    maxLength = 20;
+    final eipData = eipEllipsify(str: str);
+    if (eipData.ascii != null) {
+      str = eipData.ascii!;
+      maxLength = 20;
+    } else if (eipData.brackets != null) {
+      str = eipData.brackets!;
+      maxLength = 20;
+    }
   }
   final first = str.substring(0, maxLength ~/ 2);
   final last = str.substring((str.length - maxLength / 2).toInt(), str.length);
