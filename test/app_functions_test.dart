@@ -651,6 +651,7 @@ void main() async {
           break;
 
         case 'ADA':
+          print(cryptoKeys.address);
           if (blockchainInfo.getName() == 'Cardano') {
             expect(
               cryptoKeys.address,
