@@ -1,4 +1,3 @@
-import 'package:algorand_dart/src/utils/serializers/bigint_serializer.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'asset_parameters_model.g.dart';

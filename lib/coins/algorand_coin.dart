@@ -6,7 +6,6 @@ import 'dart:math';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
-import 'package:hive/hive.dart';
 import 'package:algorand_dart/algorand_dart.dart' as algo_rand;
 
 import '../interface/coin.dart';
