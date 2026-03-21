@@ -16,7 +16,6 @@ import '../interface/coin.dart';
 import '../main.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
-import '../utils/rpc_urls.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
