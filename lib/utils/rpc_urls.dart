@@ -213,6 +213,7 @@ Eip1809 eipEllipsify({required String str}) {
       '7': '₇',
       '8': '₈',
       '9': '₉',
+      '0': '₀',
     };
     final totalString = totalFirstZero.toString().split('');
     for (int i = 0; i < totalString.length; i++) {
