@@ -201,7 +201,7 @@ class Eip1809 {
       totalFirstZero++;
     }
 
-    if (totalFirstZero < 3) {
+    if (totalFirstZero <= 4) {
       return Eip1809(str: str, ascii: null, brackets: null);
     }
 
