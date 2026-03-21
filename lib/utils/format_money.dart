@@ -31,11 +31,6 @@ String formatMoney(num? money, [bool isTwoDPlace = false]) {
   }
 
   if (actualMoney.abs() < 0.00000001) {
-    // print('yeeeeeeeee');
-    // print(actualMoney.abs().toString().split('.')[1]);
-    // print(actualMoney);
-    // print(
-    //     Eip1809.eipEllipsify(str: actualMoney.abs().toString().split('.')[1]));
     return '0';
   }
 
