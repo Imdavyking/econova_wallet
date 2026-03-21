@@ -77,7 +77,7 @@ String nameHash(String? inputName) {
     }
   }
 
-  return '0x' + node;
+  return '0x$node';
 }
 
 bool _isEncodedLabelhash(hash) {

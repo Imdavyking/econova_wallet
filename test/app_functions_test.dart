@@ -610,6 +610,7 @@ void main() async {
           );
           break;
         case 'XTZ':
+          print(cryptoKeys.address);
           expect(
             cryptoKeys.address,
             'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',

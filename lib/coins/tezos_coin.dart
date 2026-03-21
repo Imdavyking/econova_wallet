@@ -121,7 +121,7 @@ class TezosCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'tezosV2_${networkType.index}_${walletImportType.name}';
+    final cacheKey = 'tezosV3_${networkType.index}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(cacheKey)) {
