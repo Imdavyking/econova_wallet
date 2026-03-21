@@ -1,3 +1,4 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
@@ -24,7 +25,6 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  enableTestNet = false;
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
