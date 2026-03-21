@@ -190,7 +190,8 @@ class Eip1809 {
   });
 
   static Eip1809 eipEllipsify({required String str}) {
-    if (!str.startsWith('0x')) {
+    str = str.trim();
+    if (!str.startsWith('0')) {
       return Eip1809(str: str, ascii: null, brackets: null);
     }
 
@@ -238,12 +239,12 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    final eipData = Eip1809.eipEllipsify(str: str);
+    final eipData = Eip1809.eipEllipsify(str: str.replaceFirst('0x', ''));
     if (eipData.ascii != null) {
-      str = eipData.ascii!;
+      str = '0x${eipData.ascii!}';
       maxLength = 14;
     } else if (eipData.brackets != null) {
-      str = eipData.brackets!;
+      str = '0x${eipData.brackets!}';
       maxLength = 16;
     }
   }
