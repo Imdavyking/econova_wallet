@@ -335,7 +335,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
             onConsoleMessage: (_, msg) {
               if (kDebugMode &&
                   !msg.toString().contains('externalDetectWallets')) {
-                print(msg);
+                debugPrint(msg.toString());
               }
             },
             onReceivedHttpAuthRequest: _onHttpAuth,
