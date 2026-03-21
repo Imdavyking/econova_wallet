@@ -189,6 +189,22 @@ String eipEllipsify({required String str, int? maxLength}) {
       if (c != "0") break;
       totalFirstZero++;
     }
+    const mapSub = {
+      '1': '₁',
+      '2': '₂',
+      '3': '₃',
+      '4': '₄',
+      '5': '₅',
+      '6': '₆',
+      '7': '₇',
+      '8': '₈',
+      '9': '₉',
+    };
+    final totalString = totalFirstZero.toString().split('');
+    for (int i = 0; i < totalString.length; i++) {
+      totalString[i] = mapSub[totalString[i]]!;
+    }
+    print('0x0${totalString.join('')}${strip0x.substring(totalFirstZero)}');
     return '0x0($totalFirstZero)${strip0x.substring(totalFirstZero)}';
   }
 }
