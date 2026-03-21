@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
-import 'package:bip32_ed25519/api.dart';
 
 import 'package:cardano_dart_types/cardano_dart_types.dart' hide Coin;
 import 'package:cardano_flutter_sdk/cardano_flutter_sdk.dart';
@@ -15,7 +14,6 @@ import 'package:http/http.dart' as http;
 import '../extensions/big_int_ext.dart';
 import '../interface/coin.dart';
 import '../main.dart';
-import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
@@ -32,16 +30,16 @@ const _blockfrostPreprod = 'https://cardano-preprod.blockfrost.io/api/v0';
 // ── Isolate args ──────────────────────────────────────────────────────────────
 
 class CardanoDeriveArgs {
-  final SeedPhraseRoot seedRoot;
+  final String mnemonic;
   final bool isTestnet;
-  const CardanoDeriveArgs({required this.seedRoot, required this.isTestnet});
+  const CardanoDeriveArgs({required this.mnemonic, required this.isTestnet});
 }
 
 Future<Map<String, dynamic>> calculateCardanoKey(CardanoDeriveArgs args) async {
   final network = args.isTestnet ? NetworkId.testnet : NetworkId.mainnet;
-  final wallet = await WalletFactory.fromSeed(
+  final wallet = await WalletFactory.fromMnemonic(
     network,
-    ByteList(args.seedRoot.seed),
+    args.mnemonic.split(' '),
   );
   final addrKit = await wallet.getPaymentAddressKit(addressIndex: 0);
   return {
@@ -49,9 +47,7 @@ Future<Map<String, dynamic>> calculateCardanoKey(CardanoDeriveArgs args) async {
   };
 }
 
-// ── CBOR unsigned transaction builder ────────────────────────────────────────
-// Builds the unsigned tx body hex so the SDK can sign it.
-// Format: [txBody, {}, true, null]  (empty witness set before signing)
+// ── CBOR unsigned transaction builder ─────────────────────────────────────────
 
 String _buildUnsignedTxHex({
   required List<Map<String, dynamic>> utxos,
@@ -65,7 +61,6 @@ String _buildUnsignedTxHex({
       lovelaceToSend -
       fee;
 
-  // Inputs: Set of [txHash bytes, index]
   final inputs = CborList(
     utxos
         .map((u) => CborList([
@@ -73,10 +68,9 @@ String _buildUnsignedTxHex({
               CborSmallInt(u['tx_index'] as int),
             ]))
         .toList(),
-    tags: [258], // tag 258 = set
+    tags: [258],
   );
 
-  // Decode addresses from bech32 to raw bytes
   final toAddrBytes = _bech32ToBytes(toAddress);
   final changeAddrBytes = _bech32ToBytes(changeAddress);
 
@@ -91,26 +85,23 @@ String _buildUnsignedTxHex({
   }
 
   final txBody = CborMap({
-    CborSmallInt(0): inputs,
-    CborSmallInt(1): CborList(outputs),
-    CborSmallInt(2): CborInt(BigInt.from(fee)),
-    CborSmallInt(3): CborInt(BigInt.from(ttl)),
+    const CborSmallInt(0): inputs,
+    const CborSmallInt(1): CborList(outputs),
+    const CborSmallInt(2): CborInt(BigInt.from(fee)),
+    const CborSmallInt(3): CborInt(BigInt.from(ttl)),
   });
 
-  // Unsigned tx: [body, empty witness set, true, null]
   final tx = CborList([
     txBody,
     CborMap({}),
-    CborBool(true),
-    CborNull(),
+    const CborBool(true),
+    const CborNull(),
   ]);
 
   return HEX.encode(cbor.encode(tx));
 }
 
-// Bech32 decode for Cardano addresses (strip HRP and checksum)
 Uint8List _bech32ToBytes(String bech32Addr) {
-  // Use cardano_dart_types Address parsing
   final addr = CardanoAddress.fromBech32(bech32Addr);
   return addr.bytes.toUint8List();
 }
@@ -155,7 +146,7 @@ class CardanoCoin extends Coin {
   @override
   bool get supportPrivateKey => false;
   @override
-  String savedTransKey() => 'cardanoTxV3${isTestnet}_$blockFrostKey';
+  String savedTransKey() => 'cardanoTxV4${isTestnet}_$blockFrostKey';
 
   // ── Serialization ───────────────────────────────────────────────────────────
 
@@ -177,7 +168,7 @@ class CardanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'cardanoV3${isTestnet}_${walletImportType.name}';
+    final cacheKey = 'cardanoV4${isTestnet}_${walletImportType.name}';
     Map<String, dynamic> cached = {};
 
     if (pref.containsKey(cacheKey)) {
@@ -189,7 +180,7 @@ class CardanoCoin extends Coin {
 
     final keys = await compute(
       calculateCardanoKey,
-      CardanoDeriveArgs(seedRoot: seedPhraseRoot, isTestnet: isTestnet),
+      CardanoDeriveArgs(mnemonic: mnemonic, isTestnet: isTestnet),
     );
 
     cached[mnemonic] = keys;
@@ -236,7 +227,7 @@ class CardanoCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'cardanoBalanceV3_$address';
+    final key = 'cardanoBalanceV4_$address';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
@@ -298,6 +289,7 @@ class CardanoCoin extends Coin {
       throw Exception('Minimum send is 1 ADA');
     }
 
+    // data is the raw mnemonic string for phrase key wallets
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final keyPair = await importData(data);
     final address = keyPair.address;
@@ -308,7 +300,6 @@ class CardanoCoin extends Coin {
     const fee = _estimatedTxFee;
     final ttl = await _getCurrentSlot() + 7200;
 
-    // Select UTxOs
     final selected = <Map<String, dynamic>>[];
     int totalIn = 0;
     for (final utxo in utxos) {
@@ -318,7 +309,6 @@ class CardanoCoin extends Coin {
     }
     if (totalIn < lovelaceToSend + fee) throw Exception('Insufficient balance');
 
-    // Build unsigned tx hex
     final unsignedTxHex = _buildUnsignedTxHex(
       utxos: selected,
       lovelaceToSend: lovelaceToSend,
@@ -328,10 +318,10 @@ class CardanoCoin extends Coin {
       ttl: ttl,
     );
 
-    // Sign using cardano_flutter_sdk
-    final wallet = await WalletFactory.fromSeed(
+    // Sign using cardano_flutter_sdk — must use fromMnemonic for correct Icarus derivation
+    final wallet = await WalletFactory.fromMnemonic(
       _network,
-      ByteList(seedPhraseRoot.seed),
+      data.split(' '),
     );
 
     final parsedTx = CardanoTransaction.deserializeFromHex(unsignedTxHex);
@@ -342,7 +332,6 @@ class CardanoCoin extends Coin {
     final signedTx = parsedTx.copyWithAdditionalSignatures(witnessSet);
     final signedTxHex = signedTx.serializeHexString();
 
-    // Submit via Blockfrost
     final res = await http.post(
       Uri.parse('$_api/tx/submit'),
       headers: {..._headers, 'Content-Type': 'application/cbor'},

@@ -23,7 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  enableTestNet = false;
+  enableTestNet = true;
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
@@ -657,7 +657,7 @@ void main() async {
               cryptoKeys.address,
               'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
             );
-          } else if (blockchainInfo.getName() == 'Cardano(Prepod)') {
+          } else if (blockchainInfo.getName() == 'Cardano (Preprod)') {
             expect(
               cryptoKeys.address,
               'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
