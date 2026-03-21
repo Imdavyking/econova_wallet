@@ -4,7 +4,7 @@ class NetworkGuard {
   static final NetworkGuard _instance = NetworkGuard._internal();
   factory NetworkGuard() => _instance;
 
-  bool _isConnected = false;
+  bool _isConnected = true;
 
   NetworkGuard._internal() {
     Connectivity().onConnectivityChanged.listen((result) {
