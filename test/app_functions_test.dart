@@ -12,6 +12,7 @@ import 'package:wallet_app/utils/alt_ens.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
 import 'package:wallet_app/utils/ethereum_blockies.dart';
+import 'package:wallet_app/utils/network_guard.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:hex/hex.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -221,6 +222,10 @@ void main() async {
   });
 
   test('ens resolves correctly to address and content hash', () async {
+    if (!NetworkGuard().isConnected) {
+      debugPrint("Can not run ens test network offline");
+      return;
+    }
     Map ensToAddressMap = await ensToAddr(
       domainName: ensAddress,
     );
@@ -248,6 +253,10 @@ void main() async {
   });
 
   test('unstoppable domain resolves correctly to address', () async {
+    if (!NetworkGuard().isConnected) {
+      debugPrint("Can not run UD domain test network offline");
+      return;
+    }
     const domainAddress = unstoppableAddress;
     Map domainResult = await udResolver(
       domainName: domainAddress,
@@ -716,6 +725,10 @@ void main() async {
   });
 
   test('can import token from blockchain', () async {
+    if (!NetworkGuard().isConnected) {
+      debugPrint("Can not run import token test network offline");
+      return;
+    }
     final chainCoin = evmFromChainId(56)!;
     final coin = ERCFungibleCoin(
       geckoID: '',
