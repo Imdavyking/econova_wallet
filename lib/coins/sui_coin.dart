@@ -7,9 +7,7 @@ import 'package:hex/hex.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sui/signers/txn_data_serializers/txn_data_serializer.dart';
-import 'package:sui/sui.dart';
-
+import 'package:sui/sui.dart' hide Coin;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -107,7 +105,7 @@ class SuiCoin extends Coin {
 
     final keyPair = SuiAccount.fromPrivateKey(
       privateKey,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
 
     final keys = AccountData(
@@ -148,8 +146,7 @@ class SuiCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final suiClient = SuiClient(rpc);
-
-    final resp = await suiClient.provider.getBalance(address);
+    final resp = await suiClient.getBalance(address);
     final base = BigInt.from(10);
     return resp.totalBalance / base.pow(decimals());
   }
@@ -179,11 +176,21 @@ class SuiCoin extends Coin {
     }
   }
 
+  Future<bool> getFaucetToken(String address) async {
+    try {
+      final faucet = FaucetClient(SuiUrls.faucetDev);
+      await faucet.requestSuiFromFaucetV1(address);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<String?> resolveAddress(String address) async {
     final client = SuiClient(rpc);
     try {
-      return await client.provider.resolveNameServiceAddress(name);
+      return await client.resolveNameServiceAddress(address);
     } catch (e) {
       return null;
     }
@@ -205,7 +212,7 @@ class SuiCoin extends Coin {
     final response = await importData(data);
     final keyPair = SuiAccount.fromPrivateKey(
       response.privateKey!,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
 
     final client = SuiClient(rpc, account: keyPair);
@@ -245,7 +252,7 @@ class SuiCoin extends Coin {
     final response = await importData(data);
     final keyPair = SuiAccount.fromPrivateKey(
       response.privateKey!,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
     SuiAccount account = keyPair;
     final miniSui = double.parse(amount) * pow(10, suiDecimals);
@@ -286,16 +293,6 @@ class SuiCoin extends Coin {
   String getRampID() => rampID;
 }
 
-Future<bool> getFaucetToken(String address) async {
-  try {
-    final faucet = FaucetClient(Constants.faucetDevAPI);
-    await faucet.requestSui(address);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 List<SuiCoin> getSuiBlockChains() {
   List<SuiCoin> blockChains = [];
   if (enableTestNet) {
@@ -307,7 +304,7 @@ List<SuiCoin> getSuiBlockChains() {
         blockExplorer:
             'https://suiexplorer.com/txblock/$blockExplorerPlaceholder?network=devnet',
         image: 'assets/sui.png',
-        rpc: Constants.devnetAPI,
+        rpc: SuiUrls.devnet,
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
@@ -322,7 +319,7 @@ List<SuiCoin> getSuiBlockChains() {
         blockExplorer:
             'https://suiexplorer.com/txblock/$blockExplorerPlaceholder',
         image: 'assets/sui.png',
-        rpc: Constants.mainnetAPI,
+        rpc: SuiUrls.mainnet,
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
@@ -344,7 +341,7 @@ class SuiArgs {
 Future calculateSuiKey(SuiArgs config) async {
   final account = SuiAccount.fromMnemonics(
     config.mnemonic,
-    SignatureScheme.ED25519,
+    SignatureScheme.Ed25519,
   );
 
   return {
@@ -353,3 +350,14 @@ Future calculateSuiKey(SuiArgs config) async {
     'publicKey': HEX.encode(account.getPublicKey()),
   };
 }
+
+// abstract class Constants {
+//   static const String mainnetAPI = "https://mainnet-rpc.sui.chainbase.online/";
+//   static const String testnetAPI = "https://fullnode.testnet.sui.io";
+//   static const String devnetAPI = "https://fullnode.devnet.sui.io";
+//   static const String faucetDevAPI = "https://faucet.devnet.sui.io/gas";
+//   static const String faucetTestAPI = "https://faucet.testnet.sui.io/gas";
+//   static const String websocketAPI = "wss://fullnode.mainnet.sui.io";
+
+//   static bool enableDebugLog = true;
+// }
