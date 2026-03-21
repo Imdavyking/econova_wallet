@@ -264,15 +264,6 @@ Future<bool> getFaucetToken(String address) async {
 List<AptosCoin> getAptosBlockchain() {
   List<AptosCoin> blockChains = [];
   if (enableTestNet) {
-    // blockChains.add({
-    //   'name': 'Aptos(Testnet)',
-    //   'symbol': 'APT',
-    //   'default': 'APT',
-    //   'blockExplorer':
-    //       'https://explorer.aptoslabs.com/txn/$blockExplorerPlaceholder?network=devnet',
-    //   'image': 'assets/aptos.png',
-    //   'rpc': Constants.devnetAPI,
-    // });
     blockChains.addAll([
       AptosCoin(
         blockExplorer:
