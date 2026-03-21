@@ -121,7 +121,7 @@ class TezosCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey = 'tezosV3_${networkType.index}_${walletImportType.name}';
+    final cacheKey = 'tezosV2_${networkType.index}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(cacheKey)) {
@@ -185,70 +185,97 @@ class TezosCoin extends Coin {
     final accountData = await importData(data);
     final address = accountData.address;
     final privateKeyHex = accountData.privateKey!;
-    final publicKeyHex = accountData.publicKey!;
+    final publicKeyEncoded = accountData.publicKey!; // edpk...
 
     final mutez =
         (double.parse(amount) * pow(10, tezosDecimals)).toInt().toString();
 
-    // 1. Counter
+    // 1. Counter — RPC returns a JSON-quoted integer string e.g. "42"
     final counterRes = await http.get(
       Uri.parse(
           '${_net.rpc}/chains/main/blocks/head/context/contracts/$address/counter'),
     );
     if (counterRes.statusCode ~/ 100 != 2) {
-      throw Exception('Counter fetch failed');
+      throw Exception('Counter fetch failed: ${counterRes.body}');
     }
-    final counter =
-        (int.parse(jsonDecode(counterRes.body) as String) + 1).toString();
+    final rawCounter = jsonDecode(counterRes.body);
+    int nextCounter =
+        (rawCounter is int ? rawCounter : int.parse(rawCounter.toString())) + 1;
 
     // 2. Block hash for TTL
     final blockRes = await http.get(
       Uri.parse('${_net.rpc}/chains/main/blocks/head/hash'),
     );
     if (blockRes.statusCode ~/ 100 != 2) {
-      throw Exception('Block hash fetch failed');
+      throw Exception('Block hash fetch failed: ${blockRes.body}');
     }
-    final blockHash = (jsonDecode(blockRes.body) as String).replaceAll('"', '');
+    final blockHash = jsonDecode(blockRes.body) as String;
 
-    // 3. Forge operation via RPC
-    final op = {
-      'branch': blockHash,
-      'contents': [
-        {
-          'kind': 'transaction',
-          'source': address,
-          'fee': '1500',
-          'counter': counter,
-          'gas_limit': '10600',
-          'storage_limit': '300',
-          'amount': mutez,
-          'destination': to,
-        }
-      ],
-    };
-
-    final forgeRes = await http.post(
-      Uri.parse('${_net.rpc}/chains/main/blocks/head/helpers/forge/operations'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(op),
+    // 3. Check if public key is already revealed on-chain
+    final managerRes = await http.get(
+      Uri.parse(
+          '${_net.rpc}/chains/main/blocks/head/context/contracts/$address/manager_key'),
     );
+    final managerKey =
+        managerRes.statusCode ~/ 100 == 2 ? jsonDecode(managerRes.body) : null;
+    final needsReveal = managerKey == null || managerKey == '';
+
+    // 4. Build operation contents — prepend reveal if needed
+    final contents = <Map<String, dynamic>>[];
+
+    if (needsReveal) {
+      contents.add({
+        'kind': 'reveal',
+        'source': address,
+        'fee': '1300',
+        'counter': nextCounter.toString(),
+        'gas_limit': '1100',
+        'storage_limit': '0',
+        'public_key': publicKeyEncoded,
+      });
+      nextCounter++;
+    }
+
+    contents.add({
+      'kind': 'transaction',
+      'source': address,
+      'fee': '1500',
+      'counter': nextCounter.toString(),
+      'gas_limit': '10600',
+      'storage_limit': '300',
+      'amount': mutez,
+      'destination': to,
+    });
+
+    // 5. Forge operation via RPC
+    final op = {'branch': blockHash, 'contents': contents};
+
+    final forgeReq = http.Request(
+      'POST',
+      Uri.parse('${_net.rpc}/chains/main/blocks/head/helpers/forge/operations'),
+    )
+      ..headers['Content-Type'] = 'application/json'
+      ..bodyBytes = utf8.encode(jsonEncode(op));
+    final forgeRes = await http.Response.fromStream(await forgeReq.send());
     if (forgeRes.statusCode ~/ 100 != 2) {
       throw Exception('Forge failed: ${forgeRes.body}');
     }
-    final forgedHex = (jsonDecode(forgeRes.body) as String).replaceAll('"', '');
+    final forgedHex = jsonDecode(forgeRes.body) as String;
 
-    // 4. Sign — watermark 0x03 + forged bytes, then Ed25519
+    // 6. Sign — watermark 0x03 + forged bytes, then Ed25519
     final privateKeyBytes =
         Uint8List.fromList(HEX.decode(privateKeyHex.replaceFirst('0x', '')));
     final signatureHex = await _signOperation(privateKeyBytes, forgedHex);
 
-    // 5. Inject
+    // 7. Inject
     final signedHex = forgedHex + signatureHex;
-    final injectRes = await http.post(
+    final injectReq = http.Request(
+      'POST',
       Uri.parse('${_net.rpc}/injection/operation'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(signedHex),
-    );
+    )
+      ..headers['Content-Type'] = 'application/json'
+      ..bodyBytes = utf8.encode(jsonEncode(signedHex));
+    final injectRes = await http.Response.fromStream(await injectReq.send());
     if (injectRes.statusCode ~/ 100 != 2) {
       throw Exception('Inject failed: ${injectRes.body}');
     }
