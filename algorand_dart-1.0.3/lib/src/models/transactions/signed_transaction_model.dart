@@ -16,6 +16,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'signed_transaction_model.g.dart';
 
 @JsonSerializable(explicitToJson: true, fieldRename: FieldRename.kebab)
+// ignore: must_be_immutable
 class SignedTransaction extends Equatable implements MessagePackable {
   /// The signature of the transaction
   @JsonKey(name: 'sig')
