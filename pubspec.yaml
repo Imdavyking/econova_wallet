@@ -165,8 +165,8 @@ dependencies:
     path: ./starknet-0.2.0
   starknet_provider:
     path: ./starknet_provider-0.2.0
-  cardano_wallet_sdk:
-    path: ./cardano
+  cardano_flutter_sdk:
+    path: ./cardano_dart_sdk-3.2.1
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -184,6 +184,7 @@ dependency_overrides:
   ffi: 2.0.0
   pinenacl: ^0.6.0
   pointycastle: ^3.4.0
+  cbor: ^6.3.5
   logger: ^2.5.0
   starknet:
     path: ./starknet-0.2.0

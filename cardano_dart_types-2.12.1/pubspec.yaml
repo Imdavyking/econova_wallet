@@ -39,3 +39,4 @@ dev_dependencies:
   # dependency_overrides:
   # bip32_ed25519:
   #   path: ../bip32-ed25519-dart
+

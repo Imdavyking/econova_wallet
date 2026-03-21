@@ -615,12 +615,13 @@ String transactionSignLotus(Map msg, String privateKeyHex) {
     method ?? 0,
     base64.decode(params ?? '')
   ];
-  cbor.init();
-  final output = cbor.OutputStandard();
-  final encoder = cbor.Encoder(output);
-  output.clear();
-  encoder.writeArray(messageToEncode);
-  final unsignedMessage = output.getDataAsList();
+  final unsignedMessage = cbor.cbor.encode(cbor.CborList(
+    messageToEncode.map((e) {
+      if (e is int) return cbor.CborSmallInt(e);
+      if (e is List<int>) return cbor.CborBytes(Uint8List.fromList(e));
+      return const cbor.CborSmallInt(0);
+    }).toList(),
+  ));
   Uint8List privateKey = HEX.decode(privateKeyHex) as Uint8List;
 
   final messageDigest = getDigest(Uint8List.fromList(unsignedMessage));
