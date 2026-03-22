@@ -178,58 +178,80 @@ bool seqEqual(List<int> a, List<int> b) {
   return true;
 }
 
-class Eip1809 {
-  final String? ascii;
-  final String? brackets;
-  final String str;
+class Erc8117 {
+  final String str; // original unchanged
+  final String? unicode; // subscript notation  e.g. 0x0₈abcd… / 0.0₆9
+  final String? ascii; // parenthesis notation e.g. 0x0(8)abcd… / 0.0(6)9
 
-  const Eip1809({
-    required this.ascii,
-    required this.brackets,
+  const Erc8117({
     required this.str,
+    required this.unicode,
+    required this.ascii,
   });
 
-  static Eip1809 eipEllipsify({required String str}) {
-    str = str.trim();
+  static const _sub = {
+    '0': '₀',
+    '1': '₁',
+    '2': '₂',
+    '3': '₃',
+    '4': '₄',
+    '5': '₅',
+    '6': '₆',
+    '7': '₇',
+    '8': '₈',
+    '9': '₉',
+  };
 
-    if (!str.startsWith('0')) {
-      return Eip1809(str: str, ascii: null, brackets: null);
+  static String _toSubscript(int n) =>
+      n.toString().split('').map((c) => _sub[c]!).join();
+
+  // ERC-8117 §address — counts leading zero nibbles after 0x
+  static Erc8117 fromAddress(String address) {
+    final trimmed = address.trim();
+    if (!trimmed.startsWith('0x') && !trimmed.startsWith('0X')) {
+      return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
 
-    int totalFirstZero = 0;
-    while (totalFirstZero < str.length && str[totalFirstZero] == '0') {
-      totalFirstZero++;
+    final body = trimmed.substring(2).toLowerCase(); // nibbles after 0x
+    int n = 0;
+    while (n < body.length && body[n] == '0') n++;
+
+    if (n <= 4) {
+      return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
 
-    if (totalFirstZero <= 4) {
-      return Eip1809(str: str, ascii: null, brackets: null);
+    final rest = body.substring(n);
+    return Erc8117(
+      str: trimmed,
+      unicode: '0x0${_toSubscript(n)}$rest',
+      ascii: '0x0($n)$rest',
+    );
+  }
+
+  // Token price convention — counts leading zeros after the decimal point
+  static Erc8117 fromTokenPrice(String price) {
+    final trimmed = price.trim();
+    if (!trimmed.startsWith('0.')) {
+      return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
 
-    final mapSub = {
-      '0': '₀',
-      '1': '₁',
-      '2': '₂',
-      '3': '₃',
-      '4': '₄',
-      '5': '₅',
-      '6': '₆',
-      '7': '₇',
-      '8': '₈',
-      '9': '₉'
-    };
+    final afterDot = trimmed.substring(2);
+    int n = 0;
+    while (n < afterDot.length && afterDot[n] == '0') n++;
 
-    final totalString = totalFirstZero.toString().split('');
-    for (int i = 0; i < totalString.length; i++) {
-      final currentString = totalString[i];
-      if (int.tryParse(currentString) != null) {
-        totalString[i] = mapSub[totalString[i]]!;
-      }
+    if (n <= 4) {
+      return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
 
-    return Eip1809(
-      str: str,
-      ascii: '0${totalString.join('')}${str.substring(totalFirstZero)}',
-      brackets: '0($totalFirstZero)${str.substring(totalFirstZero)}',
+    final significant = afterDot.substring(n);
+    if (significant.isEmpty) {
+      return Erc8117(str: trimmed, unicode: null, ascii: null);
+    }
+
+    return Erc8117(
+      str: trimmed,
+      unicode: '0.0${_toSubscript(n)}$significant',
+      ascii: '0.0($n)$significant',
     );
   }
 }
@@ -239,12 +261,12 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    final eipData = Eip1809.eipEllipsify(str: str.replaceFirst('0x', ''));
+    final eipData = Erc8117.fromAddress(str.replaceFirst('0x', ''));
     if (eipData.ascii != null) {
       str = '0x${eipData.ascii!}';
       maxLength = 14;
-    } else if (eipData.brackets != null) {
-      str = '0x${eipData.brackets!}';
+    } else if (eipData.unicode != null) {
+      str = '0x${eipData.unicode!}';
       maxLength = 16;
     }
   }

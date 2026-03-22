@@ -21,14 +21,10 @@ String formatMoney(num? money, [bool isTwoDPlace = false]) {
   }
 
   if (actualMoney < 1) {
-    final splitted = actualMoney.toString().split('.');
-    final integerPart = splitted[0];
-    final decimalPart = splitted[1];
-
-    final formatted = Eip1809.eipEllipsify(str: decimalPart).ascii;
+    final formatted = Erc8117.fromTokenPrice(actualMoney.toString()).ascii;
 
     if (formatted != null) {
-      return '$integerPart.${formatted.length < 6 ? formatted : formatted.substring(0, 6)}';
+      return formatted.length < 6 ? formatted : formatted.substring(0, 6);
     }
   }
 
