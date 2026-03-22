@@ -38,12 +38,14 @@ class TokenTransaction {
   final String to;
   final String transactionHash;
   final String time;
+  String? memo;
   final num value;
   final int decimal;
 
-  const TokenTransaction({
+  TokenTransaction({
     required this.from,
     required this.to,
+    this.memo,
     required this.transactionHash,
     required this.time,
     required this.value,
@@ -56,6 +58,7 @@ class TokenTransaction {
       to: json['to'] as String? ?? '',
       transactionHash: json['transactionHash'] as String? ?? '',
       time: json['time'] as String? ?? '',
+      memo: json['memo'] as String? ?? '',
       value: json['value'] as num? ?? 0,
       decimal: json['decimal'] as int? ?? 18,
     );

@@ -46,6 +46,8 @@ PODS:
     - Flutter
   - share (0.0.1):
     - Flutter
+  - share_plus (0.0.1):
+    - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -86,6 +88,7 @@ DEPENDENCIES:
   - scan (from `.symlinks/plugins/scan/ios`)
   - screenshot_callback (from `.symlinks/plugins/screenshot_callback/ios`)
   - share (from `.symlinks/plugins/share/ios`)
+  - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - smart_auth (from `.symlinks/plugins/smart_auth/ios`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
@@ -138,6 +141,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/screenshot_callback/ios"
   share:
     :path: ".symlinks/plugins/share/ios"
+  share_plus:
+    :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   smart_auth:
@@ -175,6 +180,7 @@ SPEC CHECKSUMS:
   scan: 28e4f67b9b0d63ccd5c649acc3d6aaf94c0a7a81
   screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
   share: a34936589f3090d59481bcdc5c30cc9dd47c75f6
+  share_plus: de6030e33b4e106470e09322d87cf2a4258d2d1d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   smart_auth: 33668081c5f646af84f10492a067d25fdcd16951
   speech_to_text: 9dc43a5df3cbc2813f8c7cc9bd0fbf94268ed7ac

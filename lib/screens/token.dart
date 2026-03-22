@@ -13,6 +13,7 @@ import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_form.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/download_transaction.dart';
 import 'package:wallet_app/utils/format_money.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:intl/intl.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 
 import '../service/wallet_service.dart';
 import '../utils/get_token_image.dart';
@@ -541,6 +543,44 @@ class _TransactionSection extends ConsumerWidget {
     required this.trxOpen,
   });
 
+  void _showExport(BuildContext context, TransactionState? state) {
+    if (state == null || state.transactions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export')),
+      );
+      return;
+    }
+
+    // Convert TokenTransaction → WalletTransaction
+    final walletTxs = state.transactions.map((tx) {
+      final date = DateFormat('yyyy-MM-dd hh:mm:ss').parse(tx.time);
+      return WalletTransaction(
+        hash: tx.transactionHash,
+        from: tx.from,
+        to: tx.to,
+        amount: tx.tokenAmount.toString(),
+        symbol: coin.getSymbol(),
+        decimals: tx.decimal,
+        timestamp: date,
+        status: WalletTxStatus.confirmed,
+        direction: tx.from.toLowerCase() == state.currentUser.toLowerCase()
+            ? WalletTxDirection.sent
+            : WalletTxDirection.received,
+        explorerUrl: coin.getExplorer().replaceFirst(
+              blockExplorerPlaceholder,
+              tx.transactionHash,
+            ),
+        memo: tx.memo, // if your TokenTransaction has memo
+      );
+    }).toList();
+
+    TransactionExportSheet.show(
+      context: context,
+      transactions: walletTxs,
+      tokenSymbol: coin.getSymbol(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(transactionsController);
@@ -556,6 +596,7 @@ class _TransactionSection extends ConsumerWidget {
             _TransactionHeader(
               isOpen: isOpen,
               onTap: () => trxOpen.value = !trxOpen.value,
+              onExport: () => _showExport(context, state), // 👈
             ),
             if (items.isNotEmpty && isOpen)
               Column(
@@ -588,8 +629,13 @@ class _TransactionSection extends ConsumerWidget {
 class _TransactionHeader extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onTap;
+  final VoidCallback? onExport; // 👈 add this
 
-  const _TransactionHeader({required this.isOpen, required this.onTap});
+  const _TransactionHeader({
+    required this.isOpen,
+    required this.onTap,
+    this.onExport,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -608,6 +654,16 @@ class _TransactionHeader extends StatelessWidget {
                 angle: isOpen ? 90 * pi / 180 : 270 * pi / 180,
                 child: const Icon(Icons.arrow_back_ios_new, size: 15),
               ),
+              const Spacer(),
+              // 👇 export button
+              if (onExport != null)
+                IconButton(
+                  onPressed: onExport,
+                  icon: const Icon(Icons.download, size: 20),
+                  tooltip: 'Export',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
         ),
