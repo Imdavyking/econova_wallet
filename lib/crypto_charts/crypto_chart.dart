@@ -19,54 +19,167 @@ import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
 
+// ── URL builder ───────────────────────────────────────────────────────────────
+
+String _marketDataUrl({
+  required int days,
+  required String coinGeckoId,
+  required String currency,
+}) =>
+    '$coinGeckoBaseurl/coins/$coinGeckoId/market_chart'
+    '?vs_currency=$currency&days=$days';
+
+// ── Day range config ──────────────────────────────────────────────────────────
+
+class _DayRange {
+  final String label;
+  final int days;
+  const _DayRange(this.label, this.days);
+}
+
+const _dayRanges = [
+  _DayRange('1D', 1),
+  _DayRange('1W', 7),
+  _DayRange('1M', 30),
+  _DayRange('1Y', 365),
+];
+
+// ── Root widget ───────────────────────────────────────────────────────────────
+
 class CryptoChart extends StatefulWidget {
   final Coin coin;
-  const CryptoChart({
-    super.key,
-    required this.coin,
-  });
+  const CryptoChart({super.key, required this.coin});
 
   @override
   State<CryptoChart> createState() => _CryptoChartState();
 }
 
-String getMarketData({
-  required int days,
-  required String coinGeckoId,
-  required String defaultCurrency,
-}) {
-  return "$coinGeckoBaseurl/coins/$coinGeckoId/market_chart?vs_currency=$defaultCurrency&days=$days";
-}
-
 class _CryptoChartState extends State<CryptoChart> {
-  late List<charts.Series<List, num>> series;
-  List<List<dynamic>> chartData = [];
-  int days = 1;
-  Map savedData = {};
-  late Coin coin;
+  int _days = 1;
+  final Map<int, String> _cache = {};
+
+  // Separate notifiers so only the relevant widget rebuilds
+  final ValueNotifier<String> _priceNotifier = ValueNotifier('');
+  final ValueNotifier<String> _dateNotifier = ValueNotifier('');
+  final ValueNotifier<_PeriodChange?> _changeNotifier = ValueNotifier(null);
+
+  Future<_ChartResult>? _chartFuture;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-    coin = widget.coin;
+    _chartFuture = _fetchChart(_days);
   }
 
-  ValueNotifier<String> priceNotifier = ValueNotifier<String>('');
+  Future<_ChartResult> _fetchChart(int days) async {
+    final defaultCurrency = pref.get('defaultCurrency') as String? ?? 'usd';
+    final currencyWithSymbol = jsonDecode(currencyJson) as Map;
+    final symbol =
+        currencyWithSymbol[defaultCurrency.toUpperCase()]['symbol'] as String;
+
+    if (_cache[days] == null) {
+      final res = await http
+          .get(Uri.parse(_marketDataUrl(
+            days: days,
+            coinGeckoId: widget.coin.getGeckoId(),
+            currency: defaultCurrency,
+          )))
+          .timeout(networkTimeOutDuration);
+
+      if (res.statusCode ~/ 100 != 2) throw Exception('Request failed');
+      _cache[days] = res.body;
+    }
+
+    final prices =
+        (jsonDecode(_cache[days]!)['prices'] as List).cast<List<dynamic>>();
+
+    if (prices.isEmpty) throw Exception('No data');
+
+    double xMin = double.infinity,
+        xMax = double.negativeInfinity,
+        yMin = double.infinity,
+        yMax = double.negativeInfinity;
+
+    final points = prices.map((e) {
+      final x = (e[0] as num).toDouble();
+      final y = (e[1] as num).toDouble();
+      if (x < xMin) xMin = x;
+      if (x > xMax) xMax = x;
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
+      return [x, y];
+    }).toList();
+
+    final firstPrice = points.first[1];
+    final lastPrice = points.last[1];
+    final change = lastPrice - firstPrice;
+    final changePct = firstPrice > 0 ? (change / firstPrice) * 100 : 0.0;
+    final isPositive = change >= 0;
+
+    // Set initial display values
+    _priceNotifier.value = '$symbol${formatMoney(lastPrice)}';
+    _dateNotifier.value = '';
+    _changeNotifier.value = _PeriodChange(
+      amount:
+          '${isPositive ? '+' : ''}$symbol${formatMoney(change.abs(), true)}',
+      percent: '${isPositive ? '+' : ''}${formatMoney(changePct.abs(), true)}%',
+      isPositive: isPositive,
+    );
+
+    final lineColor = isPositive ? appPrimaryColor : Colors.red;
+
+    final series = [
+      charts.Series<List, num>(
+        id: 'price',
+        data: points,
+        domainFn: (p, _) => p[0],
+        measureFn: (p, _) => p[1],
+        labelAccessorFn: (p, _) => '${p[0]}',
+        colorFn: (_, __) => charts.ColorUtil.fromDartColor(lineColor),
+        areaColorFn: (_, __) =>
+            charts.ColorUtil.fromDartColor(lineColor.withOpacity(0.08)),
+      ),
+    ];
+
+    return _ChartResult(
+      series: series,
+      xMin: xMin,
+      xMax: xMax,
+      yMin: yMin - (yMax - yMin) * 0.05, // 5% padding below
+      yMax: yMax + (yMax - yMin) * 0.05, // 5% padding above
+      symbol: symbol,
+      isPositive: isPositive,
+    );
+  }
+
+  void _selectDay(int days) {
+    if (_days == days) return;
+    setState(() {
+      _days = days;
+      _chartFuture = _fetchChart(days);
+    });
+  }
+
+  @override
+  void dispose() {
+    _priceNotifier.dispose();
+    _dateNotifier.dispose();
+    _changeNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${coin.getName()} (${coin.getSymbol()})'),
+        title: Text('${widget.coin.getName()} (${widget.coin.getSymbol()})'),
       ),
       body: SizedBox(
         height: double.infinity,
         child: RefreshIndicator(
           onRefresh: () async {
-            // Clear cache so fresh data is fetched on refresh
-            savedData.clear();
-            await Future.delayed(const Duration(seconds: 2));
-            setState(() {});
+            _cache.clear();
+            setState(() => _chartFuture = _fetchChart(_days));
           },
           child: SafeArea(
             child: SingleChildScrollView(
@@ -77,111 +190,33 @@ class _CryptoChartState extends State<CryptoChart> {
                   children: [
                     Card(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                          borderRadius: BorderRadius.circular(20)),
                       child: Column(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10.0),
-                            child: ValueListenableBuilder<String>(
-                              valueListenable: priceNotifier,
-                              builder: ((context, value, child) {
-                                return ChartPrice(
-                                  chartPriceData: ChartPriceParam(
-                                    price: value,
-                                  ),
-                                );
-                              }),
+                          const SizedBox(height: 16),
+                          // Price display
+                          ValueListenableBuilder<String>(
+                            valueListenable: _priceNotifier,
+                            builder: (_, value, __) => ChartPrice(
+                              chartPriceData: ChartPriceParam(price: value),
                             ),
                           ),
+                          const SizedBox(height: 4),
+                          // Period change badge + scrub date
+                          _PeriodChangeRow(
+                            changeNotifier: _changeNotifier,
+                            dateNotifier: _dateNotifier,
+                          ),
+                          const SizedBox(height: 8),
+                          // Chart
                           SizedBox(
                             width: double.infinity,
-                            height: 250,
+                            height: 220,
                             child: FutureBuilder<_ChartResult>(
-                              future: () async {
-                                final String defaultCurrency =
-                                    pref.get('defaultCurrency') ?? "usd";
-
-                                double viewportYMin = double.infinity;
-                                double viewportYMax = double.negativeInfinity;
-                                double viewportXMin = double.infinity;
-                                double viewportXMax = double.negativeInfinity;
-
-                                final currencyWithSymbol =
-                                    jsonDecode(currencyJson);
-
-                                final symbol = currencyWithSymbol[
-                                    defaultCurrency.toUpperCase()]['symbol'];
-
-                                if (savedData[days] == null) {
-                                  final request = await http
-                                      .get(
-                                        Uri.parse(
-                                          getMarketData(
-                                            days: days,
-                                            coinGeckoId: coin.getGeckoId(),
-                                            defaultCurrency: defaultCurrency,
-                                          ),
-                                        ),
-                                      )
-                                      .timeout(networkTimeOutDuration);
-
-                                  if (request.statusCode ~/ 100 == 4 ||
-                                      request.statusCode ~/ 100 == 5) {
-                                    throw Exception('Request failed');
-                                  }
-
-                                  savedData[days] = request.body;
-                                }
-
-                                final jsonDecodedPrices =
-                                    jsonDecode(savedData[days])['prices']
-                                        as List;
-
-                                // Set initial price display to latest price
-                                priceNotifier.value =
-                                    '$symbol${formatMoney(jsonDecodedPrices.last[1])}';
-
-                                chartData = jsonDecodedPrices.map((e) {
-                                  final double x = (e[0] as num).toDouble();
-                                  final double y = (e[1] as num).toDouble();
-
-                                  // ── FIX: correctly track both X and Y viewports ──
-                                  if (x < viewportXMin) viewportXMin = x;
-                                  if (x > viewportXMax) viewportXMax = x;
-                                  if (y < viewportYMin) viewportYMin = y;
-                                  if (y > viewportYMax) viewportYMax = y;
-
-                                  return List<dynamic>.from(e);
-                                }).toList();
-
-                                series = [
-                                  charts.Series(
-                                    id: 'crypto chart',
-                                    data: chartData,
-                                    labelAccessorFn: (List series, _) =>
-                                        '${series[0]}',
-                                    domainFn: (List series, _) => series[0],
-                                    measureFn: (List series, _) => series[1],
-                                    colorFn: (List series, _) =>
-                                        charts.ColorUtil.fromDartColor(
-                                            appPrimaryColor),
-                                  )
-                                ];
-
-                                return _ChartResult(
-                                  viewportYMin: viewportYMin,
-                                  viewportYMax: viewportYMax,
-                                  viewportXMin: viewportXMin,
-                                  viewportXMax: viewportXMax,
-                                  symbol: symbol,
-                                );
-                              }(),
+                              future: _chartFuture,
                               builder: (context, snapshot) {
                                 if (snapshot.hasError) {
-                                  if (kDebugMode) {
-                                    print(snapshot.error);
-                                  }
+                                  if (kDebugMode) print(snapshot.error);
                                   return Center(
                                     child: Text(
                                       AppLocalizations.of(context)!
@@ -190,126 +225,41 @@ class _CryptoChartState extends State<CryptoChart> {
                                     ),
                                   );
                                 }
-                                if (snapshot.hasData) {
-                                  return charts.LineChart(
-                                    series,
-                                    selectionModels: [
-                                      charts.SelectionModelConfig(
-                                        type: charts.SelectionModelType.info,
-                                        changedListener:
-                                            (charts.SelectionModel model) {
-                                          if (model.hasDatumSelection) {
-                                            final millis =
-                                                model.selectedDatum[0].datum[0];
-
-                                            final dt = DateTime
-                                                .fromMillisecondsSinceEpoch(
-                                                    millis);
-
-                                            final date = DateFormat('hh:mm a')
-                                                .format(dt);
-
-                                            final price = model
-                                                .selectedSeries[0]
-                                                .measureFn(model
-                                                    .selectedDatum[0].index);
-
-                                            CustomCircleSymbolRenderer
-                                                    .backgroundColor =
-                                                Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium!
-                                                    .color!;
-                                            CustomCircleSymbolRenderer
-                                                    .textColor =
-                                                Theme.of(context)
-                                                    .scaffoldBackgroundColor;
-
-                                            priceNotifier.value =
-                                                '${snapshot.data!.symbol}${formatMoney(price)}';
-
-                                            CustomCircleSymbolRenderer.value =
-                                                '$date\n${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-                                          }
-                                        },
-                                      )
-                                    ],
-                                    behaviors: [
-                                      charts.SelectNearest(
-                                        eventTrigger:
-                                            charts.SelectionTrigger.tapAndDrag,
-                                      ),
-                                      charts.LinePointHighlighter(
-                                        symbolRenderer:
-                                            CustomCircleSymbolRenderer(),
-                                      ),
-                                    ],
-                                    domainAxis: charts.NumericAxisSpec(
-                                      tickProviderSpec: const charts
-                                          .BasicNumericTickProviderSpec(
-                                          desiredTickCount: 10,
-                                          zeroBound: false),
-                                      renderSpec: const charts.NoneRenderSpec(),
-                                      viewport: charts.NumericExtents(
-                                        snapshot.data!.viewportXMin,
-                                        snapshot.data!.viewportXMax,
-                                      ),
-                                    ),
-                                    primaryMeasureAxis: charts.NumericAxisSpec(
-                                      renderSpec: const charts.NoneRenderSpec(),
-                                      viewport: charts.NumericExtents(
-                                        snapshot.data!.viewportYMin,
-                                        snapshot.data!.viewportYMax,
-                                      ),
-                                    ),
-                                    animate: false,
-                                  );
-                                } else {
-                                  return const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Loader(),
-                                    ],
-                                  );
+                                if (!snapshot.hasData) {
+                                  return const Center(child: Loader());
                                 }
+                                return _ChartView(
+                                  result: snapshot.data!,
+                                  onSelect: (price, date, symbol) {
+                                    _priceNotifier.value =
+                                        '$symbol${formatMoney(price)}';
+                                    _dateNotifier.value = date;
+                                  },
+                                  onDeselect: (lastPrice, symbol) {
+                                    _priceNotifier.value =
+                                        '$symbol${formatMoney(lastPrice)}';
+                                    _dateNotifier.value = '';
+                                  },
+                                );
                               },
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          // Day range selector
                           Padding(
-                            padding: const EdgeInsets.only(
-                              left: 20,
-                              right: 20,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _DayButton(
-                                  label: '1D',
-                                  value: 1,
-                                  selectedDays: days,
-                                  onTap: () => setState(() => days = 1),
-                                ),
-                                _DayButton(
-                                  label: '1W',
-                                  value: 7,
-                                  selectedDays: days,
-                                  onTap: () => setState(() => days = 7),
-                                ),
-                                _DayButton(
-                                  label: '1M',
-                                  value: 30,
-                                  selectedDays: days,
-                                  onTap: () => setState(() => days = 30),
-                                ),
-                                _DayButton(
-                                  label: '1Y',
-                                  value: 365,
-                                  selectedDays: days,
-                                  onTap: () => setState(() => days = 365),
-                                ),
-                              ],
+                              children: _dayRanges
+                                  .map((r) => _DayButton(
+                                        range: r,
+                                        selected: _days == r.days,
+                                        onTap: () => _selectDay(r.days),
+                                      ))
+                                  .toList(),
                             ),
                           ),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
@@ -325,18 +275,149 @@ class _CryptoChartState extends State<CryptoChart> {
   }
 }
 
-// ── Extracted day button widget to remove repetition ──────────────────────────
+// ── Chart view ────────────────────────────────────────────────────────────────
+
+class _ChartView extends StatelessWidget {
+  final _ChartResult result;
+  final void Function(num price, String date, String symbol) onSelect;
+  final void Function(num lastPrice, String symbol) onDeselect;
+
+  const _ChartView({
+    required this.result,
+    required this.onSelect,
+    required this.onDeselect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return charts.LineChart(
+      result.series,
+      defaultRenderer: charts.LineRendererConfig(includeArea: true),
+      selectionModels: [
+        charts.SelectionModelConfig(
+          type: charts.SelectionModelType.info,
+          changedListener: (model) {
+            if (model.hasDatumSelection) {
+              final millis = model.selectedDatum[0].datum[0] as num;
+              final dt = DateTime.fromMillisecondsSinceEpoch(millis.toInt());
+              final date =
+                  '${DateFormat('hh:mm a').format(dt)} · ${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+              final price = model.selectedSeries[0]
+                  .measureFn(model.selectedDatum[0].index);
+
+              CustomCircleSymbolRenderer.backgroundColor =
+                  Theme.of(context).textTheme.bodyMedium!.color!;
+              CustomCircleSymbolRenderer.textColor =
+                  Theme.of(context).scaffoldBackgroundColor;
+              CustomCircleSymbolRenderer.value = date;
+
+              onSelect(price ?? 0, date, result.symbol);
+            } else {
+              // deselect — restore latest price
+              final lastY = (result.series.first.data.last as List)[1] as num;
+              onDeselect(lastY, result.symbol);
+            }
+          },
+        ),
+      ],
+      behaviors: [
+        charts.SelectNearest(
+          eventTrigger: charts.SelectionTrigger.tapAndDrag,
+        ),
+        charts.LinePointHighlighter(
+          symbolRenderer: CustomCircleSymbolRenderer(),
+        ),
+      ],
+      domainAxis: charts.NumericAxisSpec(
+        tickProviderSpec: const charts.BasicNumericTickProviderSpec(
+            desiredTickCount: 10, zeroBound: false),
+        renderSpec: const charts.NoneRenderSpec(),
+        viewport: charts.NumericExtents(result.xMin, result.xMax),
+      ),
+      primaryMeasureAxis: charts.NumericAxisSpec(
+        renderSpec: const charts.NoneRenderSpec(),
+        viewport: charts.NumericExtents(result.yMin, result.yMax),
+      ),
+      animate: true,
+      animationDuration: const Duration(milliseconds: 400),
+    );
+  }
+}
+
+// ── Period change row ─────────────────────────────────────────────────────────
+
+class _PeriodChange {
+  final String amount;
+  final String percent;
+  final bool isPositive;
+  const _PeriodChange(
+      {required this.amount, required this.percent, required this.isPositive});
+}
+
+class _PeriodChangeRow extends StatelessWidget {
+  final ValueNotifier<_PeriodChange?> changeNotifier;
+  final ValueNotifier<String> dateNotifier;
+
+  const _PeriodChangeRow({
+    required this.changeNotifier,
+    required this.dateNotifier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ValueListenableBuilder<_PeriodChange?>(
+          valueListenable: changeNotifier,
+          builder: (_, change, __) {
+            if (change == null) return const SizedBox();
+            final color = change.isPositive ? green : red;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${change.amount}  (${change.percent})',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          },
+        ),
+        ValueListenableBuilder<String>(
+          valueListenable: dateNotifier,
+          builder: (_, date, __) {
+            if (date.isEmpty) return const SizedBox();
+            return Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                date,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ── Day button ────────────────────────────────────────────────────────────────
 
 class _DayButton extends StatelessWidget {
-  final String label;
-  final int value;
-  final int selectedDays;
+  final _DayRange range;
+  final bool selected;
   final VoidCallback onTap;
 
   const _DayButton({
-    required this.label,
-    required this.value,
-    required this.selectedDays,
+    required this.range,
+    required this.selected,
     required this.onTap,
   });
 
@@ -344,30 +425,38 @@ class _DayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 50,
+        height: 32,
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              width: 5,
-              color:
-                  selectedDays == value ? appPrimaryColor : Colors.transparent,
+          color:
+              selected ? appPrimaryColor.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border:
+              selected ? Border.all(color: appPrimaryColor, width: 1.5) : null,
+        ),
+        child: Center(
+          child: Text(
+            range.label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              color: selected ? appPrimaryColor : null,
             ),
           ),
         ),
-        width: 50,
-        height: 30,
-        child: Center(child: Text(label)),
       ),
     );
   }
 }
 
-// ── Chart tooltip renderer ────────────────────────────────────────────────────
+// ── Tooltip renderer ──────────────────────────────────────────────────────────
 
 class CustomCircleSymbolRenderer extends charts.CircleSymbolRenderer {
-  static late String value;
-  static late Color textColor;
-  static late Color backgroundColor;
+  static String value = '';
+  static Color textColor = Colors.black;
+  static Color backgroundColor = Colors.white;
 
   @override
   void paint(
@@ -379,53 +468,59 @@ class CustomCircleSymbolRenderer extends charts.CircleSymbolRenderer {
     charts.Color? strokeColor,
     double? strokeWidthPx,
   }) {
-    super.paint(
-      canvas,
-      bounds,
-      dashPattern: dashPattern,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidthPx: strokeWidthPx,
-    );
+    super.paint(canvas, bounds,
+        dashPattern: dashPattern,
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        strokeWidthPx: strokeWidthPx);
+
+    final tooltipWidth = (value.length * 7.5).clamp(80.0, 220.0);
+
     canvas.drawRRect(
       Rectangle(
         bounds.left - 5,
-        bounds.top - 31,
-        bounds.width + (5 * value.length),
-        bounds.height + 30,
+        bounds.top - 35,
+        tooltipWidth,
+        30,
       ),
-      radius: 5,
+      radius: 6,
       roundTopLeft: true,
       roundTopRight: true,
       roundBottomRight: true,
       roundBottomLeft: true,
       fill: charts.ColorUtil.fromDartColor(backgroundColor),
     );
-    final textStyle = style.TextStyle();
-    textStyle.color = charts.ColorUtil.fromDartColor(textColor);
-    textStyle.fontSize = 15;
+
+    final textStyle = style.TextStyle()
+      ..color = charts.ColorUtil.fromDartColor(textColor)
+      ..fontSize = 12;
+
     canvas.drawText(
       TextElement.TextElement(value, style: textStyle),
       (bounds.left).round(),
-      (bounds.top - 26).round(),
+      (bounds.top - 30).round(),
     );
   }
 }
 
-// ── Chart result data class ───────────────────────────────────────────────────
+// ── Chart result ──────────────────────────────────────────────────────────────
 
 class _ChartResult {
-  final double viewportYMin;
-  final double viewportYMax;
-  final double viewportXMin;
-  final double viewportXMax;
+  final List<charts.Series<List, num>> series;
+  final double xMin;
+  final double xMax;
+  final double yMin;
+  final double yMax;
   final String symbol;
+  final bool isPositive;
 
   const _ChartResult({
-    required this.viewportYMin,
-    required this.viewportYMax,
-    required this.viewportXMin,
-    required this.viewportXMax,
+    required this.series,
+    required this.xMin,
+    required this.xMax,
+    required this.yMin,
+    required this.yMax,
     required this.symbol,
+    required this.isPositive,
   });
 }

@@ -723,25 +723,25 @@ class _DappState extends State<Dapp> {
     final useWidget = showWebViewTabsViewer
         ? _buildWebViewTabViewerAppBar()
         : _buildWebViewTabAppBar();
-    return WillPopScope(
-      child: Scaffold(
-          appBar: useWidget as PreferredSizeWidget?,
-          body: IndexedStack(
-            index: showWebViewTabsViewer ? 1 : 0,
-            children: [_buildWebViewTabs(), _buildWebViewTabsViewer()],
-          )),
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
         if (showWebViewTabsViewer) {
-          setState(() {
-            showWebViewTabsViewer = false;
-          });
+          setState(() => showWebViewTabsViewer = false);
         } else if (await webViewTabs[currentTabIndex].canGoBack()) {
           webViewTabs[currentTabIndex].goBack();
         } else {
-          return true;
+          if (context.mounted) Navigator.pop(context);
         }
-        return false;
       },
+      child: Scaffold(
+        appBar: useWidget as PreferredSizeWidget?,
+        body: IndexedStack(
+          index: showWebViewTabsViewer ? 1 : 0,
+          children: [_buildWebViewTabs(), _buildWebViewTabsViewer()],
+        ),
+      ),
     );
   }
 }

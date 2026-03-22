@@ -9,189 +9,117 @@ import '../service/contact_service.dart';
 import '../utils/rpc_urls.dart';
 
 class Contact extends StatefulWidget {
-  final bool? showAdd;
-
-  const Contact({
-    super.key,
-    this.showAdd,
-  });
+  final bool showAdd;
+  const Contact({super.key, this.showAdd = true});
 
   @override
   State<Contact> createState() => _ContactState();
 }
 
 class _ContactState extends State<Contact> {
-  late List languages;
-  late String languageCode;
-  ValueNotifier<List<ContactParams>> contacts =
-      ValueNotifier<List<ContactParams>>([]);
-  late AppLocalizations localization;
+  final ValueNotifier<List<ContactParams>> _contacts =
+      ValueNotifier(ContactService.getContacts());
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  Future<void> _addContact() async {
+    final coin = await Navigator.push<Coin>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            SelectBlockchain(filterFn: (coin) => coin.tokenAddress() == null),
+      ),
+    );
+    if (coin == null || !mounted) return;
+
+    final updated = await Navigator.push<List<ContactParams>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddContact(
+          params: ContactParams.create(
+            coin: coin,
+            name: '',
+            address: '',
+          ),
+        ),
+      ),
+    );
+
+    if (updated != null) _contacts.value = updated;
+  }
+
+  Future<void> _editContact(ContactParams params) async {
+    final updated = await Navigator.push<List<ContactParams>>(
+      context,
+      MaterialPageRoute(builder: (_) => AddContact(params: params)),
+    );
+    if (updated != null) _contacts.value = updated;
+  }
+
+  Future<bool> _deleteContact(ContactParams contact) async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (!await authenticate(context)) return false;
+
+    final updated = await ContactService.deleteContact(contact.id);
+    _contacts.value = updated;
+    return true;
+  }
+
   @override
-  void initState() {
-    super.initState();
-    contacts.value = ContactService.getContacts();
+  void dispose() {
+    _contacts.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
+    final localization = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          localization.contact,
-        ),
+        title: Text(localization.contact),
         actions: [
-          if (widget.showAdd ?? true)
+          if (widget.showAdd)
             IconButton(
-                onPressed: () async {
-                  Coin? coin = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (ctx) => SelectBlockchain(
-                        filterFn: (coin) => coin.tokenAddress() == null,
-                      ),
-                    ),
-                  );
-
-                  if (coin == null) return;
-                  if (context.mounted) {
-                    List<ContactParams>? updatedData = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (ctx) => AddContact(
-                          params: ContactParams(coin: coin),
-                        ),
-                      ),
-                    );
-
-                    if (updatedData == null) return;
-
-                    contacts.value = updatedData;
-                  }
-                },
-                icon: const Icon(FontAwesomeIcons.plus)),
+              icon: const Icon(FontAwesomeIcons.plus),
+              onPressed: _addContact,
+            ),
         ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            await Future.delayed(const Duration(seconds: 2));
+            _contacts.value = ContactService.getContacts();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: ValueListenableBuilder(
-                valueListenable: contacts,
-                builder: (context, List<ContactParams> _, child) {
+              padding: const EdgeInsets.all(15),
+              child: ValueListenableBuilder<List<ContactParams>>(
+                valueListenable: _contacts,
+                builder: (_, contacts, __) {
+                  if (contacts.isEmpty) {
+                    return _EmptyState(
+                      onAdd: widget.showAdd ? _addContact : null,
+                    );
+                  }
                   return Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (contacts.value.isEmpty)
-                        const Text(
-                          'No Contact Yet',
-                          style: TextStyle(fontSize: 18),
-                        )
-                      else
-                        for (ContactParams params in contacts.value) ...[
-                          Dismissible(
-                            secondaryBackground: Container(
-                              color: Colors.red,
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 15),
-                              alignment: Alignment.centerRight,
-                              child: const Padding(
-                                padding: EdgeInsets.only(right: 10),
-                                child: Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            background: Container(
-                              color: Colors.blue,
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 15),
-                              alignment: Alignment.centerLeft,
-                              child: const Padding(
-                                padding: EdgeInsets.all(10),
-                                child: Icon(
-                                  Icons.edit,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            onDismissed: (DismissDirection direction) {},
-                            key: UniqueKey(),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (DismissDirection direction) async {
-                              if (direction.name == 'endToStart') {
-                                return await _deleteContact(params);
-                              }
-                              return false;
-                            },
-                            child: GestureDetector(
-                              onTap: () async {
-                                if (widget.showAdd ?? true) {
-                                  List<ContactParams>? updatedData =
-                                      await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (ctx) => AddContact(
-                                        params: params,
-                                      ),
-                                    ),
-                                  );
-                                  if (updatedData == null) return;
-
-                                  contacts.value = updatedData;
-                                } else {
-                                  Navigator.pop(context, params);
-                                }
-                              },
-                              child: Card(
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                                  width: double.infinity,
-                                  height: 60,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        ellipsify(
-                                          str: params.name!,
-                                          maxLength: 20,
-                                        ),
-                                        style: const TextStyle(fontSize: 18),
-                                      ),
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 20,
-                                            backgroundImage: AssetImage(
-                                              params.coin.getImage(),
-                                            ),
-                                          ),
-                                          const SizedBox(
-                                            width: 10,
-                                          ),
-                                          const Icon(
-                                            Icons.arrow_forward_ios,
-                                            color: Colors.grey,
-                                          )
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ]
+                      for (final contact in contacts) ...[
+                        _ContactTile(
+                          contact: contact,
+                          onTap: () {
+                            if (widget.showAdd) {
+                              _editContact(contact);
+                            } else {
+                              Navigator.pop(context, contact);
+                            }
+                          },
+                          onDelete: () => _deleteContact(contact),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ],
                   );
                 },
@@ -202,19 +130,143 @@ class _ContactState extends State<Contact> {
       ),
     );
   }
+}
 
-  Future<bool> _deleteContact(ContactParams contact) async {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+// ── Empty state ───────────────────────────────────────────────────────────────
 
-    if (await authenticate(context)) {
-      await ContactService.deleteData(contact);
+class _EmptyState extends StatelessWidget {
+  final VoidCallback? onAdd;
+  const _EmptyState({this.onAdd});
 
-      contacts.value = [...contacts.value]
-        ..removeWhere((element) => element == contact);
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 60),
+          const Icon(Icons.contact_page_outlined, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            'No contacts yet',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          if (onAdd != null) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(FontAwesomeIcons.plus, size: 14),
+              label: const Text('Add Contact'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
-      return true;
-    } else {
-      return false;
-    }
+// ── Contact tile ──────────────────────────────────────────────────────────────
+
+class _ContactTile extends StatelessWidget {
+  final ContactParams contact;
+  final VoidCallback onTap;
+  final Future<bool> Function() onDelete;
+
+  const _ContactTile({
+    required this.contact,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey(contact.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => onDelete(),
+      background: _SwipeBackground(
+        color: Colors.blue,
+        icon: Icons.edit,
+        alignment: Alignment.centerLeft,
+      ),
+      secondaryBackground: _SwipeBackground(
+        color: Colors.red,
+        icon: Icons.delete,
+        alignment: Alignment.centerRight,
+      ),
+      onDismissed: (_) {},
+      child: GestureDetector(
+        onTap: onTap,
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: SizedBox(
+              height: 60,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ellipsify(str: contact.name, maxLength: 20),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        if (contact.memo != null && contact.memo!.isNotEmpty)
+                          Text(
+                            'Tag: ${contact.memo}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: AssetImage(contact.coin.getImage()),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Swipe background ──────────────────────────────────────────────────────────
+
+class _SwipeBackground extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final Alignment alignment;
+
+  const _SwipeBackground({
+    required this.color,
+    required this.icon,
+    required this.alignment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: color,
+      margin: const EdgeInsets.symmetric(horizontal: 15),
+      alignment: alignment,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Icon(icon, color: Colors.white),
+      ),
+    );
   }
 }
