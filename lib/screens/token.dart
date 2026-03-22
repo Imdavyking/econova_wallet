@@ -13,7 +13,7 @@ import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_form.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
 import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/download_transaction.dart';
+import 'package:wallet_app/service/transaction_export_service.dart';
 import 'package:wallet_app/utils/format_money.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
