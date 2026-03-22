@@ -111,7 +111,12 @@ class AIAgentService {
         making transactions, checking balances,
         and querying smart contracts — all through simple, conversational commands.
         For sending, always use memo if available.
-
+        ── TOOL CALLING RULES — STRICT ──────────────────────────────────────
+        NEVER call multiple tools in the same response.
+        Always call ONE tool at a time, wait for the result, then call the next.
+        Even if the user asks for multiple balances, call QRY_getBalance once,
+        get the result, then call it again for the next token.
+        This is a hard rule — parallel tool calls are not allowed.
         ── CURRENT NETWORK ──────────────────────────────────────────────────────
         Active network: $currentCoin
         Native token address: $tokenAddress
