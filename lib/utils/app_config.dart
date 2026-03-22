@@ -11,7 +11,7 @@ const walletName = 'Econova';
 final base64Logo = base64Encode(logoBytes.buffer.asUint8List());
 
 // Convert to base64 URI
-final base64Uri = Uri.dataFromString(
+final browserUrl = Uri.dataFromString(
   walletHomePage,
   mimeType: 'text/html',
   encoding: Encoding.getByName('utf-8'),
@@ -25,7 +25,6 @@ const String fallbackMessage =
 const walletDexProviderUrl =
     'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
 const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
-const browserUrl = 'http://localhost:5173/demo';
 
 // dapp links
 const blogUrl = "https://www.stacks.co/blog";
