@@ -111,7 +111,7 @@ class RecipientField extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const Contact(showAdd: false)),
     );
     if (contact == null) return;
-    controller.setText(contact.address!);
+    controller.setText(contact.address);
     if (showMemoFromContact) memoController?.setText(contact.memo ?? '');
   }
 
