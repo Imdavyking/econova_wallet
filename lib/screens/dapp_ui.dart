@@ -57,14 +57,14 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
   // ── DApp registry ─────────────────────────────────────────────────────────
 
   List<_DappEntry> get _allDapps => [
-        _DappEntry(
+        const _DappEntry(
           name: 'NFT Marketplace',
           description: 'Buy, sell and discover NFTs',
           url: marketPlaceUrl,
           svgAsset: 'assets/social_dapp.svg',
           isNew: true,
         ),
-        _DappEntry(
+        const _DappEntry(
           name: 'Polymarket',
           description: 'Predict real-world events with USDC',
           url: 'https://polymarket.com',
@@ -72,7 +72,7 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
           networkHint: 'Polygon',
           isNew: true,
         ),
-        _DappEntry(
+        const _DappEntry(
           name: 'Blog',
           description: 'News and updates',
           url: blogUrl,
@@ -91,22 +91,22 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
   // ── Quick action entries ──────────────────────────────────────────────────
 
   late final _quickActions = [
-    _QuickAction(
+    const _QuickAction(
       label: 'Dex',
       svgAsset: 'assets/swap_dapp.svg',
       url: walletDexProviderUrl,
     ),
-    _QuickAction(
+    const _QuickAction(
       labelKey: 'stake',
       svgAsset: 'assets/stake_dapp.svg',
       url: stakeDexProviderUrl,
     ),
-    _QuickAction(
+    const _QuickAction(
       labelKey: 'fiat',
       svgAsset: 'assets/fiat_dapp.svg',
       url: fiatDexProviderUrl,
     ),
-    _QuickAction(
+    const _QuickAction(
       labelKey: 'browser',
       svgAsset: 'assets/browser_dapp.svg',
       url: browserUrl,
