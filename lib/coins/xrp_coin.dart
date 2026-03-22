@@ -260,8 +260,6 @@ class XRPCoin extends Coin {
 
     Map txInfo = json.decode(request.body);
 
-    print(txInfo);
-
     final hash = txInfo['result']["tx_json"]['hash'];
 
     return (txHash: hash as String, txRaw: txBlob);
