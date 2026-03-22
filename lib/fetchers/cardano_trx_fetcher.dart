@@ -28,7 +28,6 @@ class CardanoTransactionFetcher implements TransactionFetcher {
     required String address,
     int limit = 25,
   }) async {
-    // Step 1 — get tx hashes for the address
     final listUri = Uri.parse(
       '$_api/addresses/$address/transactions'
       '?count=$limit&order=desc',
@@ -49,17 +48,12 @@ class CardanoTransactionFetcher implements TransactionFetcher {
         .where((h) => h.isNotEmpty)
         .toList();
 
-    // Step 2 — fetch UTxOs for each tx to determine amounts and direction
-    final results = <WalletTransaction>[];
-    for (final hash in hashes) {
-      try {
-        final tx = await _fetchTx(hash, address);
-        if (tx != null) results.add(tx);
-      } catch (_) {
-        continue;
-      }
-    }
-    return results;
+    // Fetch all txs in parallel instead of sequentially
+    final results = await Future.wait(
+      hashes.map((hash) => _fetchTx(hash, address)),
+    );
+
+    return results.whereType<WalletTransaction>().toList();
   }
 
   Future<WalletTransaction?> _fetchTx(String hash, String address) async {
