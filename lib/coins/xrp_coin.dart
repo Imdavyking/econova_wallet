@@ -17,6 +17,8 @@ import '../model/seed_phrase_root.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import '../xrp_transaction/xrp_transaction.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/xrp_trx_fetcher.dart';
 
 const xrpDecimals = 6;
 
@@ -59,6 +61,12 @@ class XRPCoin extends Coin {
   String getExplorer() {
     return blockExplorer;
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => XrpTransactionFetcher(
+        rpcUrl: api,
+        isTestnet: name.contains('Testnet'),
+      );
 
   @override
   String getDefault() {

@@ -10,7 +10,8 @@ import 'package:aptos/faucet_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/service/wallet_service.dart';
-
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/aptos_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -69,6 +70,12 @@ class AptosCoin extends Coin {
   String getSymbol() {
     return symbol;
   }
+
+   @override
+  TransactionFetcher? get transactionFetcher => AptosTransactionFetcher(
+        rpcUrl: rpc,
+        isTestnet: rpc.contains('devnet') || rpc.contains('testnet'),
+      );
 
   AptosCoin({
     required this.blockExplorer,

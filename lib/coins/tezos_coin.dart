@@ -10,7 +10,8 @@ import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/tezos_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -93,6 +94,10 @@ class TezosCoin extends Coin {
 
   @override
   String getPayScheme() => 'tezos';
+
+  @override
+  TransactionFetcher? get transactionFetcher =>
+      TezosTransactionFetcher(networkType: networkType);
 
   // ── Serialization ───────────────────────────────────────────────────────────
 

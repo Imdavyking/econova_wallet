@@ -6,7 +6,8 @@ import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
-
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/stellar_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -59,6 +60,11 @@ class StellarCoin extends Coin {
   String getSymbol() {
     return symbol;
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => StellarTransactionFetcher(
+        isTestnet: cluster == stellar.Network.TESTNET,
+      );
 
   StellarCoin({
     required this.blockExplorer,

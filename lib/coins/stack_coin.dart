@@ -17,6 +17,8 @@ import '../service/x402_service.dart';
 import '../utils/app_config.dart';
 import '../utils/c32check.dart';
 import '../utils/stack_tx_utils.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/stacks_trx_fetcher.dart';
 
 // ─── Address version bytes ─────────────────────────────────────────────────────
 
@@ -81,6 +83,10 @@ class StacksCoin extends Coin {
   String getRampID() => rampID;
   @override
   String getPayScheme() => payScheme;
+
+  @override
+  TransactionFetcher? get transactionFetcher =>
+      StacksTransactionFetcher(isTestnet: isTestnet);
 
   static const int _stacksDecimals = 6;
 

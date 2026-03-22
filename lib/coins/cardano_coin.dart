@@ -8,7 +8,8 @@ import 'package:cardano_flutter_sdk/cardano_flutter_sdk.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/cardano_trx_fetcher.dart';
 import '../extensions/big_int_ext.dart';
 import '../interface/coin.dart';
 import '../main.dart';
@@ -145,6 +146,12 @@ class CardanoCoin extends Coin {
   bool get supportPrivateKey => false;
   @override
   String savedTransKey() => 'cardanoTxV4${isTestnet}_$blockFrostKey';
+
+  @override
+  TransactionFetcher? get transactionFetcher => CardanoTransactionFetcher(
+        blockFrostKey: blockFrostKey,
+        isTestnet: isTestnet,
+      );
 
   // ── Serialization ───────────────────────────────────────────────────────────
 
