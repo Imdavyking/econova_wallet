@@ -335,14 +335,16 @@ List<TezosCoin> getTezosBlockchains() {
 
 Future<String> _signOperation(
     Uint8List privateKeyBytes, String forgedHex) async {
-  // Tezos operation watermark for 'generic operation' = 0x03
+  // Watermark 0x03 = generic operation
   final watermarked = Uint8List.fromList(
     [0x03, ...HEX.decode(forgedHex)],
   );
 
+  final msgHash = Uint8List.fromList(blake2bHash(watermarked, digestSize: 32));
+
   final algorithm = Ed25519();
   final keyPair = await algorithm.newKeyPairFromSeed(privateKeyBytes);
-  final sig = await algorithm.sign(watermarked, keyPair: keyPair);
+  final sig = await algorithm.sign(msgHash, keyPair: keyPair);
   return HEX.encode(sig.bytes);
 }
 
