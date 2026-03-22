@@ -83,6 +83,8 @@ const alchemyPolygonApiKey = 'DtU0__wTk6KUpZElU8pYQRpaHK0b8mip';
 const rampApiKey = '9842oj9c45xuzc93bm7zd7z4rn8cub3fs45decqh';
 const bscApiKey = '2WQ9Q2TTNSMD5DJ7GJR8F7TAEMZUCNCI5B';
 const tronGridApiKey = 'e09b6df9-0abc-4463-a623-43eaf291ef22';
+const supportedCurrencyKey = 'supportedCurrencies';
+const defaultCurrencyKey = 'defaultCurrency';
 
 List getAlchemyNFTs(EthereumCoin ethCoin) {
   List allowedNFTNames = [];

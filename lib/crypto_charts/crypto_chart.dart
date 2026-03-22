@@ -72,7 +72,7 @@ class _CryptoChartState extends State<CryptoChart> {
   }
 
   Future<_ChartResult> _fetchChart(int days) async {
-    final defaultCurrency = pref.get('defaultCurrency') as String? ?? 'usd';
+    final defaultCurrency = pref.get(defaultCurrencyKey) as String? ?? 'usd';
     final currencyWithSymbol = jsonDecode(currencyJson) as Map;
     final symbol =
         currencyWithSymbol[defaultCurrency.toUpperCase()]['symbol'] as String;

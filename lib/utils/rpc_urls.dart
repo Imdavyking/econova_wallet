@@ -303,7 +303,7 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
       now.difference(MyApp.lastcoinGeckoData).inSeconds;
   final bool useCached = secondsSinceLastFetch < secondsToResendRequest;
 
-  final String defaultCurrency = pref.get('defaultCurrency') ?? 'usd';
+  final String defaultCurrency = pref.get(defaultCurrencyKey) ?? 'usd';
   final currencyWithSymbol = jsonDecode(currencyJson) as Map;
   final String symbol =
       currencyWithSymbol[defaultCurrency.toUpperCase()]['symbol'];
@@ -337,7 +337,7 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
     }
 
     final String allCrypto = coinGeckoIDs.join(',');
-    final String vsCurrencies = pref.get('supportedCurrencies') ?? 'usd';
+    final String vsCurrencies = pref.get(supportedCurrencyKey) ?? 'usd';
 
     final Uri apiUrl = Uri.parse(
       '$coinGeckoBaseurl/simple/price?ids=$allCrypto'

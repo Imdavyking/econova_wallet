@@ -236,13 +236,13 @@ void main() async {
 
 // Call this once at app startup or first launch
 Future<void> cacheSupportedCurrencies() async {
-  if (pref.get('supportedCurrencies') != null) return; // already cached
+  if (pref.get(supportedCurrencyKey) != null) return; // already cached
 
   final supported = jsonDecode(
     (await http.get(Uri.parse(coinGeckoSupportedCurrencies))).body,
   ) as List;
 
-  await pref.put('supportedCurrencies', supported.join(','));
+  await pref.put(supportedCurrencyKey, supported.join(','));
 }
 
 int uint8ListToNumber(Uint8List bytes, {Endian endian = Endian.little}) {

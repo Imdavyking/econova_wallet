@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +67,7 @@ class _SetCurrencyState extends State<SetCurrency> {
   Future<_ScreenData> _loadData() async {
     if (kDebugMode) print('loading currencies');
 
-    final selectedCode = (pref.get('defaultCurrency') ?? 'USD') as String;
+    final selectedCode = (pref.get(defaultCurrencyKey) ?? 'USD') as String;
     final raw = jsonDecode(await getCurrencyJson()) as Map;
 
     final currencies = raw.entries
@@ -90,7 +91,7 @@ class _SetCurrencyState extends State<SetCurrency> {
     try {
       List<dynamic> supported;
 
-      final cached = pref.get('supportedCurrencies') as String?;
+      final cached = pref.get(supportedCurrencyKey) as String?;
       if (cached != null) {
         supported = cached.split(',');
       } else {
@@ -103,7 +104,7 @@ class _SetCurrencyState extends State<SetCurrency> {
       if (!mounted) return;
 
       if (supported.contains(entry.code.toLowerCase())) {
-        await pref.put('defaultCurrency', entry.code);
+        await pref.put(defaultCurrencyKey, entry.code);
         if (!mounted) return;
         Navigator.pop(context);
       } else {
