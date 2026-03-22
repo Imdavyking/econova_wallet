@@ -28,7 +28,8 @@ String encodeXrpJson(Map txJson, {bool forSigning = true}) {
   // Resolve X-Addresses before encoding.
   if (sampleXrpJson.containsKey('Destination') &&
       isXrp_X_Address(sampleXrpJson['Destination'] as String)) {
-    final d = xaddress_to_classic_address(sampleXrpJson['Destination'] as String);
+    final d =
+        xaddress_to_classic_address(sampleXrpJson['Destination'] as String);
     sampleXrpJson['Destination'] = d.classicAddress;
     if (d.tag != null) sampleXrpJson['DestinationTag'] = d.tag;
   }
@@ -245,9 +246,14 @@ String _encodeDer(MsgSignature sig) {
   final totalLen = rLen + sLen + 4; // 2 type+length bytes each for r and s
 
   return HEX.encode([
-    0x30, totalLen,
-    0x02, rLen, ...r,
-    0x02, sLen, ...s,
+    0x30,
+    totalLen,
+    0x02,
+    rLen,
+    ...r,
+    0x02,
+    sLen,
+    ...s,
   ]).toUpperCase();
 }
 
@@ -306,10 +312,8 @@ String _encodeClassicAddress(Uint8List bytes) {
     throw Exception('Invalid address payload length: ${bytes.length}');
   }
   final payload = [..._CLASSIC_ADDRESS_PREFIX, ...bytes];
-  final checksum = sha256
-      .convert(sha256.convert([0, ...bytes]).bytes)
-      .bytes
-      .sublist(0, 4);
+  final checksum =
+      sha256.convert(sha256.convert([0, ...bytes]).bytes).bytes.sublist(0, 4);
   return xrpBaseCodec.encode(Uint8List.fromList([...payload, ...checksum]));
 }
 
