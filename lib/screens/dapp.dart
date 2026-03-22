@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -95,7 +94,7 @@ class _DappState extends State<Dapp> with TickerProviderStateMixin {
       windowId: windowId,
       onStateUpdated: () => setState(() {}),
       onCloseTabRequested: () {
-        if (tab != null) _closeTab(tab!);
+        if (tab != null) _closeTab(tab);
       },
       onCreateTabRequested: (action) {
         _addTab(windowId: action.windowId);
@@ -161,7 +160,7 @@ class _DappState extends State<Dapp> with TickerProviderStateMixin {
 
   void _showMaxTabsSnackbar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Maximum $_kMaxTabs tabs reached'),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
