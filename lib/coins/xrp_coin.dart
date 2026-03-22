@@ -206,8 +206,15 @@ class XRPCoin extends Coin {
       "Destination": to
     };
 
-    if (memo != null) {
-      xrpJson['DestinationTag'] = int.tryParse(memo);
+    if (memo != null && memo.trim().isNotEmpty) {
+      final tag = int.tryParse(memo.trim());
+      if (tag == null) {
+        throw Exception(
+          'Destination Tag must be a number. '
+          'Check the tag required by the recipient (e.g. exchange deposit tag).',
+        );
+      }
+      xrpJson['DestinationTag'] = tag;
     }
 
     if (response.address == to) {
