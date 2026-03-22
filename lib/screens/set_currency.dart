@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 import '../main.dart';
@@ -87,8 +88,19 @@ class _SetCurrencyState extends State<SetCurrency> {
 
   Future<void> _onSelect(_CurrencyEntry entry) async {
     try {
-      final supported =
-          (pref.get('supportedCurrencies') as String?)?.split(',') ?? [];
+      List<dynamic> supported;
+
+      final cached = pref.get('supportedCurrencies') as String?;
+      if (cached != null) {
+        supported = cached.split(',');
+      } else {
+        // fallback — only hits network if startup cache failed
+        supported = jsonDecode(
+          (await http.get(Uri.parse(coinGeckoSupportedCurrencies))).body,
+        ) as List;
+      }
+
+      if (!mounted) return;
 
       if (supported.contains(entry.code.toLowerCase())) {
         await pref.put('defaultCurrency', entry.code);
