@@ -9,7 +9,7 @@ import 'package:wallet_app/interface/ft_explorer.dart';
 import 'package:wallet_app/providers/token_provider.dart';
 import 'package:wallet_app/screens/need_deploy_widget.dart';
 import 'package:wallet_app/screens/receive_token.dart';
-import 'package:wallet_app/screens/send_token.dart';
+import 'package:wallet_app/screens/send_form.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/format_money.dart';
@@ -35,7 +35,7 @@ class Token extends StatefulWidget {
 
 class _TokenState extends State<Token> {
   final ValueNotifier<bool> _trxOpen = ValueNotifier(true);
-  late String _currentAddress;
+  String _currentAddress = '';
   String? _description;
   late Coin _coin;
 
@@ -86,7 +86,8 @@ class _TokenState extends State<Token> {
   }
 
   Future<void> _setAddress() async {
-    _currentAddress = await _coin.getAddress();
+    final address = await _coin.getAddress();
+    if (mounted) setState(() => _currentAddress = address);
   }
 
   void _showTransferBlockedSnackbar() {
@@ -368,10 +369,8 @@ class _ActionButtons extends StatelessWidget {
               return;
             }
             if (context.mounted) {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => SendToken(tokenData: coin)));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => SendForm(tokenData: coin)));
             }
           },
         ),

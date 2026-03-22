@@ -2,10 +2,11 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:wallet_app/screens/view_nft_screens.dart';
+
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import '../service/x402_service.dart';
-import 'package:wallet_app/screens/view_erc_nfts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';

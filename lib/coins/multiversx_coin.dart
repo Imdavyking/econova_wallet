@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/esdt_coin.dart';
+import 'package:wallet_app/screens/view_nft_screens.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -15,7 +16,6 @@ import 'package:web3dart/crypto.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/multix_resolver.dart';
-import '../screens/view_multix_nfts.dart';
 import '../utils/app_config.dart';
 
 const multiversxDecimals = 18;
@@ -223,7 +223,7 @@ class MultiversxCoin extends Coin {
     }
   }
 
-  Future<String> trnsTok(TrxCoinParams config) async {
+  Future<String> _sendEgld(TrxCoinParams config) async {
     multiversx.UserSecretKey signer =
         multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
@@ -263,7 +263,7 @@ class MultiversxCoin extends Coin {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final sendTransaction = await compute(
-      trnsTok,
+      _sendEgld,
       TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
