@@ -383,12 +383,12 @@ class _WalletTile extends StatelessWidget {
         }
         return false; // never auto-remove; let state handle it
       },
-      background: _SwipeBackground(
+      background: const _SwipeBackground(
         color: Colors.blue,
         icon: Icons.edit,
         alignment: Alignment.centerLeft,
       ),
-      secondaryBackground: _SwipeBackground(
+      secondaryBackground: const _SwipeBackground(
         color: Colors.red,
         icon: Icons.delete,
         alignment: Alignment.centerRight,
