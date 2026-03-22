@@ -24,7 +24,7 @@ String formatMoney(num? money, [bool isTwoDPlace = false]) {
     final formatted = Erc8117.fromTokenPrice(actualMoney.toString()).ascii;
 
     if (formatted != null) {
-      return formatted.length < 6 ? formatted : formatted.substring(0, 6);
+      return formatted.length < 10 ? formatted : formatted.substring(0, 10);
     }
   }
 
