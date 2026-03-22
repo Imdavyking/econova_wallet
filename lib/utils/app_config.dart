@@ -16,8 +16,8 @@ final base64Uri = Uri.dataFromString(
   mimeType: 'text/html',
   encoding: Encoding.getByName('utf-8'),
 ).toString();
-final walletURL = base64Uri;
-final walletIconURL = "$walletURL/img/logo.png";
+const walletURL = "https://econova.vercel.app";
+const walletIconURL = "$walletURL/img/logo.png";
 const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
 
 const String fallbackMessage =
@@ -25,7 +25,7 @@ const String fallbackMessage =
 const walletDexProviderUrl =
     'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
 const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
-final browserUrl = walletURL;
+const browserUrl = 'http://localhost:5173/demo';
 
 // dapp links
 const blogUrl = "https://www.stacks.co/blog";

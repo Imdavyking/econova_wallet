@@ -125,12 +125,12 @@ class AItools {
             ContactService.getContacts().where((c) => c.coin == coin).toList();
 
         final exactMatch = contacts.firstWhereOrNull(
-          (c) => c.name?.toLowerCase() == contactName.toLowerCase(),
+          (c) => c.name.toLowerCase() == contactName.toLowerCase(),
         );
 
         if (exactMatch != null) {
           final address = exactMatch.address;
-          if (address == null || address.isEmpty) {
+          if (address.isEmpty) {
             return 'Contact "$contactName" has no associated address.';
           }
           try {
