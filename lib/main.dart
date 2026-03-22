@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
@@ -222,6 +223,7 @@ void main() async {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
+  cacheSupportedCurrencies();
   runApp(ProviderScope(
     child: MyApp(
       userDarkMode: pref.get(darkModekey, defaultValue: true),
@@ -230,6 +232,17 @@ void main() async {
       ),
     ),
   ));
+}
+
+// Call this once at app startup or first launch
+Future<void> cacheSupportedCurrencies() async {
+  if (pref.get('supportedCurrencies') != null) return; // already cached
+
+  final supported = jsonDecode(
+    (await http.get(Uri.parse(coinGeckoSupportedCurrencies))).body,
+  ) as List;
+
+  await pref.put('supportedCurrencies', supported.join(','));
 }
 
 int uint8ListToNumber(Uint8List bytes, {Endian endian = Endian.little}) {

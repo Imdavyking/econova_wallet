@@ -6,11 +6,8 @@ import 'package:wallet_app/utils/network_guard.dart';
 import 'package:blockchain_utils/blockchain_utils.dart' hide AES;
 import 'package:on_chain/on_chain.dart' hide Permission;
 import '../service/wallet_service.dart';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:bs58check/bs58check.dart' as bs58check;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart';
 import 'package:validators/validators.dart';
 import 'package:wallet_connect/wallet_connect.dart';
@@ -340,8 +337,12 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
     }
 
     final String allCrypto = coinGeckoIDs.join(',');
+    final String vsCurrencies = pref.get('supportedCurrencies') ?? 'usd';
+
     final Uri apiUrl = Uri.parse(
-      '$coinGeckoBaseurl/simple/price?ids=$allCrypto&vs_currencies=usd,$defaultCurrency&include_24hr_change=true',
+      '$coinGeckoBaseurl/simple/price?ids=$allCrypto'
+      '&vs_currencies=$vsCurrencies'
+      '&include_24hr_change=true',
     );
     final response = await get(apiUrl).timeout(networkTimeOutDuration);
 
