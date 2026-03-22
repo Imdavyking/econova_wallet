@@ -226,8 +226,10 @@ class XRPCoin extends Coin {
     if (fee != null) {
       xrpJson = {...xrpJson, ...fee};
     }
+    print('ksksksks');
 
     Map xrpTransaction = signXrpTransaction(response.privateKey!, xrpJson);
+    print('ok signed');
 
     final httpFromWs = Uri.parse(api);
     final request = await post(
