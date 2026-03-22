@@ -123,6 +123,7 @@ class AlgorandCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final microAlgos = await getAlgorandClient(algoType).getBalance(address);
+    print(microAlgos);
     return microAlgos / pow(10, algorandDecimals);
   }
 

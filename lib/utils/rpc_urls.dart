@@ -265,13 +265,11 @@ String ellipsify({required String str, int? maxLength}) {
   if (maxLength % 2 != 0) maxLength++;
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
-    final eipData = Erc8117.fromAddress(str.replaceFirst('0x', ''));
-    if (eipData.ascii != null) {
-      str = '0x${eipData.ascii!}';
-      maxLength = 14;
-    } else if (eipData.unicode != null) {
-      str = '0x${eipData.unicode!}';
-      maxLength = 16;
+    final eipData = Erc8117.fromAddress(str);
+    if (eipData.unicode != null) {
+      return eipData.unicode!;
+    } else if (eipData.ascii != null) {
+      return eipData.ascii!;
     }
   }
   final first = str.substring(0, maxLength ~/ 2);
