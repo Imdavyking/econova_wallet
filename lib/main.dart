@@ -151,6 +151,7 @@ Future<List<Coin>> fetchSupportedChains() async {
 late Box pref;
 final mnemonicSuggester = Trie();
 late WalletType walletImportType;
+late ByteData logoBytes;
 
 // DO NOT USE (public)
 const testMnemonic =
@@ -224,6 +225,7 @@ void main() async {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
   cacheSupportedCurrencies();
+  logoBytes = await rootBundle.load('assets/logo.png');
   runApp(ProviderScope(
     child: MyApp(
       userDarkMode: pref.get(darkModekey, defaultValue: true),

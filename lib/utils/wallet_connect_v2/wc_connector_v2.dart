@@ -107,7 +107,7 @@ class WcConnectorV2 {
     signClient = await SignClient.init(
       projectId: walletConnectKey,
       relayUrl: wcEndpoint,
-      metadata: const AppMetadata(
+      metadata: AppMetadata(
         name: walletName,
         url: walletURL,
         description: walletAbbr,

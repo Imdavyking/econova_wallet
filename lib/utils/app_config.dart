@@ -1,11 +1,23 @@
+import 'dart:convert';
+
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/material.dart';
+import 'package:wallet_app/main.dart';
+import 'package:wallet_app/web_home/econova_web.dart';
 import '../coins/ethereum_coin.dart';
 
 const walletAbbr = 'ECA';
 const walletName = 'Econova';
-const walletURL = "https://econova.vercel.app";
-const walletIconURL = "$walletURL/img/logo.png";
+final base64Logo = base64Encode(logoBytes.buffer.asUint8List());
+
+// Convert to base64 URI
+final base64Uri = Uri.dataFromString(
+  walletHomePage,
+  mimeType: 'text/html',
+  encoding: Encoding.getByName('utf-8'),
+).toString();
+final walletURL = base64Uri;
+final walletIconURL = "$walletURL/img/logo.png";
 const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
 
 const String fallbackMessage =
@@ -13,7 +25,7 @@ const String fallbackMessage =
 const walletDexProviderUrl =
     'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
 const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
-const browserUrl = 'http://localhost:5173/demo';
+final browserUrl = walletURL;
 
 // dapp links
 const blogUrl = "https://www.stacks.co/blog";
