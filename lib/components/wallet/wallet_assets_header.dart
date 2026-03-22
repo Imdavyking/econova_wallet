@@ -3,6 +3,7 @@ import 'package:page_transition/page_transition.dart';
 import 'package:wallet_app/screens/add_custom_token.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/app_config.dart';
 
 class WalletAssetsHeader extends StatelessWidget {
   const WalletAssetsHeader({super.key});
@@ -18,35 +19,52 @@ class WalletAssetsHeader extends StatelessWidget {
         children: [
           Text(
             localization.assets,
-            style:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           if (WalletService.isPharseKey())
             GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  PageTransition(
-                    type: PageTransitionType.rightToLeft,
-                    child: const AddCustomToken(),
-                  ),
-                );
-              },
+              onTap: () => Navigator.push(
+                context,
+                PageTransition(
+                  type: PageTransitionType.rightToLeft,
+                  child: const AddCustomToken(),
+                ),
+              ),
               child: Container(
-                color: Colors.transparent,
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          localization.addToken,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const Icon(Icons.add, size: 20),
-                      ],
-                    ),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: appBackgroundblue.withOpacity(0.6),
+                    width: 1.5,
                   ),
+                  color: appBackgroundblue.withOpacity(0.08),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: appBackgroundblue,
+                      ),
+                      child:
+                          const Icon(Icons.add, size: 14, color: Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      localization.addToken,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: appBackgroundblue,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
