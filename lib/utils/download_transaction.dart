@@ -184,13 +184,11 @@ class TransactionExportService {
           ]),
     ];
 
-    print(rows);
-
     final csv = const ListToCsvConverter().convert(rows);
-    print("Hreeee");
+
     final fileName =
         '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.csv';
-    print("goood");
+
     await _shareFile(
       content: csv,
       fileName: fileName,
