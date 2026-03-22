@@ -106,7 +106,7 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
       svgAsset: 'assets/fiat_dapp.svg',
       url: fiatDexProviderUrl,
     ),
-    _QuickAction(
+    const _QuickAction(
       labelKey: 'browser',
       svgAsset: 'assets/browser_dapp.svg',
       url: browserUrl,
