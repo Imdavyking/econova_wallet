@@ -123,6 +123,7 @@ String encodeXrpJson(Map sampleXrpJson) {
       serializer.addAll(associatedValue);
     }
   }
+
   serializer.insertAll(0, xrpTransactionPrefix);
   return HEX.encode(List<int>.from(serializer)).toUpperCase();
 }

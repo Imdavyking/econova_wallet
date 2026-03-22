@@ -207,7 +207,7 @@ class XRPCoin extends Coin {
     };
 
     if (memo != null) {
-      xrpJson['DestinationTag'] = memo;
+      xrpJson['DestinationTag'] = int.tryParse(memo);
     }
 
     if (response.address == to) {
