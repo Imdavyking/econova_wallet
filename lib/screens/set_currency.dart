@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 import '../main.dart';
@@ -21,7 +20,7 @@ class _CurrencyEntry {
   String get flagAsset => 'assets/currency_flags/${code.toLowerCase()}.png';
 }
 
-// ── Screen state ──────────────────────────────────────────────────────────────
+// ── Screen data ───────────────────────────────────────────────────────────────
 
 class _ScreenData {
   final List<_CurrencyEntry> currencies;
@@ -44,11 +43,13 @@ class SetCurrency extends StatefulWidget {
 
 class _SetCurrencyState extends State<SetCurrency> {
   final _searchController = TextEditingController();
+  late final Future<_ScreenData> _dataFuture;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
+    _dataFuture = _loadData();
     _searchController.addListener(
       () =>
           setState(() => _query = _searchController.text.trim().toLowerCase()),
@@ -86,11 +87,8 @@ class _SetCurrencyState extends State<SetCurrency> {
 
   Future<void> _onSelect(_CurrencyEntry entry) async {
     try {
-      final supported = jsonDecode(
-        (await get(Uri.parse(coinGeckoSupportedCurrencies))).body,
-      ) as List;
-
-      if (!context.mounted) return;
+      final supported =
+          (pref.get('supportedCurrencies') as String?)?.split(',') ?? [];
 
       if (supported.contains(entry.code.toLowerCase())) {
         await pref.put('defaultCurrency', entry.code);
@@ -127,7 +125,7 @@ class _SetCurrencyState extends State<SetCurrency> {
             ),
             Expanded(
               child: FutureBuilder<_ScreenData>(
-                future: _loadData(),
+                future: _dataFuture,
                 builder: (ctx, snapshot) {
                   if (!snapshot.hasData) {
                     return snapshot.hasError
@@ -251,7 +249,6 @@ class _CurrencyTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
-            // Flag
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.grey.shade200,
@@ -259,7 +256,6 @@ class _CurrencyTile extends StatelessWidget {
               onBackgroundImageError: (_, __) {},
             ),
             const SizedBox(width: 12),
-            // Labels
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +276,6 @@ class _CurrencyTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Check
             if (isSelected)
               Container(
                 decoration: const BoxDecoration(
