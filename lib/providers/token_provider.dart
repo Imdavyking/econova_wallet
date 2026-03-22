@@ -11,17 +11,25 @@ import '../utils/rpc_urls.dart';
 // ── Typed data classes ────────────────────────────────────────────────────────
 
 class BlockchainInfo {
+  final double price;
+  final String currencySymbol;
   final String pricewithSym;
   final double change;
   final String changeSign;
   final Color color;
 
   const BlockchainInfo({
+    required this.price,
+    required this.currencySymbol,
     required this.pricewithSym,
     required this.change,
     required this.changeSign,
     required this.color,
   });
+
+  /// Fiat value of [balance] units of this coin.
+  String fiatValue(double balance) =>
+      '$currencySymbol${formatMoney(balance * price, true)}';
 }
 
 class TokenTransaction {
@@ -88,6 +96,8 @@ class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
       if (currChange < 0) color = red;
 
       state = BlockchainInfo(
+        price: currPrice,
+        currencySymbol: cryptoPrice.symbol,
         pricewithSym: cryptoPrice.symbol + formatMoney(currPrice, true),
         change: currChange,
         changeSign: currChange > 0 ? '+' : '',

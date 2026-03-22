@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:math';
+
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -25,6 +26,18 @@ import '../service/wallet_service.dart';
 import '../utils/get_token_image.dart';
 import 'launch_url.dart';
 
+// ── Provider typedefs ─────────────────────────────────────────────────────────
+
+typedef _InfoProvider
+    = AutoDisposeStateNotifierProvider<BlockchainInfoData, BlockchainInfo?>;
+typedef _BalanceProvider
+    = AutoDisposeStateNotifierProvider<TokenBalance, double?>;
+typedef _TxProvider
+    = AutoDisposeStateNotifierProvider<TransactionData, TransactionState?>;
+typedef _ServiceProvider = AutoDisposeFutureProvider;
+
+// ── Root widget ───────────────────────────────────────────────────────────────
+
 class Token extends StatefulWidget {
   final Coin coin;
   const Token({required this.coin, super.key});
@@ -39,15 +52,12 @@ class _TokenState extends State<Token> {
   String? _description;
   late Coin _coin;
 
-  late AutoDisposeStateNotifierProvider<BlockchainInfoData, BlockchainInfo?>
-      _infoController;
-  late AutoDisposeStateNotifierProvider<TransactionData, TransactionState?>
-      _transactionsController;
-  late AutoDisposeStateNotifierProvider<TokenBalance, double?>
-      _tokenBalanceController;
-  late AutoDisposeFutureProvider _infoService;
-  late AutoDisposeFutureProvider _transactionService;
-  late AutoDisposeFutureProvider _tokenBalanceService;
+  late _InfoProvider _infoController;
+  late _TxProvider _transactionsController;
+  late _BalanceProvider _tokenBalanceController;
+  late _ServiceProvider _infoService;
+  late _ServiceProvider _transactionService;
+  late _ServiceProvider _tokenBalanceService;
 
   @override
   void initState() {
@@ -130,35 +140,31 @@ class _TokenState extends State<Token> {
             onRefresh: () async {},
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(25),
-                    child: Column(
-                      children: [
-                        _CoinCard(
-                          coin: _coin,
-                          description: _description!,
-                          infoController: _infoController,
-                          infoService: _infoService,
-                          tokenBalanceController: _tokenBalanceController,
-                          tokenBalanceService: _tokenBalanceService,
-                          onTransferBlocked: _showTransferBlockedSnackbar,
-                          currentAddress: _currentAddress,
-                          localization: localization,
-                        ),
-                        NeedDeploymentWidget(coin: _coin),
-                        const SizedBox(height: 20),
-                        _TransactionSection(
-                          transactionsController: _transactionsController,
-                          transactionService: _transactionService,
-                          coin: _coin,
-                          trxOpen: _trxOpen,
-                        ),
-                      ],
+              child: Padding(
+                padding: const EdgeInsets.all(25),
+                child: Column(
+                  children: [
+                    _CoinCard(
+                      coin: _coin,
+                      description: _description!,
+                      infoController: _infoController,
+                      infoService: _infoService,
+                      tokenBalanceController: _tokenBalanceController,
+                      tokenBalanceService: _tokenBalanceService,
+                      onTransferBlocked: _showTransferBlockedSnackbar,
+                      currentAddress: _currentAddress,
+                      localization: localization,
                     ),
-                  ),
-                ],
+                    NeedDeploymentWidget(coin: _coin),
+                    const SizedBox(height: 20),
+                    _TransactionSection(
+                      transactionsController: _transactionsController,
+                      transactionService: _transactionService,
+                      coin: _coin,
+                      trxOpen: _trxOpen,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -198,17 +204,15 @@ class _TokenState extends State<Token> {
   }
 }
 
-// ── Coin info card ─────────────────────────────────────────────────────────────
+// ── Coin info card ────────────────────────────────────────────────────────────
 
 class _CoinCard extends ConsumerWidget {
   final Coin coin;
   final String description;
-  final AutoDisposeStateNotifierProvider<BlockchainInfoData, BlockchainInfo?>
-      infoController;
-  final AutoDisposeFutureProvider infoService;
-  final AutoDisposeStateNotifierProvider<TokenBalance, double?>
-      tokenBalanceController;
-  final AutoDisposeFutureProvider tokenBalanceService;
+  final _InfoProvider infoController;
+  final _ServiceProvider infoService;
+  final _BalanceProvider tokenBalanceController;
+  final _ServiceProvider tokenBalanceService;
   final VoidCallback onTransferBlocked;
   final String currentAddress;
   final AppLocalizations localization;
@@ -229,7 +233,6 @@ class _CoinCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
-      height: 300,
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Padding(
@@ -242,7 +245,7 @@ class _CoinCard extends ConsumerWidget {
                 children: [
                   Text(description,
                       style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                  _PriceChangeConsumer(
+                  _PriceChangeWidget(
                     infoController: infoController,
                     infoService: infoService,
                   ),
@@ -251,27 +254,15 @@ class _CoinCard extends ConsumerWidget {
               const SizedBox(height: 20),
               GetTokenImage(radius: 25, currCoin: coin),
               const SizedBox(height: 10),
-              // Balance
-              Consumer(builder: (context, ref, _) {
-                final balance = ref.watch(tokenBalanceController);
-                ref.watch(tokenBalanceService);
-                if (balance == null) {
-                  return const Text('',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold));
-                }
-                return UserBalance(
-                  iconSize: 20,
-                  mustIcon: _LockIcon(coin: coin, onBlocked: onTransferBlocked),
-                  haveValue: coin.isRpcWorking,
-                  textStyle: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                  balance: balance,
-                  symbol: coin.tokenAddress() != null
-                      ? ellipsify(str: coin.getSymbol())
-                      : coin.getSymbol(),
-                );
-              }),
+              // Balance + fiat value
+              _BalanceWithFiat(
+                coin: coin,
+                infoController: infoController,
+                infoService: infoService,
+                tokenBalanceController: tokenBalanceController,
+                tokenBalanceService: tokenBalanceService,
+                onTransferBlocked: onTransferBlocked,
+              ),
               const SizedBox(height: 10),
               const Divider(),
               const SizedBox(height: 10),
@@ -289,15 +280,80 @@ class _CoinCard extends ConsumerWidget {
   }
 }
 
-// ── Price/change consumer ─────────────────────────────────────────────────────
+// ── Balance + fiat value ──────────────────────────────────────────────────────
 
-class _PriceChangeConsumer extends ConsumerWidget {
-  final AutoDisposeStateNotifierProvider<BlockchainInfoData, BlockchainInfo?>
-      infoController;
-  final AutoDisposeFutureProvider infoService;
+class _BalanceWithFiat extends ConsumerWidget {
+  final Coin coin;
+  final _InfoProvider infoController;
+  final _ServiceProvider infoService;
+  final _BalanceProvider tokenBalanceController;
+  final _ServiceProvider tokenBalanceService;
+  final VoidCallback onTransferBlocked;
 
-  const _PriceChangeConsumer(
-      {required this.infoController, required this.infoService});
+  const _BalanceWithFiat({
+    required this.coin,
+    required this.infoController,
+    required this.infoService,
+    required this.tokenBalanceController,
+    required this.tokenBalanceService,
+    required this.onTransferBlocked,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final balance = ref.watch(tokenBalanceController);
+    final info = ref.watch(infoController);
+    ref.watch(tokenBalanceService);
+    ref.watch(infoService);
+
+    const boldLarge = TextStyle(fontSize: 20, fontWeight: FontWeight.bold);
+
+    if (balance == null) {
+      return const Text('', style: boldLarge);
+    }
+
+    final fiatText = (info != null && info.price > 0 && balance > 0)
+        ? info.fiatValue(balance)
+        : null;
+
+    return Column(
+      children: [
+        UserBalance(
+          iconSize: 20,
+          mustIcon: _LockIcon(coin: coin, onBlocked: onTransferBlocked),
+          haveValue: coin.isRpcWorking,
+          textStyle: boldLarge,
+          balance: balance,
+          symbol: coin.tokenAddress() != null
+              ? ellipsify(str: coin.getSymbol())
+              : coin.getSymbol(),
+        ),
+        if (fiatText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            fiatText,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Price/change widget ───────────────────────────────────────────────────────
+
+class _PriceChangeWidget extends ConsumerWidget {
+  final _InfoProvider infoController;
+  final _ServiceProvider infoService;
+
+  const _PriceChangeWidget({
+    required this.infoController,
+    required this.infoService,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -341,7 +397,7 @@ class _LockIcon extends StatelessWidget {
   }
 }
 
-// ── Action buttons ─────────────────────────────────────────────────────────────
+// ── Action buttons ────────────────────────────────────────────────────────────
 
 class _ActionButtons extends StatelessWidget {
   final Coin coin;
@@ -369,8 +425,10 @@ class _ActionButtons extends StatelessWidget {
               return;
             }
             if (context.mounted) {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => SendForm(tokenData: coin)));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SendForm(tokenData: coin)),
+              );
             }
           },
         ),
@@ -384,8 +442,10 @@ class _ActionButtons extends StatelessWidget {
               return;
             }
             if (context.mounted) {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => ReceiveToken(coin: coin)));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ReceiveToken(coin: coin)),
+              );
             }
           },
         ),
@@ -395,7 +455,9 @@ class _ActionButtons extends StatelessWidget {
             icon: Icons.image,
             label: 'NFTs',
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => coin.getNFTPage()!)),
+              context,
+              MaterialPageRoute(builder: (_) => coin.getNFTPage()!),
+            ),
           ),
         ],
         if (coin.getStakingPage() != null) ...[
@@ -403,8 +465,10 @@ class _ActionButtons extends StatelessWidget {
           _ActionButton(
             icon: FontAwesomeIcons.coins,
             label: 'Stake',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => coin.getStakingPage()!)),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => coin.getStakingPage()!),
+            ),
           ),
         ],
         if (coin.getGoalPage() != null) ...[
@@ -412,8 +476,10 @@ class _ActionButtons extends StatelessWidget {
           _ActionButton(
             icon: FontAwesomeIcons.lock,
             label: 'Save',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => coin.getGoalPage()!)),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => coin.getGoalPage()!),
+            ),
           ),
         ],
       ],
@@ -460,12 +526,11 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ── Transaction section ────────────────────────────────────────────────────────
+// ── Transaction section ───────────────────────────────────────────────────────
 
 class _TransactionSection extends ConsumerWidget {
-  final AutoDisposeStateNotifierProvider<TransactionData, TransactionState?>
-      transactionsController;
-  final AutoDisposeFutureProvider transactionService;
+  final _TxProvider transactionsController;
+  final _ServiceProvider transactionService;
   final Coin coin;
   final ValueNotifier<bool> trxOpen;
 
@@ -484,47 +549,13 @@ class _TransactionSection extends ConsumerWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: trxOpen,
       builder: (_, isOpen, __) {
-        final items = <Widget>[];
-
-        if (state != null) {
-          int count = 0;
-          for (final tx in state.transactions) {
-            if (count >= maximumTransactionToSave) break;
-            if (tx.from.toLowerCase() != state.currentUser.toLowerCase()) {
-              continue;
-            }
-
-            items.addAll([
-              _TransactionItem(tx: tx, coin: coin),
-              const Divider(),
-            ]);
-            count++;
-          }
-        }
+        final items = _buildTransactionItems(state);
 
         return Column(
           children: [
-            GestureDetector(
+            _TransactionHeader(
+              isOpen: isOpen,
               onTap: () => trxOpen.value = !trxOpen.value,
-              child: Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-                child: Padding(
-                  padding: const EdgeInsets.all(15),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Transactions',
-                          style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: 5),
-                      Transform.rotate(
-                        angle: isOpen ? 90 * pi / 180 : 270 * pi / 180,
-                        child: const Icon(Icons.arrow_back_ios_new, size: 15),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
             if (items.isNotEmpty && isOpen)
               Column(
@@ -534,6 +565,53 @@ class _TransactionSection extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+
+  List<Widget> _buildTransactionItems(TransactionState? state) {
+    if (state == null) return [];
+
+    final items = <Widget>[];
+    int count = 0;
+
+    for (final tx in state.transactions) {
+      if (count >= maximumTransactionToSave) break;
+      if (tx.from.toLowerCase() != state.currentUser.toLowerCase()) continue;
+      items.addAll([_TransactionItem(tx: tx, coin: coin), const Divider()]);
+      count++;
+    }
+
+    return items;
+  }
+}
+
+class _TransactionHeader extends StatelessWidget {
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  const _TransactionHeader({required this.isOpen, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Transactions', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 5),
+              Transform.rotate(
+                angle: isOpen ? 90 * pi / 180 : 270 * pi / 180,
+                child: const Icon(Icons.arrow_back_ios_new, size: 15),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
