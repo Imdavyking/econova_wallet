@@ -136,31 +136,37 @@ class TransactionData extends StateNotifier<TransactionState?> {
   final Coin coin;
 
   TransactionData({required this.coin}) : super(null);
-
   Future<void> getTokenTransactions() async {
     try {
       final address = await coin.getAddress();
       final fetcher = coin.transactionFetcher;
 
       if (fetcher != null) {
-        // ── On-chain indexer path ─────────────────────────────────────────
-        final walletTxs = await fetcher.fetch(address: address);
-        state = TransactionState(
-          transactions: walletTxs.map(TokenTransaction.fromWallet).toList(),
-          currentUser: address,
-        );
-      } else {
-        // ── Local store fallback ──────────────────────────────────────────
-        final raw = await coin.getTransactions();
-        final rawList = raw['trx'] as List? ?? [];
-        state = TransactionState(
-          transactions: rawList
-              .whereType<Map<String, dynamic>>()
-              .map(TokenTransaction.fromJson)
-              .toList(),
-          currentUser: raw['currentUser'] as String? ?? address,
-        );
+        try {
+          // ── On-chain indexer path ─────────────────────────────────────────
+          final walletTxs = await fetcher.fetch(address: address);
+          state = TransactionState(
+            transactions: walletTxs.map(TokenTransaction.fromWallet).toList(),
+            currentUser: address,
+          );
+          return; // success — don't fall through to local
+        } catch (_) {
+          // Indexer failed (offline, rate limited, etc.)
+          // Fall through to local store below
+        }
       }
+
+      // ── Local store fallback ──────────────────────────────────────────────
+      // Runs if: no fetcher, or fetcher threw
+      final raw = await coin.getTransactions();
+      final rawList = raw['trx'] as List? ?? [];
+      state = TransactionState(
+        transactions: rawList
+            .whereType<Map<String, dynamic>>()
+            .map(TokenTransaction.fromJson)
+            .toList(),
+        currentUser: raw['currentUser'] as String? ?? address,
+      );
     } catch (_) {}
   }
 }
