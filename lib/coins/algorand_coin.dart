@@ -123,7 +123,7 @@ class AlgorandCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final microAlgos = await getAlgorandClient(algoType).getBalance(address);
-    print(microAlgos);
+    print('algOOO: $microAlgos');
     return microAlgos / pow(10, algorandDecimals);
   }
 
@@ -141,6 +141,8 @@ class AlgorandCoin extends Coin {
       await pref.put(key, balance);
       return balance;
     } catch (e) {
+      print("algo eerrror");
+      print(e);
       return savedBalance;
     }
   }
@@ -248,7 +250,7 @@ algo_rand.Algorand getAlgorandClient(AlgorandTypes type) {
   );
 
   final kmdClient = algo_rand.KmdClient(
-    apiUrl: '127.0.0.1',
+    apiUrl: 'http://127.0.0.1',
     apiKey: pureStakeApiKey,
   );
 
