@@ -1,316 +1,359 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names, prefer_const_declarations
+
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart';
+import 'package:hex/hex.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:wallet_app/xrp_transaction/xrp_definitions.dart';
-import 'package:wallet_app/xrp_transaction/xrp_ordinal.dart';
-import 'package:flutter/services.dart';
-import 'package:crypto/crypto.dart';
-import 'package:hex/hex.dart';
 import 'package:web3dart/crypto.dart';
 
 import '../coins/xrp_coin.dart';
+import 'xrp_definitions.dart';
+import 'xrp_ordinal.dart';
 
-Uint8List decodeClassicAddress(String classicAddress) {
-  return _decode(classicAddress, _CLASSIC_ADDRESS_PREFIX);
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/// Encodes [txJson] to the canonical XRP binary format.
+///
+/// Pass [forSigning] = true (default) to exclude non-signing fields
+/// (e.g. TxnSignature) so the output can be hashed for signing.
+/// Pass [forSigning] = false when encoding the final signed transaction
+/// for submission.
+String encodeXrpJson(Map txJson, {bool forSigning = true}) {
+  // Work on a copy so the caller's map is never mutated.
+  final sampleXrpJson = Map.of(txJson);
+
+  // Resolve X-Addresses before encoding.
+  if (sampleXrpJson.containsKey('Destination') &&
+      isXrp_X_Address(sampleXrpJson['Destination'] as String)) {
+    final d = xaddress_to_classic_address(sampleXrpJson['Destination'] as String);
+    sampleXrpJson['Destination'] = d.classicAddress;
+    if (d.tag != null) sampleXrpJson['DestinationTag'] = d.tag;
+  }
+
+  if (sampleXrpJson.containsKey('Account') &&
+      isXrp_X_Address(sampleXrpJson['Account'] as String)) {
+    final s = xaddress_to_classic_address(sampleXrpJson['Account'] as String);
+    sampleXrpJson['Account'] = s.classicAddress;
+    if (s.tag != null) sampleXrpJson['SourceTag'] = s.tag;
+  }
+
+  // Build field metadata from FIELDS definition.
+  final fields = rippleDefinitions['FIELDS'] as List;
+  final Map<String, Map> fieldMeta = {};
+  for (final field in fields) {
+    final key = field[0] as String;
+    fieldMeta[key] = Map.from(field[1] as Map);
+  }
+
+  // Collect only fields that are present in the tx AND are serializable.
+  final List<Map> toSerialize = [];
+  for (final key in sampleXrpJson.keys) {
+    final ordinalEntry = xrpOrdinal[key as String];
+    if (ordinalEntry == null) continue; // unknown field — skip
+
+    final meta = fieldMeta[key];
+    if (meta == null) continue;
+
+    final isSerialized = meta['isSerialized'] as bool? ?? false;
+    final isSigningField = meta['isSigningField'] as bool? ?? false;
+
+    if (!isSerialized) continue;
+    if (forSigning && !isSigningField) continue; // exclude TxnSignature etc.
+
+    toSerialize.add({
+      'name': key,
+      'ordinal': ordinalEntry['ordinal'] as int,
+      'nth': ordinalEntry['nth'] as int,
+      'type': meta['type'] as String,
+      'isVLEncoded': meta['isVLEncoded'] as bool? ?? false,
+    });
+  }
+
+  // Sort by canonical ordinal order.
+  toSerialize.sort((a, b) => (a['ordinal'] as int) - (b['ordinal'] as int));
+
+  // Serialize.
+  final List<int> serializer = [];
+  const xrpTransactionPrefix = [83, 84, 88, 0];
+
+  for (final field in toSerialize) {
+    final name = field['name'] as String;
+    final typeCode = rippleDefinitions['TYPES'][field['type']] as int;
+    final fieldCode = field['nth'] as int;
+    final isVLEncoded = field['isVLEncoded'] as bool;
+
+    // Field header
+    final List<int> header = _buildHeader(typeCode, fieldCode);
+    serializer.addAll(header);
+
+    // Field value
+    final Uint8List value = _encodeFieldValue(
+      name: name,
+      type: field['type'] as String,
+      rawValue: sampleXrpJson[name],
+    );
+
+    if (isVLEncoded) {
+      serializer.addAll(_encodeVariableLengthPrefix(value.length));
+    }
+    serializer.addAll(value);
+  }
+
+  serializer.insertAll(0, xrpTransactionPrefix);
+  return HEX.encode(serializer).toUpperCase();
 }
 
-Uint8List _decode(classicAddress, List prefix) {
-  final decoded = xrpBaseCodec.decode(classicAddress);
+/// Signs [xrpTransactionJson] with [privateKeyHex] and returns the map
+/// with 'TxnSignature' populated.
+Map signXrpTransaction(String privateKeyHex, Map xrpTransactionJson) {
+  final signingHex = encodeXrpJson(xrpTransactionJson, forSigning: true);
+
+  // XRP signs SHA-512Half of the prefixed serialized tx.
+  final full = sha512.convert(HEX.decode(signingHex)).bytes;
+  final half = Uint8List.fromList(full.sublist(0, 32));
+
+  final sig = sign(half, Uint8List.fromList(HEX.decode(privateKeyHex)));
+  final derSig = _encodeDer(sig);
+
+  final signed = Map.of(xrpTransactionJson);
+  signed['TxnSignature'] = derSig;
+  return signed;
+}
+
+/// Throws a user-friendly [Exception] if [balanceDrops] minus [sendDrops]
+/// would fall below the XRP base reserve (1 XRP = 1_000_000 drops).
+///
+/// Call this before building the transaction in your XRP coin's transferToken.
+void assertXrpReserve({
+  required BigInt balanceDrops,
+  required BigInt sendDrops,
+  required BigInt feeDrops,
+  int reserveDrops = 1000000,
+}) {
+  final remaining = balanceDrops - sendDrops - feeDrops;
+  if (remaining < BigInt.from(reserveDrops)) {
+    final reserveXrp = (reserveDrops / 1e6).toStringAsFixed(1);
+    throw Exception(
+      'Insufficient balance — XRP requires a minimum reserve of $reserveXrp XRP '
+      'to remain in the account at all times.',
+    );
+  }
+}
+
+// ── Address helpers ───────────────────────────────────────────────────────────
+
+Uint8List decodeClassicAddress(String classicAddress) =>
+    _decode(classicAddress, _CLASSIC_ADDRESS_PREFIX);
+
+Uint8List _decode(String address, List<int> prefix) {
+  final decoded = xrpBaseCodec.decode(address);
   return decoded.sublist(prefix.length, decoded.length - 4);
 }
 
-bool isXrp_X_Address(String x_Address) {
+bool isXrp_X_Address(String address) {
   try {
-    xaddress_to_classic_address(x_Address);
+    xaddress_to_classic_address(address);
     return true;
-  } catch (e) {
+  } catch (_) {
     return false;
   }
 }
 
-String encodeXrpJson(Map sampleXrpJson) {
-  final xrpTransactionPrefix = [83, 84, 88, 0];
+// ── Internal encoding helpers ─────────────────────────────────────────────────
 
-  if (isXrp_X_Address(sampleXrpJson['Destination'])) {
-    final destinationXDetails =
-        xaddress_to_classic_address(sampleXrpJson['Destination']);
-    sampleXrpJson['Destination'] = destinationXDetails.classicAddress;
-    sampleXrpJson['DestinationTag'] = destinationXDetails.tag;
-  } else if (isXrp_X_Address(sampleXrpJson['Account'])) {
-    final sourceXDetails =
-        xaddress_to_classic_address(sampleXrpJson['Account']);
-    sampleXrpJson['Account'] = sourceXDetails.classicAddress;
-    sampleXrpJson['SourceTag'] = sourceXDetails.tag;
-  }
+List<int> _buildHeader(int typeCode, int fieldCode) {
+  if (typeCode < 16 && fieldCode < 16) return [typeCode << 4 | fieldCode];
+  if (typeCode < 16) return [typeCode << 4, fieldCode];
+  if (fieldCode < 16) return [0, typeCode, fieldCode];
+  return [0, typeCode, fieldCode];
+}
 
-  List xrpJson = sampleXrpJson.keys.toList();
-  var sorted = xrpJson.map((e) {
-    return xrpOrdinal[e];
-  }).toList()
-    ..removeWhere((f) {
-      return f == null && f?['isSerialized'] == null;
-    })
-    ..sort((a, b) {
-      return (a?['ordinal'] as int) - (b?['ordinal'] as int);
-    });
-
-  final fields = rippleDefinitions['FIELDS'] as List;
-  Map trxFieldInfo = {};
-  for (var field in fields) {
-    final key = field[0];
-    final value = field[1];
-    trxFieldInfo[key] = value;
-  }
-
-  List serializer = [];
-
-  for (int i = 0; i < sorted.length; i++) {
-    final sortedKeys = sorted[i]?['name'];
-
-    trxFieldInfo[sortedKeys]['ordinal'] = sorted[i]?['ordinal'];
-    trxFieldInfo[sortedKeys]['name'] = sorted[i]?['name'];
-    trxFieldInfo[sortedKeys]['nth'] = sorted[i]?['nth'];
-
-    final typeCode =
-        rippleDefinitions['TYPES'][trxFieldInfo[sortedKeys]['type']];
-    final fieldCode = trxFieldInfo[sortedKeys]['nth'];
-    final isVariableEncoded = trxFieldInfo[sortedKeys]['isVLEncoded'];
-    Uint8List associatedValue = Uint8List.fromList([]);
-
-    if (sortedKeys == 'TransactionType') {
-      final transType =
-          rippleDefinitions['TRANSACTION_TYPES'][sampleXrpJson[sortedKeys]];
-      associatedValue = _toUint16(transType);
-    } else if (trxFieldInfo[sortedKeys]['type'] == 'UInt32') {
-      associatedValue = _toUint32(sampleXrpJson[sortedKeys]);
-    } else if (trxFieldInfo[sortedKeys]['type'] == 'UInt16') {
-      associatedValue = _toUint32(sampleXrpJson[sortedKeys]);
-    } else if (trxFieldInfo[sortedKeys]['type'] == 'Amount') {
-      associatedValue = _toAmount(int.parse(sampleXrpJson[sortedKeys]));
-    } else if (trxFieldInfo[sortedKeys]['type'] == 'AccountID') {
-      associatedValue = decodeClassicAddress(sampleXrpJson[sortedKeys]);
-    } else if (trxFieldInfo[sortedKeys]['type'] == 'Blob') {
-      associatedValue =
-          Uint8List.fromList(HEX.decode(sampleXrpJson[sortedKeys]));
-    }
-
-    List<int> header = [];
-    if (typeCode < 16) {
-      if (fieldCode < 16) {
-        header.add(typeCode << 4 | fieldCode);
-      } else {
-        header.add(typeCode << 4);
-        header.add(fieldCode);
+Uint8List _encodeFieldValue({
+  required String name,
+  required String type,
+  required dynamic rawValue,
+}) {
+  switch (type) {
+    case 'UInt16':
+      if (name == 'TransactionType') {
+        final code = rippleDefinitions['TRANSACTION_TYPES'][rawValue] as int;
+        return _toUint16(code);
       }
-    } else if (fieldCode < 16) {
-      header.addAll([fieldCode, typeCode]);
-    } else {
-      header.addAll([0, typeCode, fieldCode]);
-    }
+      return _toUint16(rawValue as int);
 
-    serializer.addAll(header);
+    case 'UInt32':
+      return _toUint32(rawValue as int);
 
-    if (isVariableEncoded) {
-      List byte_object = [];
-      byte_object.addAll(associatedValue);
+    case 'Amount':
+      // XRP amounts are passed as strings (drops) to avoid int overflow.
+      final drops = BigInt.parse(rawValue.toString());
+      return _toAmount(drops);
 
-      Uint8List length_prefix =
-          _encode_variable_length_prefix(byte_object.length);
+    case 'AccountID':
+      return decodeClassicAddress(rawValue as String);
 
-      serializer += length_prefix;
-      serializer += byte_object;
-    } else {
-      serializer.addAll(associatedValue);
-    }
-  }
-  serializer.insertAll(0, xrpTransactionPrefix);
-  return HEX.encode(List<int>.from(serializer)).toUpperCase();
-}
+    case 'Blob':
+      return Uint8List.fromList(HEX.decode(rawValue as String));
 
-final int _MAX_SINGLE_BYTE_LENGTH = 192;
-final int _MAX_DOUBLE_BYTE_LENGTH = 12481;
-final int _MAX_LENGTH_VALUE = 918744;
-final int _MAX_SECOND_BYTE_VALUE = 240;
-
-Uint8List _encode_variable_length_prefix(int length) {
-  if (length <= _MAX_SINGLE_BYTE_LENGTH) {
-    return Uint8List.fromList([length]);
-  } else if (length < _MAX_DOUBLE_BYTE_LENGTH) {
-    length -= _MAX_SINGLE_BYTE_LENGTH + 1;
-    final byte1 = ((_MAX_SINGLE_BYTE_LENGTH + 1) + (length >> 8)).toByte();
-    final byte2 = (length & 0xFF).toByte();
-    return Uint8List.fromList([byte1, byte2]);
-  } else if (length <= _MAX_LENGTH_VALUE) {
-    length -= _MAX_DOUBLE_BYTE_LENGTH;
-    final byte1 = ((_MAX_SECOND_BYTE_VALUE + 1) + (length >> 16)).toByte();
-    final byte2 = ((length >> 8) & 0xFF).toByte();
-    final byte3 = (length & 0xFF).toByte();
-    return Uint8List.fromList([byte1, byte2, byte3]);
-  }
-  throw Exception(
-      "VariableLength field must be <= $_MAX_LENGTH_VALUE bytes long");
-}
-
-extension IntToByte on int {
-  int toByte() {
-    return this & 0xff;
+    default:
+      // Unhandled types (Hash256, STObject, etc.) — return empty for now.
+      // Extend as needed when supporting escrows, offers, etc.
+      return Uint8List(0);
   }
 }
 
 Uint8List _toUint16(int value) {
-  var buffer = ByteData(2);
-  buffer.setUint16(0, value);
-  return buffer.buffer.asUint8List();
-}
-
-Map signXrpTransaction(String privateKeyHex, Map xrpTransactionJson) {
-  final msg = encodeXrpJson(xrpTransactionJson);
-
-  List<int> firstsha512 = sha512.convert(HEX.decode(msg)).bytes;
-  firstsha512 = firstsha512.sublist(0, firstsha512.length ~/ 2);
-
-  final signature = _encodeSignatureToDER(
-    sign(
-      Uint8List.fromList(firstsha512),
-      Uint8List.fromList(HEX.decode(privateKeyHex)),
-    ),
-  );
-  xrpTransactionJson['TxnSignature'] = signature;
-  return xrpTransactionJson;
-}
-
-String _encodeSignatureToDER(MsgSignature signature) {
-  List<int> r = signature.r.toUint8List();
-  List<int> s = signature.s.toUint8List();
-
-  if ((r[0] & 0x80) == 0x80) {
-    r = [0] + r;
-  }
-  if ((s[0] & 0x80) == 0x80) {
-    s = [0] + s;
-  }
-
-  final sig = ([0x30] + BigInt.from(r.length + s.length + 4).toUint8List()) +
-      ([0x02] + BigInt.from(r.length).toUint8List()) +
-      r +
-      ([0x02] + BigInt.from(s.length).toUint8List()) +
-      s;
-  return HEX.encode(sig).toUpperCase();
+  final buf = ByteData(2);
+  buf.setUint16(0, value);
+  return buf.buffer.asUint8List();
 }
 
 Uint8List _toUint32(int value) {
-  var buffer = ByteData(4);
-  buffer.setUint32(0, value);
-  return buffer.buffer.asUint8List();
+  final buf = ByteData(4);
+  buf.setUint32(0, value);
+  return buf.buffer.asUint8List();
 }
 
-Uint8List _toAmount(int value) {
-  const POS_SIGN_BIT_MASK = 0x4000000000000000;
-  final valueWithPosBit = value | POS_SIGN_BIT_MASK;
-  var buffer = ByteData(8);
-  buffer.setInt64(0, valueWithPosBit);
-  return buffer.buffer.asUint8List();
+/// Encodes an XRP Amount field.
+/// XRP native amounts set bit 62 (positive sign bit); bits 63 and 0–61 are value.
+/// Using BigInt throughout avoids int64 overflow for large drop values.
+Uint8List _toAmount(BigInt drops) {
+  const posBit = 0x4000000000000000;
+  final withBit = drops | BigInt.from(posBit);
+  final buf = ByteData(8);
+  // Write as two 32-bit halves to avoid Dart's int truncation on web.
+  final hi = (withBit >> 32).toInt();
+  final lo = (withBit & BigInt.from(0xFFFFFFFF)).toInt();
+  buf.setUint32(0, hi);
+  buf.setUint32(4, lo);
+  return buf.buffer.asUint8List();
 }
+
+String _encodeDer(MsgSignature sig) {
+  List<int> r = sig.r.toUint8List();
+  List<int> s = sig.s.toUint8List();
+
+  // Pad with leading zero if high bit is set (DER positive integer encoding).
+  if (r[0] & 0x80 != 0) r = [0, ...r];
+  if (s[0] & 0x80 != 0) s = [0, ...s];
+
+  final rLen = r.length;
+  final sLen = s.length;
+  final totalLen = rLen + sLen + 4; // 2 type+length bytes each for r and s
+
+  return HEX.encode([
+    0x30, totalLen,
+    0x02, rLen, ...r,
+    0x02, sLen, ...s,
+  ]).toUpperCase();
+}
+
+// ── Variable length prefix ────────────────────────────────────────────────────
+
+const int _MAX_SINGLE_BYTE_LENGTH = 192;
+const int _MAX_DOUBLE_BYTE_LENGTH = 12481;
+const int _MAX_LENGTH_VALUE = 918744;
+const int _MAX_SECOND_BYTE_VALUE = 240;
+
+Uint8List _encodeVariableLengthPrefix(int length) {
+  if (length <= _MAX_SINGLE_BYTE_LENGTH) {
+    return Uint8List.fromList([length]);
+  } else if (length < _MAX_DOUBLE_BYTE_LENGTH) {
+    final adjusted = length - (_MAX_SINGLE_BYTE_LENGTH + 1);
+    return Uint8List.fromList([
+      (_MAX_SINGLE_BYTE_LENGTH + 1 + (adjusted >> 8)) & 0xFF,
+      adjusted & 0xFF,
+    ]);
+  } else if (length <= _MAX_LENGTH_VALUE) {
+    final adjusted = length - _MAX_DOUBLE_BYTE_LENGTH;
+    return Uint8List.fromList([
+      (_MAX_SECOND_BYTE_VALUE + 1 + (adjusted >> 16)) & 0xFF,
+      (adjusted >> 8) & 0xFF,
+      adjusted & 0xFF,
+    ]);
+  }
+  throw Exception('VL field exceeds max length of $_MAX_LENGTH_VALUE bytes');
+}
+
+// ── X-Address helpers ─────────────────────────────────────────────────────────
 
 final _PREFIX_BYTES_MAIN = Uint8List.fromList([0x05, 0x44]);
 final _PREFIX_BYTES_TEST = Uint8List.fromList([0x04, 0x93]);
+final _CLASSIC_ADDRESS_PREFIX = [0x0];
+const _CLASSIC_ADDRESS_LENGTH = 20;
 
-ClassicAddressWithTag xaddress_to_classic_address(String X_Address) {
-  Uint8List decoded = xrpBaseCodec.decode(X_Address);
-
+ClassicAddressWithTag xaddress_to_classic_address(String xAddress) {
+  Uint8List decoded = xrpBaseCodec.decode(xAddress);
   decoded = decoded.sublist(0, decoded.length - 4);
 
-  bool isXTestNet = _is_test_x_address(decoded.sublist(0, 2));
-  final classicAddressByte = decoded.sublist(2, 22);
-
-  final tag = _get_tag_from_buffer(decoded.sublist(22));
-
-  final classic_address = encode_classic_address(classicAddressByte);
+  final isTest = _isTestXAddress(decoded.sublist(0, 2));
+  final addressBytes = decoded.sublist(2, 22);
+  final tag = _getTag(decoded.sublist(22));
+  final classic = _encodeClassicAddress(addressBytes);
 
   return ClassicAddressWithTag(
-    classicAddress: classic_address,
+    classicAddress: classic,
     tag: tag,
-    isXTestNet: isXTestNet,
+    isXTestNet: isTest,
   );
 }
 
-final _CLASSIC_ADDRESS_LENGTH = 20;
-final _CLASSIC_ADDRESS_PREFIX = [0x0];
-
-String encode_classic_address(Uint8List bytestring) {
-  return _encode(bytestring, _CLASSIC_ADDRESS_PREFIX, _CLASSIC_ADDRESS_LENGTH);
-}
-
-String _encode(Uint8List bytestring, List<int> prefix, int expected_length) {
-  if (bytestring.length != expected_length) {
-    throw Exception(
-        'unexpected_payload_length: len(bytestring) does not match expected_length.Ensure that the bytes are a bytestring.');
+String _encodeClassicAddress(Uint8List bytes) {
+  if (bytes.length != _CLASSIC_ADDRESS_LENGTH) {
+    throw Exception('Invalid address payload length: ${bytes.length}');
   }
-
-  final payload = prefix + bytestring;
-  final computedCheckSum = sha256
-      .convert(sha256.convert([0, ...bytestring]).bytes)
+  final payload = [..._CLASSIC_ADDRESS_PREFIX, ...bytes];
+  final checksum = sha256
+      .convert(sha256.convert([0, ...bytes]).bytes)
       .bytes
       .sublist(0, 4);
-  return xrpBaseCodec
-      .encode(Uint8List.fromList([...payload, ...computedCheckSum]));
+  return xrpBaseCodec.encode(Uint8List.fromList([...payload, ...checksum]));
 }
 
-int? _get_tag_from_buffer(Uint8List buffer) {
-  int flag = buffer[0];
-  if (flag >= 2) {
-    throw Exception("Unsupported X-Address");
-  }
+int? _getTag(Uint8List buf) {
+  final flag = buf[0];
+  if (flag >= 2) throw Exception('Unsupported X-Address');
   if (flag == 1) {
-    return (buffer[1] +
-        buffer[2] * 0x100 +
-        buffer[3] * 0x10000 +
-        buffer[4] * 0x1000000);
+    return buf[1] + buf[2] * 0x100 + buf[3] * 0x10000 + buf[4] * 0x1000000;
   }
-
-  if (flag != 0) {
-    throw Exception("Flag must be zero to indicate no tag");
+  if (!seqEqual(List.filled(8, 0), buf.sublist(1, 9))) {
+    throw Exception('Remaining bytes must be zero for no-tag X-Address');
   }
-
-  if (!seqEqual(List.filled(8, 0), buffer.sublist(1, 9))) {
-    throw Exception("Remaining bytes must be zero");
-  }
-
   return null;
 }
 
-bool _is_test_x_address(Uint8List prefix) {
-  if (seqEqual(_PREFIX_BYTES_MAIN, prefix)) {
-    return false;
-  } else if (seqEqual(_PREFIX_BYTES_TEST, prefix)) {
-    return true;
-  }
-  throw Exception("Invalid X-Address: bad prefix");
+bool _isTestXAddress(Uint8List prefix) {
+  if (seqEqual(_PREFIX_BYTES_MAIN, prefix)) return false;
+  if (seqEqual(_PREFIX_BYTES_TEST, prefix)) return true;
+  throw Exception('Invalid X-Address: unrecognized prefix');
 }
 
+// ── ClassicAddressWithTag ─────────────────────────────────────────────────────
+
 class ClassicAddressWithTag {
-  String classicAddress;
-  int? tag;
-  bool isXTestNet;
-  ClassicAddressWithTag({
+  final String classicAddress;
+  final int? tag;
+  final bool isXTestNet;
+
+  const ClassicAddressWithTag({
     required this.classicAddress,
     required this.tag,
     required this.isXTestNet,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'classicAddress': classicAddress,
-      'tag': tag,
-      'isXTestNet': isXTestNet,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'classicAddress': classicAddress,
+        'tag': tag,
+        'isXTestNet': isXTestNet,
+      };
 
-  factory ClassicAddressWithTag.fromJson(Map<dynamic, dynamic> json) {
-    return ClassicAddressWithTag(
-      classicAddress: json['classicAddress'],
-      tag: json['tag'],
-      isXTestNet: json['isXTestNet'],
-    );
-  }
+  factory ClassicAddressWithTag.fromJson(Map<dynamic, dynamic> json) =>
+      ClassicAddressWithTag(
+        classicAddress: json['classicAddress'] as String,
+        tag: json['tag'] as int?,
+        isXTestNet: json['isXTestNet'] as bool,
+      );
 }
