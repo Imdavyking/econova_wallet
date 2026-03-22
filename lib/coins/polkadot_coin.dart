@@ -605,9 +605,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         coinDecimals: 12,
         ss58Prefix: 42,
         path: "m/44'/354'/0'/0'/0'",
-        geckoID: '',
-        payScheme: '',
-        rampID: '',
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -620,9 +620,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         coinDecimals: 12,
         ss58Prefix: 42,
         path: "m/44'/354'/0'/0'/0'",
-        geckoID: '',
-        payScheme: '',
-        rampID: '',
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
       ),
       PolkadotCoin(
         blockExplorer:
