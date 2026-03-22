@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
@@ -23,11 +25,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  bool networkAvailable = true;
 
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
     supportedChains = await fetchSupportedChains();
+    networkAvailable = await NetworkGuard().checkNow();
   });
 
   tearDown(() async {
@@ -68,7 +72,6 @@ void main() async {
 
     expect(result3, BigInt.parse('-250000892384000000000000'));
   });
-  test('can generate transactionSignLotus cid', () {});
 
   test('can generate filecoin cid', () {
     expect(
@@ -112,12 +115,12 @@ void main() async {
       'bagaaierafwnjryt63d5n7l2c76blfv7jddxgfeuhl4bvcdzuniggxo2eqngq',
     );
   });
+
   test('can convert from cid v0 to cid v1', () {
     expect(
       fromV0ToV1('QmW5xcH8ydwYtnS8FsMYxZfjpsN6p4YTVv7n5YbvoooZy4'),
       'bafybeidtdic3panzxksm5vva52ru222wlasitwpuio2vxszuhfgizrhlim',
     );
-
     expect(
       fromV0ToV1('QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n'),
       'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku',
@@ -127,6 +130,7 @@ void main() async {
       'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
     );
   });
+
   test('can decode known abis', () {
     expect(solidityFunctionSig('withdraw(uint256)'), '0x2e1a7d4d');
     expect(solidityFunctionSig('ownerOf(uint256)'), '0x6352211e');
@@ -135,6 +139,7 @@ void main() async {
     expect(solidityFunctionSig('approve(address,uint256)'), '0x095ea7b3');
     expect(solidityFunctionSig('solversk()'), '0xffb5eff0');
   });
+
   test(
     'ellipsify works',
     () {
@@ -164,7 +169,7 @@ void main() async {
     expect(sha3(json.encode(imageData)),
         'd935e1c2fa18d0a7b7f92604e3ea282ab4572124852411306d70e302fb5447a4');
 
-    /// Account two
+    // Account two
     blockInstanceTwo.seedrand(addressTwo.toLowerCase());
     HSL colorTwo = blockInstanceTwo.createColor();
     HSL bgColorTwo = blockInstanceTwo.createColor();
@@ -199,6 +204,7 @@ void main() async {
     expect(parsedUrl.recipient, address);
     expect(parsedUrl.coinScheme, scheme);
   });
+
   test('eip681 conversion', () {
     expect(
         EIP681.build(
@@ -232,8 +238,10 @@ void main() async {
   });
 
   test('ens resolves correctly to address and content hash', () async {
-    if (!NetworkGuard().isConnected) {
-      debugPrint("Can not run ens test network offline");
+    // Use checkNow() for a real-time socket check — avoids stream timing issues
+    // and works on macOS where connectivity_plus.checkConnectivity() is not implemented.
+    if (!networkAvailable) {
+      debugPrint("Cannot run ENS test: network offline");
       return;
     }
 
@@ -244,6 +252,7 @@ void main() async {
     Map ensToContentHash = await ensToContentHashAndIPFS(
       cryptoDomainName: ensAddress,
     );
+
     if (ensToAddressMap['success']) {
       expect(
         ensToAddressMap['msg'],
@@ -264,21 +273,24 @@ void main() async {
   });
 
   test('unstoppable domain resolves correctly to address', () async {
-    if (!NetworkGuard().isConnected) {
-      debugPrint("Can not run UD domain test network offline");
+    if (!networkAvailable) {
+      debugPrint("Cannot run UD domain test: network offline");
       return;
     }
+
     const domainAddress = unstoppableAddress;
     Map domainResult = await udResolver(
       domainName: domainAddress,
       currency: 'BTC',
     );
+
     if (domainResult['success']) {
       expect(domainResult['msg'], 'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
     } else {
       throw Exception(domainResult['msg']);
     }
   });
+
   test('test solidity sha3(keccak256) returns correct data', () {
     expect(sha3('hello world'),
         '47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad');
@@ -307,7 +319,6 @@ void main() async {
             );
           }
           break;
-
         case 'ETH':
           blockchainInfo
               .validateAddress('0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF');
@@ -493,6 +504,7 @@ void main() async {
       }
     }
   });
+
   test('check if keystore generate right address', () async {
     final keystore = {
       "address": "498b5c1c91911f379ca84f0896671bcee2186d48",
@@ -527,6 +539,7 @@ void main() async {
       keyStoreRes,
     );
   });
+
   test('check if seed phrase generates the correct crypto address', () async {
     // WARNING: These accounts, and their private keys, are publicly known.
     // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
@@ -598,15 +611,12 @@ void main() async {
             cryptoKeys.address,
             '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
           );
-
           break;
-
         case 'TON':
           expect(
             cryptoKeys.address,
             'EQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtFO5',
           );
-
           break;
         case 'SUI':
           expect(
@@ -631,7 +641,6 @@ void main() async {
             cryptoKeys.address,
             '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
           );
-
           break;
         case 'BCH':
           expect(
@@ -640,42 +649,34 @@ void main() async {
         case 'LTC':
           expect(cryptoKeys.address,
               'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7');
-
           break;
         case 'DASH':
           expect(cryptoKeys.address, 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti');
-
           break;
         case 'TRX':
           expect(cryptoKeys.address, 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM');
-
           break;
         case 'SOL':
           expect(
             cryptoKeys.address,
             '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
           );
-
           break;
         case 'XLM':
           expect(cryptoKeys.address,
               'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT');
-
           break;
         case 'ALGO':
           expect(cryptoKeys.address,
               'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U');
-
           break;
         case 'ATOM':
           expect(cryptoKeys.address,
               'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
-
           break;
         case 'ZEC':
           expect(cryptoKeys.address, 't1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
           break;
-
         case 'ADA':
           if (blockchainInfo.getName() == 'Cardano') {
             expect(
@@ -688,11 +689,9 @@ void main() async {
               'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
             );
           }
-
           break;
         case 'XRP':
           expect(cryptoKeys.address, 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL');
-
           break;
         case 'FIL':
           if (blockchainInfo.getName() == 'Filecoin') {
@@ -704,18 +703,19 @@ void main() async {
               't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
             );
           }
-
           break;
         case 'DOT':
           expect(
             cryptoKeys.address,
             '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
           );
+          break;
         case 'WND':
           expect(
             cryptoKeys.address,
             '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
           );
+          break;
 
         default:
       }
@@ -736,10 +736,11 @@ void main() async {
   });
 
   test('can import token from blockchain', () async {
-    if (!NetworkGuard().isConnected) {
-      debugPrint("Can not run import token test network offline");
+    if (!networkAvailable) {
+      debugPrint("Cannot run import token test: network offline");
       return;
     }
+
     final chainCoin = evmFromChainId(56)!;
     final coin = ERCFungibleCoin(
       geckoID: '',
