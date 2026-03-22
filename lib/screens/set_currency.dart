@@ -94,7 +94,7 @@ class _SetCurrencyState extends State<SetCurrency> {
 
       if (supported.contains(entry.code.toLowerCase())) {
         await pref.put('defaultCurrency', entry.code);
-        if (!context.mounted) return;
+        if (!mounted) return;
         Navigator.pop(context);
       } else {
         _showError('${entry.code} is not supported yet');
