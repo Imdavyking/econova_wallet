@@ -123,7 +123,7 @@ class AlgorandCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final microAlgos = await getAlgorandClient(algoType).getBalance(address);
-    print('algOOO: $microAlgos');
+    debugPrint('algOOO: $microAlgos');
     return microAlgos / pow(10, algorandDecimals);
   }
 
@@ -141,8 +141,12 @@ class AlgorandCoin extends Coin {
       await pref.put(key, balance);
       return balance;
     } catch (e) {
-      print("algo eerrror");
-      print(e);
+      debugPrint("algo eerrror");
+      if (e is algo_rand.AlgorandException) {
+        debugPrint(e.message);
+      } else {
+        debugPrint(e.toString());
+      }
       return savedBalance;
     }
   }
@@ -175,7 +179,12 @@ class AlgorandCoin extends Coin {
         note: memo,
       );
     } on algo_rand.AlgorandException catch (e) {
-      throw e.message;
+      if (e.message.contains('below min')) {
+        throw Exception(
+          'Insufficient balance — Algorand requires a minimum of 0.1 ALGO to remain in the account after fees.',
+        );
+      }
+      throw Exception(e.message);
     }
 
     return (txHash: txHash, txRaw: null);
@@ -235,23 +244,23 @@ enum AlgorandTypes { mainNet, testNet }
 algo_rand.Algorand getAlgorandClient(AlgorandTypes type) {
   final algodClient = algo_rand.AlgodClient(
     apiUrl: type == AlgorandTypes.mainNet
-        ? algo_rand.PureStake.MAINNET_ALGOD_API_URL
-        : algo_rand.PureStake.TESTNET_ALGOD_API_URL,
-    apiKey: pureStakeApiKey,
-    tokenKey: algo_rand.PureStake.API_TOKEN_HEADER,
+        ? 'https://mainnet-api.4160.nodely.dev'
+        : 'https://testnet-api.4160.nodely.dev',
+    apiKey: '', // no key required
+    tokenKey: 'X-Algo-API-Token',
   );
 
   final indexerClient = algo_rand.IndexerClient(
     apiUrl: type == AlgorandTypes.mainNet
-        ? algo_rand.PureStake.MAINNET_INDEXER_API_URL
-        : algo_rand.PureStake.TESTNET_INDEXER_API_URL,
-    apiKey: pureStakeApiKey,
-    tokenKey: algo_rand.PureStake.API_TOKEN_HEADER,
+        ? 'https://mainnet-idx.4160.nodely.dev'
+        : 'https://testnet-idx.4160.nodely.dev',
+    apiKey: '',
+    tokenKey: 'X-Algo-API-Token',
   );
 
   final kmdClient = algo_rand.KmdClient(
-    apiUrl: 'http://127.0.0.1',
-    apiKey: pureStakeApiKey,
+    apiUrl: 'http://localhost', // unused, just needs a valid URL
+    apiKey: '',
   );
 
   return algo_rand.Algorand(
