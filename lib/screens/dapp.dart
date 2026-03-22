@@ -237,17 +237,20 @@ class _DappState extends State<Dapp> with TickerProviderStateMixin {
               ),
           ],
         ),
-        bottomNavigationBar: _BrowserBottomBar(
-          tab: _tabs[_currentIndex],
-          tabCount: _tabs.length,
-          showingTabSwitcher: _showTabSwitcher,
-          onBack: _goBack,
-          onForward: _goForward,
-          onToggleTabs: _toggleTabSwitcher,
-          onReload: () => _tabs[_currentIndex].readloadWeb3_(),
-          onHome: () => _tabs[_currentIndex].controller?.loadUrl(
-                urlRequest: URLRequest(url: WebUri(walletURL)),
-              ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: _BrowserBottomBar(
+            tab: _tabs[_currentIndex],
+            tabCount: _tabs.length,
+            showingTabSwitcher: _showTabSwitcher,
+            onBack: _goBack,
+            onForward: _goForward,
+            onToggleTabs: _toggleTabSwitcher,
+            onReload: () => _tabs[_currentIndex].readloadWeb3_(),
+            onHome: () => _tabs[_currentIndex].controller?.loadUrl(
+                  urlRequest: URLRequest(url: WebUri(walletURL)),
+                ),
+          ),
         ),
       ),
     );
