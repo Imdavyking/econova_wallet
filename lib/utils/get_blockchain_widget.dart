@@ -9,7 +9,6 @@ import 'get_token_image.dart';
 
 class GetBlockChainWidget extends StatefulWidget {
   final Widget cryptoAmount;
-
   final Coin coin;
 
   const GetBlockChainWidget({
@@ -24,76 +23,57 @@ class GetBlockChainWidget extends StatefulWidget {
 }
 
 class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
-  Timer? timer;
-  BlockchainPrice? cryptoInfo;
-  bool useCache = true;
-  final ValueNotifier<double> coinWorth = ValueNotifier<double>(0);
-  late Coin coin;
+  Timer? _timer;
+  BlockchainPrice? _cryptoInfo;
+  bool _useCache = true;
+  final ValueNotifier<double> _coinWorth = ValueNotifier(0);
+  late Coin _coin;
 
   @override
   void initState() {
     super.initState();
-    coin = widget.coin;
-
-    if (coin.getGeckoId().isNotEmpty) {
-      getBlockchainPrice();
-      timer = Timer.periodic(
-        httpPollingDelay,
-        (Timer t) async {
-          try {
-            await getBlockchainPrice();
-          } catch (_) {}
-        },
-      );
+    _coin = widget.coin;
+    if (_coin.getGeckoId().isNotEmpty) {
+      _fetchPrice();
+      _timer = Timer.periodic(httpPollingDelay, (_) async {
+        try {
+          await _fetchPrice();
+        } catch (_) {}
+      });
     }
   }
 
   @override
   void dispose() {
-    timer?.cancel();
-    coinWorth.dispose();
+    _timer?.cancel();
+    _coinWorth.dispose();
     super.dispose();
   }
 
-  Future getBlockchainPrice() async {
+  Future<void> _fetchPrice() async {
     try {
-      final cryptoPrice = await getCryptoPrice(useCache: useCache);
-      if (useCache) useCache = false;
+      final cryptoPrice = await getCryptoPrice(useCache: _useCache);
+      if (_useCache) _useCache = false;
 
-      final currPrice = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0.0;
-      final currChange = cryptoPrice.getChange(coin.getGeckoId()) ?? 0.0;
+      final currPrice = cryptoPrice.getPrice(_coin.getGeckoId()) ?? 0.0;
+      final currChange = cryptoPrice.getChange(_coin.getGeckoId()) ?? 0.0;
 
       Color color = Colors.grey;
-      if (currChange > 0) {
-        color = green;
-      } else if (currChange < 0) {
-        color = red;
-      }
+      if (currChange > 0) color = green;
+      if (currChange < 0) color = red;
 
-      coinWorth.value = await coin.getBalance(true) * currPrice;
+      _coinWorth.value = await _coin.getBalance(true) * currPrice;
 
-      cryptoInfo = BlockchainPrice(
+      _cryptoInfo = BlockchainPrice(
         pricewithSym: cryptoPrice.symbol + formatMoney(currPrice, true),
         change: currChange,
         changeSign: currChange > 0 ? '+' : '',
         symbol: cryptoPrice.symbol,
         color: color,
       );
+
       if (mounted) setState(() {});
     } catch (_) {}
-  }
-
-  Widget _buildPriceUI() {
-    return Text(
-      '${cryptoInfo!.changeSign}${formatMoney(
-        cryptoInfo!.change,
-        true,
-      )}%',
-      style: TextStyle(
-        fontSize: 12,
-        color: cryptoInfo!.color,
-      ),
-    );
   }
 
   @override
@@ -104,12 +84,8 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
         Expanded(
           child: Row(
             children: [
-              GetTokenImage(
-                currCoin: coin,
-              ),
-              const SizedBox(
-                width: 10,
-              ),
+              GetTokenImage(currCoin: _coin),
+              const SizedBox(width: 10),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,71 +94,30 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          coin.getSymbol(),
+                          _coin.getSymbol(),
                           style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w500),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
                           overflow: TextOverflow.fade,
                         ),
-                        widget.cryptoAmount
+                        widget.cryptoAmount,
                       ],
                     ),
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (cryptoInfo != null)
-                          Row(
-                            children: [
-                              Text(
-                                cryptoInfo!.pricewithSym,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: coin.getGeckoId().isNotEmpty
-                                      ? Colors.grey
-                                      : const Color(0x00ffffff),
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 5,
-                              ),
-                              if (cryptoInfo != null) _buildPriceUI()
-                            ],
-                          )
-                        else
-                          const Row(
-                            children: [
-                              Text(
-                                '\$0',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                '0%',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            ],
-                          ),
+                        _PriceChangeRow(info: _cryptoInfo, coin: _coin),
                         ValueListenableBuilder<double>(
-                          valueListenable: coinWorth,
-                          builder: (context, value, child) {
-                            if (cryptoInfo == null) {
-                              return const SizedBox();
-                            }
+                          valueListenable: _coinWorth,
+                          builder: (context, value, _) {
+                            if (_cryptoInfo == null) return const SizedBox();
                             return UserBalance(
-                              symbol: cryptoInfo!.symbol,
-                              haveValue: coin.isRpcWorking,
+                              symbol: _cryptoInfo!.symbol,
+                              haveValue: _coin.isRpcWorking,
                               reversed: true,
-                              balance: coinWorth.value,
+                              balance: value,
                               seperate: false,
                               textStyle: const TextStyle(
                                 fontSize: 15,
@@ -195,7 +130,7 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -204,15 +139,57 @@ class _GetBlockChainWidgetState extends State<GetBlockChainWidget> {
   }
 }
 
+// ── Price + change row ─────────────────────────────────────────────────────────
+
+class _PriceChangeRow extends StatelessWidget {
+  final BlockchainPrice? info;
+  final Coin coin;
+
+  const _PriceChangeRow({required this.info, required this.coin});
+
+  @override
+  Widget build(BuildContext context) {
+    if (info == null) {
+      return const Row(
+        children: [
+          Text('\$0', style: TextStyle(fontSize: 15, color: Colors.grey)),
+          SizedBox(width: 5),
+          Text('0%', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Text(
+          info!.pricewithSym,
+          style: TextStyle(
+            fontSize: 15,
+            color: coin.getGeckoId().isNotEmpty
+                ? Colors.grey
+                : const Color(0x00ffffff),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          '${info!.changeSign}${formatMoney(info!.change, true)}%',
+          style: TextStyle(fontSize: 12, color: info!.color),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Data class ────────────────────────────────────────────────────────────────
+
 class BlockchainPrice {
   final String pricewithSym;
-
   final double change;
   final String changeSign;
   final String symbol;
   final Color color;
 
-  BlockchainPrice({
+  const BlockchainPrice({
     required this.pricewithSym,
     required this.change,
     required this.changeSign,
