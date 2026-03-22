@@ -214,7 +214,9 @@ class Erc8117 {
 
     final body = trimmed.substring(2).toLowerCase(); // nibbles after 0x
     int n = 0;
-    while (n < body.length && body[n] == '0') n++;
+    while (n < body.length && body[n] == '0') {
+      n++;
+    }
 
     if (n <= 4) {
       return Erc8117(str: trimmed, unicode: null, ascii: null);
@@ -237,7 +239,9 @@ class Erc8117 {
 
     final afterDot = trimmed.substring(2);
     int n = 0;
-    while (n < afterDot.length && afterDot[n] == '0') n++;
+    while (n < afterDot.length && afterDot[n] == '0') {
+      n++;
+    }
 
     if (n <= 4) {
       return Erc8117(str: trimmed, unicode: null, ascii: null);
