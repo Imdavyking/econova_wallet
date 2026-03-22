@@ -5,7 +5,6 @@ import 'package:wallet_app/coins/nfts/multiv_nft_coin.dart';
 import 'package:wallet_app/coins/nfts/starknet_nft_coin.dart';
 import 'package:wallet_app/screens/send_form_widgets.dart';
 import 'package:wallet_app/screens/transfer_nft.dart';
-import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/foundation.dart';
@@ -107,11 +106,11 @@ class _SendNFTFormState extends State<_SendNFTForm> {
     }
 
     if (_amountCtrl.text.trim().isEmpty || recipient.isEmpty) return;
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).clearSnackBars();
     await reInstianteSeedRoot();
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     await Navigator.push(
       context,
