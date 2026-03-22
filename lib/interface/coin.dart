@@ -6,6 +6,7 @@ import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
 
@@ -32,6 +33,7 @@ abstract class Coin {
     return amountString.replaceAll(',', '');
   }
 
+  TransactionFetcher? get transactionFetcher => null;
   void validateAddress(String address);
   Future<String> addressExplorer();
   Map toJson();

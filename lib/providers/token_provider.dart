@@ -2,13 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../interface/coin.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../utils/app_config.dart';
 import '../utils/format_money.dart';
 import '../utils/rpc_urls.dart';
 
-// ── Typed data classes ────────────────────────────────────────────────────────
+// ── BlockchainInfo ────────────────────────────────────────────────────────────
 
 class BlockchainInfo {
   final double price;
@@ -27,10 +27,11 @@ class BlockchainInfo {
     required this.color,
   });
 
-  /// Fiat value of [balance] units of this coin.
   String fiatValue(double balance) =>
       '$currencySymbol${formatMoney(balance * price, true)}';
 }
+
+// ── TokenTransaction ──────────────────────────────────────────────────────────
 
 class TokenTransaction {
   final String from;
@@ -60,8 +61,14 @@ class TokenTransaction {
     );
   }
 
+  /// Bridge: build from a chain-fetched [WalletTransaction].
+  factory TokenTransaction.fromWallet(WalletTransaction tx) =>
+      TokenTransaction.fromJson(tx.toTokenTransactionJson());
+
   double get tokenAmount => value / pow(10, decimal);
 }
+
+// ── TransactionState ──────────────────────────────────────────────────────────
 
 class TransactionState {
   final List<TokenTransaction> transactions;
@@ -73,7 +80,7 @@ class TransactionState {
   });
 }
 
-// ── State notifiers ───────────────────────────────────────────────────────────
+// ── BlockchainInfoData ────────────────────────────────────────────────────────
 
 class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
   bool _useCache = true;
@@ -107,29 +114,7 @@ class BlockchainInfoData extends StateNotifier<BlockchainInfo?> {
   }
 }
 
-class TransactionData extends StateNotifier<TransactionState?> {
-  final Coin coin;
-
-  TransactionData({required this.coin}) : super(null);
-
-  Future<void> getTokenTransactions() async {
-    try {
-      final raw = await coin.getTransactions();
-      final rawList = raw['trx'] as List? ?? [];
-      final currentUser = raw['currentUser'] as String? ?? '';
-
-      final transactions = rawList
-          .whereType<Map<String, dynamic>>()
-          .map(TokenTransaction.fromJson)
-          .toList();
-
-      state = TransactionState(
-        transactions: transactions,
-        currentUser: currentUser,
-      );
-    } catch (_) {}
-  }
-}
+// ── TokenBalance ──────────────────────────────────────────────────────────────
 
 class TokenBalance extends StateNotifier<double?> {
   bool _useCache = true;
@@ -141,6 +126,41 @@ class TokenBalance extends StateNotifier<double?> {
     try {
       state = await coin.getBalance(_useCache);
       if (_useCache) _useCache = false;
+    } catch (_) {}
+  }
+}
+
+// ── TransactionData ───────────────────────────────────────────────────────────
+
+class TransactionData extends StateNotifier<TransactionState?> {
+  final Coin coin;
+
+  TransactionData({required this.coin}) : super(null);
+
+  Future<void> getTokenTransactions() async {
+    try {
+      final address = await coin.getAddress();
+      final fetcher = coin.transactionFetcher;
+
+      if (fetcher != null) {
+        // ── On-chain indexer path ─────────────────────────────────────────
+        final walletTxs = await fetcher.fetch(address: address);
+        state = TransactionState(
+          transactions: walletTxs.map(TokenTransaction.fromWallet).toList(),
+          currentUser: address,
+        );
+      } else {
+        // ── Local store fallback ──────────────────────────────────────────
+        final raw = await coin.getTransactions();
+        final rawList = raw['trx'] as List? ?? [];
+        state = TransactionState(
+          transactions: rawList
+              .whereType<Map<String, dynamic>>()
+              .map(TokenTransaction.fromJson)
+              .toList(),
+          currentUser: raw['currentUser'] as String? ?? address,
+        );
+      }
     } catch (_) {}
   }
 }
