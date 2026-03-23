@@ -30,6 +30,7 @@ import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
@@ -426,7 +427,7 @@ class LegacyUtxoCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey =
-        'legacyUtxoV1_${symbol}_${isTestnet ? 'test' : 'main'}_${walletImportType.name}';
+        'legacyUtxoV7_${symbol}_${isTestnet ? 'test' : 'main'}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
@@ -839,7 +840,9 @@ Map<String, dynamic> _deriveKey(_DeriveArgs args) {
   }
 
   if (args.symbol == 'ZEC') {
-    final prefix = (args.network == zcashTestnet) ? [0x1d, 0x25] : [0x1c, 0xb8];
+    final prefix = (args.network.bech32 == zcashTestnet.bech32)
+        ? [0x1d, 0x25]
+        : [0x1c, 0xb8];
     final decoded = [...bs58check.decode(address)]..removeAt(0);
     final taddr = Uint8List(22)
       ..setAll(0, prefix)

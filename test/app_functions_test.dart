@@ -407,7 +407,7 @@ void main() async {
           );
           break;
         case 'ZEC':
-          blockchainInfo.validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
+        blockchainInfo.validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
           expect(
             () => blockchainInfo.validateAddress(invalidAddress),
             throwsA(isA<Exception>()),
