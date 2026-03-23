@@ -12,7 +12,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
-
+import 'package:bs58check/bs58check.dart' as bs58check;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -146,18 +146,13 @@ Uint8List tapTweak(Uint8List internalKey) {
 }
 
 /// Runs in a separate isolate — derives P2TR (tb1p / bc1p) address.
-///
-/// Leather uses the raw x-only pubkey as the witness program directly —
-/// no BIP341 tapTweak applied. tweakedPublicKey == x-only pubkey.
 Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   final node = args.seedRoot.root.derivePath(args.derivationPath);
 
   // Strip 02/03 prefix → 32-byte x-only internal key
   final internalKey = Uint8List.fromList(node.publicKey.sublist(1));
 
-  // BIP341 tapTweak (key-path only, no script tree):
-  //   t = taggedHash("TapTweak", internalKey)
-  //   tweakedKey = internalKey + t·G  (x-only)
+  // BIP341 tapTweak (key-path only, no script tree)
   final tweakedKey = tapTweak(internalKey);
 
   // Encode tweaked key as bech32m with witness version 1
@@ -168,7 +163,7 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
     'address': address,
     'privateKey': '0x${HEX.encode(node.privateKey!)}',
     'publicKey': HEX.encode(node.publicKey),
-    'tweakedPublicKey': HEX.encode(internalKey), // matches Leather's field name
+    'tweakedPublicKey': HEX.encode(internalKey),
   };
 }
 
@@ -186,6 +181,79 @@ List<int> convertBits(List<int> data, int from, int to, bool pad) {
   }
   if (pad && bits > 0) result.add((acc << (to - bits)) & maxv);
   return result;
+}
+
+// ─── Address type detection ───────────────────────────────────────────────────
+//
+// Used by NativeBtcCoin to build the correct output script for any recipient
+// address type — P2PKH (base58check), P2WPKH (bech32 v0), or P2TR (bech32m v1).
+
+enum _BtcAddrType { p2pkh, p2wpkh, p2tr, unknown }
+
+_BtcAddrType _detectAddrType(String address, bool isTestnet) {
+  final expectedHrp = isTestnet ? 'tb' : 'bc';
+
+  // bech32 (P2WPKH — witness version 0)
+  try {
+    final decoded = const Bech32Codec().decode(address);
+    if (decoded.hrp == expectedHrp && decoded.data[0] == 0) {
+      return _BtcAddrType.p2wpkh;
+    }
+  } catch (_) {}
+
+  // bech32m (P2TR — witness version 1)
+  try {
+    final decoded = bech32mDecode(address);
+    if (decoded.hrp == expectedHrp && decoded.data[0] == 1) {
+      return _BtcAddrType.p2tr;
+    }
+  } catch (_) {}
+
+  // base58check (P2PKH)
+  try {
+    final decoded =
+        Address.validateAddress(address, isTestnet ? testnet : bitcoin);
+    if (decoded) return _BtcAddrType.p2pkh;
+  } catch (_) {}
+
+  return _BtcAddrType.unknown;
+}
+
+/// Builds the correct scriptPubKey for any supported recipient address type.
+/// Used in NativeBtcCoin.transferToken() to support cross-type sends.
+Uint8List buildOutputScript(String address, bool isTestnet) {
+  final type = _detectAddrType(address, isTestnet);
+  switch (type) {
+    case _BtcAddrType.p2wpkh:
+      // OP_0 <20-byte hash>
+      return p2wpkhScript(
+        Uint8List.fromList(const SegwitCodec().decode(address).program),
+      );
+
+    case _BtcAddrType.p2tr:
+      // OP_1 <32-byte tweaked pubkey>
+      final program = Uint8List.fromList(
+        convertBits(bech32mDecode(address).data.sublist(1), 5, 8, false),
+      );
+      return Uint8List.fromList(
+          [0x51, 0x20, ...program]); // OP_1 OP_PUSHBYTES_32
+
+    case _BtcAddrType.p2pkh:
+      // OP_DUP OP_HASH160 <20-byte pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
+      final decoded = bs58check.decode(address);
+      final pubKeyHash = decoded.sublist(1); // strip version byte
+      return Uint8List.fromList([
+        0x76,
+        0xa9,
+        0x14,
+        ...pubKeyHash,
+        0x88,
+        0xac,
+      ]);
+
+    case _BtcAddrType.unknown:
+      throw Exception('Unsupported or invalid recipient address: $address');
+  }
 }
 
 // ─── P2WPKH (tb1q / bc1q) ─────────────────────────────────────────────────────
@@ -209,7 +277,6 @@ class NativeBtcCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    // v2 — bumped to bust stale cache
     final saveKey = 'nativeBtcP2WPKHv2i$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
@@ -300,21 +367,11 @@ class NativeBtcCoin extends Coin {
 
   // ─── Send ────────────────────────────────────────────────────────────────────
   //
-  // amount is a BTC string e.g. "0.0001" — converted to satoshis internally.
+  // Supports sending to any address type: P2PKH (m…/n…), P2WPKH (bc1q…/tb1q…),
+  // P2TR (bc1p…/tb1p…). The correct output scriptPubKey is built via
+  // buildOutputScript() based on address type detection.
   //
-  // IMPORTANT — segwit signing order:
-  //   1. addInput  (all inputs, with scriptPubKey)
-  //   2. addOutput (all outputs — recipient + change)
-  //   3. sign      (each input with witnessValue)
-  //   4. build + broadcast
-  //
-  // The BIP143 sighash commits to outputs, so outputs must exist before
-  // signing. Also ECPair must be created with compressed: true or
-  // publicKey will be null and sign() will throw.
-
-  // ── Relevant imports to add (if not already present) ─────────────────────────
-// import '../utils/segwit_tx.dart';
-// Remove: HEX, BytesBuilder — already re-exported via segwit_tx or keep if used elsewhere
+  // Inputs are always P2WPKH (our own address type) — BIP143 signing.
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
@@ -322,10 +379,8 @@ class NativeBtcCoin extends Coin {
     String to, {
     String? memo,
   }) async {
-    // amount is BTC — convert to satoshis
     final satoshiToSend = amount.toBigIntDec(decimals()).toInt();
     if (kDebugMode) print('BTC satoshiToSend: $satoshiToSend');
-
     if (satoshiToSend < 546) throw Exception('Amount below dust limit');
 
     final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -344,8 +399,8 @@ class NativeBtcCoin extends Coin {
     for (final utxo in utxos) {
       selectedUtxos.add(utxo);
       totalIn += utxo['value'] as int;
-      final fee = _estimateFee(selectedUtxos.length, 2, feeRate);
-      if (totalIn >= satoshiToSend + fee) break;
+      if (totalIn >=
+          satoshiToSend + _estimateFee(selectedUtxos.length, 2, feeRate)) break;
     }
 
     final fee = _estimateFee(selectedUtxos.length, 2, feeRate);
@@ -355,15 +410,15 @@ class NativeBtcCoin extends Coin {
     }
     if (totalIn < satoshiToSend + fee) {
       throw Exception(
-          'Insufficient balance (need ${satoshiToSend + fee} sat, have $totalIn)');
+        'Insufficient balance (need ${satoshiToSend + fee} sat, have $totalIn)',
+      );
     }
     final change = totalIn - satoshiToSend - fee;
 
     // ── Step 2: build output scripts ──────────────────────────────────────────
-    // Witness program from bech32 decode IS already the hash160 — do not re-hash.
-    final toScript = p2wpkhScript(
-      Uint8List.fromList(const SegwitCodec().decode(to).program),
-    );
+    // toScript supports P2PKH / P2WPKH / P2TR recipients.
+    // changeScript is always P2WPKH (sending change back to our own address).
+    final toScript = buildOutputScript(to, isTestnet);
     final changeScript = change > 546
         ? p2wpkhScript(
             Uint8List.fromList(const SegwitCodec().decode(address).program),
@@ -380,7 +435,6 @@ class NativeBtcCoin extends Coin {
       changeScript: changeScript,
     );
 
-    // scriptCode derived from our own pubkey (hash the pubkey — not an address)
     final scriptCode = p2wpkhScriptCode(
       hash160(compressedPubKey(privBytes)),
     );
@@ -428,6 +482,7 @@ class NativeBtcCoin extends Coin {
 
     return (txHash: res.body.trim(), txRaw: txHex);
   }
+
   // ─── Boilerplate ─────────────────────────────────────────────────────────────
 
   @override
@@ -463,34 +518,11 @@ class NativeBtcCoin extends Coin {
   @override
   Future<String?> resolveAddress(String address) async => null;
 
+  // Accepts P2PKH (m…/n…/1…), P2WPKH (bc1q…/tb1q…), P2TR (bc1p…/tb1p…)
   @override
   void validateAddress(String address) {
-    try {
-      final decoded = const Bech32Codec().decode(address);
-
-      final expectedHrp = isTestnet ? 'tb' : 'bc';
-      if (decoded.hrp != expectedHrp) {
-        throw Exception('Invalid HRP');
-      }
-
-      final data = decoded.data;
-
-      // First byte = witness version
-      final version = data[0];
-      if (version != 0) {
-        throw Exception('Invalid witness version for P2WPKH');
-      }
-
-      // Convert from 5-bit to 8-bit
-      final program = convertBits(data.sublist(1), 5, 8, false);
-
-      // P2WPKH must be 20 bytes
-      if (program.length != 20) {
-        throw Exception('Invalid program length for P2WPKH');
-      }
-    } catch (e) {
-      throw Exception('Invalid BTC address');
-    }
+    if (_detectAddrType(address, isTestnet) != _BtcAddrType.unknown) return;
+    throw Exception('Invalid BTC address');
   }
 
   @override
@@ -523,7 +555,6 @@ class TaprootBtcCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    // v3 — bumped to bust stale cache from tapTweak era
     final saveKey = 'nativeBtcP2TRv42$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
@@ -586,8 +617,8 @@ class TaprootBtcCoin extends Coin {
   }
 
   // ─── Send ─────────────────────────────────────────────────────────────────────
-  // Taproot spending requires BIP340 Schnorr signing which bitcoin_flutter
-  // does not yet support. P2TR is receive-only — users send via tb1q address.
+  // Taproot spending requires BIP340 Schnorr signing — not in bitcoin_flutter.
+  // P2TR is receive-only; users send from their SegWit (tb1q / bc1q) address.
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
@@ -640,32 +671,11 @@ class TaprootBtcCoin extends Coin {
   @override
   Future<String?> resolveAddress(String address) async => null;
 
+  // Accepts same address types as NativeBtcCoin for consistency
   @override
   void validateAddress(String address) {
-    try {
-      final decoded = bech32mDecode(address); // use your bech32m util
-
-      final expectedHrp = isTestnet ? 'tb' : 'bc';
-      if (decoded.hrp != expectedHrp) {
-        throw Exception('Invalid HRP');
-      }
-
-      final data = decoded.data;
-      final version = data[0];
-
-      if (version != 1) {
-        throw Exception('Invalid witness version for Taproot');
-      }
-
-      final program = convertBits(data.sublist(1), 5, 8, false);
-
-      // Taproot = 32 bytes
-      if (program.length != 32) {
-        throw Exception('Invalid program length for Taproot');
-      }
-    } catch (e) {
-      throw Exception('Invalid BTC Taproot address');
-    }
+    if (_detectAddrType(address, isTestnet) != _BtcAddrType.unknown) return;
+    throw Exception('Invalid BTC Taproot address');
   }
 
   @override
