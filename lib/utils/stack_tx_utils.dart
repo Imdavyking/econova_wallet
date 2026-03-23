@@ -610,14 +610,18 @@ String? clarityParseString(String hex) {
     case 0x00: // int128
       if (cur + 16 > bytes.length) return (display: '?', bytesRead: 1);
       var v = BigInt.zero;
-      for (int i = 0; i < 16; i++) v = (v << 8) | BigInt.from(bytes[cur + i]);
+      for (int i = 0; i < 16; i++) {
+        v = (v << 8) | BigInt.from(bytes[cur + i]);
+      }
       if (bytes[cur] >= 0x80) v = v - (BigInt.one << 128);
       return (display: '$v', bytesRead: 17);
 
     case 0x01: // uint128
       if (cur + 16 > bytes.length) return (display: '?', bytesRead: 1);
       var u = BigInt.zero;
-      for (int i = 0; i < 16; i++) u = (u << 8) | BigInt.from(bytes[cur + i]);
+      for (int i = 0; i < 16; i++) {
+        u = (u << 8) | BigInt.from(bytes[cur + i]);
+      }
       return (display: 'u$u', bytesRead: 17);
 
     case 0x03:

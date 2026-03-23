@@ -18,8 +18,7 @@
 //
 // Sending
 //   BTC · DOGE · DASH  — standard P2PKH, bitcoin_flutter TransactionBuilder
-//   BCH                — DISABLED: needs SIGHASH_FORKID (0x41), not supported
-//                        by bitcoin_flutter TransactionBuilder out of the box
+//   BCH                — SIGHASH_FORKID (0x41), custom BIP143-style signing in bch_tx.dart
 //   ZEC                — DISABLED: Sapling v4 format is out of scope
 //
 // ignore_for_file: non_constant_identifier_names
@@ -35,8 +34,9 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/alt_ens.dart';
+import 'package:wallet_app/utils/bch_tx.dart';
 import 'package:wallet_app/utils/btc_script_utils.dart';
-
+import 'package:wallet_app/utils/stack_tx_utils.dart'; // txDataToUintList, compressedPubKey, dsha256
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -339,9 +339,7 @@ final _configs = <String, _CoinConfig>{
     minimumFee: 100000, // 0.001 DASH
     feeRate: 10,
   ),
-  // BCH send disabled — SIGHASH_FORKID (0x41) required for replay protection.
-  // bitcoin_flutter TransactionBuilder uses SIGHASH_ALL (0x01) only.
-  // Nodes will reject the broadcast with "mandatory-script-verify-flag-failed".
+  // BCH send enabled — uses SIGHASH_FORKID (0x41) via bch_tx.dart
   'BCH': _CoinConfig(
     blockchain: 'bitcoin-cash',
     coinType: 145,
@@ -349,7 +347,6 @@ final _configs = <String, _CoinConfig>{
     dustLimit: 546,
     minimumFee: 1000,
     feeRate: 2,
-    sendEnabled: false,
   ),
   // ZEC send disabled — Sapling v4 transaction format is out of scope
   'ZEC': _CoinConfig(
@@ -616,8 +613,9 @@ class LegacyUtxoCoin extends Coin {
     for (final utxo in utxos) {
       selected.add(utxo);
       totalIn += utxo.satoshis;
-      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate))
+      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate)) {
         break;
+      }
     }
 
     final fee = _estimateFee(selected.length, 2, feeRate);
@@ -635,6 +633,28 @@ class LegacyUtxoCoin extends Coin {
     }
 
     // ── Build and sign ────────────────────────────────────────────────────────
+
+    // BCH: custom SIGHASH_FORKID (0x41) path — bitcoin_flutter TransactionBuilder
+    // only produces SIGHASH_ALL (0x01) which BCH full nodes reject outright.
+    if (symbol == 'BCH') {
+      final txHex = _buildBchTx(
+        privKey: keyPair.privateKey!,
+        ownAddress: address,
+        to: to,
+        selected: selected,
+        satoshiToSend: satoshiToSend,
+        change: change,
+      );
+      if (kDebugMode) print('BCH txHex: $txHex');
+      final txid = await _CryptoApis.broadcast(
+        _cfg.blockchain,
+        _cfg.cryptoApisNetwork,
+        txHex,
+      );
+      return (txHash: txid, txRaw: txHex);
+    }
+
+    // BTC · DOGE · DASH — standard P2PKH via bitcoin_flutter TransactionBuilder
     final privBytes = txDataToUintList(keyPair.privateKey!);
     final ecPair = ECPair.fromPrivateKey(
       privBytes,
@@ -648,9 +668,8 @@ class LegacyUtxoCoin extends Coin {
       txb.addInput(utxo.txid, utxo.vout);
     }
 
-    // BTC: use script-based output so any recipient address type is supported
-    // (P2PKH, P2WPKH, P2TR). Other coins stay with address string — their
-    // network's TransactionBuilder handles P2PKH natively.
+    // BTC: script-based output supports P2PKH, P2WPKH, P2TR recipients.
+    // DOGE/DASH: address string is fine — pure P2PKH network.
     if (symbol == 'BTC') {
       txb.addOutput(buildBtcOutputScript(to, isTestnet), satoshiToSend);
       if (change > _cfg.dustLimit) {
@@ -680,6 +699,81 @@ class LegacyUtxoCoin extends Coin {
     return (txHash: txid, txRaw: txHex);
   }
 
+  // ── BCH SIGHASH_FORKID signing ────────────────────────────────────────────────
+  //
+  // BCH requires BIP143-style sighash committed to the input value, with
+  // SIGHASH_ALL | SIGHASH_FORKID (0x41) appended to every signature.
+  // Standard P2PKH (non-segwit) wire format — no marker/flag/witness bytes.
+
+  String _buildBchTx({
+    required String privKey,
+    required String ownAddress, // CashAddr (our wallet's display address)
+    required String to, // CashAddr or legacy (user-entered recipient)
+    required List<_Utxo> selected,
+    required int satoshiToSend,
+    required int change,
+  }) {
+    final privBytes = txDataToUintList(privKey);
+
+    // Convert all addresses to legacy for script building.
+    // CashAddr cannot be used to extract pubKeyHash directly.
+    final toLegacy = bchToLegacy(to);
+    final changeLegacy = bchToLegacy(ownAddress);
+
+    // Output scripts
+    final toScript = bchP2pkhScript(bchAddressHash160(toLegacy));
+    final changeScript =
+        change > 546 ? bchP2pkhScript(bchAddressHash160(changeLegacy)) : null;
+
+    // The scriptCode for signing each input is the P2PKH scriptPubKey of
+    // the UTXO being spent — which is always our own address.
+    final ownScriptCode = bchP2pkhScript(bchAddressHash160(changeLegacy));
+
+    // Compressed public key — required for P2PKH to match the hash160
+    final pubkey = compressedPubKey(privBytes);
+
+    // BIP143-style shared hashes
+    final bchUtxos = selected
+        .map((u) => BchUtxo(txid: u.txid, vout: u.vout, satoshis: u.satoshis))
+        .toList();
+
+    final hashPrevouts = buildBchHashPrevouts(bchUtxos);
+    final hashSequence = buildBchHashSequence(selected.length);
+    final hashOutputs = buildBchHashOutputs(
+      satoshiToSend: satoshiToSend,
+      toScript: toScript,
+      change: change,
+      changeScript: changeScript,
+    );
+
+    // Sign each input
+    final scriptSigs = <Uint8List>[];
+    for (final utxo in selected) {
+      final txid = HEX.decode(utxo.txid).reversed.toList();
+      final preimage = bchSighashPreimage(
+        hashPrevouts: hashPrevouts,
+        hashSequence: hashSequence,
+        txid: txid,
+        vout: utxo.vout,
+        scriptCode: ownScriptCode,
+        value: utxo.satoshis,
+        hashOutputs: hashOutputs,
+      );
+      final sigHash = dsha256(preimage);
+      final sig = buildBchSignature(privBytes: privBytes, sigHash: sigHash);
+      scriptSigs.add(buildBchScriptSig(sig, pubkey));
+    }
+
+    return buildBchTxHex(
+      inputs: bchUtxos,
+      scriptSigs: scriptSigs,
+      satoshiToSend: satoshiToSend,
+      toScript: toScript,
+      change: change,
+      changeScript: changeScript,
+    );
+  }
+
   // ── Address validation ────────────────────────────────────────────────────────
 
   @override
@@ -701,8 +795,9 @@ class LegacyUtxoCoin extends Coin {
       try {
         final decoded = bs58check.decode(address);
         final expectedPrefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
-        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1])
+        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1]) {
           return;
+        }
       } catch (_) {}
       throw Exception(
         'Invalid ZEC ${isTestnet ? 'testnet' : 'mainnet'} t-address',
@@ -872,7 +967,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       rampID: '',
       payScheme: 'dash',
     ),
-    // BCH: balance and address work; send disabled (SIGHASH_FORKID required)
+    // BCH: balance, address, and send all work. SIGHASH_FORKID signing via bch_tx.dart.
     LegacyUtxoCoin(
       name: 'Bitcoin Cash',
       symbol: 'BCH',
