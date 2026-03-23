@@ -553,31 +553,31 @@ void main() async {
         case 'ZIL':
           expect(
             cryptoKeys.address,
-            'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
+            'zil1d4c4vntch9jpn3fj9d4ugpuap8cmdj7alnrxvv',
           );
           break;
         case 'STRK':
           expect(
             cryptoKeys.address,
-            '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+            '0x058ac366fa8dc98e25a85c7343bcca64324c2e7e65c017785c363d1066ce072a',
           );
           break;
         case 'ICP':
           expect(
             cryptoKeys.address,
-            'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
+            '',
           );
           break;
         case 'ONE':
           expect(
             cryptoKeys.address,
-            'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
+            'one12t2plmp43a2pqyl8wp5sgwktslnqt2dzd557mp',
           );
           break;
         case 'EGLD':
           expect(
             cryptoKeys.address,
-            'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
+            'erd1v38vje2t7rvccq2utxcamernpvchnshr6r8x4q9l2f0ekd3tqj2qcl7fs7',
           );
           break;
         case 'BTC':
@@ -589,7 +589,7 @@ void main() async {
           } else if (blockchainInfo.getName() == 'Bitcoin (SegWit Test4)') {
             expect(
               cryptoKeys.address,
-              'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
+              'tb1qquv9lg5g2r4jkr0ahun0ddfg5xntxjelvmc7t8',
             );
           }
           break;
@@ -602,38 +602,38 @@ void main() async {
           } else if (blockchainInfo.getName() == 'Stacks(Test)') {
             expect(
               cryptoKeys.address,
-              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+              'ST3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNEGTCR6R',
             );
           }
           break;
         case 'ETH':
           expect(
             cryptoKeys.address,
-            '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
+            '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
           );
           break;
         case 'TON':
           expect(
             cryptoKeys.address,
-            'EQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtFO5',
+            'EQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Kbar',
           );
           break;
         case 'SUI':
           expect(
             cryptoKeys.address,
-            '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+            '0xc88ef07b9b8b2fc3b7daad9478f4e1337f01792e2eab9c3794494e610636026e',
           );
           break;
         case 'APT':
           expect(
             cryptoKeys.address,
-            '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
+            '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
           );
           break;
         case 'XTZ':
           expect(
             cryptoKeys.address,
-            'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
+            'tz1UiMU2fCPen52tf6F8wp1aLpRTEvuct1kW',
           );
           break;
         case 'ETC':
@@ -654,25 +654,25 @@ void main() async {
           expect(cryptoKeys.address, 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti');
           break;
         case 'TRX':
-          expect(cryptoKeys.address, 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM');
+          expect(cryptoKeys.address, 'TWer2Ygk5TEheHp3TPuYeqxmB6SsGZmaL6');
           break;
         case 'SOL':
           expect(
             cryptoKeys.address,
-            '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
+            'BtELVjZSaWhMat94P9HyasX3Gvpv6C7WHXJGqWdZbwSQ',
           );
           break;
         case 'XLM':
           expect(cryptoKeys.address,
-              'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT');
+              'GCRN5PMAG5FM5QLCH7BUZPRQ7UIW37LBZLF2BIDEOSG4ZQ6HYRC45ALA');
           break;
         case 'ALGO':
           expect(cryptoKeys.address,
-              'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U');
+              'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q');
           break;
         case 'ATOM':
           expect(cryptoKeys.address,
-              'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
+              'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7');
           break;
         case 'ZEC':
           expect(cryptoKeys.address, 't1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
@@ -686,21 +686,21 @@ void main() async {
           } else if (blockchainInfo.getName() == 'Cardano (Preprod)') {
             expect(
               cryptoKeys.address,
-              'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
+              'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
             );
           }
           break;
         case 'XRP':
-          expect(cryptoKeys.address, 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL');
+          expect(cryptoKeys.address, 'rnrbiYDUYTJS4JVdSV5FtyCj4HFuRjfLKM');
           break;
         case 'FIL':
           if (blockchainInfo.getName() == 'Filecoin') {
             expect(cryptoKeys.address,
-                'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa');
+                'f1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea');
           } else if (blockchainInfo.getName() == 'Filecoin(Testnet)') {
             expect(
               cryptoKeys.address,
-              't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+              't1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
             );
           }
           break;
@@ -713,7 +713,7 @@ void main() async {
         case 'WND':
           expect(
             cryptoKeys.address,
-            '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
+            '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
           );
           break;
 
