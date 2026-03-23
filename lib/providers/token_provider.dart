@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wallet_app/main.dart';
+import 'package:wallet_app/utils/network_guard.dart';
 import '../interface/coin.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../utils/app_config.dart';
@@ -146,7 +147,7 @@ class TransactionData extends StateNotifier<TransactionState?> {
       final address = await coin.getAddress();
       final fetcher = coin.transactionFetcher;
 
-      if (fetcher != null) {
+      if (fetcher != null && NetworkGuard().isConnected) {
         try {
           // ── On-chain indexer path ─────────────────────────────────────────
           final walletTxs = await fetcher.fetch(address: address);
