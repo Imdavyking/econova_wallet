@@ -35,6 +35,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/alt_ens.dart';
+import 'package:wallet_app/utils/btc_script_utils.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -615,9 +616,8 @@ class LegacyUtxoCoin extends Coin {
     for (final utxo in utxos) {
       selected.add(utxo);
       totalIn += utxo.satoshis;
-      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate)) {
+      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate))
         break;
-      }
     }
 
     final fee = _estimateFee(selected.length, 2, feeRate);
@@ -648,8 +648,18 @@ class LegacyUtxoCoin extends Coin {
       txb.addInput(utxo.txid, utxo.vout);
     }
 
-    txb.addOutput(to, satoshiToSend);
-    if (change > _cfg.dustLimit) txb.addOutput(address, change);
+    // BTC: use script-based output so any recipient address type is supported
+    // (P2PKH, P2WPKH, P2TR). Other coins stay with address string — their
+    // network's TransactionBuilder handles P2PKH natively.
+    if (symbol == 'BTC') {
+      txb.addOutput(buildBtcOutputScript(to, isTestnet), satoshiToSend);
+      if (change > _cfg.dustLimit) {
+        txb.addOutput(buildBtcOutputScript(address, isTestnet), change);
+      }
+    } else {
+      txb.addOutput(to, satoshiToSend);
+      if (change > _cfg.dustLimit) txb.addOutput(address, change);
+    }
 
     for (int i = 0; i < selected.length; i++) {
       txb.sign(vin: i, keyPair: ecPair);
@@ -691,16 +701,21 @@ class LegacyUtxoCoin extends Coin {
       try {
         final decoded = bs58check.decode(address);
         final expectedPrefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
-        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1]) {
+        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1])
           return;
-        }
       } catch (_) {}
       throw Exception(
         'Invalid ZEC ${isTestnet ? 'testnet' : 'mainnet'} t-address',
       );
     }
 
-    // BTC, DOGE, DASH — standard base58check pubKeyHash
+    // BTC legacy: accept P2PKH, P2WPKH, and P2TR so cross-type sends work
+    if (symbol == 'BTC') {
+      if (detectBtcAddrType(address, isTestnet) != BtcAddrType.unknown) return;
+      throw Exception('Invalid BTC address');
+    }
+
+    // DOGE, DASH — standard base58check pubKeyHash
     try {
       if (Address.validateAddress(address, _cfg.network)) return;
     } catch (_) {}

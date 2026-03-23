@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:wallet_app/utils/bech32m.dart';
+import 'package:wallet_app/utils/btc_script_utils.dart';
 import 'package:wallet_app/utils/segwit_tx.dart';
 import 'package:bech32/bech32.dart';
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
@@ -12,7 +13,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
-import 'package:bs58check/bs58check.dart' as bs58check;
+
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -183,79 +184,6 @@ List<int> convertBits(List<int> data, int from, int to, bool pad) {
   return result;
 }
 
-// ─── Address type detection ───────────────────────────────────────────────────
-//
-// Used by NativeBtcCoin to build the correct output script for any recipient
-// address type — P2PKH (base58check), P2WPKH (bech32 v0), or P2TR (bech32m v1).
-
-enum _BtcAddrType { p2pkh, p2wpkh, p2tr, unknown }
-
-_BtcAddrType _detectAddrType(String address, bool isTestnet) {
-  final expectedHrp = isTestnet ? 'tb' : 'bc';
-
-  // bech32 (P2WPKH — witness version 0)
-  try {
-    final decoded = const Bech32Codec().decode(address);
-    if (decoded.hrp == expectedHrp && decoded.data[0] == 0) {
-      return _BtcAddrType.p2wpkh;
-    }
-  } catch (_) {}
-
-  // bech32m (P2TR — witness version 1)
-  try {
-    final decoded = bech32mDecode(address);
-    if (decoded.hrp == expectedHrp && decoded.data[0] == 1) {
-      return _BtcAddrType.p2tr;
-    }
-  } catch (_) {}
-
-  // base58check (P2PKH)
-  try {
-    final decoded =
-        Address.validateAddress(address, isTestnet ? testnet : bitcoin);
-    if (decoded) return _BtcAddrType.p2pkh;
-  } catch (_) {}
-
-  return _BtcAddrType.unknown;
-}
-
-/// Builds the correct scriptPubKey for any supported recipient address type.
-/// Used in NativeBtcCoin.transferToken() to support cross-type sends.
-Uint8List buildOutputScript(String address, bool isTestnet) {
-  final type = _detectAddrType(address, isTestnet);
-  switch (type) {
-    case _BtcAddrType.p2wpkh:
-      // OP_0 <20-byte hash>
-      return p2wpkhScript(
-        Uint8List.fromList(const SegwitCodec().decode(address).program),
-      );
-
-    case _BtcAddrType.p2tr:
-      // OP_1 <32-byte tweaked pubkey>
-      final program = Uint8List.fromList(
-        convertBits(bech32mDecode(address).data.sublist(1), 5, 8, false),
-      );
-      return Uint8List.fromList(
-          [0x51, 0x20, ...program]); // OP_1 OP_PUSHBYTES_32
-
-    case _BtcAddrType.p2pkh:
-      // OP_DUP OP_HASH160 <20-byte pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-      final decoded = bs58check.decode(address);
-      final pubKeyHash = decoded.sublist(1); // strip version byte
-      return Uint8List.fromList([
-        0x76,
-        0xa9,
-        0x14,
-        ...pubKeyHash,
-        0x88,
-        0xac,
-      ]);
-
-    case _BtcAddrType.unknown:
-      throw Exception('Unsupported or invalid recipient address: $address');
-  }
-}
-
 // ─── P2WPKH (tb1q / bc1q) ─────────────────────────────────────────────────────
 
 class NativeBtcCoin extends Coin {
@@ -418,7 +346,7 @@ class NativeBtcCoin extends Coin {
     // ── Step 2: build output scripts ──────────────────────────────────────────
     // toScript supports P2PKH / P2WPKH / P2TR recipients.
     // changeScript is always P2WPKH (sending change back to our own address).
-    final toScript = buildOutputScript(to, isTestnet);
+    final toScript = buildBtcOutputScript(to, isTestnet);
     final changeScript = change > 546
         ? p2wpkhScript(
             Uint8List.fromList(const SegwitCodec().decode(address).program),
@@ -521,7 +449,7 @@ class NativeBtcCoin extends Coin {
   // Accepts P2PKH (m…/n…/1…), P2WPKH (bc1q…/tb1q…), P2TR (bc1p…/tb1p…)
   @override
   void validateAddress(String address) {
-    if (_detectAddrType(address, isTestnet) != _BtcAddrType.unknown) return;
+    if (detectBtcAddrType(address, isTestnet) != BtcAddrType.unknown) return;
     throw Exception('Invalid BTC address');
   }
 
@@ -674,7 +602,7 @@ class TaprootBtcCoin extends Coin {
   // Accepts same address types as NativeBtcCoin for consistency
   @override
   void validateAddress(String address) {
-    if (_detectAddrType(address, isTestnet) != _BtcAddrType.unknown) return;
+    if (detectBtcAddrType(address, isTestnet) != BtcAddrType.unknown) return;
     throw Exception('Invalid BTC Taproot address');
   }
 
