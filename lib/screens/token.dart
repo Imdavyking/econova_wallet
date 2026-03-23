@@ -23,6 +23,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:intl/intl.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/screens/token_approvals_screen.dart';
 
 import '../service/wallet_service.dart';
 import '../utils/get_token_image.dart';
@@ -177,6 +178,17 @@ class _TokenState extends State<Token> {
 
   List<Widget> _buildAppBarActions(BuildContext context) {
     return [
+      if (_coin.getApprovals(_currentAddress) != null)
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TokenApprovalsScreen(coin: _coin),
+            ),
+          ),
+          icon: const Icon(Icons.security, color: Colors.white),
+          tooltip: 'Token Approvals',
+        ),
       IconButton(
         onPressed: () => Navigator.push(
           context,
