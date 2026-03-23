@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
-import 'package:wallet_app/coins/btc_coin.dart';
+import 'package:wallet_app/coins/segwit_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
@@ -17,7 +17,7 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'base_handler.dart';
-import 'package:wallet_app/utils/btc_script_utils.dart';
+import 'package:wallet_app/utils/utxo_script_utils.dart';
 import 'package:http/http.dart' as http;
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ class StacksHandler extends BaseWebViewHandler {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
 
     // Derive P2WPKH (tb1q / bc1q)
-    final segwitCoin = getNativeBtcCoins().first;
+    final segwitCoin = getSegwitCoins().first;
     final segwitData = await segwitCoin.importData(walletData);
     final segwitPath = isTestnet ? "m/84'/1'/0'/0/0" : "m/84'/0'/0'/0/0";
 
@@ -928,7 +928,7 @@ class StacksHandler extends BaseWebViewHandler {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
 
     // ── Derive BTC addresses dynamically ─────────────────────────────────────
-    final segwitCoin = getNativeBtcCoins().first;
+    final segwitCoin = getSegwitCoins().first;
     final segwitData = await segwitCoin.importData(walletData);
 
     final taprootCoin = getTaprootBtcCoins().first;
