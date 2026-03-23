@@ -358,13 +358,19 @@ class _BalanceWithFiat extends ConsumerWidget {
         ),
         if (fiatText != null) ...[
           const SizedBox(height: 4),
-          Text(
-            fiatText,
-            style: const TextStyle(
-              fontSize: 14,
+          UserBalance(
+            iconSize: 15,
+            mustIcon: _LockIcon(coin: coin, onBlocked: onTransferBlocked),
+            haveValue: coin.isRpcWorking,
+            textStyle: const TextStyle(
+              fontSize: 15,
               color: Colors.grey,
               fontWeight: FontWeight.w400,
             ),
+            balance: balance * (info?.price ?? 1),
+            symbol: info?.currencySymbol ?? "",
+            reversed: true,
+            iconDivider: const SizedBox(),
           ),
         ],
       ],
