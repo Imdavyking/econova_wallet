@@ -14,11 +14,8 @@ import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart' as web3;
 import 'package:web3dart/web3dart.dart';
-import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
-
-import '../coins/utxo_coin.dart';
 import '../coins/ethereum_coin.dart';
 import '../model/seed_phrase_root.dart';
 import 'abis.dart';
@@ -109,13 +106,6 @@ EthereumCoin? evmFromSymbol(String symbol) {
 EthereumCoin? evmFromChainId(int chainId) {
   for (final c in getEVMBlockchains()) {
     if (c.chainId == chainId) return c;
-  }
-  return null;
-}
-
-UtxoCoin? bitcoinFromNetwork(NetworkType network) {
-  for (final c in getUtxoCoins()) {
-    if (c.POSNetwork == network) return c;
   }
   return null;
 }
