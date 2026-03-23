@@ -430,22 +430,25 @@ class EthereumCoin extends Coin {
   }
 
   // ── Token approvals ───────────────────────────────────────────────────────
-
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) async {
-    if (address.isEmpty) return null; // ← stops the RPC call
-    final cacheKey = 'token_approvals_${chainId}_$address';
-    final cached = pref.get(cacheKey);
-    final cachedTime = pref.get('${cacheKey}_time');
+  Future<List<TokenApproval>>? getApprovals(String address) {
+    if (address.isEmpty) return null;
+    return _fetchEthApprovals(address);
+  }
 
-    // Return cache if fresh (< 10 minutes)
+  Future<List<TokenApproval>> _fetchEthApprovals(String address) async {
+    final cacheKey = 'token_approvals_${chainId}_$address';
+    final String? cached = pref.get(cacheKey) as String?;
+    final String? cachedTime = pref.get('${cacheKey}_time') as String?;
+
     if (cached != null && cachedTime != null) {
-      final age =
-          DateTime.now().difference(DateTime.parse(cachedTime as String));
+      final age = DateTime.now().difference(DateTime.parse(cachedTime));
       if (age.inMinutes < 10) {
         try {
-          final list = jsonDecode(cached as String) as List;
-          return list.map((e) => TokenApproval.fromJson(e)).toList();
+          final list = jsonDecode(cached) as List;
+          return list
+              .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+              .toList();
         } catch (_) {}
       }
     }
@@ -453,19 +456,21 @@ class EthereumCoin extends Coin {
     try {
       final fetcher = TokenApprovalFetcherFactory.forChain(chainId: chainId);
       final approvals = await fetcher.fetchApprovals(address);
-
-      await pref.put(
-          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
-
-      return approvals;
+      if (approvals != null) {
+        await pref.put(
+            cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+        await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+        return approvals;
+      }
+      return [];
     } catch (e) {
       debugPrint('EthereumCoin.getApprovals error: $e');
-      // Return stale cache on error
       if (cached != null) {
         try {
-          final list = jsonDecode(cached as String) as List;
-          return list.map((e) => TokenApproval.fromJson(e)).toList();
+          final list = jsonDecode(cached) as List;
+          return list
+              .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+              .toList();
         } catch (_) {}
       }
       return [];

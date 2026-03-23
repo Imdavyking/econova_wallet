@@ -357,14 +357,16 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) async {
-    if (address.isEmpty) return null; // ← stops the RPC call
+  Future<List<TokenApproval>>? getApprovals(String address) {
+    if (address.isEmpty) return null;
+    return _fetchSolanaApprovals(address);
+  }
 
+  Future<List<TokenApproval>> _fetchSolanaApprovals(String address) async {
     final cacheKey = 'solana_approvals_$address$rpc';
-    final cachedTime = pref.get('${cacheKey}_time');
     final cached = pref.get(cacheKey);
+    final cachedTime = pref.get('${cacheKey}_time');
 
-    // Return cache if fresh (< 10 minutes)
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
       if (age.inMinutes < 10) {
@@ -377,46 +379,29 @@ class SolanaCoin extends Coin {
 
     try {
       final client = getProxy().rpcClient;
-      print("Heeeeeee");
-      print("Address being used: '$address'");
-      print("Address length: ${address.length}");
-      // Get all token accounts owned by this wallet
       final accounts = await client.getTokenAccountsByOwner(
         address,
-        const TokenAccountsFilter.byProgramId(
-          TokenProgram.programId,
-        ),
+        const TokenAccountsFilter.byProgramId(TokenProgram.programId),
         commitment: Commitment.finalized,
       );
-      print("we good");
-
-      print(accounts);
 
       final approvals = <TokenApproval>[];
 
       for (final account in accounts.value) {
         final parsed = account.account.data;
         if (parsed is! ParsedSplTokenProgramAccountData) continue;
-
         final info = parsed.parsed;
         if (info is! TokenAccountData) continue;
-
-        // Only include accounts with an active delegate
         final delegate = info.info.delegate;
         final delegatedAmount = info.info.delegateAmount;
-
         if (delegate == null || delegatedAmount == null) continue;
         if (delegatedAmount.amount == '0') continue;
-
         final mintAddress = info.info.mint;
-
-        // Try to find token symbol from your SPL tokens list
         final splToken = getSplTokens().cast<Coin?>().firstWhere(
               (t) =>
                   t?.tokenAddress()?.toLowerCase() == mintAddress.toLowerCase(),
               orElse: () => null,
             );
-
         approvals.add(TokenApproval(
           tokenAddress: mintAddress,
           tokenSymbol: splToken?.getSymbol() ?? _shortAddr(mintAddress),
@@ -424,20 +409,16 @@ class SolanaCoin extends Coin {
           spenderAddress: delegate,
           spenderName: _resolveSpenderName(delegate),
           allowance: BigInt.parse(delegatedAmount.amount),
-          lastUpdated: null, // Solana doesn't return this from token accounts
+          lastUpdated: null,
         ));
       }
 
-      // Cache result
       await pref.put(
           cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
       await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
-
       return approvals;
     } catch (e) {
       debugPrint('SolanaCoin.getApprovals error: $e');
-
-      // Return stale cache on error
       if (cached != null) {
         try {
           final list = jsonDecode(cached) as List;
@@ -447,7 +428,6 @@ class SolanaCoin extends Coin {
       return [];
     }
   }
-
 // ── Revoke delegate ────────────────────────────────────────────────────────
 
   @override

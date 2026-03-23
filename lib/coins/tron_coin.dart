@@ -363,13 +363,17 @@ class TronCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) async {
-    if (address.isEmpty) return []; // ← stops the RPC call
+  Future<List<TokenApproval>>? getApprovals(String address) {
+    if (address.isEmpty) return null;
+    return _fetchTronApprovalsWithCache(address);
+  }
+
+  Future<List<TokenApproval>> _fetchTronApprovalsWithCache(
+      String address) async {
     final cacheKey = 'tron_approvals_${address}_$api';
     final cached = pref.get(cacheKey);
     final cachedTime = pref.get('${cacheKey}_time');
 
-    // Return cache if fresh
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
       if (age.inMinutes < 10) {
@@ -382,12 +386,13 @@ class TronCoin extends Coin {
 
     try {
       final approvals = await _fetchTronApprovals(address);
-
-      await pref.put(
-          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
-
-      return approvals;
+      if (approvals != null) {
+        await pref.put(
+            cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+        await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+        return approvals;
+      }
+      return [];
     } catch (e) {
       debugPrint('TronCoin.getApprovals error: $e');
       if (cached != null) {
