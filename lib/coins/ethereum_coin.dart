@@ -366,7 +366,10 @@ class EthereumCoin extends Coin {
         lower == 'native';
   }
 
+  @override
   Future<String?>? testCreateApproval() async {
+    const sepoliaChainId = 11155111;
+    if (chainId != sepoliaChainId) return null;
     try {
       final client = Web3Client(rpc, Client());
       final data = WalletService.getActiveKey(walletImportType)!.data;
