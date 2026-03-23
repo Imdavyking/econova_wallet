@@ -57,7 +57,7 @@ class ConfirmTransfer extends StatelessWidget {
         List userTransactions = [];
         final existing = pref.get(trnxKey);
         if (existing != null) {
-          userTransactions = json.decode(existing);
+          userTransactions = jsonDecode(existing);
         }
         userTransactions.insert(0, mapData);
         if (userTransactions.length > maximumTransactionToSave) {

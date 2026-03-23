@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wallet_app/main.dart';
 import '../interface/coin.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../utils/app_config.dart';
@@ -152,6 +154,9 @@ class TransactionData extends StateNotifier<TransactionState?> {
             transactions: walletTxs.map(TokenTransaction.fromWallet).toList(),
             currentUser: address,
           );
+          final mapped =
+              walletTxs.map((tx) => tx.toTokenTransactionJson()).toList();
+          await pref.put(coin.savedTransKey(), jsonEncode(mapped));
           return; // success — don't fall through to local
         } catch (_) {
           // Indexer failed (offline, rate limited, etc.)
