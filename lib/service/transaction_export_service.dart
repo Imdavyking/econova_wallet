@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:pdf/pdf.dart';
+import '../utils/format_money.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 // ── Export format ─────────────────────────────────────────────────────────────
@@ -722,13 +723,13 @@ class _InsightsCard extends StatelessWidget {
               Expanded(
                 child: _StatCell(
                   label: 'Total sent',
-                  value: '${insights.totalSent.toStringAsFixed(2)} $symbol',
+                  value: '${formatMoney(insights.totalSent)} $symbol',
                 ),
               ),
               Expanded(
                 child: _StatCell(
                   label: 'Total received',
-                  value: '${insights.totalReceived.toStringAsFixed(2)} $symbol',
+                  value: '${formatMoney(insights.totalReceived)} $symbol',
                 ),
               ),
               Expanded(
@@ -758,8 +759,7 @@ class _InsightsCard extends StatelessWidget {
             _InsightRow(
               icon: Icons.arrow_upward,
               label: 'Biggest send',
-              value:
-                  '${insights.biggestSend!.amount.toStringAsFixed(2)} $symbol'
+              value: '${formatMoney(insights.biggestSend!.amount)} $symbol'
                   ' to ${_short(insights.biggestSend!.address)}'
                   ' on ${TransactionExportService.shortDate(insights.biggestSend!.date)}',
             ),
@@ -800,7 +800,7 @@ class _InsightsCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '${r.total.toStringAsFixed(2)} ${r.symbol}',
+                      '${formatMoney(r.total)} ${r.symbol}',
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600),
                     ),
