@@ -154,8 +154,6 @@ class EVMApprovalFetcher {
             allowance = BigInt.zero;
           }
 
-          print('allowance: $allowance');
-
           if (allowance == BigInt.zero) continue;
 
           approvals.add(TokenApproval(
