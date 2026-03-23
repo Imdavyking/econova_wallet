@@ -357,7 +357,9 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>> getApprovals(String address) async {
+  Future<List<TokenApproval>>? getApprovals(String address) async {
+    if (address.isEmpty) return null; // ← stops the RPC call
+
     final cacheKey = 'solana_approvals_$address$rpc';
     final cachedTime = pref.get('${cacheKey}_time');
     final cached = pref.get(cacheKey);
@@ -375,16 +377,20 @@ class SolanaCoin extends Coin {
 
     try {
       final client = getProxy().rpcClient;
-
+      print("Heeeeeee");
+      print("Address being used: '$address'");
+      print("Address length: ${address.length}");
       // Get all token accounts owned by this wallet
       final accounts = await client.getTokenAccountsByOwner(
         address,
         const TokenAccountsFilter.byProgramId(
           TokenProgram.programId,
         ),
-        encoding: Encoding.jsonParsed,
         commitment: Commitment.finalized,
       );
+      print("we good");
+
+      print(accounts);
 
       final approvals = <TokenApproval>[];
 

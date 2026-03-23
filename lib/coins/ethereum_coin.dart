@@ -432,7 +432,8 @@ class EthereumCoin extends Coin {
   // ── Token approvals ───────────────────────────────────────────────────────
 
   @override
-  Future<List<TokenApproval>> getApprovals(String address) async {
+  Future<List<TokenApproval>>? getApprovals(String address) async {
+    if (address.isEmpty) return null; // ← stops the RPC call
     final cacheKey = 'token_approvals_${chainId}_$address';
     final cached = pref.get(cacheKey);
     final cachedTime = pref.get('${cacheKey}_time');

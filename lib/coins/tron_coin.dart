@@ -363,7 +363,8 @@ class TronCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>> getApprovals(String address) async {
+  Future<List<TokenApproval>>? getApprovals(String address) async {
+    if (address.isEmpty) return []; // ← stops the RPC call
     final cacheKey = 'tron_approvals_${address}_$api';
     final cached = pref.get(cacheKey);
     final cachedTime = pref.get('${cacheKey}_time');
@@ -399,7 +400,7 @@ class TronCoin extends Coin {
     }
   }
 
-  Future<List<TokenApproval>> _fetchTronApprovals(String address) async {
+  Future<List<TokenApproval>>? _fetchTronApprovals(String address) async {
     // TronGrid returns TRC20 approval events for an address
     final response = await http.get(
       Uri.parse(

@@ -23,7 +23,7 @@ class TokenApprovalsScreen extends StatefulWidget {
 }
 
 class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
-  late Future<List<TokenApproval>> _approvalsFuture;
+  late Future<List<TokenApproval>>? _approvalsFuture;
   String _address = '';
 
   @override
@@ -36,7 +36,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
     _approvalsFuture = _fetchApprovals();
   }
 
-  Future<List<TokenApproval>> _fetchApprovals() async {
+  Future<List<TokenApproval>>? _fetchApprovals() async {
     _address = await widget.coin.getAddress();
     final future = widget.coin.getApprovals(_address);
 

@@ -101,7 +101,7 @@ class TokenApprovalFetcher {
         '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
-  Future<List<TokenApproval>> fetchApprovals(String walletAddress) async {
+  Future<List<TokenApproval>>? fetchApprovals(String walletAddress) async {
     try {
       final url = Uri.parse(
         'https://api.covalenthq.com/v1/$chainId/approvals/$walletAddress/',
