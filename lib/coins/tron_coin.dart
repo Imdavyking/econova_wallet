@@ -6,6 +6,7 @@ import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:http/http.dart' as http;
 import 'package:on_chain/tron/tron.dart';
+import 'package:wallet_app/model/token_approvals.dart';
 import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -295,6 +296,200 @@ class TronCoin extends Coin {
     debugPrint(result.toString());
     throw Exception('sending failed');
   }
+
+  @override
+  Future<List<TokenApproval>> getApprovals(String address) async {
+    final cacheKey = 'tron_approvals_${address}_$api';
+    final cached = pref.get(cacheKey);
+    final cachedTime = pref.get('${cacheKey}_time');
+
+    // Return cache if fresh
+    if (cached != null && cachedTime != null) {
+      final age = DateTime.now().difference(DateTime.parse(cachedTime));
+      if (age.inMinutes < 10) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final approvals = await _fetchTronApprovals(address);
+
+      await pref.put(
+          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+
+      return approvals;
+    } catch (e) {
+      debugPrint('TronCoin.getApprovals error: $e');
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+  }
+
+  Future<List<TokenApproval>> _fetchTronApprovals(String address) async {
+    // TronGrid returns TRC20 approval events for an address
+    final response = await http.get(
+      Uri.parse(
+        '$api/v1/accounts/$address/transactions/trc20'
+        '?limit=200&only_confirmed=true',
+      ),
+      headers: {
+        'TRON-PRO-API-KEY': tronGridApiKey,
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode ~/ 100 != 2) {
+      throw Exception('TronGrid error: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final txList = data['data'] as List? ?? [];
+
+    // Track latest allowance per (token, spender) pair
+    final approvalMap = <String, TokenApproval>{};
+
+    for (final tx in txList) {
+      // Only approval events (type = "Approval")
+      final type = tx['type'] as String?;
+      if (type != 'Approval') continue;
+
+      final tokenAddress = (tx['token_info']?['address'] as String? ?? '');
+      final tokenSymbol = tx['token_info']?['symbol'] as String? ?? '?';
+      final tokenName = tx['token_info']?['name'] as String? ?? tokenSymbol;
+      final spender = tx['to'] as String? ?? '';
+      final value = tx['value'] as String? ?? '0';
+      final blockTimestamp = tx['block_timestamp'] as int?;
+
+      if (spender.isEmpty || tokenAddress.isEmpty) continue;
+
+      BigInt allowance;
+      try {
+        allowance = BigInt.parse(value);
+      } catch (_) {
+        allowance = BigInt.zero;
+      }
+
+      // Skip revoked
+      if (allowance == BigInt.zero) {
+        approvalMap.remove('${tokenAddress}_$spender');
+        continue;
+      }
+
+      // Keep latest approval per (token, spender)
+      approvalMap['${tokenAddress}_$spender'] = TokenApproval(
+        tokenAddress: tokenAddress,
+        tokenSymbol: tokenSymbol,
+        tokenName: tokenName,
+        spenderAddress: spender,
+        spenderName: _resolveSpenderName(spender),
+        allowance: allowance,
+        lastUpdated: blockTimestamp != null
+            ? DateTime.fromMillisecondsSinceEpoch(blockTimestamp)
+            : null,
+      );
+    }
+
+    final approvals = approvalMap.values.toList()
+      ..sort((a, b) {
+        if (a.isDangerous && !b.isDangerous) return -1;
+        if (!a.isDangerous && b.isDangerous) return 1;
+        return 0;
+      });
+
+    return approvals;
+  }
+
+  @override
+  Future<bool>? revokeApproval(TokenApproval approval) async {
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final tronDetails = await importData(data);
+      final ownerAddress = TronAddress(tronDetails.address);
+      final rpc = TronProvider(TronHTTPProvider(url: api));
+      final block = await rpc.request(TronRequestGetNowBlock());
+
+      // TRC20 approve(spender, 0) — same as ERC20
+      // Function selector: 0x095ea7b3
+      final spenderHex = tronAddressToHex(approval.spenderAddress)
+          .toLowerCase()
+          .replaceFirst('41', '')
+          .padLeft(64, '0');
+      final amountHex = '0' * 64; // amount = 0
+      final data_ = '095ea7b3$spenderHex$amountHex';
+
+      final contract = TriggerSmartContract(
+        ownerAddress: ownerAddress,
+        contractAddress: TronAddress(approval.tokenAddress),
+        data: BytesUtils.fromHexString(data_),
+        callValue: BigInt.zero,
+      );
+
+      final any = Any(typeUrl: contract.typeURL, value: contract);
+      final transactionContract =
+          TransactionContract(type: contract.contractType, parameter: any);
+
+      final rawTr = TransactionRaw(
+        refBlockBytes: block.blockHeader.rawData.refBlockBytes,
+        refBlockHash: block.blockHeader.rawData.refBlockHash,
+        expiration:
+            block.blockHeader.rawData.timestamp + BigInt.from(60 * 6 * 60),
+        contract: [transactionContract],
+        timestamp: block.blockHeader.rawData.timestamp,
+        feeLimit: BigInt.from(TRX_FEE_LIMIT),
+      );
+
+      final privateKey =
+          Uint8List.fromList(HEX.decode(tronDetails.privateKey!));
+      final txID = Uint8List.fromList(HEX.decode(rawTr.txID));
+      final sig = sign(txID, privateKey);
+      final recid = sig.v - 27;
+      final signature = '${HEX.encode([
+            ...sig.r.toUint8List(),
+            ...sig.s.toUint8List(),
+          ])}0$recid';
+
+      final transaction =
+          Transaction(rawData: rawTr, signature: [HEX.decode(signature)]);
+      final raw = BytesUtils.toHexString(transaction.toBuffer());
+      final result =
+          await rpc.request(TronRequestBroadcastHex(transaction: raw));
+
+      if (!result.isSuccess) {
+        throw Exception('Revoke failed: ${result.error}');
+      }
+
+      // Clear cache
+      final address = await getAddress();
+      await pref.delete('tron_approvals_${address}_$api');
+      await pref.delete('tron_approvals_${address}_${api}_time');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static const _knownTronSpenders = <String, String>{
+    'TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax': 'SunSwap V2',
+    'TFVisXFaijZfeyeSjCEVkHfex7HGdTxzS9': 'JustLend',
+    'TXF1xDbVGdxFGbovmmmXvBGu8ZiE3Lq4mR': 'Sun.io',
+  };
+
+  String _resolveSpenderName(String address) {
+    return _knownTronSpenders[address] ?? _shortAddr(address);
+  }
+
+  String _shortAddr(String addr) => addr.length > 10
+      ? '${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}'
+      : addr;
 
   @override
   validateAddress(String address) {

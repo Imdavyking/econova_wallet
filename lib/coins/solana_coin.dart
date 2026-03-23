@@ -6,7 +6,9 @@ import 'package:hex/hex.dart';
 import 'package:solana/dto.dart' hide AccountData;
 import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
-import 'package:wallet_app/model/solana_transaction_versioned.dart';
+import 'package:wallet_app/model/solana_transaction_versioned.dart'
+    hide Message;
+import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/solana_meme.coin.dart';
 
@@ -304,6 +306,168 @@ class SolanaCoin extends Coin {
 
     return newCompiledMessage.toByteArray().toList();
   }
+
+  @override
+  Future<List<TokenApproval>> getApprovals(String address) async {
+    final cacheKey = 'solana_approvals_$address$rpc';
+    final cachedTime = pref.get('${cacheKey}_time');
+    final cached = pref.get(cacheKey);
+
+    // Return cache if fresh (< 10 minutes)
+    if (cached != null && cachedTime != null) {
+      final age = DateTime.now().difference(DateTime.parse(cachedTime));
+      if (age.inMinutes < 10) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final client = getProxy().rpcClient;
+
+      // Get all token accounts owned by this wallet
+      final accounts = await client.getTokenAccountsByOwner(
+        address,
+        const TokenAccountsFilter.byProgramId(
+          TokenProgram.programId,
+        ),
+        encoding: Encoding.jsonParsed,
+        commitment: Commitment.finalized,
+      );
+
+      final approvals = <TokenApproval>[];
+
+      for (final account in accounts.value) {
+        final parsed = account.account.data;
+        if (parsed is! ParsedSplTokenProgramAccountData) continue;
+
+        final info = parsed.parsed;
+        if (info is! TokenAccountData) continue;
+
+        // Only include accounts with an active delegate
+        final delegate = info.info.delegate;
+        final delegatedAmount = info.info.delegateAmount;
+
+        if (delegate == null || delegatedAmount == null) continue;
+        if (delegatedAmount.amount == '0') continue;
+
+        final mintAddress = info.info.mint;
+
+        // Try to find token symbol from your SPL tokens list
+        final splToken = getSplTokens().cast<Coin?>().firstWhere(
+              (t) =>
+                  t?.tokenAddress()?.toLowerCase() == mintAddress.toLowerCase(),
+              orElse: () => null,
+            );
+
+        approvals.add(TokenApproval(
+          tokenAddress: mintAddress,
+          tokenSymbol: splToken?.getSymbol() ?? _shortAddr(mintAddress),
+          tokenName: splToken?.getName() ?? mintAddress,
+          spenderAddress: delegate,
+          spenderName: _resolveSpenderName(delegate),
+          allowance: BigInt.parse(delegatedAmount.amount),
+          lastUpdated: null, // Solana doesn't return this from token accounts
+        ));
+      }
+
+      // Cache result
+      await pref.put(
+          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+
+      return approvals;
+    } catch (e) {
+      debugPrint('SolanaCoin.getApprovals error: $e');
+
+      // Return stale cache on error
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+  }
+
+// ── Revoke delegate ────────────────────────────────────────────────────────
+
+  @override
+  Future<bool>? revokeApproval(TokenApproval approval) async {
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final response = await importData(data);
+      final privateKeyBytes = HEX.decode(response.privateKey!);
+      final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: privateKeyBytes,
+      );
+
+      // Find the token account for this mint
+      final accounts = await getProxy().rpcClient.getTokenAccountsByOwner(
+            await getAddress(),
+            TokenAccountsFilter.byMint(approval.tokenAddress),
+            encoding: Encoding.jsonParsed,
+          );
+
+      if (accounts.value.isEmpty) {
+        throw Exception('Token account not found for ${approval.tokenSymbol}');
+      }
+
+      final tokenAccountAddress = accounts.value.first.pubkey;
+
+      // Get latest blockhash
+      final bh = await getProxy().rpcClient.getLatestBlockhash(
+            commitment: Commitment.finalized,
+          );
+
+      // Build revoke instruction with correct parameter names
+      final revokeIx = TokenInstruction.revoke(
+        source: Ed25519HDPublicKey.fromBase58(
+          tokenAccountAddress,
+        ), // ← source not accountToChange
+        sourceOwner: keyPair.publicKey, // ← sourceOwner not accountOwner
+      );
+
+      final message = Message(instructions: [revokeIx]);
+
+      // signMessage takes Message + recentBlockhash, not compiled bytes
+      final signed = await keyPair.signMessage(
+        message: message, // ← Message not compiled.toByteArray()
+        recentBlockhash: bh.value.blockhash, // ← required param
+      );
+
+      await getProxy().rpcClient.sendTransaction(
+            base64Encode(signed.toByteArray().toList()),
+          );
+
+      // Clear cache
+      final address = await getAddress();
+      await pref.delete('solana_approvals_$address$rpc');
+      await pref.delete('solana_approvals_$address${rpc}_time');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+  static const _knownSolanaSpenders = <String, String>{
+    'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter V6',
+    'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc': 'Orca Whirlpool',
+    '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP': 'Orca V2',
+    'RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr': 'Raydium V4',
+    '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8': 'Raydium AMM',
+  };
+
+  String _resolveSpenderName(String address) {
+    return _knownSolanaSpenders[address] ?? _shortAddr(address);
+  }
+
+  String _shortAddr(String addr) =>
+      '${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}';
 
   @override
   Future<DeployMeme> deployMemeCoin({

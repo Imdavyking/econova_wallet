@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:wallet_app/extensions/first_or_null.dart';
+import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -32,6 +33,9 @@ abstract class Coin {
   String normalizeAmountString(String amountString) {
     return amountString.replaceAll(',', '');
   }
+
+  Future<List<TokenApproval>>? getApprovals(String address) => null;
+  Future<bool>? revokeApproval(TokenApproval approval) => null;
 
   TransactionFetcher? get transactionFetcher => null;
   void validateAddress(String address);

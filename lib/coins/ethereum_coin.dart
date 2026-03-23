@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:hex/hex.dart';
+import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
 
 import '../extensions/big_int_ext.dart';
@@ -9,7 +11,6 @@ import '../service/wallet_service.dart';
 import '../service/x402_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:hex/hex.dart';
 import 'package:http/http.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
@@ -23,12 +24,10 @@ import '../utils/rpc_urls.dart';
 
 const etherDecimals = 18;
 
-// ── Known USDC contract names per version ─────────────────────────────────────
-// v0 draft used a different domain name on some deployments.
 const _usdcDomainNameByVersion = {
-  0: 'USDC', // some early v0 servers used the short form
-  1: 'USD Coin', // canonical EIP-3009 domain name
-  2: 'USD Coin', // unchanged in v2
+  0: 'USDC',
+  1: 'USD Coin',
+  2: 'USD Coin',
 };
 
 class EthereumCoin extends Coin {
@@ -90,28 +89,17 @@ class EthereumCoin extends Coin {
   @override
   String? getStakeDappUrl() => 'https://lido.fi';
 
-  // ── x402 support ─────────────────────────────────────────────────────────────
+  // ── x402 ─────────────────────────────────────────────────────────────────
 
   @override
   bool get supportsX402 => true;
 
-  /// Signs an x402 payment header, handling all known protocol versions.
-  ///
-  /// Version behaviour:
-  ///   v0 – legacy draft: uses short `"USDC"` domain name, emits `"version"`
-  ///         key in the JSON payload (not `"x402Version"`).
-  ///   v1 – current spec: full `"USD Coin"` domain, `"x402Version": 1`.
-  ///   v2 – extended: same as v1 for ERC-20 assets; native-ETH assets use a
-  ///         personal_sign digest instead of EIP-3009 (servers on v2 that
-  ///         request ETH micro-payments don't use transferWithAuthorization).
   @override
   Future<String?> signX402Payment(
     X402PaymentOption option, {
     int version = 1,
   }) async {
     try {
-      // EVM payments always need a recipient address.
-      // Stacks-style 402 responses omit payTo — cannot sign for those.
       final payTo = option.payTo;
       if (payTo.isEmpty) {
         debugPrint(
@@ -127,7 +115,6 @@ class EthereumCoin extends Coin {
       final resolvedChainId = _chainIdForNetwork(option.network);
       final isNativeEth = _isNativeEth(option.asset);
 
-      // v2 native-ETH path: simple personal_sign commitment, no EIP-3009.
       if (version >= 2 && isNativeEth) {
         return _signNativeEthPayment(
           from: fromAddress,
@@ -139,7 +126,6 @@ class EthereumCoin extends Coin {
         );
       }
 
-      // ERC-20 path (all versions): EIP-3009 TransferWithAuthorization.
       final value = BigInt.parse(option.maxAmountRequired);
       final validAfter = BigInt.zero;
       final validBefore = BigInt.from(
@@ -183,9 +169,6 @@ class EthereumCoin extends Coin {
     }
   }
 
-  // ── Payload builders ──────────────────────────────────────────────────────────
-
-  /// Builds the JSON payload for ERC-20 payments, keyed per version.
   Map<String, dynamic> _buildPayload({
     required int version,
     required X402PaymentOption option,
@@ -207,7 +190,6 @@ class EthereumCoin extends Coin {
     };
 
     if (version == 0) {
-      // v0 draft: used "version" instead of "x402Version"
       return {
         'version': 0,
         'scheme': option.scheme,
@@ -219,7 +201,6 @@ class EthereumCoin extends Coin {
       };
     }
 
-    // v1 and v2 share the same structure; v2 adds an optional "extra" echo.
     final payload = <String, dynamic>{
       'x402Version': version,
       'scheme': option.scheme,
@@ -231,17 +212,12 @@ class EthereumCoin extends Coin {
     };
 
     if (version >= 2 && option.extra != null) {
-      // v2 allows echoing server-supplied extra fields back in the header
-      // so the facilitator can route correctly (e.g. multi-hop).
       payload['extra'] = option.extra;
     }
 
     return payload;
   }
 
-  /// v2 native-ETH: personal_sign over a canonical commitment string.
-  /// This is NOT EIP-3009 (which only works for ERC-20 with the authorization
-  /// interface). The server verifies ecrecover(commitment, sig) == from.
   Future<String?> _signNativeEthPayment({
     required String from,
     required X402PaymentOption option,
@@ -255,7 +231,6 @@ class EthereumCoin extends Coin {
             1000;
     final nonce = _randomNonce();
 
-    // Canonical commitment: matches the facilitator's verifyNativePayment spec.
     final commitment =
         'x402:eth:${option.network}:$payTo:${option.maxAmountRequired}:$validBefore:$nonce';
 
@@ -286,8 +261,6 @@ class EthereumCoin extends Coin {
 
     return base64Encode(utf8.encode(jsonEncode(payload)));
   }
-
-  // ── EIP-3009 signing ──────────────────────────────────────────────────────────
 
   String _signEIP3009({
     required String from,
@@ -360,8 +333,6 @@ class EthereumCoin extends Coin {
     ]));
   }
 
-  // ── ABI encoding helpers ──────────────────────────────────────────────────────
-
   Uint8List _abiEncode(List<Uint8List> parts) {
     final result = <int>[];
     for (final part in parts) {
@@ -382,16 +353,12 @@ class EthereumCoin extends Coin {
         address.toLowerCase().replaceFirst('0x', '').padLeft(64, '0'),
       );
 
-  // ── Misc helpers ──────────────────────────────────────────────────────────────
-
   String _randomNonce() {
     final rng = Random.secure();
     final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
     return '0x${bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
   }
 
-  /// Returns true for asset identifiers that represent native ETH
-  /// rather than an ERC-20 contract address.
   bool _isNativeEth(String asset) {
     final lower = asset.toLowerCase();
     return lower == 'eth' ||
@@ -399,30 +366,119 @@ class EthereumCoin extends Coin {
         lower == 'native';
   }
 
-  /// Maps an x402 network string to its EVM chain ID.
-  /// Falls back to this coin's own [chainId] for unknown networks.
   int _chainIdForNetwork(String network) {
     return switch (network) {
-      // ── Base ──────────────────────────────────────────────────────────────
       'base-mainnet' => 8453,
       'base-sepolia' => 84532,
-      // ── Ethereum ─────────────────────────────────────────────────────────
       'ethereum-mainnet' => 1,
       'ethereum-sepolia' => 11155111,
-      // ── Optimism (v2+) ───────────────────────────────────────────────────
       'optimism-mainnet' => 10,
       'optimism-sepolia' => 11155420,
-      // ── Arbitrum (v2+) ───────────────────────────────────────────────────
       'arbitrum-mainnet' => 42161,
       'arbitrum-sepolia' => 421614,
-      // ── Polygon (v2+) ────────────────────────────────────────────────────
       'polygon-mainnet' => 137,
       'polygon-amoy' => 80002,
       _ => chainId,
     };
   }
 
-  // ── Standard EthereumCoin methods ─────────────────────────────────────────────
+  // ── Token approvals ───────────────────────────────────────────────────────
+
+  @override
+  Future<List<TokenApproval>> getApprovals(String address) async {
+    final cacheKey = 'token_approvals_${chainId}_$address';
+    final cached = pref.get(cacheKey);
+    final cachedTime = pref.get('${cacheKey}_time');
+
+    // Return cache if fresh (< 10 minutes)
+    if (cached != null && cachedTime != null) {
+      final age =
+          DateTime.now().difference(DateTime.parse(cachedTime as String));
+      if (age.inMinutes < 10) {
+        try {
+          final list = jsonDecode(cached as String) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final fetcher = TokenApprovalFetcherFactory.forChain(chainId: chainId);
+      final approvals = await fetcher.fetchApprovals(address);
+
+      await pref.put(
+          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+
+      return approvals;
+    } catch (e) {
+      debugPrint('EthereumCoin.getApprovals error: $e');
+      // Return stale cache on error
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached as String) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+  }
+
+  @override
+  Future<bool>? revokeApproval(TokenApproval approval) async {
+    try {
+      final client = Web3Client(rpc, Client());
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final response = await importData(data);
+      final credentials = EthPrivateKey.fromHex(response.privateKey!);
+      final gasPrice = await client.getGasPrice();
+
+      // approve(spender, 0) — revoke
+      final approveData = _encodeApprove(
+        spender: approval.spenderAddress,
+        amount: BigInt.zero,
+      );
+
+      final tx = Transaction(
+        from: credentials.address,
+        to: EthereumAddress.fromHex(approval.tokenAddress),
+        data: approveData,
+        gasPrice: gasPrice,
+      );
+
+      final signed = await client.signTransaction(
+        credentials,
+        tx,
+        chainId: chainId,
+      );
+
+      await client.sendRawTransaction(signed);
+      await client.dispose();
+
+      // Clear cache
+      final address = await getAddress();
+      final cacheKey = 'token_approvals_${chainId}_$address';
+      await pref.delete(cacheKey);
+      await pref.delete('${cacheKey}_time');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Uint8List _encodeApprove({
+    required String spender,
+    required BigInt amount,
+  }) {
+    // approve(address,uint256) selector = 0x095ea7b3
+    const selector = '095ea7b3';
+    final paddedSpender =
+        spender.toLowerCase().replaceFirst('0x', '').padLeft(64, '0');
+    final paddedAmount = amount.toRadixString(16).padLeft(64, '0');
+    return hexToBytes('$selector$paddedSpender$paddedAmount');
+  }
+
+  // ── Standard methods ──────────────────────────────────────────────────────
 
   factory EthereumCoin.fromJson(Map<String, dynamic> json) {
     return EthereumCoin(
