@@ -613,7 +613,8 @@ class LegacyUtxoCoin extends Coin {
     for (final utxo in utxos) {
       selected.add(utxo);
       totalIn += utxo.satoshis;
-      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate)) {
+      if (totalIn >=
+          satoshiToSend + _estimateFee(selected.length, 2, feeRate)) {
         break;
       }
     }
@@ -795,7 +796,8 @@ class LegacyUtxoCoin extends Coin {
       try {
         final decoded = bs58check.decode(address);
         final expectedPrefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
-        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1]) {
+        if (decoded[0] == expectedPrefix[0] &&
+            decoded[1] == expectedPrefix[1]) {
           return;
         }
       } catch (_) {}
