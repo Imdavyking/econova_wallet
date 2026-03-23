@@ -1,10 +1,9 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/model/token_approvals.dart';
-import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:wallet_app/utils/app_config.dart';
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 //
 // Works for any coin that overrides getApprovals() and revokeApproval()
@@ -25,8 +24,9 @@ class TokenApprovalsScreen extends StatefulWidget {
 }
 
 class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
-  late Future<List<TokenApproval>>? _approvalsFuture;
+  Future<List<TokenApproval>>? _approvalsFuture;
   bool _revoking = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,21 +37,21 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
     _approvalsFuture = _fetchApprovals();
   }
 
-  Future<List<TokenApproval>>? _fetchApprovals() async {
+  Future<List<TokenApproval>> _fetchApprovals() async {
     final future = widget.coin.getApprovals();
-
-    if (future == null) return []; // coin doesn't support approvals
+    if (future == null) return [];
     return future;
   }
 
   Future<void> _confirmRevoke(TokenApproval approval) async {
     bool confirmed = false;
+
     await AwesomeDialog(
       closeIcon: const Icon(Icons.close),
       buttonsTextStyle: const TextStyle(color: Colors.white),
       context: context,
       btnOkColor: Colors.red,
-      btnCancelColor: appBackgroundblue.withOpacity(0.5),
+      btnCancelColor: Colors.grey.shade600,
       dialogType: DialogType.warning,
       buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
       headerAnimationLoop: false,
@@ -64,15 +64,14 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
       btnCancelText: 'Cancel',
       btnCancelOnPress: () {},
       btnOkOnPress: () {
-        confirmed = true; // ← just set flag, don't call async
+        confirmed = true;
       },
     ).show();
-    print(confirmed);
+
     if (confirmed) await _revoke(approval);
   }
 
   Future<void> _revoke(TokenApproval approval) async {
-    print('ok');
     if (!mounted) return;
     setState(() => _revoking = true);
 
@@ -96,7 +95,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(() => _load()); // ← setState wrapping _load so UI rebuilds
+        setState(() => _load());
       } else {
         _showError('Failed to revoke approval');
       }
@@ -116,65 +115,90 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.coin.getSymbol()} Approvals'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => setState(_load),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<TokenApproval>>(
-        future: _approvalsFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return snapshot.hasError
-                ? _ErrorView(error: snapshot.error.toString())
-                : const _LoadingView();
-          }
-
-          final approvals = snapshot.data!;
-          if (approvals.isEmpty) return const _EmptyView();
-
-          final dangerous = approvals.where((a) => a.isDangerous).toList();
-          final safe = approvals.where((a) => !a.isDangerous).toList();
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _DisclaimerBanner(),
-              const SizedBox(height: 16),
-              if (dangerous.isNotEmpty) ...[
-                _SectionHeader(
-                  title: 'Unlimited approvals',
-                  subtitle: '${dangerous.length} — high risk',
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 8),
-                ...dangerous.map((a) => _ApprovalCard(
-                      approval: a,
-                      onRevoke: () => _confirmRevoke(a),
-                    )),
-                const SizedBox(height: 20),
-              ],
-              if (safe.isNotEmpty) ...[
-                _SectionHeader(
-                  title: 'Limited approvals',
-                  subtitle: '${safe.length} — fixed amount',
-                  color: Colors.orange,
-                ),
-                const SizedBox(height: 8),
-                ...safe.map((a) => _ApprovalCard(
-                      approval: a,
-                      onRevoke: () => _confirmRevoke(a),
-                    )),
-              ],
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: Text('${widget.coin.getSymbol()} Approvals'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => setState(_load),
+              ),
             ],
-          );
-        },
-      ),
+          ),
+          body: FutureBuilder<List<TokenApproval>>(
+            future: _approvalsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const _LoadingView();
+              }
+
+              if (snapshot.hasError) {
+                return _ErrorView(error: snapshot.error.toString());
+              }
+
+              final approvals = snapshot.data ?? [];
+              if (approvals.isEmpty) return const _EmptyView();
+
+              final dangerous = approvals.where((a) => a.isDangerous).toList();
+              final safe = approvals.where((a) => !a.isDangerous).toList();
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _DisclaimerBanner(),
+                  const SizedBox(height: 16),
+                  if (dangerous.isNotEmpty) ...[
+                    _SectionHeader(
+                      title: 'Unlimited approvals',
+                      subtitle: '${dangerous.length} — high risk',
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 8),
+                    ...dangerous.map((a) => _ApprovalCard(
+                          approval: a,
+                          onRevoke: () => _confirmRevoke(a),
+                        )),
+                    const SizedBox(height: 20),
+                  ],
+                  if (safe.isNotEmpty) ...[
+                    _SectionHeader(
+                      title: 'Limited approvals',
+                      subtitle: '${safe.length} — fixed amount',
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(height: 8),
+                    ...safe.map((a) => _ApprovalCard(
+                          approval: a,
+                          onRevoke: () => _confirmRevoke(a),
+                        )),
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+
+        // ── Revoke loader overlay ─────────────────────────────────────
+        if (_revoking)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Revoking approval...',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -284,7 +308,7 @@ class _ApprovalCard extends StatelessWidget {
               ),
             ),
 
-            // Revoke
+            // Revoke button
             TextButton(
               onPressed: onRevoke,
               style: TextButton.styleFrom(
@@ -292,8 +316,10 @@ class _ApprovalCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              child: const Text('Revoke',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Revoke',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -391,8 +417,10 @@ class _EmptyView extends StatelessWidget {
           Icon(Icons.verified_user_outlined,
               size: 48, color: Colors.green.shade400),
           const SizedBox(height: 16),
-          const Text('No active approvals',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const Text(
+            'No active approvals',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           Text(
             'You have not approved any DApps\nto spend your tokens.',
@@ -419,8 +447,10 @@ class _ErrorView extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
             const SizedBox(height: 16),
-            const Text('Failed to load approvals',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text(
+              'Failed to load approvals',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             Text(
               error,
