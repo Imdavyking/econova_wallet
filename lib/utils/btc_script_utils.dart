@@ -67,7 +67,7 @@ Uint8List buildBtcOutputScript(String address, bool isTestnet) {
     case BtcAddrType.p2tr:
       // OP_1 OP_PUSHBYTES_32 <32-byte tweaked pubkey>
       final words = bech32mDecode(address).data.sublist(1);
-      final program = Uint8List.fromList(_convertBits(words, 5, 8, false));
+      final program = Uint8List.fromList(convertBits(words, 5, 8, false));
       return Uint8List.fromList([0x51, 0x20, ...program]);
 
     case BtcAddrType.p2pkh:
@@ -89,7 +89,7 @@ Uint8List buildBtcOutputScript(String address, bool isTestnet) {
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-List<int> _convertBits(List<int> data, int from, int to, bool pad) {
+List<int> convertBits(List<int> data, int from, int to, bool pad) {
   int acc = 0, bits = 0;
   final result = <int>[];
   final maxv = (1 << to) - 1;
@@ -103,4 +103,4 @@ List<int> _convertBits(List<int> data, int from, int to, bool pad) {
   }
   if (pad && bits > 0) result.add((acc << (to - bits)) & maxv);
   return result;
-}// TODO Implement this library.
+}

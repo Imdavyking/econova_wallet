@@ -168,22 +168,6 @@ Map<String, dynamic> calculateTaprootBtcKey(TaprootBtcDeriveArgs args) {
   };
 }
 
-List<int> convertBits(List<int> data, int from, int to, bool pad) {
-  int acc = 0, bits = 0;
-  final result = <int>[];
-  final maxv = (1 << to) - 1;
-  for (final value in data) {
-    acc = ((acc << from) | value) & 0xfff;
-    bits += from;
-    while (bits >= to) {
-      bits -= to;
-      result.add((acc >> bits) & maxv);
-    }
-  }
-  if (pad && bits > 0) result.add((acc << (to - bits)) & maxv);
-  return result;
-}
-
 // ─── P2WPKH (tb1q / bc1q) ─────────────────────────────────────────────────────
 
 class NativeBtcCoin extends Coin {
