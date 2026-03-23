@@ -139,13 +139,10 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
     ...getTronFungibleCoins(),
-  ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
-
-  blockchains.insertAll(0, [
     ...stackCoins,
     ...getSIP010Coins(),
     ...getSegwitCoins(),
-  ]);
+  ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   return blockchains;
 }

@@ -253,7 +253,7 @@ final _btcMainnet = SegwitCoinConfig(
   derivationPath: "m/84'/0'/0'/0/0",
   hrp: 'bc',
   symbol: 'BTC',
-  name: 'Bitcoin',
+  name: 'Bitcoin (SegWit)',
   image: 'assets/bitcoin.jpg',
   blockExplorer: 'https://mempool.space/tx/$blockExplorerPlaceholder',
   geckoId: 'bitcoin',

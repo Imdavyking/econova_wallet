@@ -311,7 +311,7 @@ void main() async {
           );
           break;
         case 'BTC':
-          if (blockchainInfo.getName() == 'Bitcoin') {
+          if (blockchainInfo.getName() == 'Bitcoin (SegWit)') {
             blockchainInfo
                 .validateAddress('bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf');
             expect(
@@ -589,7 +589,7 @@ void main() async {
           );
           break;
         case 'BTC':
-          if (blockchainInfo.getName() == 'Bitcoin') {
+          if (blockchainInfo.getName() == 'Bitcoin (SegWit)') {
             expect(
               cryptoKeys.address,
               'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
