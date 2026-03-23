@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
+import 'package:wallet_app/coins/legacy_utxo_coin.dart';
 import 'package:wallet_app/coins/tezos_coin.dart';
 import 'package:wallet_app/coins/algorand_coin.dart';
 import 'package:wallet_app/coins/utxo_coin.dart';
@@ -129,6 +130,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getTezosBlockchains(),
     ...getAlgorandBlockchains(),
     ...getFUSEFTBlockchains(),
+    ...getLegacyUtxoCoins(),
     ...getSplTokens(),
     ...erc20Coins,
     ...getCosmosBlockChains(),
@@ -158,7 +160,8 @@ late ByteData logoBytes;
 // DO NOT USE (public)
 const testMnemonic =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
-
+// const testMnemonic =
+//     'test test test test test test test test test test test junk'; // do not use it in production
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FlutterDownloader.initialize();

@@ -602,7 +602,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       // BTC legacy P2PKH testnet — m/44'/0'/0'/0/0
       // Kept separate from NativeBtcCoin (SegWit) and TaprootBtcCoin.
       LegacyUtxoCoin(
-        name: 'Bitcoin (Test)',
+        name: 'Bitcoin (Legacy Test)',
         symbol: 'BTC',
         default_: 'BTC',
         image: 'assets/bitcoin.jpg',

@@ -591,6 +591,11 @@ void main() async {
               cryptoKeys.address,
               'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
             );
+          } else if (blockchainInfo.getName() == 'Bitcoin (Legacy Test)') {
+            expect(
+              cryptoKeys.address,
+              'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
+            );
           }
           break;
         case 'STX':
