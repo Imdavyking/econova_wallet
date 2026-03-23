@@ -479,6 +479,8 @@ class SolanaCoin extends Coin {
           spenderAddress: delegate,
           spenderName: _resolveSpenderName(delegate),
           allowance: allowance,
+          contractDecimals:
+              splToken?.decimals() ?? (info.info.delegateAmount?.decimals ?? 9),
           lastUpdated: null,
         ));
       }

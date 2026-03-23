@@ -484,6 +484,9 @@ class TronCoin extends Coin {
         spenderAddress: spender,
         spenderName: _resolveSpenderName(spender),
         allowance: allowance,
+        contractDecimals: tx['token_info']?['decimals'] as int? ??
+            6, 
+
         lastUpdated: blockTimestamp != null
             ? DateTime.fromMillisecondsSinceEpoch(blockTimestamp)
             : null,

@@ -22,8 +22,8 @@ class TokenApproval {
     required this.spenderAddress,
     required this.spenderName,
     required this.allowance,
+    required this.contractDecimals,
     this.lastUpdated,
-    this.contractDecimals = 18,
   });
 
   static final _maxUint256 = BigInt.parse(
