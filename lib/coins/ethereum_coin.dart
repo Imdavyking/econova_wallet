@@ -366,43 +366,48 @@ class EthereumCoin extends Coin {
         lower == 'native';
   }
 
-  Future<void> testCreateApproval() async {
-    final client = Web3Client(rpc, Client());
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
-    final credentials = EthPrivateKey.fromHex(response.privateKey!);
-    final gasPrice = await client.getGasPrice();
+  Future<String?>? testCreateApproval() async {
+    try {
+      final client = Web3Client(rpc, Client());
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final response = await importData(data);
+      final credentials = EthPrivateKey.fromHex(response.privateKey!);
+      final gasPrice = await client.getGasPrice();
 
-    // Your existing Sepolia USDC
-    const testTokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+      // Your existing Sepolia USDC
+      const testTokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 
-    // Any address as spender — using Uniswap V2 router for test
-    const testSpender = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
+      // Any address as spender — using Uniswap V2 router for test
+      const testSpender = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
 
-    // Approve 100 USDC (6 decimals)
-    final testAmount = BigInt.from(100) * BigInt.from(10).pow(6);
+      // Approve 100 USDC (6 decimals)
+      final testAmount = BigInt.from(100) * BigInt.from(10).pow(6);
 
-    final approveData = _encodeApprove(
-      spender: testSpender,
-      amount: testAmount,
-    );
+      final approveData = _encodeApprove(
+        spender: testSpender,
+        amount: testAmount,
+      );
 
-    final tx = Transaction(
-      from: credentials.address,
-      to: EthereumAddress.fromHex(testTokenAddress),
-      data: approveData,
-      gasPrice: gasPrice,
-    );
+      final tx = Transaction(
+        from: credentials.address,
+        to: EthereumAddress.fromHex(testTokenAddress),
+        data: approveData,
+        gasPrice: gasPrice,
+      );
 
-    final signed = await client.signTransaction(
-      credentials,
-      tx,
-      chainId: chainId,
-    );
+      final signed = await client.signTransaction(
+        credentials,
+        tx,
+        chainId: chainId,
+      );
 
-    final txHash = await client.sendRawTransaction(signed);
-    await client.dispose();
-    debugPrint('ETH test approval tx: $txHash');
+      final txHash = await client.sendRawTransaction(signed);
+      await client.dispose();
+      debugPrint('ETH test approval tx: $txHash');
+      return txHash;
+    } catch (e) {
+      return 'Error: $e';
+    }
   }
 
   int _chainIdForNetwork(String network) {

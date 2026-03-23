@@ -36,7 +36,7 @@ abstract class Coin {
 
   Future<List<TokenApproval>>? getApprovals(String address) => null;
   Future<bool>? revokeApproval(TokenApproval approval) => null;
-
+  Future<String?>? testCreateApproval() => null;
   TransactionFetcher? get transactionFetcher => null;
   void validateAddress(String address);
   Future<String> addressExplorer();

@@ -297,63 +297,69 @@ class TronCoin extends Coin {
     throw Exception('sending failed');
   }
 
-  Future<void> testCreateApproval() async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final tronDetails = await importData(data);
-    final ownerAddress = TronAddress(tronDetails.address);
-    final rpcProvider = TronProvider(TronHTTPProvider(url: api));
-    final block = await rpcProvider.request(TronRequestGetNowBlock());
+  @override
+  Future<String?> testCreateApproval() async {
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final tronDetails = await importData(data);
+      final ownerAddress = TronAddress(tronDetails.address);
+      final rpcProvider = TronProvider(TronHTTPProvider(url: api));
+      final block = await rpcProvider.request(TronRequestGetNowBlock());
 
-    // USDT on Tron testnet (Shasta)
-    const testTokenAddress =
-        'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs'; // USDT Shasta
-    const testSpender = 'TXF1xDbVGdxFGbovmmmXvBGu8ZiE3Lq4mR'; // Sun.io
-    final testAmount = BigInt.from(1000000); // 1 USDT (6 decimals)
+      const testTokenAddress =
+          'TTFd5kQ8r34XPtUjK3Lk5Eh8rLBjynsX1k'; // PRIME TRC20
 
-    final spenderHex = tronAddressToHex(testSpender)
-        .toLowerCase()
-        .replaceFirst('41', '')
-        .padLeft(64, '0');
-    final amountHex = testAmount.toRadixString(16).padLeft(64, '0');
-    final callData = '095ea7b3$spenderHex$amountHex';
+      const testSpender = 'TXF1xDbVGdxFGbovmmmXvBGu8ZiE3Lq4mR';
+      final testAmount = BigInt.from(1000000);
 
-    final contract = TriggerSmartContract(
-      ownerAddress: ownerAddress,
-      contractAddress: TronAddress(testTokenAddress),
-      data: BytesUtils.fromHexString(callData),
-      callValue: BigInt.zero,
-    );
+      final spenderHex = tronAddressToHex(testSpender)
+          .toLowerCase()
+          .replaceFirst('41', '')
+          .padLeft(64, '0');
+      final amountHex = testAmount.toRadixString(16).padLeft(64, '0');
+      final callData = '095ea7b3$spenderHex$amountHex';
 
-    final any = Any(typeUrl: contract.typeURL, value: contract);
-    final transactionContract =
-        TransactionContract(type: contract.contractType, parameter: any);
+      final contract = TriggerSmartContract(
+        ownerAddress: ownerAddress,
+        contractAddress: TronAddress(testTokenAddress),
+        data: BytesUtils.fromHexString(callData),
+        callValue: BigInt.zero,
+      );
 
-    final rawTr = TransactionRaw(
-      refBlockBytes: block.blockHeader.rawData.refBlockBytes,
-      refBlockHash: block.blockHeader.rawData.refBlockHash,
-      expiration:
-          block.blockHeader.rawData.timestamp + BigInt.from(60 * 6 * 60),
-      contract: [transactionContract],
-      timestamp: block.blockHeader.rawData.timestamp,
-      feeLimit: BigInt.from(TRX_FEE_LIMIT),
-    );
+      final any = Any(typeUrl: contract.typeURL, value: contract);
+      final transactionContract =
+          TransactionContract(type: contract.contractType, parameter: any);
 
-    final privateKey = Uint8List.fromList(HEX.decode(tronDetails.privateKey!));
-    final txID = Uint8List.fromList(HEX.decode(rawTr.txID));
-    final sig = sign(txID, privateKey);
-    final recid = sig.v - 27;
-    final signature = '${HEX.encode([
-          ...sig.r.toUint8List(),
-          ...sig.s.toUint8List(),
-        ])}0$recid';
+      final rawTr = TransactionRaw(
+        refBlockBytes: block.blockHeader.rawData.refBlockBytes,
+        refBlockHash: block.blockHeader.rawData.refBlockHash,
+        expiration:
+            block.blockHeader.rawData.timestamp + BigInt.from(60 * 6 * 60),
+        contract: [transactionContract],
+        timestamp: block.blockHeader.rawData.timestamp,
+        feeLimit: BigInt.from(TRX_FEE_LIMIT),
+      );
 
-    final transaction =
-        Transaction(rawData: rawTr, signature: [HEX.decode(signature)]);
-    final raw = BytesUtils.toHexString(transaction.toBuffer());
-    final result =
-        await rpcProvider.request(TronRequestBroadcastHex(transaction: raw));
+      final privateKey =
+          Uint8List.fromList(HEX.decode(tronDetails.privateKey!));
+      final txID = Uint8List.fromList(HEX.decode(rawTr.txID));
+      final sig = sign(txID, privateKey);
+      final recid = sig.v - 27;
+      final signature = '${HEX.encode([
+            ...sig.r.toUint8List(),
+            ...sig.s.toUint8List(),
+          ])}0$recid';
 
-    debugPrint('TRX test approval tx: ${result.txId}');
+      final transaction =
+          Transaction(rawData: rawTr, signature: [HEX.decode(signature)]);
+      final raw = BytesUtils.toHexString(transaction.toBuffer());
+      final result =
+          await rpcProvider.request(TronRequestBroadcastHex(transaction: raw));
+
+      return result.txId;
+    } catch (e) {
+      return 'Error: $e';
+    }
   }
 
   @override
