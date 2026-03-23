@@ -44,8 +44,9 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:page_transition/page_transition.dart';
-import 'coins/fungible_tokens/esdt_coin.dart';
+import 'coins/fungible_tokens/esdt_ft_coin.dart';
 import 'coins/fungible_tokens/ton_fungible_coins.dart';
+import 'coins/fungible_tokens/tron_fungible_coin.dart';
 import 'coins/harmony_coin.dart';
 import 'coins/iotex_coin.dart';
 import 'coins/multiversx_coin.dart';
@@ -137,6 +138,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
+    ...getTronFungibleCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   blockchains.insertAll(0, [

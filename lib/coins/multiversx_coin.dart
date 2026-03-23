@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'package:hex/hex.dart';
-import 'package:wallet_app/coins/fungible_tokens/esdt_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
 
 import '../extensions/big_int_ext.dart';
