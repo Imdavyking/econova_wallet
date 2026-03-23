@@ -398,13 +398,10 @@ class TronCoin extends Coin {
 
     try {
       final approvals = await _fetchTronApprovals(address);
-      if (approvals != null) {
-        await pref.put(
-            keys.key, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-        await pref.put(keys.timeKey, DateTime.now().toIso8601String());
-        return approvals;
-      }
-      return [];
+      await pref.put(
+          keys.key, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+      await pref.put(keys.timeKey, DateTime.now().toIso8601String());
+      return approvals;
     } catch (e) {
       debugPrint('TronCoin.getApprovals error: $e');
       if (cached != null) {
@@ -417,12 +414,11 @@ class TronCoin extends Coin {
     }
   }
 
-  Future<List<TokenApproval>>? _fetchTronApprovals(String address) async {
-    // TronGrid returns TRC20 approval events for an address
+  Future<List<TokenApproval>> _fetchTronApprovals(String address) async {
     final response = await http.get(
       Uri.parse(
         '$api/v1/accounts/$address/transactions/trc20'
-        '?limit=200&only_confirmed=true',
+        '?limit=200&only_confirmed=true&order_by=block_timestamp,desc', // ← sort desc
       ),
       headers: {
         'TRON-PRO-API-KEY': tronGridApiKey,
@@ -437,22 +433,37 @@ class TronCoin extends Coin {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final txList = data['data'] as List? ?? [];
 
+    // Sort by block_timestamp descending — latest first
+    final sorted = List.from(txList)
+      ..sort((a, b) {
+        final aTime = a['block_timestamp'] as int? ?? 0;
+        final bTime = b['block_timestamp'] as int? ?? 0;
+        return bTime.compareTo(aTime); // desc
+      });
+
     // Track latest allowance per (token, spender) pair
+    // Since sorted latest first, first seen = most recent state
+    final seen = <String>{};
     final approvalMap = <String, TokenApproval>{};
 
-    for (final tx in txList) {
-      // Only approval events (type = "Approval")
+    for (final tx in sorted) {
       final type = tx['type'] as String?;
       if (type != 'Approval') continue;
 
       final tokenAddress = (tx['token_info']?['address'] as String? ?? '');
+      final spender = tx['to'] as String? ?? '';
+      if (spender.isEmpty || tokenAddress.isEmpty) continue;
+
+      final pairKey = '${tokenAddress}_$spender';
+
+      // Already seen a more recent tx for this pair — skip
+      if (seen.contains(pairKey)) continue;
+      seen.add(pairKey);
+
       final tokenSymbol = tx['token_info']?['symbol'] as String? ?? '?';
       final tokenName = tx['token_info']?['name'] as String? ?? tokenSymbol;
-      final spender = tx['to'] as String? ?? '';
       final value = tx['value'] as String? ?? '0';
       final blockTimestamp = tx['block_timestamp'] as int?;
-
-      if (spender.isEmpty || tokenAddress.isEmpty) continue;
 
       BigInt allowance;
       try {
@@ -461,14 +472,10 @@ class TronCoin extends Coin {
         allowance = BigInt.zero;
       }
 
-      // Skip revoked
-      if (allowance == BigInt.zero) {
-        approvalMap.remove('${tokenAddress}_$spender');
-        continue;
-      }
+      // Most recent tx for this pair is a revoke — skip
+      if (allowance == BigInt.zero) continue;
 
-      // Keep latest approval per (token, spender)
-      approvalMap['${tokenAddress}_$spender'] = TokenApproval(
+      approvalMap[pairKey] = TokenApproval(
         tokenAddress: tokenAddress,
         tokenSymbol: tokenSymbol,
         tokenName: tokenName,
@@ -481,14 +488,12 @@ class TronCoin extends Coin {
       );
     }
 
-    final approvals = approvalMap.values.toList()
+    return approvalMap.values.toList()
       ..sort((a, b) {
         if (a.isDangerous && !b.isDangerous) return -1;
         if (!a.isDangerous && b.isDangerous) return 1;
         return 0;
       });
-
-    return approvals;
   }
 
   @override
