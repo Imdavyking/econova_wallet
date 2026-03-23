@@ -11,19 +11,20 @@ import 'package:wallet_app/providers/token_provider.dart';
 import 'package:wallet_app/screens/need_deploy_widget.dart';
 import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_form.dart';
+import 'package:wallet_app/screens/token_approvals_screen.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
-import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/service/transaction_export_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/format_money.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:intl/intl.dart';
-import 'package:wallet_app/utils/wallet_transaction.dart';
-import 'package:wallet_app/screens/token_approvals_screen.dart';
 
 import '../service/wallet_service.dart';
 import '../utils/get_token_image.dart';
@@ -178,6 +179,7 @@ class _TokenState extends State<Token> {
 
   List<Widget> _buildAppBarActions(BuildContext context) {
     return [
+      // Approvals button — only for coins that support it
       if (_coin.getApprovals(_currentAddress) != null)
         IconButton(
           onPressed: () => Navigator.push(
@@ -189,6 +191,20 @@ class _TokenState extends State<Token> {
           icon: const Icon(Icons.security, color: Colors.white),
           tooltip: 'Token Approvals',
         ),
+
+      // Debug test page — debug mode only
+      if (kDebugMode && _coin.testCreateApproval() != null)
+        IconButton(
+          icon: const Icon(Icons.bug_report, color: Colors.amber),
+          tooltip: 'Test Approvals (debug)',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => _ApprovalTestPage(coin: _coin),
+            ),
+          ),
+        ),
+
       IconButton(
         onPressed: () => Navigator.push(
           context,
@@ -253,7 +269,6 @@ class _CoinCard extends ConsumerWidget {
           padding: const EdgeInsets.only(left: 10, right: 10, top: 20),
           child: Column(
             children: [
-              // Price row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -268,7 +283,6 @@ class _CoinCard extends ConsumerWidget {
               const SizedBox(height: 20),
               GetTokenImage(radius: 25, currCoin: coin),
               const SizedBox(height: 10),
-              // Balance + fiat value
               _BalanceWithFiat(
                 coin: coin,
                 infoController: infoController,
@@ -563,7 +577,6 @@ class _TransactionSection extends ConsumerWidget {
       return;
     }
 
-    // Convert TokenTransaction → WalletTransaction
     final walletTxs = state.transactions.map((tx) {
       final date = DateFormat('yyyy-MM-dd hh:mm:ss').parse(tx.time);
       return WalletTransaction(
@@ -582,7 +595,7 @@ class _TransactionSection extends ConsumerWidget {
               blockExplorerPlaceholder,
               tx.transactionHash,
             ),
-        memo: tx.memo, // if your TokenTransaction has memo
+        memo: tx.memo,
       );
     }).toList();
 
@@ -608,7 +621,7 @@ class _TransactionSection extends ConsumerWidget {
             _TransactionHeader(
               isOpen: isOpen,
               onTap: () => trxOpen.value = !trxOpen.value,
-              onExport: () => _showExport(context, state), // 👈
+              onExport: () => _showExport(context, state),
             ),
             if (items.isNotEmpty && isOpen)
               Column(
@@ -641,7 +654,7 @@ class _TransactionSection extends ConsumerWidget {
 class _TransactionHeader extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onTap;
-  final VoidCallback? onExport; // 👈 add this
+  final VoidCallback? onExport;
 
   const _TransactionHeader({
     required this.isOpen,
@@ -667,7 +680,6 @@ class _TransactionHeader extends StatelessWidget {
                 child: const Icon(Icons.arrow_back_ios_new, size: 15),
               ),
               const Spacer(),
-              // 👇 export button
               if (onExport != null)
                 IconButton(
                   onPressed: onExport,
@@ -754,6 +766,340 @@ class _TransactionItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Debug: Approval test page ─────────────────────────────────────────────────
+// Only reachable in kDebugMode via the bug_report icon in the app bar.
+// Completely stripped in release builds.
+
+class _ApprovalTestPage extends StatefulWidget {
+  final Coin coin;
+  const _ApprovalTestPage({required this.coin});
+
+  @override
+  State<_ApprovalTestPage> createState() => _ApprovalTestPageState();
+}
+
+class _ApprovalTestPageState extends State<_ApprovalTestPage> {
+  bool _loading = false;
+  String? _result;
+  bool _isError = false;
+  String? _explorerUrl;
+
+  Future<void> _createApproval() async {
+    setState(() {
+      _loading = true;
+      _result = null;
+      _explorerUrl = null;
+      _isError = false;
+    });
+
+    try {
+      final txHash = await widget.coin.testCreateApproval();
+
+      if (txHash == null) {
+        setState(() {
+          _result = 'No result returned';
+          _isError = true;
+        });
+        return;
+      }
+
+      final isError = txHash.startsWith('Error') ||
+          txHash.startsWith('Failed') ||
+          txHash.startsWith('No ');
+
+      setState(() {
+        _result = txHash;
+        _isError = isError;
+        if (!isError) {
+          _explorerUrl = widget.coin.formatTxHash(txHash);
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _result = 'Error: $e';
+        _isError = true;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.coin.getSymbol()} — Approval Test'),
+        backgroundColor: Colors.deepPurple,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Warning banner
+            _Banner(
+              color: Colors.red,
+              icon: Icons.warning_amber_rounded,
+              message: 'Debug only — creates a real on-chain approval.\n'
+                  'Use testnet only.',
+            ),
+            const SizedBox(height: 20),
+
+            // Coin info
+            _InfoCard(coin: widget.coin),
+            const SizedBox(height: 24),
+
+            // Create approval button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _loading ? null : _createApproval,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_circle_outline),
+                label: Text(_loading ? 'Creating...' : 'Create Test Approval'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // View approvals button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TokenApprovalsScreen(coin: widget.coin),
+                  ),
+                ),
+                icon: const Icon(Icons.security),
+                label: const Text('View Approvals'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+
+            // Result
+            if (_result != null) ...[
+              const SizedBox(height: 24),
+              _ResultCard(
+                result: _result!,
+                isError: _isError,
+                explorerUrl: _explorerUrl,
+                coin: widget.coin,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Info card ─────────────────────────────────────────────────────────────────
+
+class _InfoCard extends StatelessWidget {
+  final Coin coin;
+  const _InfoCard({required this.coin});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'COIN INFO',
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey,
+                letterSpacing: 1.5),
+          ),
+          const SizedBox(height: 12),
+          _InfoRow('Name', coin.getName()),
+          _InfoRow('Symbol', coin.getSymbol()),
+          _InfoRow('Approvals supported',
+              coin.getApprovals('') != null ? 'Yes' : 'No'),
+          _InfoRow(
+              'Test approval',
+              coin.testCreateApproval() != null
+                  ? 'Available'
+                  : 'Not available'),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text('$label:  ',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          Expanded(
+            child: Text(value,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Result card ───────────────────────────────────────────────────────────────
+
+class _ResultCard extends StatelessWidget {
+  final String result;
+  final bool isError;
+  final String? explorerUrl;
+  final Coin coin;
+
+  const _ResultCard({
+    required this.result,
+    required this.isError,
+    required this.explorerUrl,
+    required this.coin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isError ? Colors.red : Colors.green;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                size: 16,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isError ? 'Failed' : 'Approval created!',
+                style: TextStyle(
+                    fontWeight: FontWeight.w700, color: color, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SelectableText(
+            result,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          ),
+          if (!isError) ...[
+            const SizedBox(height: 12),
+            Text(
+              '1. Tap "View Approvals" to see it\n'
+              '2. Wait ~15s for chain confirmation first',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ),
+            if (explorerUrl != null) ...[
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  await launchPageUrl(
+                    context: context,
+                    url: explorerUrl!,
+                  );
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.open_in_new, size: 14, color: color),
+                    const SizedBox(width: 6),
+                    Text(
+                      'View on explorer',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: color,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reusable banner ───────────────────────────────────────────────────────────
+
+class _Banner extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final String message;
+
+  const _Banner({
+    required this.color,
+    required this.icon,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 12, color: color),
+            ),
+          ),
+        ],
       ),
     );
   }
