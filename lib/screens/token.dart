@@ -642,8 +642,17 @@ class _TransactionSection extends ConsumerWidget {
 
     for (final tx in state.transactions) {
       if (count >= maximumTransactionToSave) break;
-      if (tx.from.toLowerCase() != state.currentUser.toLowerCase()) continue;
-      items.addAll([_TransactionItem(tx: tx, coin: coin), const Divider()]);
+      final isSent = tx.from.toLowerCase() == state.currentUser.toLowerCase();
+      final isReceived = tx.to.toLowerCase() == state.currentUser.toLowerCase();
+      if (!isSent && !isReceived) continue;
+      items.addAll([
+        _TransactionItem(
+          tx: tx,
+          coin: coin,
+          isSent: isSent,
+        ),
+        const Divider()
+      ]);
       count++;
     }
 
@@ -699,8 +708,13 @@ class _TransactionHeader extends StatelessWidget {
 class _TransactionItem extends StatelessWidget {
   final TokenTransaction tx;
   final Coin coin;
+  final bool isSent; // ✅
 
-  const _TransactionItem({required this.tx, required this.coin});
+  const _TransactionItem({
+    required this.tx,
+    required this.coin,
+    required this.isSent, // ✅
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +739,10 @@ class _TransactionItem extends StatelessWidget {
                 Flexible(
                   child: Row(
                     children: [
-                      SvgPicture.asset('assets/sent-trans.svg'),
+                      Transform.rotate(
+                        angle: isSent ? 0 : pi,
+                        child: SvgPicture.asset('assets/sent-trans.svg'),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -733,9 +750,12 @@ class _TransactionItem extends StatelessWidget {
                           children: [
                             UserBalance(
                               balance: tx.tokenAmount,
-                              symbol: '-',
+                              symbol: isSent ? '-' : '+', // ✅
                               reversed: true,
-                              textStyle: const TextStyle(fontSize: 18),
+                              textStyle: TextStyle(
+                                fontSize: 18,
+                                color: isSent ? Colors.red : Colors.green, // ✅
+                              ),
                             ),
                             const SizedBox(height: 10),
                             Text(
@@ -749,10 +769,15 @@ class _TransactionItem extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text('Sent'),
+                            Text(
+                              isSent ? 'Sent' : 'Received', // ✅
+                              style: TextStyle(
+                                color: isSent ? Colors.red : Colors.green,
+                              ),
+                            ),
                             const SizedBox(height: 10),
                             Text(
-                              ellipsify(str: tx.to),
+                              ellipsify(str: isSent ? tx.to : tx.from), // ✅
                               overflow: TextOverflow.fade,
                               style: const TextStyle(color: Colors.grey),
                             ),
@@ -770,7 +795,6 @@ class _TransactionItem extends StatelessWidget {
     );
   }
 }
-
 // ── Debug: Approval test page ─────────────────────────────────────────────────
 // Only reachable in kDebugMode via the bug_report icon in the app bar.
 // Completely stripped in release builds.
@@ -842,7 +866,7 @@ class _ApprovalTestPageState extends State<_ApprovalTestPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Warning banner
-            _Banner(
+            const _Banner(
               color: Colors.red,
               icon: Icons.warning_amber_rounded,
               message: 'Debug only — creates a real on-chain approval.\n'
