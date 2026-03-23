@@ -17,6 +17,7 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'base_handler.dart';
+import 'package:wallet_app/utils/btc_script_utils.dart';
 import 'package:http/http.dart' as http;
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
