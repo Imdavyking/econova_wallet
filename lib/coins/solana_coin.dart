@@ -287,6 +287,59 @@ class SolanaCoin extends Coin {
     }
   }
 
+  Future<void> testCreateApproval() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final privateKeyBytes = HEX.decode(response.privateKey!);
+    final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+      privateKey: privateKeyBytes,
+    );
+
+    // Your existing devnet USDC mint
+    const testMint = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
+
+    // Any random address as the spender for testing
+    const testSpender = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
+    final accounts = await getProxy().rpcClient.getTokenAccountsByOwner(
+          await getAddress(),
+          const TokenAccountsFilter.byMint(testMint),
+          encoding: Encoding.jsonParsed,
+        );
+
+    if (accounts.value.isEmpty) {
+      debugPrint(
+          'No USDC token account found — make sure you have devnet USDC');
+      return;
+    }
+
+    final tokenAccount = Ed25519HDPublicKey.fromBase58(
+      accounts.value.first.pubkey,
+    );
+
+    final bh = await getProxy().rpcClient.getLatestBlockhash(
+          commitment: Commitment.finalized,
+        );
+
+    final approveIx = TokenInstruction.approve(
+      source: tokenAccount,
+      delegate: Ed25519HDPublicKey.fromBase58(testSpender),
+      sourceOwner: keyPair.publicKey,
+      amount: 1000000, // 1 USDC
+    );
+
+    final signed = await keyPair.signMessage(
+      message: Message(instructions: [approveIx]),
+      recentBlockhash: bh.value.blockhash,
+    );
+
+    final txHash = await getProxy().rpcClient.sendTransaction(
+          base64Encode(signed.toByteArray().toList()),
+        );
+
+    debugPrint('Test approval tx: $txHash');
+  }
+
   Future<List<int>> signVersionTx(Uint8List txBytes) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
