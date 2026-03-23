@@ -122,6 +122,7 @@ class TokenApprovalFetcher {
       }
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
+
       final data = json['data'] as Map<String, dynamic>?;
       if (data == null) return [];
 

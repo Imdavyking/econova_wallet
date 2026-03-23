@@ -86,7 +86,7 @@ const alterPrimaryColor = MaterialColor(
 
 // security
 const secureStorageKey = 'box28aldk3qka';
-const covalApiKey = 'box28aldk3qka';
+const covalApiKey = 'cqt_rQVJMhq83DXd3Jw3WK4GfBBwkBq9';
 const alchemyEthMainnetApiKey = 'DyEtOvLwpEw43cr-lTgQWre7HfjPeUlq';
 const alchemyEthGoerliApiKey = 's00aWtjDOmCnUYS7cFBFIL3fbVCzsc8Z';
 const alchemyArbitriumApiKey = 'T2_T1IKID7xte8PYAhLK2FyCAu2lIcq-';
