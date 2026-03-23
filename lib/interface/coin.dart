@@ -34,6 +34,8 @@ abstract class Coin {
     return amountString.replaceAll(',', '');
   }
 
+  Future<({String key, String timeKey})?> approvalCacheKeys() async => null;
+
   Future<List<TokenApproval>>? getApprovals() => null;
   Future<bool>? revokeApproval(TokenApproval approval) => null;
   Future<String?>? testCreateApproval() => null;

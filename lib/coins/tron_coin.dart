@@ -363,15 +363,24 @@ class TronCoin extends Coin {
   }
 
   @override
+  Future<({String key, String timeKey})?> approvalCacheKeys() async {
+    final address = await getAddress();
+    final key = 'tron_approvals_${address}_$api';
+    return (key: key, timeKey: '${key}_time');
+  }
+
+  @override
   Future<List<TokenApproval>>? getApprovals() {
     return _fetchTronApprovalsWithCache();
   }
 
   Future<List<TokenApproval>> _fetchTronApprovalsWithCache() async {
     final address = await getAddress();
-    final cacheKey = 'tron_approvals_${address}_$api';
-    final cached = pref.get(cacheKey);
-    final cachedTime = pref.get('${cacheKey}_time');
+    final keys = await approvalCacheKeys();
+    if (keys == null) return [];
+
+    final String? cached = pref.get(keys.key) as String?;
+    final String? cachedTime = pref.get(keys.timeKey) as String?;
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
@@ -391,8 +400,8 @@ class TronCoin extends Coin {
       final approvals = await _fetchTronApprovals(address);
       if (approvals != null) {
         await pref.put(
-            cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-        await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+            keys.key, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+        await pref.put(keys.timeKey, DateTime.now().toIso8601String());
         return approvals;
       }
       return [];
@@ -485,6 +494,8 @@ class TronCoin extends Coin {
   @override
   Future<bool>? revokeApproval(TokenApproval approval) async {
     try {
+      final keys = await approvalCacheKeys();
+      if (keys == null) return false;
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final tronDetails = await importData(data);
       final ownerAddress = TronAddress(tronDetails.address);
@@ -541,10 +552,8 @@ class TronCoin extends Coin {
         throw Exception('Revoke failed: ${result.error}');
       }
 
-      // Clear cache
-      final address = await getAddress();
-      await pref.delete('tron_approvals_${address}_$api');
-      await pref.delete('tron_approvals_${address}_${api}_time');
+      await pref.delete(keys.key);
+      await pref.delete(keys.timeKey);
       return true;
     } catch (e) {
       return false;

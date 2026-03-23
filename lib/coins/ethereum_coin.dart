@@ -429,6 +429,13 @@ class EthereumCoin extends Coin {
     };
   }
 
+  @override
+  Future<({String key, String timeKey})?> approvalCacheKeys() async {
+    final address = await getAddress();
+    final key = 'token_approvals_${chainId}_$address';
+    return (key: key, timeKey: '${key}_time');
+  }
+
   // ── Token approvals ───────────────────────────────────────────────────────
   @override
   Future<List<TokenApproval>>? getApprovals() {
@@ -437,9 +444,11 @@ class EthereumCoin extends Coin {
 
   Future<List<TokenApproval>> _fetchEthApprovals() async {
     final address = await getAddress();
-    final cacheKey = 'token_approvals_${chainId}_$address';
-    final String? cached = pref.get(cacheKey) as String?;
-    final String? cachedTime = pref.get('${cacheKey}_time') as String?;
+    final keys = await approvalCacheKeys();
+    if (keys == null) return [];
+
+    final String? cached = pref.get(keys.key) as String?;
+    final String? cachedTime = pref.get(keys.timeKey) as String?;
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
@@ -460,8 +469,8 @@ class EthereumCoin extends Coin {
       final approvals = await fetcher.fetchApprovals(address);
       if (approvals != null) {
         await pref.put(
-            cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-        await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+            keys.key, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+        await pref.put(keys.timeKey, DateTime.now().toIso8601String());
         return approvals;
       }
       return [];
@@ -482,6 +491,8 @@ class EthereumCoin extends Coin {
   @override
   Future<bool>? revokeApproval(TokenApproval approval) async {
     try {
+      final keys = await approvalCacheKeys();
+      if (keys == null) return false;
       final client = Web3Client(rpc, Client());
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final response = await importData(data);
@@ -510,11 +521,8 @@ class EthereumCoin extends Coin {
       await client.sendRawTransaction(signed);
       await client.dispose();
 
-      // Clear cache
-      final address = await getAddress();
-      final cacheKey = 'token_approvals_${chainId}_$address';
-      await pref.delete(cacheKey);
-      await pref.delete('${cacheKey}_time');
+      await pref.delete(keys.key);
+      await pref.delete(keys.timeKey);
       return true;
     } catch (e) {
       return false;

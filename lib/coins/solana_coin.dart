@@ -361,11 +361,19 @@ class SolanaCoin extends Coin {
     return _fetchSolanaApprovals();
   }
 
+  @override
+  Future<({String key, String timeKey})?> approvalCacheKeys() async {
+    final address = await getAddress();
+    final key = 'solana_approvals_$address$rpc';
+    return (key: key, timeKey: '${key}_time');
+  }
+
   Future<List<TokenApproval>> _fetchSolanaApprovals() async {
     final address = await getAddress();
-    final cacheKey = 'solana_approvals_$address$rpc';
-    final String? cached = pref.get(cacheKey) as String?;
-    final String? cachedTime = pref.get('${cacheKey}_time') as String?;
+    final keys = await approvalCacheKeys();
+    if (keys == null) return [];
+    final String? cached = pref.get(keys.key) as String?;
+    final String? cachedTime = pref.get(keys.timeKey) as String?;
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
@@ -473,8 +481,14 @@ class SolanaCoin extends Coin {
       }
 
       await pref.put(
-          cacheKey, jsonEncode(approvals.map((a) => a.toJson()).toList()));
-      await pref.put('${cacheKey}_time', DateTime.now().toIso8601String());
+        keys.key,
+        jsonEncode(
+          approvals.map((a) => a.toJson()).toList(),
+        ),
+      );
+
+      await pref.put(keys.timeKey, DateTime.now().toIso8601String());
+
       return approvals;
     } catch (e) {
       debugPrint('SolanaCoin.getApprovals error: $e');
@@ -493,6 +507,8 @@ class SolanaCoin extends Coin {
   @override
   Future<bool>? revokeApproval(TokenApproval approval) async {
     try {
+      final keys = await approvalCacheKeys();
+      if (keys == null) return false;
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final response = await importData(data);
       final privateKeyBytes = HEX.decode(response.privateKey!);
@@ -538,10 +554,8 @@ class SolanaCoin extends Coin {
             base64Encode(signed.toByteArray().toList()),
           );
 
-      // Clear cache
-      final address = await getAddress();
-      await pref.delete('solana_approvals_$address$rpc');
-      await pref.delete('solana_approvals_$address${rpc}_time');
+      await pref.delete(keys.key);
+      await pref.delete(keys.timeKey);
       return true;
     } catch (e) {
       return false;
