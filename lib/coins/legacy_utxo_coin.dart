@@ -37,6 +37,7 @@ import 'package:wallet_app/utils/alt_ens.dart';
 import 'package:wallet_app/utils/bch_tx.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
 import 'package:wallet_app/utils/utxo_script_utils.dart'; // replaces btc_script_utils
+import 'package:wallet_app/utils/wallet_transaction.dart';
 
 import '../interface/coin.dart';
 import '../main.dart';
@@ -45,6 +46,7 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/pos_networks.dart';
 import '../utils/rpc_urls.dart';
+import 'package:wallet_app/fetchers/mempool_trx_fetcher.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -275,6 +277,7 @@ class _CoinConfig {
   final bool sendEnabled;
   final String cryptoApisNetwork;
   final bool useMempool;
+  final String mempoolBase;
 
   const _CoinConfig({
     required this.blockchain,
@@ -287,6 +290,7 @@ class _CoinConfig {
     this.sendEnabled = true,
     this.cryptoApisNetwork = 'mainnet',
     this.useMempool = false,
+    this.mempoolBase = 'https://mempool.space/testnet4/api', // testnet default
   });
 }
 
@@ -324,6 +328,17 @@ final _configs = <String, _CoinConfig>{
     feeRate: 10,
     sendEnabled: false,
   ),
+  'BTC': _CoinConfig(
+    blockchain: 'bitcoin',
+    coinType: 0,
+    network: bitcoin,
+    hrp: 'bc',
+    dustLimit: 546,
+    minimumFee: 1000,
+    feeRate: 5,
+    useMempool: true,
+    mempoolBase: 'https://mempool.space/api',
+  ),
   'BTC_testnet': _CoinConfig(
     blockchain: 'bitcoin',
     coinType: 0,
@@ -333,6 +348,7 @@ final _configs = <String, _CoinConfig>{
     minimumFee: 1000,
     feeRate: 5,
     useMempool: true,
+    mempoolBase: 'https://mempool.space/testnet4/api',
   ),
   'ZEC_testnet': _CoinConfig(
     blockchain: 'zcash',
@@ -707,6 +723,19 @@ class LegacyUtxoCoin extends Coin {
     );
   }
 
+  @override
+  TransactionFetcher? get transactionFetcher {
+    if (!_cfg.useMempool) return null; // Crypto APIs — no fetcher yet
+    return MempoolTransactionFetcher(
+      apiBase: _cfg.mempoolBase,
+      symbol: symbol,
+      explorerBase: blockExplorer.replaceFirst(
+        '/tx/$blockExplorerPlaceholder',
+        '/tx/',
+      ),
+    );
+  }
+
   // ── Address validation ────────────────────────────────────────────────────────
 
   @override
@@ -859,6 +888,18 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
   }
 
   return [
+    LegacyUtxoCoin(
+      name: 'Bitcoin (Legacy)',
+      symbol: 'BTC',
+      default_: 'BTC',
+      image: 'assets/bitcoin.jpg',
+      blockExplorer: 'https://mempool.space/tx/$blockExplorerPlaceholder',
+      derivationPath: "m/44'/0'/0'/0/0",
+      geckoID: 'bitcoin',
+      rampID: 'BTC_BTC',
+      payScheme: 'bitcoin',
+      isTestnet: false,
+    ),
     LegacyUtxoCoin(
       name: 'Dogecoin',
       symbol: 'DOGE',

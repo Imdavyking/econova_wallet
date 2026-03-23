@@ -13,6 +13,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/utils/stack_tx_utils.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -20,6 +21,8 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import '../utils/pos_networks.dart';
+import 'package:wallet_app/fetchers/mempool_trx_fetcher.dart';
+
 // ─── P2WPKH (tb1q / bc1q) ─────────────────────────────────────────────────────
 
 // coins/segwit_coin.dart
@@ -350,6 +353,16 @@ class SegwitCoin extends Coin {
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => MempoolTransactionFetcher(
+        apiBase: cfg.apiBase,
+        symbol: cfg.symbol,
+        explorerBase: cfg.blockExplorer.replaceFirst(
+          '/tx/$blockExplorerPlaceholder',
+          '/tx/',
+        ),
+      );
 
   @override
   Future<String> addressExplorer() async {
