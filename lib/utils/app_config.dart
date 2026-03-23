@@ -150,7 +150,7 @@ const utxoApiKey = '07ddba0bd184344993fbc2a4a3d7059213e13469';
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
 // enable
-bool enableTestNet = false;
+bool enableTestNet = true;
 const orange1 = Color.fromARGB(255, 233, 183, 9);
 
 // app theme
