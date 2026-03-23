@@ -118,7 +118,7 @@ class _MempoolApi {
 //
 // /addresses-historical/ requires the address to be synced first.
 // Crypto APIs returns 409 + "sync_address_not_active" when it is not.
-// utxos() auto-syncs on first encounter and retries once after 3 s.
+// utxos() auto-syncs on first encounter and retries once after 3 s. 
 
 class _CryptoApis {
   static Map<String, String> get _headers => {
