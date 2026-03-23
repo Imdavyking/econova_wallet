@@ -27,8 +27,6 @@ import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/utils/alt_ens.dart';
-import 'package:web3dart/crypto.dart';
-
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -41,7 +39,6 @@ import 'package:wallet_app/extensions/big_int_ext.dart';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const _cryptoApisBase = 'https://rest.cryptoapis.io/v2';
-const _cryptoApisNetwork = 'mainnet';
 const _legacyDecimals = 8;
 
 // ─── Crypto APIs HTTP client ──────────────────────────────────────────────────
@@ -55,18 +52,20 @@ class _CryptoApis {
         'X-API-Key': utxoApiKey, // rpc_urls.dart
       };
 
-  static Uri _dataUri(String blockchain, String path) => Uri.parse(
-        '$_cryptoApisBase/blockchain-data/$blockchain/$_cryptoApisNetwork/$path',
-      );
+  static Uri _dataUri(String blockchain, String network, String path) =>
+      Uri.parse('$_cryptoApisBase/blockchain-data/$blockchain/$network/$path');
 
-  static Uri _toolsUri(String blockchain, String path) => Uri.parse(
-        '$_cryptoApisBase/blockchain-tools/$blockchain/$_cryptoApisNetwork/$path',
-      );
+  static Uri _toolsUri(String blockchain, String network, String path) =>
+      Uri.parse('$_cryptoApisBase/blockchain-tools/$blockchain/$network/$path');
 
   /// Confirmed spendable balance in coin units (e.g. 42.5 DOGE).
-  static Future<double> balance(String blockchain, String address) async {
+  static Future<double> balance(
+    String blockchain,
+    String network,
+    String address,
+  ) async {
     final res = await http.get(
-      _dataUri(blockchain, 'addresses/$address'),
+      _dataUri(blockchain, network, 'addresses/$address'),
       headers: _headers,
     );
     _assertOk(res, 'balance');
@@ -76,9 +75,13 @@ class _CryptoApis {
   }
 
   /// Available UTXOs for [address], already converted to satoshis.
-  static Future<List<_Utxo>> utxos(String blockchain, String address) async {
+  static Future<List<_Utxo>> utxos(
+    String blockchain,
+    String network,
+    String address,
+  ) async {
     final res = await http.get(
-      _dataUri(blockchain, 'addresses/$address/unspent-outputs'),
+      _dataUri(blockchain, network, 'addresses/$address/unspent-outputs'),
       headers: _headers,
     );
     _assertOk(res, 'UTXOs');
@@ -91,9 +94,13 @@ class _CryptoApis {
   }
 
   /// Broadcast a signed raw transaction hex. Returns the txid.
-  static Future<String> broadcast(String blockchain, String txHex) async {
+  static Future<String> broadcast(
+    String blockchain,
+    String network,
+    String txHex,
+  ) async {
     final res = await http.post(
-      _toolsUri(blockchain, 'transactions/broadcast'),
+      _toolsUri(blockchain, network, 'transactions/broadcast'),
       headers: _headers,
       body: jsonEncode({
         'data': {
@@ -165,6 +172,9 @@ class _CoinConfig {
   /// false  →  throw on send (ZEC needs Sapling v4 which is out of scope).
   final bool sendEnabled;
 
+  /// Crypto APIs network string — "mainnet" or "testnet".
+  final String cryptoApisNetwork;
+
   const _CoinConfig({
     required this.blockchain,
     required this.coinType,
@@ -173,6 +183,7 @@ class _CoinConfig {
     this.minimumFee = 10000,
     this.feeRate = 10,
     this.sendEnabled = true,
+    this.cryptoApisNetwork = 'mainnet',
   });
 }
 
@@ -213,6 +224,31 @@ final _configs = <String, _CoinConfig>{
     feeRate: 10,
     sendEnabled: false,
   ),
+
+  // ── Testnet-only entries (keyed as "<SYMBOL>_testnet") ───────────────────────
+
+  // BTC legacy testnet — m/44'/0'/0'/0/0, P2PKH, Crypto APIs bitcoin/testnet
+  'BTC_testnet': _CoinConfig(
+    blockchain: 'bitcoin',
+    coinType: 0,
+    network: testnet, // bitcoin_flutter testnet
+    dustLimit: 546,
+    minimumFee: 1000,
+    feeRate: 5,
+    cryptoApisNetwork: 'testnet',
+  ),
+
+  // ZEC testnet — same derivation path, zcashTestnet network, t-address prefix [0x1d, 0x25]
+  'ZEC_testnet': _CoinConfig(
+    blockchain: 'zcash',
+    coinType: 133,
+    network: zcashTestnet, // pos_networks.dart
+    dustLimit: 546,
+    minimumFee: 10000,
+    feeRate: 10,
+    sendEnabled: false,
+    cryptoApisNetwork: 'testnet',
+  ),
 };
 
 // ─── LegacyUtxoCoin ───────────────────────────────────────────────────────────
@@ -226,6 +262,7 @@ class LegacyUtxoCoin extends Coin {
   final String geckoID;
   final String rampID;
   final String payScheme;
+  final bool isTestnet;
   final _CoinConfig _cfg;
 
   LegacyUtxoCoin({
@@ -237,7 +274,8 @@ class LegacyUtxoCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
-  }) : _cfg = _configs[symbol]!;
+    this.isTestnet = false,
+  }) : _cfg = _configs[isTestnet ? '${symbol}_testnet' : symbol]!;
 
   // ── Coin interface — metadata ─────────────────────────────────────────────────
 
@@ -266,7 +304,8 @@ class LegacyUtxoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'legacyUtxoV1_${symbol}_${walletImportType.name}';
+    final saveKey =
+        'legacyUtxoV1_${symbol}_${isTestnet ? 'test' : 'main'}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
@@ -314,7 +353,7 @@ class LegacyUtxoCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) =>
-      _CryptoApis.balance(_cfg.blockchain, address);
+      _CryptoApis.balance(_cfg.blockchain, _cfg.cryptoApisNetwork, address);
 
   @override
   Future<double> getBalance(bool useCache) async {
@@ -346,7 +385,8 @@ class LegacyUtxoCoin extends Coin {
   @override
   Future<double> getTransactionFee(String amount, String to) async {
     final address = await getAddress();
-    final utxos = await _CryptoApis.utxos(_cfg.blockchain, address);
+    final utxos = await _CryptoApis.utxos(
+        _cfg.blockchain, _cfg.cryptoApisNetwork, address);
     final count = utxos.length.clamp(1, 5);
     return _estimateFee(count, 2) / pow(10, _legacyDecimals);
   }
@@ -377,7 +417,8 @@ class LegacyUtxoCoin extends Coin {
     final address = keyPair.address;
 
     // ── Fetch UTXOs ───────────────────────────────────────────────────────────
-    final utxos = await _CryptoApis.utxos(_cfg.blockchain, address);
+    final utxos = await _CryptoApis.utxos(
+        _cfg.blockchain, _cfg.cryptoApisNetwork, address);
     if (utxos.isEmpty) throw Exception('$symbol: no UTXOs available');
 
     // ── Select UTXOs (first-fit) ──────────────────────────────────────────────
@@ -428,7 +469,8 @@ class LegacyUtxoCoin extends Coin {
     if (kDebugMode) print('$symbol txHex: $txHex');
 
     // ── Broadcast ─────────────────────────────────────────────────────────────
-    final txid = await _CryptoApis.broadcast(_cfg.blockchain, txHex);
+    final txid = await _CryptoApis.broadcast(
+        _cfg.blockchain, _cfg.cryptoApisNetwork, txHex);
     return (txHash: txid, txRaw: txHex);
   }
 
@@ -446,13 +488,17 @@ class LegacyUtxoCoin extends Coin {
       }
     }
 
-    // ZEC — check the 0x1c 0xb8 t-address prefix
+    // ZEC — two-byte transparent address prefix differs by network:
+    //   mainnet  → [0x1c, 0xb8]  (t1…)
+    //   testnet  → [0x1d, 0x25]  (tm…)
     if (symbol == 'ZEC') {
       try {
         final decoded = bs58check.decode(address);
-        if (decoded[0] == 0x1c && decoded[1] == 0xb8) return;
+        final expectedPrefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
+        if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1])
+          return;
       } catch (_) {}
-      throw Exception('Invalid ZEC t-address');
+      throw Exception('Invalid ZEC ${isTestnet ? 'testnet' : ''} t-address');
     }
 
     // DOGE, DASH — standard base58check against the network's pubKeyHash
@@ -481,6 +527,7 @@ class LegacyUtxoCoin extends Coin {
         'geckoID': geckoID,
         'rampID': rampID,
         'payScheme': payScheme,
+        'isTestnet': isTestnet,
       };
 
   factory LegacyUtxoCoin.fromJson(Map<String, dynamic> j) => LegacyUtxoCoin(
@@ -492,6 +539,7 @@ class LegacyUtxoCoin extends Coin {
         geckoID: j['geckoID'] as String,
         rampID: j['rampID'] as String,
         payScheme: j['payScheme'] as String,
+        isTestnet: j['isTestnet'] as bool? ?? false,
       );
 }
 
@@ -528,11 +576,14 @@ Map<String, dynamic> _deriveKey(_DeriveArgs args) {
     }
   }
 
-  // ZEC: rewrite the single version byte → two-byte t-address prefix (0x1c 0xb8)
+  // ZEC mainnet: rewrite version byte → [0x1c, 0xb8]  (t1… address)
+  // ZEC testnet: rewrite version byte → [0x1d, 0x25]  (tm… address)
   if (args.symbol == 'ZEC') {
+    final isTestnet = args.network == zcashTestnet;
+    final prefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
     final decoded = [...bs58check.decode(address)]..removeAt(0);
     final taddr = Uint8List(22)
-      ..setAll(0, [0x1c, 0xb8])
+      ..setAll(0, prefix)
       ..setAll(2, decoded);
     address = bs58check.encode(taddr);
   }
@@ -546,8 +597,37 @@ Map<String, dynamic> _deriveKey(_DeriveArgs args) {
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 List<LegacyUtxoCoin> getLegacyUtxoCoins() {
-  // These are mainnet-only; no reliable free testnet APIs exist for DOGE/DASH/BCH/ZEC
-  if (enableTestNet) return [];
+  if (enableTestNet) {
+    return [
+      // BTC legacy P2PKH testnet — m/44'/0'/0'/0/0
+      // Kept separate from NativeBtcCoin (SegWit) and TaprootBtcCoin.
+      LegacyUtxoCoin(
+        name: 'Bitcoin (Test)',
+        symbol: 'BTC',
+        default_: 'BTC',
+        image: 'assets/bitcoin.jpg',
+        blockExplorer:
+            'https://www.blockchain.com/btc-testnet/tx/$blockExplorerPlaceholder',
+        geckoID: 'bitcoin',
+        rampID: 'BTC_BTC',
+        payScheme: 'bitcoin',
+        isTestnet: true,
+      ),
+      // ZEC testnet — receive-only; Sapling v4 send is out of scope
+      LegacyUtxoCoin(
+        name: 'Zcash (Test)',
+        symbol: 'ZEC',
+        default_: 'ZEC',
+        image: 'assets/zcash.png',
+        blockExplorer:
+            'https://blockexplorer.one/zcash/testnet/tx/$blockExplorerPlaceholder',
+        geckoID: 'zcash',
+        rampID: '',
+        payScheme: 'zcash',
+        isTestnet: true,
+      ),
+    ];
+  }
 
   return [
     LegacyUtxoCoin(
