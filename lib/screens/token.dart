@@ -193,7 +193,7 @@ class _TokenState extends State<Token> {
         ),
 
       // Debug test page — debug mode only
-      if (kDebugMode && _coin.testCreateApproval() != null)
+      if (kDebugMode && _coin.haveTestAppproval)
         IconButton(
           icon: const Icon(Icons.bug_report, color: Colors.amber),
           tooltip: 'Test Approvals (debug)',
@@ -967,11 +967,8 @@ class _InfoCard extends StatelessWidget {
           _InfoRow('Symbol', coin.getSymbol()),
           _InfoRow('Approvals supported',
               coin.getApprovals() != null ? 'Yes' : 'No'),
-          _InfoRow(
-              'Test approval',
-              coin.testCreateApproval() != null
-                  ? 'Available'
-                  : 'Not available'),
+          _InfoRow('Test approval',
+              coin.haveTestAppproval ? 'Available' : 'Not available'),
         ],
       ),
     );

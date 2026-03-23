@@ -367,6 +367,8 @@ class EthereumCoin extends Coin {
   }
 
   @override
+  bool get haveTestAppproval => true;
+  @override
   Future<String?>? testCreateApproval() async {
     const sepoliaChainId = 11155111;
     if (chainId != sepoliaChainId) return null;
@@ -452,7 +454,7 @@ class EthereumCoin extends Coin {
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
-      if (age.inMinutes < 10) {
+      if (age.inSeconds < 10) {
         try {
           final list = jsonDecode(cached) as List;
           if (list.isNotEmpty) {

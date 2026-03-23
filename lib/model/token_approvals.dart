@@ -13,6 +13,7 @@ class TokenApproval {
   final String spenderName;
   final BigInt allowance;
   final DateTime? lastUpdated;
+  final int contractDecimals;
 
   const TokenApproval({
     required this.tokenAddress,
@@ -22,6 +23,7 @@ class TokenApproval {
     required this.spenderName,
     required this.allowance,
     this.lastUpdated,
+    this.contractDecimals = 18,
   });
 
   static final _maxUint256 = BigInt.parse(
@@ -36,7 +38,8 @@ class TokenApproval {
   String get allowanceDisplay {
     if (isUnlimited) return 'Unlimited';
     if (isRevoked) return 'Revoked';
-    final display = allowance / BigInt.from(10).pow(18);
+    final display = allowance /
+        BigInt.from(10).pow(contractDecimals); // ✅ use actual decimals
     return display.toStringAsFixed(2);
   }
 
@@ -50,6 +53,7 @@ class TokenApproval {
         'spenderName': spenderName,
         'allowance': allowance.toString(),
         'lastUpdated': lastUpdated?.toIso8601String(),
+        'contractDecimals': contractDecimals,
       };
 
   factory TokenApproval.fromJson(Map<String, dynamic> j) => TokenApproval(
@@ -62,6 +66,7 @@ class TokenApproval {
         lastUpdated: j['lastUpdated'] != null
             ? DateTime.tryParse(j['lastUpdated'] as String)
             : null,
+        contractDecimals: j['contractDecimals'] as int? ?? 18,
       );
 
   @override
@@ -71,11 +76,11 @@ class TokenApproval {
 
 // ── EVM fetcher (Covalent) ────────────────────────────────────────────────────
 
-class TokenApprovalFetcher {
+class EVMApprovalFetcher {
   final int chainId;
   final String covalentApiKey;
 
-  const TokenApprovalFetcher({
+  const EVMApprovalFetcher({
     required this.chainId,
     required this.covalentApiKey,
   });
@@ -149,6 +154,8 @@ class TokenApprovalFetcher {
             allowance = BigInt.zero;
           }
 
+          print('allowance: $allowance');
+
           if (allowance == BigInt.zero) continue;
 
           approvals.add(TokenApproval(
@@ -158,6 +165,7 @@ class TokenApprovalFetcher {
             spenderAddress: spenderAddress,
             spenderName: _resolveSpenderName(spenderAddress),
             allowance: allowance,
+            contractDecimals: item['contract_decimals'] as int? ?? 18,
             lastUpdated:
                 blockSignedAt != null ? DateTime.tryParse(blockSignedAt) : null,
           ));
@@ -180,9 +188,9 @@ class TokenApprovalFetcher {
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-extension TokenApprovalFetcherFactory on TokenApprovalFetcher {
-  static TokenApprovalFetcher forChain({required int chainId}) {
-    return TokenApprovalFetcher(
+extension TokenApprovalFetcherFactory on EVMApprovalFetcher {
+  static EVMApprovalFetcher forChain({required int chainId}) {
+    return EVMApprovalFetcher(
       chainId: chainId,
       covalentApiKey: covalApiKey,
     );

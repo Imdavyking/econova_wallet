@@ -288,6 +288,9 @@ class SolanaCoin extends Coin {
   }
 
   @override
+  bool get haveTestAppproval => true;
+
+  @override
   Future<String?> testCreateApproval() async {
     try {
       final data = WalletService.getActiveKey(walletImportType)!.data;
@@ -377,7 +380,7 @@ class SolanaCoin extends Coin {
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
-      if (age.inMinutes < 10) {
+      if (age.inSeconds < 10) {
         try {
           final list = jsonDecode(cached) as List;
           if (list.isNotEmpty) {
