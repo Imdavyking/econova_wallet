@@ -393,8 +393,7 @@ class LegacyUtxoCoin extends Coin {
   final String default_;
   final String image;
   final String blockExplorer;
-  final String
-      derivationPath; // explicit — mirrors UtxoCoin, not inferred from coinType
+  final String derivationPath;
   final String geckoID;
   final String rampID;
   final String payScheme;
