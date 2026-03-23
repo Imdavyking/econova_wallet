@@ -587,12 +587,17 @@ void main() async {
               cryptoKeys.address,
               'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
             );
+          } else if (blockchainInfo.getName() == 'Bitcoin (Legacy)') {
+            expect(
+              cryptoKeys.address,
+              '1Q9sh5HmBGVvysWfU8UAyFSMk7k2bzMnYW',
+            );
           } else if (blockchainInfo.getName() == 'Bitcoin (SegWit Test4)') {
             expect(
               cryptoKeys.address,
               'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
             );
-          } else if (blockchainInfo.getName() == 'Bitcoin (Legacy Test)') {
+          } else if (blockchainInfo.getName() == 'Bitcoin (Legacy Test4)') {
             expect(
               cryptoKeys.address,
               'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',

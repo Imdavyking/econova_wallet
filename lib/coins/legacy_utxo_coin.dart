@@ -859,7 +859,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
   if (enableTestNet) {
     return [
       LegacyUtxoCoin(
-        name: 'Bitcoin (Test)',
+        name: 'Bitcoin (Legacy Test4)',
         symbol: 'BTC',
         default_: 'BTC',
         image: 'assets/bitcoin.jpg',
