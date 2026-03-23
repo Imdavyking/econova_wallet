@@ -30,7 +30,6 @@ import 'package:bitbox/bitbox.dart' as bitbox;
 import 'package:bitcoin_flutter/bitcoin_flutter.dart';
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:flutter/foundation.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';

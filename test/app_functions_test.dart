@@ -26,7 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool networkAvailable = true;
-  enableTestNet = false;
+  enableTestNet = true;
 
   setUp(() async {
     await setUpTestHive();
@@ -407,7 +407,14 @@ void main() async {
           );
           break;
         case 'ZEC':
-        blockchainInfo.validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
+          if (blockchainInfo.getName() == 'Zcash') {
+            blockchainInfo
+                .validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
+          } else if (blockchainInfo.getName() == 'Zcash (Test)') {
+            blockchainInfo
+                .validateAddress('tmYyum6WRz3KGE6gaSG499MmMRLsZEhX6PA');
+          }
+
           expect(
             () => blockchainInfo.validateAddress(invalidAddress),
             throwsA(isA<Exception>()),
