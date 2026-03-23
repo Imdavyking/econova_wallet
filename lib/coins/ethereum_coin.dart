@@ -446,9 +446,11 @@ class EthereumCoin extends Coin {
       if (age.inMinutes < 10) {
         try {
           final list = jsonDecode(cached) as List;
-          return list
-              .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
-              .toList();
+          if (list.isNotEmpty) {
+            return list
+                .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
         } catch (_) {}
       }
     }

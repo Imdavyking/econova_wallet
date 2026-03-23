@@ -184,12 +184,12 @@ class _ContactTile extends StatelessWidget {
       key: ValueKey(contact.id),
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) => onDelete(),
-      background: _SwipeBackground(
+      background: const _SwipeBackground(
         color: Colors.blue,
         icon: Icons.edit,
         alignment: Alignment.centerLeft,
       ),
-      secondaryBackground: _SwipeBackground(
+      secondaryBackground: const _SwipeBackground(
         color: Colors.red,
         icon: Icons.delete,
         alignment: Alignment.centerRight,

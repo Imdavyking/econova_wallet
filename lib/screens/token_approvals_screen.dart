@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/model/token_approvals.dart';
-
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/app_config.dart';
 // ── Screen ────────────────────────────────────────────────────────────────────
 //
 // Works for any coin that overrides getApprovals() and revokeApproval()
@@ -24,7 +26,7 @@ class TokenApprovalsScreen extends StatefulWidget {
 
 class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
   late Future<List<TokenApproval>>? _approvalsFuture;
-
+  bool _revoking = false;
   @override
   void initState() {
     super.initState();
@@ -42,29 +44,32 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
     return future;
   }
 
-  Future<void> _revoke(TokenApproval approval) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Revoke approval'),
-        content: Text(
-          'Remove ${approval.spenderName}\'s access to your '
-          '${approval.tokenSymbol}?\n\nThis will cost a small network fee.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Revoke', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _confirmRevoke(TokenApproval approval) async {
 
-    if (confirmed != true || !mounted) return;
+    await AwesomeDialog(
+      closeIcon: const Icon(Icons.close),
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+      context: context,
+      btnOkColor: Colors.red,
+      btnCancelColor: appBackgroundblue,
+      dialogType: DialogType.warning,
+      buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
+      headerAnimationLoop: false,
+      animType: AnimType.bottomSlide,
+      title: 'Revoke Approval',
+      desc: 'Remove ${approval.spenderName}\'s access to your '
+          '${approval.tokenSymbol}?\n\nThis will cost a small network fee.',
+      showCloseIcon: true,
+      btnOkText: 'Revoke',
+      btnCancelText: 'Cancel',
+      btnCancelOnPress: () {},
+      btnOkOnPress: () => _revoke(approval),
+    ).show();
+  }
+
+  Future<void> _revoke(TokenApproval approval) async {
+    if (!mounted) return;
+    setState(() => _revoking = true);
 
     try {
       final result = await widget.coin.revokeApproval(approval);
@@ -86,12 +91,14 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(_load);
+        _load();
       } else {
         _showError('Failed to revoke approval');
       }
     } catch (e) {
       _showError('Failed to revoke: $e');
+    } finally {
+      if (mounted) setState(() => _revoking = false);
     }
   }
 
@@ -143,7 +150,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
                 const SizedBox(height: 8),
                 ...dangerous.map((a) => _ApprovalCard(
                       approval: a,
-                      onRevoke: () => _revoke(a),
+                      onRevoke: () => _confirmRevoke(a),
                     )),
                 const SizedBox(height: 20),
               ],

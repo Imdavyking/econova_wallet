@@ -364,25 +364,31 @@ class SolanaCoin extends Coin {
   Future<List<TokenApproval>> _fetchSolanaApprovals() async {
     final address = await getAddress();
     final cacheKey = 'solana_approvals_$address$rpc';
-    final cached = pref.get(cacheKey);
-    final cachedTime = pref.get('${cacheKey}_time');
+    final String? cached = pref.get(cacheKey) as String?;
+    final String? cachedTime = pref.get('${cacheKey}_time') as String?;
 
     if (cached != null && cachedTime != null) {
       final age = DateTime.now().difference(DateTime.parse(cachedTime));
       if (age.inMinutes < 10) {
         try {
           final list = jsonDecode(cached) as List;
-          return list.map((e) => TokenApproval.fromJson(e)).toList();
+          if (list.isNotEmpty) {
+            return list
+                .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
         } catch (_) {}
       }
     }
 
     try {
       final client = getProxy().rpcClient;
+
       final accounts = await client.getTokenAccountsByOwner(
         address,
         const TokenAccountsFilter.byProgramId(TokenProgram.programId),
         commitment: Commitment.finalized,
+        encoding: Encoding.jsonParsed,
       );
 
       final approvals = <TokenApproval>[];
@@ -392,23 +398,76 @@ class SolanaCoin extends Coin {
         if (parsed is! ParsedSplTokenProgramAccountData) continue;
         final info = parsed.parsed;
         if (info is! TokenAccountData) continue;
+
         final delegate = info.info.delegate;
-        final delegatedAmount = info.info.delegateAmount;
-        if (delegate == null || delegatedAmount == null) continue;
-        if (delegatedAmount.amount == '0') continue;
+        if (delegate == null) continue;
+
+        // ── Read raw account bytes for delegatedAmount ──────────────────
+        // The parsed JSON sometimes omits delegateAmount — read it from
+        // the raw SPL token account binary layout instead.
+        BigInt allowance;
+
+        try {
+          final accountInfo = await client.getAccountInfo(
+            account.pubkey,
+            encoding: Encoding.base64,
+            commitment: Commitment.finalized,
+          );
+
+          final data = accountInfo.value?.data;
+          if (data is BinaryAccountData) {
+            final bytes = data.data;
+            if (bytes.length >= 165) {
+              // delegateOption at bytes 72-75 (u32 LE)
+              final delegateOption = ByteData.sublistView(
+                Uint8List.fromList(bytes.sublist(72, 76)),
+              ).getUint32(0, Endian.little);
+
+              if (delegateOption == 0) continue; // no delegate
+
+              // delegatedAmount at bytes 121-128 (u64 LE)
+              final delegatedAmount = ByteData.sublistView(
+                Uint8List.fromList(bytes.sublist(121, 129)),
+              ).getUint64(0, Endian.little);
+
+              if (delegatedAmount == 0) continue;
+
+              allowance = BigInt.from(delegatedAmount);
+            } else {
+              continue;
+            }
+          } else {
+            // Fallback — use parsed value if available
+            final delegatedAmount = info.info.delegateAmount;
+            if (delegatedAmount == null || delegatedAmount.amount == '0') {
+              continue;
+            }
+            allowance = BigInt.parse(delegatedAmount.amount);
+          }
+        } catch (_) {
+          // Fallback to parsed value
+          final delegatedAmount = info.info.delegateAmount;
+          if (delegatedAmount == null || delegatedAmount.amount == '0') {
+            continue;
+          }
+          allowance = BigInt.parse(delegatedAmount.amount);
+        }
+
         final mintAddress = info.info.mint;
+
         final splToken = getSplTokens().cast<Coin?>().firstWhere(
               (t) =>
                   t?.tokenAddress()?.toLowerCase() == mintAddress.toLowerCase(),
               orElse: () => null,
             );
+
         approvals.add(TokenApproval(
           tokenAddress: mintAddress,
           tokenSymbol: splToken?.getSymbol() ?? _shortAddr(mintAddress),
           tokenName: splToken?.getName() ?? mintAddress,
           spenderAddress: delegate,
           spenderName: _resolveSpenderName(delegate),
-          allowance: BigInt.parse(delegatedAmount.amount),
+          allowance: allowance,
           lastUpdated: null,
         ));
       }
@@ -422,13 +481,14 @@ class SolanaCoin extends Coin {
       if (cached != null) {
         try {
           final list = jsonDecode(cached) as List;
-          return list.map((e) => TokenApproval.fromJson(e)).toList();
+          return list
+              .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+              .toList();
         } catch (_) {}
       }
       return [];
     }
-  }
-// ── Revoke delegate ────────────────────────────────────────────────────────
+  } // ── Revoke delegate ────────────────────────────────────────────────────────
 
   @override
   Future<bool>? revokeApproval(TokenApproval approval) async {
