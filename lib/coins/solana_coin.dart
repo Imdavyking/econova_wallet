@@ -387,7 +387,7 @@ class SolanaCoin extends Coin {
       final accounts = await client.getTokenAccountsByOwner(
         address,
         const TokenAccountsFilter.byProgramId(TokenProgram.programId),
-        commitment: Commitment.finalized,
+        commitment: Commitment.confirmed,
         encoding: Encoding.jsonParsed,
       );
 
