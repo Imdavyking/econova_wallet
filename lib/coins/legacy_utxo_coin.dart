@@ -3,13 +3,15 @@
 // Legacy P2PKH coins — DOGE · DASH · BCH · ZEC
 //
 // Derivation : BIP44  m/44'/<coin_type>'/0'/0/0  →  P2PKH address
+//              derivationPath is an explicit constructor field (mirrors UtxoCoin)
 // API        : Crypto APIs v2  (https://rest.cryptoapis.io)
-//              Requires `utxoApiKey` in rpc_urls.dart
-//              Header: X-API-Key
+//              Requires `utxoApiKey` in rpc_urls.dart  (header: X-API-Key)
 //
 // Address quirks
-//   BCH  — legacy P2PKH byte → CashAddr  (qXXX without the "bitcoincash:" prefix)
-//   ZEC  — P2PKH byte       → t-address  (0x1c 0xb8 two-byte prefix)
+//   BCH  — legacy P2PKH byte → CashAddr  (qXXX, no "bitcoincash:" prefix)
+//   ZEC  — P2PKH byte       → t-address  (two-byte version prefix)
+//            mainnet  [0x1c, 0xb8]  →  t1…
+//            testnet  [0x1d, 0x25]  →  tm…
 //
 // Sending
 //   DOGE · DASH · BCH  — bitcoin_flutter TransactionBuilder (non-segwit P2PKH)
@@ -38,34 +40,43 @@ import 'package:wallet_app/extensions/big_int_ext.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const _cryptoApisBase = 'https://rest.cryptoapis.io/v2';
+const _cryptoApisBase = 'https://rest.cryptoapis.io';
 const _legacyDecimals = 8;
 
 // ─── Crypto APIs HTTP client ──────────────────────────────────────────────────
 //
-// All blockchain-data and blockchain-tools calls go through here.
-// Throws descriptive exceptions so callers can surface them in the UI.
+// URL layout (confirmed from official docs):
+//
+//   Balance  → GET  /addresses-latest/utxo/{chain}/{net}/{addr}/balance
+//   UTXOs    → GET  /addresses-historical/utxo/{chain}/{net}/{addr}/unspent-outputs
+//   Sync     → POST /addresses-historical/utxo/{chain}/{net}/{addr}/sync
+//   Broadcast→ POST /blockchain-tools/{chain}/{net}/transactions/broadcast
+//
+// The /addresses-historical/ endpoints require the address to be synced first.
+// Crypto APIs returns error code "sync_address_not_active" when it is not.
+// _ensureSynced() fires the sync endpoint and waits for indexing before retrying.
+//
+// Free plan covers testnets only. Mainnet requires a paid subscription.
 
 class _CryptoApis {
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        'X-API-Key': utxoApiKey, // rpc_urls.dart
+        'X-API-Key': utxoApiKey, // defined in rpc_urls.dart
       };
 
-  static Uri _dataUri(String blockchain, String network, String path) =>
-      Uri.parse('$_cryptoApisBase/blockchain-data/$blockchain/$network/$path');
-
-  static Uri _toolsUri(String blockchain, String network, String path) =>
-      Uri.parse('$_cryptoApisBase/blockchain-tools/$blockchain/$network/$path');
+  // ── Public API ────────────────────────────────────────────────────────────────
 
   /// Confirmed spendable balance in coin units (e.g. 42.5 DOGE).
+  /// Uses /addresses-latest/ — no sync required.
   static Future<double> balance(
     String blockchain,
     String network,
     String address,
   ) async {
     final res = await http.get(
-      _dataUri(blockchain, network, 'addresses/$address'),
+      Uri.parse(
+        '$_cryptoApisBase/addresses-latest/utxo/$blockchain/$network/$address/balance',
+      ),
       headers: _headers,
     );
     _assertOk(res, 'balance');
@@ -74,23 +85,27 @@ class _CryptoApis {
     );
   }
 
-  /// Available UTXOs for [address], already converted to satoshis.
+  /// Spendable UTXOs for [address], already converted to satoshis.
+  /// Uses /addresses-historical/ — auto-syncs the address on first use.
   static Future<List<_Utxo>> utxos(
     String blockchain,
     String network,
     String address,
   ) async {
-    final res = await http.get(
-      _dataUri(blockchain, network, 'addresses/$address/unspent-outputs'),
-      headers: _headers,
-    );
+    final res = await _getUtxos(blockchain, network, address);
+
+    // Crypto APIs returns 409 with code "sync_address_not_active" when the
+    // address has never been indexed. Sync it, wait briefly, then retry once.
+    if (_isSyncRequired(res)) {
+      await _syncAddress(blockchain, network, address);
+      await Future.delayed(const Duration(seconds: 3));
+      final retryRes = await _getUtxos(blockchain, network, address);
+      _assertOk(retryRes, 'UTXOs (post-sync)');
+      return _parseUtxos(retryRes);
+    }
+
     _assertOk(res, 'UTXOs');
-    final items = (jsonDecode(res.body)['data']['items'] as List)
-        .cast<Map<String, dynamic>>();
-    return items
-        .where((u) => u['isAvailable'] == true)
-        .map(_Utxo.fromCryptoApis)
-        .toList();
+    return _parseUtxos(res);
   }
 
   /// Broadcast a signed raw transaction hex. Returns the txid.
@@ -100,7 +115,9 @@ class _CryptoApis {
     String txHex,
   ) async {
     final res = await http.post(
-      _toolsUri(blockchain, network, 'transactions/broadcast'),
+      Uri.parse(
+        '$_cryptoApisBase/blockchain-tools/$blockchain/$network/transactions/broadcast',
+      ),
       headers: _headers,
       body: jsonEncode({
         'data': {
@@ -113,6 +130,64 @@ class _CryptoApis {
   }
 
   // ── Internals ────────────────────────────────────────────────────────────────
+
+  static Future<http.Response> _getUtxos(
+    String blockchain,
+    String network,
+    String address,
+  ) =>
+      http.get(
+        Uri.parse(
+          '$_cryptoApisBase/addresses-historical/utxo/$blockchain/$network/$address/unspent-outputs',
+        ),
+        headers: _headers,
+      );
+
+  static List<_Utxo> _parseUtxos(http.Response res) {
+    final items = (jsonDecode(res.body)['data']['items'] as List)
+        .cast<Map<String, dynamic>>();
+    return items
+        .where((u) => u['isAvailable'] == true)
+        .map(_Utxo.fromCryptoApis)
+        .toList();
+  }
+
+  /// Returns true when Crypto APIs signals the address needs to be synced first.
+  static bool _isSyncRequired(http.Response res) {
+    if (res.statusCode != 409) return false;
+    try {
+      final code = jsonDecode(res.body)['error']['code'] as String?;
+      return code == 'sync_address_not_active';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Fires the sync endpoint. Crypto APIs will begin indexing the address;
+  /// the caller should wait a few seconds before retrying the data request.
+  static Future<void> _syncAddress(
+    String blockchain,
+    String network,
+    String address,
+  ) async {
+    final res = await http.post(
+      Uri.parse(
+        '$_cryptoApisBase/addresses-historical/utxo/$blockchain/$network/$address/sync',
+      ),
+      headers: _headers,
+      body: jsonEncode({
+        'data': {'item': {}}
+      }),
+    );
+    // 201 = newly synced, 409 = already syncing — both are fine to continue.
+    if (res.statusCode != 201 && res.statusCode != 409) {
+      throw Exception(
+        'Crypto APIs sync failed (${res.statusCode}): ${res.body}',
+      );
+    }
+    if (kDebugMode)
+      print('CryptoApis: syncing $address on $blockchain/$network');
+  }
 
   static void _assertOk(http.Response res, String context) {
     if (res.statusCode ~/ 100 != 2) {
@@ -131,7 +206,7 @@ class _CryptoApis {
 class _Utxo {
   final String txid;
   final int vout;
-  final int satoshis; // always in satoshis regardless of source
+  final int satoshis; // always in satoshis, regardless of source
 
   const _Utxo({
     required this.txid,
@@ -148,12 +223,16 @@ class _Utxo {
 }
 
 // ─── Per-coin static configuration ───────────────────────────────────────────
+//
+// Contains only invariants that cannot change per-instance:
+// network types, fee parameters, and API identifiers.
+// derivationPath lives on the coin itself so it is explicit and overridable.
 
 class _CoinConfig {
-  /// Crypto APIs blockchain identifier  (e.g. "dogecoin")
+  /// Crypto APIs blockchain slug  (e.g. "dogecoin", "bitcoin-cash")
   final String blockchain;
 
-  /// BIP44 coin_type  (SLIP-0044)
+  /// SLIP-0044 coin_type — kept for documentation / debugging
   final int coinType;
 
   /// bitcoin_flutter NetworkType for key derivation and tx building
@@ -166,13 +245,13 @@ class _CoinConfig {
   /// Dominates for DOGE where the 1-DOGE floor overwhelms a per-byte calc.
   final int minimumFee;
 
-  /// sat/byte used in the weight-based fee estimate.
+  /// sat/byte used in the weight-based fee estimate
   final int feeRate;
 
-  /// false  →  throw on send (ZEC needs Sapling v4 which is out of scope).
+  /// false → transferToken throws; ZEC needs Sapling v4 which is out of scope
   final bool sendEnabled;
 
-  /// Crypto APIs network string — "mainnet" or "testnet".
+  /// Crypto APIs network segment — "mainnet" or "testnet"
   final String cryptoApisNetwork;
 
   const _CoinConfig({
@@ -187,15 +266,14 @@ class _CoinConfig {
   });
 }
 
-// Each entry keyed by the coin symbol used throughout the app.
+// Keyed by symbol for mainnet, "<SYMBOL>_testnet" for testnet variants.
 final _configs = <String, _CoinConfig>{
-  // 1 DOGE minimum fee (network policy); feeRate is secondary
   'DOGE': _CoinConfig(
     blockchain: 'dogecoin',
     coinType: 3,
-    network: dogecoin, // pos_networks.dart
+    network: dogecoin,
     dustLimit: 1000000, // 0.01 DOGE
-    minimumFee: 100000000, // 1 DOGE
+    minimumFee: 100000000, // 1 DOGE  (network policy floor)
     feeRate: 400000, // dominated by minimumFee for typical tx sizes
   ),
   'DASH': _CoinConfig(
@@ -214,7 +292,7 @@ final _configs = <String, _CoinConfig>{
     minimumFee: 1000, // 0.00001 BCH
     feeRate: 2,
   ),
-  // ZEC send disabled — Sapling v4 format required
+  // ZEC send disabled — Sapling v4 transaction format is out of scope
   'ZEC': _CoinConfig(
     blockchain: 'zcash',
     coinType: 133,
@@ -225,24 +303,23 @@ final _configs = <String, _CoinConfig>{
     sendEnabled: false,
   ),
 
-  // ── Testnet-only entries (keyed as "<SYMBOL>_testnet") ───────────────────────
+  // ── Testnet variants ─────────────────────────────────────────────────────────
 
-  // BTC legacy testnet — m/44'/0'/0'/0/0, P2PKH, Crypto APIs bitcoin/testnet
+  // BTC legacy P2PKH testnet — kept separate from NativeBtcCoin (SegWit/P2WPKH)
   'BTC_testnet': _CoinConfig(
     blockchain: 'bitcoin',
     coinType: 0,
-    network: testnet, // bitcoin_flutter testnet
+    network: testnet,
     dustLimit: 546,
     minimumFee: 1000,
     feeRate: 5,
     cryptoApisNetwork: 'testnet',
   ),
-
-  // ZEC testnet — same derivation path, zcashTestnet network, t-address prefix [0x1d, 0x25]
+  // ZEC testnet — receive-only; t-address prefix [0x1d, 0x25]
   'ZEC_testnet': _CoinConfig(
     blockchain: 'zcash',
     coinType: 133,
-    network: zcashTestnet, // pos_networks.dart
+    network: zcashTestnet,
     dustLimit: 546,
     minimumFee: 10000,
     feeRate: 10,
@@ -259,10 +336,13 @@ class LegacyUtxoCoin extends Coin {
   final String default_;
   final String image;
   final String blockExplorer;
+  final String
+      derivationPath; // explicit — mirrors UtxoCoin, not inferred from coinType
   final String geckoID;
   final String rampID;
   final String payScheme;
   final bool isTestnet;
+
   final _CoinConfig _cfg;
 
   LegacyUtxoCoin({
@@ -271,6 +351,7 @@ class LegacyUtxoCoin extends Coin {
     required this.default_,
     required this.image,
     required this.blockExplorer,
+    required this.derivationPath,
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
@@ -319,7 +400,7 @@ class LegacyUtxoCoin extends Coin {
       _deriveKey,
       _DeriveArgs(
         seedRoot: seedPhraseRoot,
-        derivationPath: "m/44'/${_cfg.coinType}'/0'/0/0",
+        derivationPath: derivationPath, // ← uses the explicit field
         network: _cfg.network,
         symbol: symbol,
       ),
@@ -375,7 +456,7 @@ class LegacyUtxoCoin extends Coin {
   // ── Fee estimation ────────────────────────────────────────────────────────────
   //
   // P2PKH weight: input ≈ 148 bytes · output ≈ 34 bytes · overhead ≈ 10 bytes.
-  // Fee = max(weight × feeRate, minimumFee) to honour per-coin floors (DOGE).
+  // Fee = max(weight × feeRate, minimumFee) — honours per-coin floors (DOGE).
 
   int _estimateFee(int inputs, int outputs) {
     final weightedFee = (inputs * 148 + outputs * 34 + 10) * _cfg.feeRate;
@@ -386,9 +467,11 @@ class LegacyUtxoCoin extends Coin {
   Future<double> getTransactionFee(String amount, String to) async {
     final address = await getAddress();
     final utxos = await _CryptoApis.utxos(
-        _cfg.blockchain, _cfg.cryptoApisNetwork, address);
-    final count = utxos.length.clamp(1, 5);
-    return _estimateFee(count, 2) / pow(10, _legacyDecimals);
+      _cfg.blockchain,
+      _cfg.cryptoApisNetwork,
+      address,
+    );
+    return _estimateFee(utxos.length.clamp(1, 5), 2) / pow(10, _legacyDecimals);
   }
 
   // ── Send ──────────────────────────────────────────────────────────────────────
@@ -401,15 +484,16 @@ class LegacyUtxoCoin extends Coin {
   }) async {
     if (!_cfg.sendEnabled) {
       throw UnimplementedError(
-        '$symbol spending is not supported — Sapling v4 transaction format '
-        'is required and currently out of scope.',
+        '$symbol spending is not supported — '
+        'Sapling v4 transaction format is required and currently out of scope.',
       );
     }
 
     final satoshiToSend = amount.toBigIntDec(decimals()).toInt();
     if (satoshiToSend < _cfg.dustLimit) {
       throw Exception(
-          '$symbol: amount is below the dust limit (${_cfg.dustLimit} sat)');
+        '$symbol: amount is below the dust limit (${_cfg.dustLimit} sat)',
+      );
     }
 
     final activeKey = WalletService.getActiveKey(walletImportType)!.data;
@@ -418,7 +502,10 @@ class LegacyUtxoCoin extends Coin {
 
     // ── Fetch UTXOs ───────────────────────────────────────────────────────────
     final utxos = await _CryptoApis.utxos(
-        _cfg.blockchain, _cfg.cryptoApisNetwork, address);
+      _cfg.blockchain,
+      _cfg.cryptoApisNetwork,
+      address,
+    );
     if (utxos.isEmpty) throw Exception('$symbol: no UTXOs available');
 
     // ── Select UTXOs (first-fit) ──────────────────────────────────────────────
@@ -470,7 +557,10 @@ class LegacyUtxoCoin extends Coin {
 
     // ── Broadcast ─────────────────────────────────────────────────────────────
     final txid = await _CryptoApis.broadcast(
-        _cfg.blockchain, _cfg.cryptoApisNetwork, txHex);
+      _cfg.blockchain,
+      _cfg.cryptoApisNetwork,
+      txHex,
+    );
     return (txHash: txid, txRaw: txHex);
   }
 
@@ -478,7 +568,7 @@ class LegacyUtxoCoin extends Coin {
 
   @override
   void validateAddress(String address) {
-    // BCH accepts both CashAddr and legacy formats
+    // BCH accepts both CashAddr and legacy P2PKH formats
     if (symbol == 'BCH') {
       try {
         bitbox.Address.detectFormat(address);
@@ -489,8 +579,8 @@ class LegacyUtxoCoin extends Coin {
     }
 
     // ZEC — two-byte transparent address prefix differs by network:
-    //   mainnet  → [0x1c, 0xb8]  (t1…)
-    //   testnet  → [0x1d, 0x25]  (tm…)
+    //   mainnet  [0x1c, 0xb8]  →  t1…
+    //   testnet  [0x1d, 0x25]  →  tm…
     if (symbol == 'ZEC') {
       try {
         final decoded = bs58check.decode(address);
@@ -498,10 +588,12 @@ class LegacyUtxoCoin extends Coin {
         if (decoded[0] == expectedPrefix[0] && decoded[1] == expectedPrefix[1])
           return;
       } catch (_) {}
-      throw Exception('Invalid ZEC ${isTestnet ? 'testnet' : ''} t-address');
+      throw Exception(
+        'Invalid ZEC ${isTestnet ? 'testnet' : 'mainnet'} t-address',
+      );
     }
 
-    // DOGE, DASH — standard base58check against the network's pubKeyHash
+    // DOGE, DASH, BTC legacy — standard base58check pubKeyHash
     try {
       if (Address.validateAddress(address, _cfg.network)) return;
     } catch (_) {}
@@ -524,6 +616,7 @@ class LegacyUtxoCoin extends Coin {
         'default': default_,
         'image': image,
         'blockExplorer': blockExplorer,
+        'derivationPath': derivationPath,
         'geckoID': geckoID,
         'rampID': rampID,
         'payScheme': payScheme,
@@ -536,6 +629,7 @@ class LegacyUtxoCoin extends Coin {
         default_: j['default'] as String,
         image: j['image'] as String,
         blockExplorer: j['blockExplorer'] as String,
+        derivationPath: j['derivationPath'] as String,
         geckoID: j['geckoID'] as String,
         rampID: j['rampID'] as String,
         payScheme: j['payScheme'] as String,
@@ -545,7 +639,7 @@ class LegacyUtxoCoin extends Coin {
 
 // ─── Isolate: key derivation ──────────────────────────────────────────────────
 //
-// Top-level so Flutter's compute() can cross the isolate boundary.
+// Must be top-level so Flutter's compute() can cross the isolate boundary.
 
 class _DeriveArgs {
   final SeedPhraseRoot seedRoot;
@@ -576,11 +670,11 @@ Map<String, dynamic> _deriveKey(_DeriveArgs args) {
     }
   }
 
-  // ZEC mainnet: rewrite version byte → [0x1c, 0xb8]  (t1… address)
-  // ZEC testnet: rewrite version byte → [0x1d, 0x25]  (tm… address)
+  // ZEC: rewrite the single version byte → two-byte transparent address prefix
+  //   mainnet  [0x1c, 0xb8]  →  t1…
+  //   testnet  [0x1d, 0x25]  →  tm…
   if (args.symbol == 'ZEC') {
-    final isTestnet = args.network == zcashTestnet;
-    final prefix = isTestnet ? [0x1d, 0x25] : [0x1c, 0xb8];
+    final prefix = (args.network == zcashTestnet) ? [0x1d, 0x25] : [0x1c, 0xb8];
     final decoded = [...bs58check.decode(address)]..removeAt(0);
     final taddr = Uint8List(22)
       ..setAll(0, prefix)
@@ -599,15 +693,15 @@ Map<String, dynamic> _deriveKey(_DeriveArgs args) {
 List<LegacyUtxoCoin> getLegacyUtxoCoins() {
   if (enableTestNet) {
     return [
-      // BTC legacy P2PKH testnet — m/44'/0'/0'/0/0
-      // Kept separate from NativeBtcCoin (SegWit) and TaprootBtcCoin.
+      // BTC legacy P2PKH testnet — distinct from NativeBtcCoin (SegWit) and TaprootBtcCoin
       LegacyUtxoCoin(
-        name: 'Bitcoin (Legacy Test)',
+        name: 'Bitcoin (Test)',
         symbol: 'BTC',
         default_: 'BTC',
         image: 'assets/bitcoin.jpg',
         blockExplorer:
             'https://www.blockchain.com/btc-testnet/tx/$blockExplorerPlaceholder',
+        derivationPath: "m/44'/0'/0'/0/0",
         geckoID: 'bitcoin',
         rampID: 'BTC_BTC',
         payScheme: 'bitcoin',
@@ -621,6 +715,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
         image: 'assets/zcash.png',
         blockExplorer:
             'https://blockexplorer.one/zcash/testnet/tx/$blockExplorerPlaceholder',
+        derivationPath: "m/44'/133'/0'/0/0",
         geckoID: 'zcash',
         rampID: '',
         payScheme: 'zcash',
@@ -637,6 +732,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       image: 'assets/dogecoin.png',
       blockExplorer:
           'https://live.blockcypher.com/doge/tx/$blockExplorerPlaceholder',
+      derivationPath: "m/44'/3'/0'/0/0",
       geckoID: 'dogecoin',
       rampID: 'DOGE_DOGE',
       payScheme: 'doge',
@@ -648,6 +744,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       image: 'assets/dash.png',
       blockExplorer:
           'https://live.blockcypher.com/dash/tx/$blockExplorerPlaceholder',
+      derivationPath: "m/44'/5'/0'/0/0",
       geckoID: 'dash',
       rampID: '',
       payScheme: 'dash',
@@ -659,6 +756,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       image: 'assets/bitcoin_cash.png',
       blockExplorer:
           'https://www.blockchain.com/explorer/transactions/bch/$blockExplorerPlaceholder',
+      derivationPath: "m/44'/145'/0'/0/0",
       geckoID: 'bitcoin-cash',
       rampID: 'BCH_BCH',
       payScheme: 'bitcoincash',
@@ -672,6 +770,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       image: 'assets/zcash.png',
       blockExplorer:
           'https://blockexplorer.one/zcash/mainnet/tx/$blockExplorerPlaceholder',
+      derivationPath: "m/44'/133'/0'/0/0",
       geckoID: 'zcash',
       rampID: '',
       payScheme: 'zcash',

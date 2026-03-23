@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool networkAvailable = true;
+  enableTestNet = false;
 
   setUp(() async {
     await setUpTestHive();
