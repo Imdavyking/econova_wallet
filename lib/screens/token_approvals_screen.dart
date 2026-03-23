@@ -45,13 +45,13 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
   }
 
   Future<void> _confirmRevoke(TokenApproval approval) async {
-
+    bool confirmed = false;
     await AwesomeDialog(
       closeIcon: const Icon(Icons.close),
       buttonsTextStyle: const TextStyle(color: Colors.white),
       context: context,
       btnOkColor: Colors.red,
-      btnCancelColor: appBackgroundblue,
+      btnCancelColor: appBackgroundblue.withOpacity(0.5),
       dialogType: DialogType.warning,
       buttonsBorderRadius: const BorderRadius.all(Radius.circular(10)),
       headerAnimationLoop: false,
@@ -63,11 +63,16 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
       btnOkText: 'Revoke',
       btnCancelText: 'Cancel',
       btnCancelOnPress: () {},
-      btnOkOnPress: () => _revoke(approval),
+      btnOkOnPress: () {
+        confirmed = true; // ← just set flag, don't call async
+      },
     ).show();
+    print(confirmed);
+    if (confirmed) await _revoke(approval);
   }
 
   Future<void> _revoke(TokenApproval approval) async {
+    print('ok');
     if (!mounted) return;
     setState(() => _revoking = true);
 
@@ -91,7 +96,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        _load();
+        setState(() => _load()); // ← setState wrapping _load so UI rebuilds
       } else {
         _showError('Failed to revoke approval');
       }
@@ -163,7 +168,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
                 const SizedBox(height: 8),
                 ...safe.map((a) => _ApprovalCard(
                       approval: a,
-                      onRevoke: () => _revoke(a),
+                      onRevoke: () => _confirmRevoke(a),
                     )),
               ],
             ],

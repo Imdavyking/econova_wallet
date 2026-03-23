@@ -230,7 +230,7 @@ class _AllWalletsState extends State<AllWallets> {
       desc: localization.confirmWalletDeleteDescription,
       btnOkText: localization.delete,
       btnOkColor: Colors.red,
-      btnCancelColor: appBackgroundblue,
+      btnCancelColor: appBackgroundblue.withOpacity(0.5),
       btnCancelOnPress: () => Navigator.pop(context, false),
       btnOkOnPress: () async {
         if (await authenticate(context)) {

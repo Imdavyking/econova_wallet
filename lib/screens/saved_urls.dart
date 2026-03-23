@@ -139,7 +139,7 @@ class _SavedUrlsState extends State<SavedUrls> {
                 title: localization.clearBrowsingData,
                 btnOkText: localization.delete,
                 btnOkColor: Colors.red,
-                btnCancelColor: appBackgroundblue,
+                btnCancelColor: appBackgroundblue.withOpacity(0.5),
                 btnCancelOnPress: () {
                   Navigator.pop(context, false);
                 },

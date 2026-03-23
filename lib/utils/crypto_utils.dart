@@ -118,7 +118,7 @@ selectImage({
     showCloseIcon: true,
     btnOkText: localization.gallery,
     btnCancelText: localization.camera,
-    btnCancelColor: Colors.blue,
+    btnCancelColor: appBackgroundblue.withOpacity(0.5),
     btnOkColor: Colors.blue,
     btnCancelOnPress: () async {
       final file = await ImagePicker().pickImage(source: ImageSource.camera);
