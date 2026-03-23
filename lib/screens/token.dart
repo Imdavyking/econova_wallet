@@ -180,7 +180,7 @@ class _TokenState extends State<Token> {
   List<Widget> _buildAppBarActions(BuildContext context) {
     return [
       // Approvals button — only for coins that support it
-      if (_coin.getApprovals(_currentAddress) != null)
+      if (_coin.getApprovals() != null)
         IconButton(
           onPressed: () => Navigator.push(
             context,
@@ -942,7 +942,7 @@ class _InfoCard extends StatelessWidget {
           _InfoRow('Name', coin.getName()),
           _InfoRow('Symbol', coin.getSymbol()),
           _InfoRow('Approvals supported',
-              coin.getApprovals('') != null ? 'Yes' : 'No'),
+              coin.getApprovals() != null ? 'Yes' : 'No'),
           _InfoRow(
               'Test approval',
               coin.testCreateApproval() != null

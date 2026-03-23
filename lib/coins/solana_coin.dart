@@ -357,12 +357,12 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) {
-    if (address.isEmpty) return null;
-    return _fetchSolanaApprovals(address);
+  Future<List<TokenApproval>>? getApprovals() {
+    return _fetchSolanaApprovals();
   }
 
-  Future<List<TokenApproval>> _fetchSolanaApprovals(String address) async {
+  Future<List<TokenApproval>> _fetchSolanaApprovals() async {
+    final address = await getAddress();
     final cacheKey = 'solana_approvals_$address$rpc';
     final cached = pref.get(cacheKey);
     final cachedTime = pref.get('${cacheKey}_time');

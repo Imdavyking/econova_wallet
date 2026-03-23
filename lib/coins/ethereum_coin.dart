@@ -431,12 +431,12 @@ class EthereumCoin extends Coin {
 
   // ── Token approvals ───────────────────────────────────────────────────────
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) {
-    if (address.isEmpty) return null;
-    return _fetchEthApprovals(address);
+  Future<List<TokenApproval>>? getApprovals() {
+    return _fetchEthApprovals();
   }
 
-  Future<List<TokenApproval>> _fetchEthApprovals(String address) async {
+  Future<List<TokenApproval>> _fetchEthApprovals() async {
+    final address = await getAddress();
     final cacheKey = 'token_approvals_${chainId}_$address';
     final String? cached = pref.get(cacheKey) as String?;
     final String? cachedTime = pref.get('${cacheKey}_time') as String?;

@@ -363,13 +363,12 @@ class TronCoin extends Coin {
   }
 
   @override
-  Future<List<TokenApproval>>? getApprovals(String address) {
-    if (address.isEmpty) return null;
-    return _fetchTronApprovalsWithCache(address);
+  Future<List<TokenApproval>>? getApprovals() {
+    return _fetchTronApprovalsWithCache();
   }
 
-  Future<List<TokenApproval>> _fetchTronApprovalsWithCache(
-      String address) async {
+  Future<List<TokenApproval>> _fetchTronApprovalsWithCache() async {
+    final address = await getAddress();
     final cacheKey = 'tron_approvals_${address}_$api';
     final cached = pref.get(cacheKey);
     final cachedTime = pref.get('${cacheKey}_time');

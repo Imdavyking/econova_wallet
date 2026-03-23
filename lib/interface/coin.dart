@@ -34,7 +34,7 @@ abstract class Coin {
     return amountString.replaceAll(',', '');
   }
 
-  Future<List<TokenApproval>>? getApprovals(String address) => null;
+  Future<List<TokenApproval>>? getApprovals() => null;
   Future<bool>? revokeApproval(TokenApproval approval) => null;
   Future<String?>? testCreateApproval() => null;
   TransactionFetcher? get transactionFetcher => null;

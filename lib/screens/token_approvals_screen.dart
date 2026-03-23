@@ -24,7 +24,6 @@ class TokenApprovalsScreen extends StatefulWidget {
 
 class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
   late Future<List<TokenApproval>>? _approvalsFuture;
-  String _address = '';
 
   @override
   void initState() {
@@ -37,8 +36,7 @@ class _TokenApprovalsScreenState extends State<TokenApprovalsScreen> {
   }
 
   Future<List<TokenApproval>>? _fetchApprovals() async {
-    _address = await widget.coin.getAddress();
-    final future = widget.coin.getApprovals(_address);
+    final future = widget.coin.getApprovals();
 
     if (future == null) return []; // coin doesn't support approvals
     return future;
