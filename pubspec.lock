@@ -20,10 +20,9 @@ packages:
   agent_dart:
     dependency: "direct main"
     description:
-      name: agent_dart
-      sha256: f6710b768ab1095913167ab6a71b9726fb6901083fdb4ab2eca6127a4d3273e4
-      url: "https://pub.dev"
-    source: hosted
+      path: "agent_dart-0.1.24+1"
+      relative: true
+    source: path
     version: "0.1.24+1"
   alan:
     dependency: "direct main"
