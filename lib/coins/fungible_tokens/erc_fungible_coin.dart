@@ -184,7 +184,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
       String amount, String to,
       {String? memo}) async {
     final sendAmt = amount.toBigIntDec(decimals());
-    final parameters_ = [EthereumAddress.fromHex(to), sendAmt];
+    final parameters_ = [EthereumAddress.fromHex(roninAddrToEth(to)), sendAmt];
 
     final client = Web3Client(
       rpc,
