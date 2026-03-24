@@ -395,11 +395,13 @@ String _ethAddrToHrp(String address, String hrp) {
 }
 
 String _hrpAddrToEth(String address) {
-  final bits = bech32.decode(address);
-
-  final buf = _convertBits(Uint8List.fromList(bits.data), 5, 8, pad: false);
-
-  return EthereumAddress.fromHex(HEX.encode(buf)).hexEip55;
+  try {
+    return EthereumAddress.fromHex(address).hexEip55;
+  } catch (e) {
+    final bits = bech32.decode(address);
+    final buf = _convertBits(Uint8List.fromList(bits.data), 5, 8, pad: false);
+    return EthereumAddress.fromHex(HEX.encode(buf)).hexEip55;
+  }
 }
 
 Uint8List _convertBits(
