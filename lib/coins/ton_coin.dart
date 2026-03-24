@@ -75,7 +75,7 @@ class TonCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'tonCoinDetails${walletImportType.name}';
+    final saveKey = 'tonCoinDetailsV3${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -248,7 +248,7 @@ class TonCoin extends Coin {
     final ownerWallet = WalletV4.create(
       chain: TonChain.fromWorkchain(0),
       publicKey: decodedPublicKey,
-      bounceableAddress: true,
+      bounceableAddress: false,
     );
 
     final privateKey = TonPrivateKey.fromBytes(decodedPrivateKey);
@@ -317,8 +317,10 @@ class _TonDerive {
       publicKey = publicKey.sublist(1);
     }
 
-    var wallet = ton.WalletContractV4R2.create(
+    final wallet = WalletV4.create(
+      chain: TonChain.fromWorkchain(0),
       publicKey: Uint8List.fromList(publicKey),
+      bounceableAddress: false,
     );
 
     return AccountData(
