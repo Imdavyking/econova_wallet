@@ -5,6 +5,7 @@ import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/get_token_image.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -156,7 +157,10 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const WalletLogo(),
+                        GetTokenImage(
+                          currCoin: coin,
+                          radius: 30,
+                        ),
                         const SizedBox(
                           height: 20,
                         ),

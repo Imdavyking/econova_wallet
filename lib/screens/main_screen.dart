@@ -147,7 +147,8 @@ class _MainScreenState extends State<MainScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (ctx) => SelectBlockchain(
-                              filterFn: (coin) => true, // removeCoin: false,
+                              filterFn: (coin) =>
+                                  coin.supportKeystore, // removeCoin: false,
                             ),
                           ),
                         );
