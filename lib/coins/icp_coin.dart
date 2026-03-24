@@ -252,7 +252,7 @@ List<ICPCoin> getICPBlockchains() {
         name: 'ICP(Testnet)',
         default_: 'ICP',
         image: 'assets/icp.png',
-        api: "http://127.0.0.1:8000/",
+        api: "http://127.0.0.1:4943/",
         geckoID: "internet-computer",
         payScheme: 'internet_computer',
         rampID: '',
