@@ -109,11 +109,13 @@ class _PortfolioState extends State<Portfolio> {
                     if (userBalance != null)
                       GestureDetector(
                         onTap: () async {
-                          final userPreviousHidingBalance =
+                          final userBalHidden =
                               pref.get(hideBalanceKey, defaultValue: false);
-
-                          await pref.put(
-                              hideBalanceKey, !userPreviousHidingBalance);
+                          if (userBalHidden) {
+                            final auth = await authenticate(context);
+                            if (!auth) return;
+                          }
+                          await pref.put(hideBalanceKey, !userBalHidden);
                         },
                         child: SizedBox(
                           height: 35,
