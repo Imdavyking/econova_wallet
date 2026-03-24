@@ -554,12 +554,13 @@ void main() async {
     // WARNING: These accounts, and their private keys, are publicly known.
     // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
     walletImportType = WalletType.secretPhrase;
-    seedPhraseRoot = await compute(seedFromMnemonic, testMnemonic);
+    const mnemonic = testMnemonic;
+    seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
 
     for (int i = 0; i < supportedChains.length; i++) {
       Coin currCoin = supportedChains[i];
-      AccountData cryptoKeys = await currCoin.importData(testMnemonic);
       if (currCoin.getDefault() != currCoin.getSymbol()) continue;
+      AccountData cryptoKeys = await currCoin.importData(mnemonic);
 
       switch (currCoin.getDefault()) {
         case "ADA":
@@ -827,6 +828,210 @@ void main() async {
             "zil1d4c4vntch9jpn3fj9d4ugpuap8cmdj7alnrxvv",
           );
           break;
+        default:
+      }
+    }
+  });
+
+  test('check if seed phrase 2 generates the correct crypto address', () async {
+    // WARNING: These accounts, and their private keys, are publicly known.
+    // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
+    walletImportType = WalletType.secretPhrase;
+    const mnemonic = testMnemonic1;
+    seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
+
+    for (int i = 0; i < supportedChains.length; i++) {
+      Coin currCoin = supportedChains[i];
+      if (currCoin.getDefault() != currCoin.getSymbol()) continue;
+      AccountData cryptoKeys = await currCoin.importData(mnemonic);
+      switch (currCoin.getDefault()) {
+        case 'ZIL':
+          expect(
+            cryptoKeys.address,
+            'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
+          );
+          break;
+        case 'STRK':
+          expect(
+            cryptoKeys.address,
+            '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+          );
+          break;
+        case 'ICP':
+          expect(
+            cryptoKeys.address,
+            'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
+          );
+          break;
+        case 'ONE':
+          expect(
+            cryptoKeys.address,
+            'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
+          );
+          break;
+        case 'EGLD':
+          expect(
+            cryptoKeys.address,
+            'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
+          );
+          break;
+        case 'BTC':
+          if (currCoin.getName() == 'Bitcoin') {
+            expect(
+              cryptoKeys.address,
+              'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
+            );
+          } else if (currCoin.getName() == 'Bitcoin (Legacy)') {
+            expect(
+              cryptoKeys.address,
+              '1Q9sh5HmBGVvysWfU8UAyFSMk7k2bzMnYW',
+            );
+          } else if (currCoin.getName() == 'Bitcoin (SegWit Test4)') {
+            expect(
+              cryptoKeys.address,
+              'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
+            );
+          } else if (currCoin.getName() == 'Bitcoin (Legacy Test4)') {
+            expect(
+              cryptoKeys.address,
+              'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
+            );
+          }
+          break;
+        case 'STX':
+          if (currCoin.getName() == 'Stacks') {
+            expect(
+              cryptoKeys.address,
+              'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
+            );
+          } else if (currCoin.getName() == 'Stacks(Test)') {
+            expect(
+              cryptoKeys.address,
+              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+            );
+          }
+          break;
+        case 'ETH':
+          expect(
+            cryptoKeys.address,
+            '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
+          );
+          break;
+        case 'TON':
+          expect(
+            cryptoKeys.address,
+            'EQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtFO5',
+          );
+          break;
+        case 'SUI':
+          expect(
+            cryptoKeys.address,
+            '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+          );
+          break;
+        case 'APT':
+          expect(
+            cryptoKeys.address,
+            '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
+          );
+          break;
+        case 'XTZ':
+          expect(
+            cryptoKeys.address,
+            'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
+          );
+          break;
+        case 'ETC':
+          expect(
+            cryptoKeys.address,
+            '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
+          );
+          break;
+        case 'BCH':
+          expect(
+              cryptoKeys.address, 'qr4rwp766lf2xysphv8wz2qglphuzx5y7gku3hqruj');
+          break;
+        case 'LTC':
+          expect(cryptoKeys.address,
+              'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7');
+          break;
+        case 'DASH':
+          expect(cryptoKeys.address, 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti');
+          break;
+        case 'TRX':
+          expect(cryptoKeys.address, 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM');
+          break;
+        case 'SOL':
+          expect(
+            cryptoKeys.address,
+            '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
+          );
+          break;
+        case 'XLM':
+          expect(cryptoKeys.address,
+              'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT');
+          break;
+        case 'ALGO':
+          expect(cryptoKeys.address,
+              'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U');
+          break;
+        case 'ATOM':
+          expect(cryptoKeys.address,
+              'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
+          break;
+        case 'ZEC':
+         if (currCoin.getName() == 'Zcash (Test)') {
+            expect(
+              cryptoKeys.address,
+              "tmLDBDEPStxyzcC9Fv8bDNHZmw9n2LWFB7w",
+            );
+          } else {
+            expect(
+              cryptoKeys.address,
+              "t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU",
+            );
+          }
+          break;
+        case 'ADA':
+          if (currCoin.getName() == 'Cardano') {
+            expect(
+              cryptoKeys.address,
+              'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
+            );
+          } else if (currCoin.getName() == 'Cardano (Preprod)') {
+            expect(
+              cryptoKeys.address,
+              'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
+            );
+          }
+          break;
+        case 'XRP':
+          expect(cryptoKeys.address, 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL');
+          break;
+        case 'FIL':
+          if (currCoin.getName() == 'Filecoin') {
+            expect(cryptoKeys.address,
+                'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa');
+          } else if (currCoin.getName() == 'Filecoin(Testnet)') {
+            expect(
+              cryptoKeys.address,
+              't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+            );
+          }
+          break;
+        case 'DOT':
+          expect(
+            cryptoKeys.address,
+            '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
+          );
+          break;
+        case 'WND':
+          expect(
+            cryptoKeys.address,
+            '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
+          );
+          break;
+
         default:
       }
     }
