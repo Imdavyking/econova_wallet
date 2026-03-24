@@ -247,7 +247,7 @@ List<ICPCoin> getICPBlockchains() {
     blockChains.add(
       ICPCoin(
         blockExplorer:
-            'https://dashboard.internetcomputer.org/transaction/$blockExplorerPlaceholder',
+            'http://127.0.0.1:4943/transaction/$blockExplorerPlaceholder',
         symbol: 'ICP',
         name: 'ICP(Testnet)',
         default_: 'ICP',
