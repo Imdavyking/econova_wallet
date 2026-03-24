@@ -2,8 +2,6 @@
 
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
-
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:cryptography/cryptography.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
