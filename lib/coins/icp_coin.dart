@@ -11,6 +11,7 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import '../extensions/big_int_ext.dart';
 
 const icpDecimals = 8;
 

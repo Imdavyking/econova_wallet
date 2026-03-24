@@ -858,6 +858,7 @@ void main() async {
           );
           break;
         case 'ICP':
+          print('helllo');
           expect(
             cryptoKeys.address,
             'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
@@ -980,7 +981,7 @@ void main() async {
               'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
           break;
         case 'ZEC':
-         if (currCoin.getName() == 'Zcash (Test)') {
+          if (currCoin.getName() == 'Zcash (Test)') {
             expect(
               cryptoKeys.address,
               "tmLDBDEPStxyzcC9Fv8bDNHZmw9n2LWFB7w",
