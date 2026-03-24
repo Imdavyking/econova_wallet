@@ -19,8 +19,6 @@ import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'ethereum_coin.dart';
 
-const iotexDecimals = 18;
-
 class EVMHrpCoin extends Coin {
   String blockExplorer;
   String symbol;
@@ -119,7 +117,7 @@ class EVMHrpCoin extends Coin {
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
-    String saveKey = 'iotexPrivate${walletImportType.name}$hrp';
+    String saveKey = 'evmHrpPrivate${walletImportType.name}$hrp';
     Map<String, dynamic> privateKeyMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -146,7 +144,7 @@ class EVMHrpCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'iotexCoinDetail${walletImportType.name}$hrp';
+    final saveKey = 'evmHrpCoinDetails${walletImportType.name}$hrp';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -156,8 +154,12 @@ class EVMHrpCoin extends Coin {
       }
     }
 
-    final args = EVMHrpArgs(seedRoot: seedPhraseRoot, hrp: hrp);
-    final keys = await compute(calculateIoTexKey, args);
+    final args = EVMHrpArgs(
+      seedRoot: seedPhraseRoot,
+      hrp: hrp,
+      coinType: coinType,
+    );
+    final keys = await compute(calculateEVMHrpKey, args);
 
     mnemonicMap[mnemonic] = keys;
 
@@ -182,7 +184,7 @@ class EVMHrpCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'iotexAddressBalance$address$rpc$hrp';
+    final key = 'evmHrpAddressBalance$address$rpc$hrp';
 
     final storedBalance = pref.get(key);
 
@@ -249,9 +251,7 @@ class EVMHrpCoin extends Coin {
   }
 
   @override
-  int decimals() {
-    return iotexDecimals;
-  }
+  int decimals() => 18;
 
   @override
   Future<double> getTransactionFee(String amount, String to) async {
@@ -359,16 +359,18 @@ List<EVMHrpCoin> getEVMHrpBlockchains() {
 class EVMHrpArgs {
   final SeedPhraseRoot seedRoot;
   final String hrp;
+  final int coinType;
 
   const EVMHrpArgs({
     required this.seedRoot,
     required this.hrp,
+    required this.coinType,
   });
 }
 
-Future<Map> calculateIoTexKey(EVMHrpArgs config) async {
+Future<Map> calculateEVMHrpKey(EVMHrpArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
-  const path = "m/44'/304'/0'/0/0";
+  final path = "m/44'/${config.coinType}'/0'/0/0";
   final node = seedRoot_.root.derivePath(path);
   final privateKey = HEX.encode(node.privateKey!);
   final privatekeyStr = "0x$privateKey";

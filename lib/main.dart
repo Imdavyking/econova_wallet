@@ -62,7 +62,6 @@ import '../coins/ethereum_coin.dart';
 import '../coins/near_coin.dart';
 import '../coins/solana_coin.dart';
 import '../coins/stellar_coin.dart';
-import '../coins/harmony_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 List<Coin> supportedChains = [];
@@ -141,7 +140,6 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...stackCoins,
     ...getSIP010Coins(),
     ...getSegwitCoins(),
-    ...getHarmonyBlockChains(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
 
   return blockchains;
