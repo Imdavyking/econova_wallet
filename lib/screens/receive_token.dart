@@ -6,7 +6,6 @@ import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -102,13 +101,9 @@ class _ReceiveTokenState extends State<ReceiveToken> {
     ));
   }
 
-  String get _symbolDisplay => _coin.tokenAddress() != null
-      ? ellipsify(str: _coin.getSymbol())
-      : _coin.getSymbol();
+  String get _symbolDisplay => _coin.getSymbol();
 
-  String get _nameDisplay => _coin.tokenAddress() != null
-      ? ellipsify(str: _coin.getName())
-      : _coin.getName();
+  String get _nameDisplay => _coin.getName();
 
   @override
   Widget build(BuildContext context) {
