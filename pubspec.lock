@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  agent_dart:
+    dependency: "direct main"
+    description:
+      name: agent_dart
+      sha256: f6710b768ab1095913167ab6a71b9726fb6901083fdb4ab2eca6127a4d3273e4
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.24+1"
   alan:
     dependency: "direct main"
     description:
@@ -126,6 +134,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.1"
+  basic_utils:
+    dependency: transitive
+    description:
+      name: basic_utils
+      sha256: c4f6b890f961ee3d6f70e2d65be99839055a4b4d1bb12c778d26b53e96eb33aa
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.5.2"
   bcs:
     dependency: transitive
     description:
@@ -2018,6 +2034,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.3"
+  recase:
+    dependency: transitive
+    description:
+      name: recase
+      sha256: e4eb4ec2dcdee52dcf99cb4ceabaffc631d7424ee55e56f280bc039737f89213
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   rename:
     dependency: "direct main"
     description:

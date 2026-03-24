@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import 'package:agent_dart/agent_dart.dart';
 import 'package:agent_dart/wallet/ledger.dart';
-import 'package:cryptowallet/extensions/big_int_ext.dart';
 import 'package:flutter/foundation.dart';
 import '../interface/coin.dart';
 import '../main.dart';
@@ -116,7 +115,7 @@ class ICPCoin extends Coin {
   }
 
   @override
-  Future<double> getBalance(bool skipNetworkRequest) async {
+  Future<double> getBalance(bool useCache) async {
     String address = await getAddress();
 
     final key = 'ICPAddressBalance$address$api';
@@ -129,7 +128,7 @@ class ICPCoin extends Coin {
       savedBalance = storedBalance;
     }
 
-    if (skipNetworkRequest) return savedBalance;
+    if (useCache) return savedBalance;
 
     try {
       final userBalance = await getUserBalance(address: address);
