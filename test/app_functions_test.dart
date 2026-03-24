@@ -28,7 +28,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool networkAvailable = true;
-  enableTestNet = true;
+  enableTestNet = false;
 
   setUp(() async {
     await setUpTestHive();
@@ -595,6 +595,12 @@ void main() async {
             "cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7",
           );
           break;
+        case "BCH":
+          expect(
+            cryptoKeys.address,
+            "qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf",
+          );
+          break;
         case "BNB":
           expect(
             cryptoKeys.address,
@@ -648,6 +654,12 @@ void main() async {
               "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
             );
           }
+          break;
+        case "DASH":
+          expect(
+            cryptoKeys.address,
+            "XoXdZSiN9MWpmVLDFS65GfLHuERoHeuFCj",
+          );
           break;
         case "EGLD":
           expect(
@@ -769,7 +781,7 @@ void main() async {
         case "TON":
           expect(
             cryptoKeys.address,
-            "EQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Kbar",
+            "UQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Ketu",
           );
           break;
         case "TRX":
