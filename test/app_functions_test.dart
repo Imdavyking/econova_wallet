@@ -932,7 +932,7 @@ void main() async {
         case 'TON':
           expect(
             cryptoKeys.address,
-            'EQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtFO5',
+            'UQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtA58',
           );
           break;
         case 'SUI':
