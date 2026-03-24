@@ -59,7 +59,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
 
   Future<String> _trnsCoin(_TrxCoinParams config) async {
     multiversx.UserSecretKey signer =
-        multiversx.UserSecretKey(HEX.decode(config.privateKey!));
+        multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
 
     await wallet.synchronize(getProxy());
