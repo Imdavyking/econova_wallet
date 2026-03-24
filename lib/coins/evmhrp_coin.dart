@@ -208,8 +208,10 @@ class EVMHrpCoin extends Coin {
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
-      String amount, String to,
-      {String? memo}) async {
+    String amount,
+    String to, {
+    String? memo,
+  }) async {
     final client = Web3Client(
       rpc,
       http.Client(),
