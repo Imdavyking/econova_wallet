@@ -584,27 +584,34 @@ class _TransactionSection extends ConsumerWidget {
       return;
     }
 
-    final walletTxs = state.transactions.map((tx) {
-      final date = DateFormat('yyyy-MM-dd hh:mm:ss').parse(tx.time);
-      return WalletTransaction(
-        hash: tx.transactionHash,
-        from: tx.from,
-        to: tx.to,
-        amount: tx.tokenAmount.toString(),
-        symbol: coin.getSymbol(),
-        decimals: tx.decimal,
-        timestamp: date,
-        status: WalletTxStatus.confirmed,
-        direction: tx.from.toLowerCase() == state.currentUser.toLowerCase()
-            ? WalletTxDirection.sent
-            : WalletTxDirection.received,
-        explorerUrl: coin.getExplorer().replaceFirst(
-              blockExplorerPlaceholder,
-              tx.transactionHash,
-            ),
-        memo: tx.memo,
-      );
-    }).toList();
+    final walletTxs = state.transactions
+        .map((tx) {
+          final isSent =
+              tx.from.toLowerCase() == state.currentUser.toLowerCase();
+          final isReceived =
+              tx.to.toLowerCase() == state.currentUser.toLowerCase();
+          if (!isSent && !isReceived) return null;
+          final date = DateFormat('yyyy-MM-dd hh:mm:ss').parse(tx.time);
+          return WalletTransaction(
+            hash: tx.transactionHash,
+            from: tx.from,
+            to: tx.to,
+            amount: tx.tokenAmount.toString(),
+            symbol: coin.getSymbol(),
+            decimals: tx.decimal,
+            timestamp: date,
+            status: WalletTxStatus.confirmed,
+            direction:
+                isSent ? WalletTxDirection.sent : WalletTxDirection.received,
+            explorerUrl: coin.getExplorer().replaceFirst(
+                  blockExplorerPlaceholder,
+                  tx.transactionHash,
+                ),
+            memo: tx.memo,
+          );
+        })
+        .nonNulls
+        .toList();
 
     TransactionExportSheet.show(
       context: context,
