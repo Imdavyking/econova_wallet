@@ -170,6 +170,7 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();

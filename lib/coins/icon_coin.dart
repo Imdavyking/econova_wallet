@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:pointycastle/digests/sha3.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
-import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:pointycastle/export.dart' as pc;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -90,7 +90,7 @@ class IconCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'iconCoinDetails${walletImportType.name}';
+    final saveKey = 'iconCoinDetailsV313${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -297,21 +297,32 @@ class IconDeriveArgs {
 Future<Map<String, dynamic>> calculateIconKey(IconDeriveArgs args) async {
   const path = "m/44'/74'/0'/0/0";
   final node = args.seedRoot.root.derivePath(path);
-  final privateKey = '0x${HEX.encode(node.privateKey!)}';
+  final privateKeyBytes = node.privateKey!;
+  final privateKey = '0x${HEX.encode(privateKeyBytes)}';
 
-  // Reuse Ethereum address derivation — same algorithm
-  final ethAddress = await etherPrivateKeyToAddress(privateKey);
 
-  // ICON address: lowercase "hx" + 40 hex chars (no EIP-55 checksum)
-  final iconAddress = 'hx${ethAddress.toLowerCase().substring(2)}';
+  final bigIntPrivKey = BigInt.parse(HEX.encode(privateKeyBytes), radix: 16);
+  final point = (pc.ECDomainParameters('secp256k1').G * bigIntPrivKey)!;
+  final encoded = point.getEncoded(false); // 65 bytes: 04 || x || y
+
+  // Force exactly 64 bytes — sublist(1) from the 65-byte encoded point
+  // guarantees x and y are each padded to 32 bytes by the encoder
+  final pub64 = encoded.sublist(1, 65); // exactly 64 bytes
+  print('pub64 length: ${pub64.length}');
+  print('pub64: ${HEX.encode(pub64)}');
+
+  final hash = keccak256(Uint8List.fromList(pub64));
+  print('hash: ${HEX.encode(hash)}');
+
+  final iconAddress = 'hx${HEX.encode(hash.sublist(12))}';
+
+  print('iconAddr $iconAddress');
 
   return {
     'address': iconAddress,
     'privateKey': privateKey,
   };
 }
-
-// ─── Factory ──────────────────────────────────────────────────────────────────
 
 List<IconCoin> getIconBlockChains() {
   if (enableTestNet) {
