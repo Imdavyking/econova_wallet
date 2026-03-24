@@ -151,10 +151,10 @@ late WalletType walletImportType;
 late ByteData logoBytes;
 
 // DO NOT USE (public)
-const testMnemonic =
+const testMnemonic1 =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
-// const testMnemonic =
-//     'test test test test test test test test test test test junk'; // do not use it in production
+const testMnemonic =
+    'test test test test test test test test test test test junk'; // do not use it in production
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FlutterDownloader.initialize();
