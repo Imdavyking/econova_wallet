@@ -129,12 +129,12 @@ class TonCoin extends Coin {
   Future<double> getUserBalance({required String address}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
-    var wallet = ton.WalletContractV4R2.create(
+    final wallet = WalletV4.create(
+      chain: TonChain.fromWorkchain(0),
       publicKey: HEX.decode(details.publicKey!) as Uint8List,
+      bounceableAddress: false,
     );
-
-    var openedContract = getClient().open(wallet);
-    var balance = await openedContract.getBalance();
+    final balance = await wallet.getBalance(getRpc());
     return balance / BigInt.from(10).pow(decimals());
   }
 
