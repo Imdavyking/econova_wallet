@@ -149,7 +149,6 @@ class AlgorandCoin extends Coin {
       await pref.put(key, balance);
       return balance;
     } catch (e) {
-      debugPrint("algo eerrror");
       if (e is algo_rand.AlgorandException) {
         debugPrint(e.message);
       } else {
