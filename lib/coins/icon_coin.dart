@@ -90,7 +90,7 @@ class IconCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'iconCoinDetailsV313${walletImportType.name}';
+    final saveKey = 'iconCoinDetailsV423456${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -286,8 +286,7 @@ Uint8List _padTo32(Uint8List bytes) {
 }
 
 // ─── Key derivation ───────────────────────────────────────────────────────────
-// ICON address = "hx" + last 20 bytes of keccak256(uncompressed pubkey)
-// This is identical to Ethereum — just swap "0x" → "hx"
+// ICON address = "hx" + last 20 bytes of SHA3-256(uncompressed pubkey)
 
 class IconDeriveArgs {
   final SeedPhraseRoot seedRoot;
@@ -300,24 +299,14 @@ Future<Map<String, dynamic>> calculateIconKey(IconDeriveArgs args) async {
   final privateKeyBytes = node.privateKey!;
   final privateKey = '0x${HEX.encode(privateKeyBytes)}';
 
-
   final bigIntPrivKey = BigInt.parse(HEX.encode(privateKeyBytes), radix: 16);
   final point = (pc.ECDomainParameters('secp256k1').G * bigIntPrivKey)!;
-  final encoded = point.getEncoded(false); // 65 bytes: 04 || x || y
+  final encoded = point.getEncoded(false); // 65 bytes
+  final pub64 = encoded.sublist(1, 65); // 64 bytes, no 04 prefix
 
-  // Force exactly 64 bytes — sublist(1) from the 65-byte encoded point
-  // guarantees x and y are each padded to 32 bytes by the encoder
-  final pub64 = encoded.sublist(1, 65); // exactly 64 bytes
-  print('pub64 length: ${pub64.length}');
-  print('pub64: ${HEX.encode(pub64)}');
-
-  final hash = keccak256(Uint8List.fromList(pub64));
-  print('hash: ${HEX.encode(hash)}');
-
+  // ICON uses SHA3-256 (NIST), NOT keccak256
+  final hash = _sha3_256(pub64);
   final iconAddress = 'hx${HEX.encode(hash.sublist(12))}';
-
-  print('iconAddr $iconAddress');
-
   return {
     'address': iconAddress,
     'privateKey': privateKey,
