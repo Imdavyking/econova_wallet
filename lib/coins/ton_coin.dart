@@ -75,9 +75,8 @@ class TonCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'tonCoinDetailsV6${walletImportType.name}';
+    final saveKey = 'tonCoinDetailsV7${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
-
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
       if (mnemonicMap.containsKey(mnemonic)) {
