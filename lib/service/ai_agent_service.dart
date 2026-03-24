@@ -10,6 +10,7 @@ import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
+// ignore: depend_on_referenced_packages
 import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
