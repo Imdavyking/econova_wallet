@@ -247,9 +247,13 @@ class EVMHrpCoin extends Coin {
 
   @override
   validateAddress(String address) {
-    Bech32 sel = bech32.decode(address);
-    if (hrp == sel.hrp) return;
-    throw Exception("Invalid address");
+    try {
+      EthereumAddress.fromHex(address);
+    } catch (e) {
+      Bech32 sel = bech32.decode(address);
+      if (hrp == sel.hrp) return;
+      throw Exception("Invalid address");
+    }
   }
 
   @override
