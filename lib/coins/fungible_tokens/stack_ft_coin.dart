@@ -98,7 +98,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
       final privBytes = txDataToUintList(accountData.privateKey!);
       final senderHash160 = hash160(compressedPubKey(privBytes));
 
-      final txHex = await buildSip010TransferHex(
+      final txHex = await buildSip010X402TransferHex(
         option: option,
         privBytes: privBytes,
         senderHash160: senderHash160,
@@ -119,7 +119,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 
   /// Builds and signs a SIP-010 `transfer` contract call.
   /// Returns hex WITHOUT 0x prefix — matches wrapAxiosWithPayment.
-  Future<String> buildSip010TransferHex({
+  Future<String> buildSip010X402TransferHex({
     required X402PaymentOption option,
     required Uint8List privBytes,
     required Uint8List senderHash160,
