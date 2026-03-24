@@ -322,12 +322,12 @@ List<IconCoin> getIconBlockChains() {
         default_: 'ICX',
         image: 'assets/icon.png',
         blockExplorer:
-            'https://tracker.berlin.icon.community/transaction/$blockExplorerPlaceholder',
-        api: 'https://berlin.net.solidwallet.io/api/v3',
+            'https://tracker.lisbon.icon.community/transaction/$blockExplorerPlaceholder',
+        api: 'https://lisbon.net.solidwallet.io/api/v3',
         geckoID: 'icon',
         rampID: '',
         payScheme: 'icon',
-        nid: '0x7',
+        nid: '0x2',
       ),
     ];
   }
