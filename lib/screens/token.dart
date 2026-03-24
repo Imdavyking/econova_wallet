@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -697,22 +696,20 @@ class _TransactionHeader extends StatelessWidget {
                 child: const Icon(Icons.arrow_back_ios_new, size: 15),
               ),
               const Spacer(),
-              ValueListenableBuilder<Box<dynamic>>(
-                  valueListenable: pref.listenable(keys: [hideBalanceKey]),
-                  builder: (context, box, _) {
-                    if (box.get(hideBalanceKey, defaultValue: false)) {
-                      return Container();
+              if (onExport != null)
+                IconButton(
+                  onPressed: () {
+                    if (pref.get(hideBalanceKey, defaultValue: false)) {
+                      return;
                     } else if (onExport != null) {
-                      return IconButton(
-                        onPressed: onExport,
-                        icon: const Icon(Icons.download, size: 20),
-                        tooltip: 'Export',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      );
+                      onExport!();
                     }
-                    return Container();
-                  }),
+                  },
+                  icon: const Icon(Icons.download, size: 20),
+                  tooltip: 'Export',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
         ),
