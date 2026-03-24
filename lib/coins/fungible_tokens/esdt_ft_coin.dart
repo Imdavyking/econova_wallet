@@ -58,10 +58,8 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   }
 
   Future<String> _trnsCoin(_TrxCoinParams config) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await importData(data);
     multiversx.UserSecretKey signer =
-        multiversx.UserSecretKey(HEX.decode(response.privateKey!));
+        multiversx.UserSecretKey(HEX.decode(config.privateKey!));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
 
     await wallet.synchronize(getProxy());
@@ -126,12 +124,11 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
   Future<({String txHash, String? txRaw})?> transferToken(
       String amount, String to,
       {String? memo}) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
     var sendTransaction = await compute(
       _trnsCoin,
-      _TrxCoinParams(
-        to: to,
-        amount: amount,
-      ),
+      _TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
     return (
@@ -244,8 +241,10 @@ List<ESDTCoin> getESDTCoins() {
 class _TrxCoinParams {
   final String amount;
   final String to;
+  final String privateKey;
   const _TrxCoinParams({
     required this.amount,
     required this.to,
+    required this.privateKey,
   });
 }
