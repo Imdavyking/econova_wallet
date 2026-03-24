@@ -123,6 +123,9 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
   }
 
   @override
+  String? tokenAddress() => tokenID;
+
+  @override
   String contractExplorer() {
     return getExplorer().replaceFirst(
       '/transaction/$blockExplorerPlaceholder',
