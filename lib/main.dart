@@ -18,7 +18,7 @@ import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/segwit_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
-// import 'coins/icp_coin.dart';
+import 'package:wallet_app/coins/icp_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
@@ -118,7 +118,7 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...multiversXchains,
     ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
-    //  ...getICPBlockchains(),
+     ...getICPBlockchains(),
     ...getFUSEBlockchains(),
     ...getZilliqaBlockChains(),
     ...getEVMHrpBlockchains(),
