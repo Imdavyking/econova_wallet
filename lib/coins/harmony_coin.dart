@@ -285,7 +285,7 @@ List<HarmonyCoin> getHarmonyBlockChains() {
   if (enableTestNet) {
     blockChains.add(
       HarmonyCoin(
-        name: 'Harmony(Testnet)',
+        name: 'Harmony(Testnet Real)',
         symbol: 'ONE',
         default_: 'ONE',
         blockExplorer:

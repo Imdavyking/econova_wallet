@@ -20,20 +20,20 @@ import '../utils/rpc_urls.dart';
 import 'ethereum_coin.dart';
 
 const iotexDecimals = 18;
-const _hrp = 'io';
 
-class IOTEXCoin extends Coin {
+class EVMHrpCoin extends Coin {
   String blockExplorer;
   String symbol;
   String default_;
   String image;
   String name;
   String rpc;
-
+  String hrp;
   String geckoID;
   String rampID;
   String payScheme;
   int chainID;
+  int coinType;
 
   @override
   bool get supportKeystore => true;
@@ -65,7 +65,7 @@ class IOTEXCoin extends Coin {
     return symbol;
   }
 
-  IOTEXCoin({
+  EVMHrpCoin({
     required this.blockExplorer,
     required this.symbol,
     required this.default_,
@@ -75,11 +75,13 @@ class IOTEXCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.hrp,
     required this.chainID,
+    required this.coinType,
   });
 
-  factory IOTEXCoin.fromJson(Map<String, dynamic> json) {
-    return IOTEXCoin(
+  factory EVMHrpCoin.fromJson(Map<String, dynamic> json) {
+    return EVMHrpCoin(
       blockExplorer: json['blockExplorer'],
       default_: json['default'],
       symbol: json['symbol'],
@@ -90,6 +92,8 @@ class IOTEXCoin extends Coin {
       rampID: json['rampID'],
       payScheme: json['payScheme'],
       chainID: json['chainID'],
+      hrp: json['hrp'],
+      coinType: json['coinType'],
     );
   }
 
@@ -107,13 +111,15 @@ class IOTEXCoin extends Coin {
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
     data['chainID'] = chainID;
+    data['hrp'] = hrp;
+    data['coinType'] = coinType;
 
     return data;
   }
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
-    String saveKey = 'iotexPrivate$rpc${walletImportType.name}';
+    String saveKey = 'iotexPrivate${walletImportType.name}$hrp';
     Map<String, dynamic> privateKeyMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -126,7 +132,7 @@ class IOTEXCoin extends Coin {
     final address = await etherPrivateKeyToAddress(privateKey);
 
     final keys = AccountData(
-      address: _ethAddrToOne(address),
+      address: _ethAddrToHrp(address, hrp),
       hex_address: address,
       privateKey: privateKey,
     );
@@ -140,7 +146,7 @@ class IOTEXCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'iotexCoinDetail${walletImportType.name}';
+    final saveKey = 'iotexCoinDetail${walletImportType.name}$hrp';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -150,7 +156,7 @@ class IOTEXCoin extends Coin {
       }
     }
 
-    final args = IoTexArgs(seedRoot: seedPhraseRoot);
+    final args = EVMHrpArgs(seedRoot: seedPhraseRoot, hrp: hrp);
     final keys = await compute(calculateIoTexKey, args);
 
     mnemonicMap[mnemonic] = keys;
@@ -164,7 +170,7 @@ class IOTEXCoin extends Coin {
   Future<double> getUserBalance({required String address}) async {
     final ethClient = Web3Client(rpc, http.Client());
 
-    final userAddress = EthereumAddress.fromHex(_oneAddrToEth(address));
+    final userAddress = EthereumAddress.fromHex(_hrpAddrToEth(address));
 
     final etherAmount = await ethClient.getBalance(userAddress);
 
@@ -176,7 +182,7 @@ class IOTEXCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'iotexAddressBalance$address$rpc';
+    final key = 'iotexAddressBalance$address$rpc$hrp';
 
     final storedBalance = pref.get(key);
 
@@ -219,7 +225,7 @@ class IOTEXCoin extends Coin {
       credentials,
       Transaction(
         from: credentials.address,
-        to: EthereumAddress.fromHex(_oneAddrToEth(to)),
+        to: EthereumAddress.fromHex(_hrpAddrToEth(to)),
         value: EtherAmount.inWei(
           wei,
         ),
@@ -238,7 +244,7 @@ class IOTEXCoin extends Coin {
   @override
   validateAddress(String address) {
     Bech32 sel = bech32.decode(address);
-    if (_hrp == sel.hrp) return;
+    if (hrp == sel.hrp) return;
     throw Exception("Invalid address");
   }
 
@@ -254,8 +260,8 @@ class IOTEXCoin extends Coin {
     final transactionFee = await getEtherTransactionFee(
       rpc,
       null,
-      EthereumAddress.fromHex(_oneAddrToEth(response.address)),
-      EthereumAddress.fromHex(_oneAddrToEth(to)),
+      EthereumAddress.fromHex(_hrpAddrToEth(response.address)),
+      EthereumAddress.fromHex(_hrpAddrToEth(to)),
     );
 
     return transactionFee / pow(10, decimals());
@@ -279,14 +285,15 @@ class IOTEXCoin extends Coin {
   String getRampID() => rampID;
 }
 
-List<IOTEXCoin> getIOTEXBlockChains() {
-  List<IOTEXCoin> blockChains = [];
+List<EVMHrpCoin> getEVMHrpBlockchains() {
+  List<EVMHrpCoin> blockChains = [];
   if (enableTestNet) {
-    blockChains.add(
-      IOTEXCoin(
+    blockChains.addAll([
+      EVMHrpCoin(
         name: 'IoTeX(Testnet)',
         symbol: 'IOTX',
         default_: 'IOTX',
+        hrp: 'io',
         blockExplorer:
             'https://testnet.iotexscan.io/tx/$blockExplorerPlaceholder',
         image: 'assets/iotex.png',
@@ -295,14 +302,31 @@ List<IOTEXCoin> getIOTEXBlockChains() {
         rampID: "",
         payScheme: 'iotex',
         chainID: 4690,
+        coinType: 304,
       ),
-    );
+      EVMHrpCoin(
+        name: 'Harmony(Testnet)',
+        symbol: 'ONE',
+        default_: 'ONE',
+        hrp: 'one',
+        blockExplorer:
+            'https://explorer.testnet.harmony.one/tx/$blockExplorerPlaceholder',
+        image: 'assets/harmony.png',
+        rpc: 'https://api.s0.b.hmny.io/',
+        geckoID: 'harmony',
+        rampID: "",
+        payScheme: 'harmony',
+        chainID: 1666700000,
+        coinType: 1023,
+      ),
+    ]);
   } else {
     blockChains.addAll([
-      IOTEXCoin(
+      EVMHrpCoin(
         name: 'IoTeX',
         symbol: 'IOTX',
         default_: 'IOTX',
+        hrp: 'io',
         blockExplorer: 'https://iotexscan.io/tx/$blockExplorerPlaceholder',
         image: 'assets/iotex.png',
         rpc: 'https://babel-api.mainnet.iotex.io',
@@ -310,21 +334,39 @@ List<IOTEXCoin> getIOTEXBlockChains() {
         rampID: "",
         payScheme: 'iotex',
         chainID: 4689,
+        coinType: 304,
+      ),
+      EVMHrpCoin(
+        name: 'Harmony',
+        symbol: 'ONE',
+        default_: 'ONE',
+        hrp: 'one',
+        blockExplorer:
+            'https://explorer.harmony.one/tx/$blockExplorerPlaceholder',
+        image: 'assets/harmony.png',
+        rpc: 'https://api.s0.t.hmny.io',
+        geckoID: 'harmony',
+        rampID: "",
+        payScheme: 'harmony',
+        chainID: 1666600000,
+        coinType: 1023,
       ),
     ]);
   }
   return blockChains;
 }
 
-class IoTexArgs {
+class EVMHrpArgs {
   final SeedPhraseRoot seedRoot;
+  final String hrp;
 
-  const IoTexArgs({
+  const EVMHrpArgs({
     required this.seedRoot,
+    required this.hrp,
   });
 }
 
-Future<Map> calculateIoTexKey(IoTexArgs config) async {
+Future<Map> calculateIoTexKey(EVMHrpArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   const path = "m/44'/304'/0'/0/0";
   final node = seedRoot_.root.derivePath(path);
@@ -333,18 +375,18 @@ Future<Map> calculateIoTexKey(IoTexArgs config) async {
   final address = await etherPrivateKeyToAddress(privatekeyStr);
 
   return {
-    'address': _ethAddrToOne(address),
+    'address': _ethAddrToHrp(address, config.hrp),
     'privateKey': privatekeyStr,
     'hex_address': address,
   };
 }
 
-String _ethAddrToOne(String address) {
+String _ethAddrToHrp(String address, String hrp) {
   final addrBz = _convertBits(HEX.decode(strip0x(address)) as Uint8List, 8, 5);
-  return bech32.encode(Bech32(_hrp, addrBz));
+  return bech32.encode(Bech32(hrp, addrBz));
 }
 
-String _oneAddrToEth(String address) {
+String _hrpAddrToEth(String address) {
   final bits = bech32.decode(address);
 
   final buf = _convertBits(Uint8List.fromList(bits.data), 5, 8, pad: false);
