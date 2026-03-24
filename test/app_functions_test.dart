@@ -858,7 +858,6 @@ void main() async {
           );
           break;
         case 'ICP':
-          print('helllo');
           expect(
             cryptoKeys.address,
             'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
