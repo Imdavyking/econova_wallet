@@ -699,6 +699,12 @@ void main() async {
             "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
           );
           break;
+        case "ICX":
+          expect(
+            cryptoKeys.address,
+            "hx136a013895887b56b99d0b1ed27cd1922906646c",
+          );
+          break;
         case "INJ":
           expect(
             cryptoKeys.address,
@@ -885,6 +891,12 @@ void main() async {
           expect(
             cryptoKeys.address,
             'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
+          );
+          break;
+        case "ICX":
+          expect(
+            cryptoKeys.address,
+            "hx1621355ce9e82899c5f5e1cfee3b99426f139e35",
           );
           break;
         case 'BTC':
