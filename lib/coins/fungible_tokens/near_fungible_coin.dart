@@ -17,25 +17,17 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   int mintDecimals;
 
   NearFungibleCoin({
-    required String api,
-    required String blockExplorer,
-    required String symbol,
-    required String default_,
-    required String image,
-    required String name,
-    required String suffix,
-    required String geckoID,
+    required super.api,
+    required super.blockExplorer,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.name,
+    required super.suffix,
+    required super.geckoID,
     required this.mintDecimals,
     required this.contractID,
   }) : super(
-          api: api,
-          geckoID: geckoID,
-          blockExplorer: blockExplorer,
-          symbol: symbol,
-          default_: default_,
-          image: image,
-          name: name,
-          suffix: suffix,
           rampID: '',
           payScheme: '',
         );
