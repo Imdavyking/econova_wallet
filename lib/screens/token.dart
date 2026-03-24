@@ -3,10 +3,12 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/providers/token_provider.dart';
 import 'package:wallet_app/screens/need_deploy_widget.dart';
 import 'package:wallet_app/screens/receive_token.dart';
@@ -695,14 +697,22 @@ class _TransactionHeader extends StatelessWidget {
                 child: const Icon(Icons.arrow_back_ios_new, size: 15),
               ),
               const Spacer(),
-              if (onExport != null)
-                IconButton(
-                  onPressed: onExport,
-                  icon: const Icon(Icons.download, size: 20),
-                  tooltip: 'Export',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+              ValueListenableBuilder<Box<dynamic>>(
+                  valueListenable: pref.listenable(keys: [hideBalanceKey]),
+                  builder: (context, box, _) {
+                    if (box.get(hideBalanceKey, defaultValue: false)) {
+                      return Container();
+                    } else if (onExport != null) {
+                      return IconButton(
+                        onPressed: onExport,
+                        icon: const Icon(Icons.download, size: 20),
+                        tooltip: 'Export',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      );
+                    }
+                    return Container();
+                  }),
             ],
           ),
         ),
