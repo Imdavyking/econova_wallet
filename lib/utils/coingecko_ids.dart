@@ -1,5 +1,6 @@
 const coinGeckoIDs = [
   'starknet',
+  'icon',
   'blockstack',
   'bonk',
   'weth',
