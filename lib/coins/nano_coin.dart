@@ -1,7 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:nanodart/nanodart.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
@@ -138,11 +137,13 @@ class NanoCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
+
     final key = 'nanoBalance$address$api';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
       final bal = await getUserBalance(address: address);
+      await receivePending();
       await pref.put(key, bal);
       return bal;
     } catch (_) {
@@ -160,91 +161,95 @@ class NanoCoin extends Coin {
   // Call this on wallet open / refresh to credit any pending funds.
 
   Future<void> receivePending() async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-    final details = await importData(data);
-    final address = details.address;
-    final privateKeyHex = details.privateKey!.replaceFirst('0x', '');
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final details = await importData(data);
+      final address = details.address;
+      final privateKeyHex = details.privateKey!.replaceFirst('0x', '');
 
-    // 1. Find all pending (receivable) block hashes
-    final receivableRes = await http.post(
-      Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'action': 'receivable',
-        'account': address,
-        'count': '32',
-        'source': 'true', // include amount per block
-      }),
-    );
-    final receivableData = jsonDecode(receivableRes.body);
-    final blocks = receivableData['blocks'];
-    if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
-
-    // 2. Pocket each block in order
-    for (final entry in (blocks as Map<String, dynamic>).entries) {
-      final pendingHash = entry.key;
-      final pendingAmount = BigInt.parse(entry.value['amount'] as String);
-
-      // Get current account state (may still be unopened)
-      final infoRes = await http.post(
+      // 1. Find all pending (receivable) block hashes
+      final receivableRes = await http.post(
         Uri.parse(api),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'action': 'account_info',
+          'action': 'receivable',
           'account': address,
-          'representative': true,
+          'count': '32',
+          'source': 'true', // include amount per block
         }),
       );
-      final infoData = jsonDecode(infoRes.body);
-      final isNew = infoData['error'] != null;
+      final receivableData = jsonDecode(receivableRes.body);
+      final blocks = receivableData['blocks'];
+      if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
 
-      final frontier = isNew
-          ? '0000000000000000000000000000000000000000000000000000000000000000'
-          : infoData['frontier'] as String;
-      final currentBalance =
-          isNew ? BigInt.zero : BigInt.parse(infoData['balance'] as String);
-      final representative =
-          isNew ? _nanoRep : infoData['representative'] as String;
+      // 2. Pocket each block in order
+      for (final entry in (blocks as Map<String, dynamic>).entries) {
+        final pendingHash = entry.key;
+        final pendingAmount = BigInt.parse(entry.value['amount'] as String);
 
-      final newBalance = currentBalance + pendingAmount;
+        // Get current account state (may still be unopened)
+        final infoRes = await http.post(
+          Uri.parse(api),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'account_info',
+            'account': address,
+            'representative': true,
+          }),
+        );
+        final infoData = jsonDecode(infoRes.body);
+        final isNew = infoData['error'] != null;
 
-      // block_create — node handles PoW, we sign locally
-      final createRes = await http.post(
-        Uri.parse(api),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'action': 'block_create',
-          'type': 'state',
-          'account': address,
-          'previous': frontier,
-          'representative': representative,
-          'balance': newBalance.toString(),
-          'source': pendingHash, // link field = hash of the send block
-        }),
-      );
-      final createData = jsonDecode(createRes.body);
-      if (createData['error'] != null) continue; // skip, try next
+        final frontier = isNew
+            ? '0000000000000000000000000000000000000000000000000000000000000000'
+            : infoData['frontier'] as String;
+        final currentBalance =
+            isNew ? BigInt.zero : BigInt.parse(infoData['balance'] as String);
+        final representative =
+            isNew ? _nanoRep : infoData['representative'] as String;
 
-      final blockHash = createData['hash'] as String;
-      final block = createData['block'] as Map<String, dynamic>;
+        final newBalance = currentBalance + pendingAmount;
 
-      // Sign locally — private key never leaves device
-      block['signature'] = NanoSignatures.signBlock(
-        blockHash,
-        privateKeyHex.toUpperCase(),
-      );
+        // block_create — node handles PoW, we sign locally
+        final createRes = await http.post(
+          Uri.parse(api),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'block_create',
+            'type': 'state',
+            'account': address,
+            'previous': frontier,
+            'representative': representative,
+            'balance': newBalance.toString(),
+            'source': pendingHash, // link field = hash of the send block
+          }),
+        );
+        final createData = jsonDecode(createRes.body);
+        if (createData['error'] != null) continue; // skip, try next
 
-      // Broadcast
-      await http.post(
-        Uri.parse(api),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'action': 'process',
-          'json_block': 'true',
-          'subtype': 'receive',
-          'block': block,
-        }),
-      );
+        final blockHash = createData['hash'] as String;
+        final block = createData['block'] as Map<String, dynamic>;
+
+        // Sign locally — private key never leaves device
+        block['signature'] = NanoSignatures.signBlock(
+          blockHash,
+          privateKeyHex.toUpperCase(),
+        );
+
+        // Broadcast
+        await http.post(
+          Uri.parse(api),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'process',
+            'json_block': 'true',
+            'subtype': 'receive',
+            'block': block,
+          }),
+        );
+      }
+    } catch (e) {
+      debugPrint(e.toString());
     }
   }
 
