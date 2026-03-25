@@ -908,7 +908,7 @@ void main() async {
         case "XNO":
           expect(
             cryptoKeys.address,
-            "hx1621355ce9e82899c5f5e1cfee3b99426f139e35",
+            "nano_33irdhma4h59muwm9zeqhqg6km9j684agbhzyr3o5ggzqgmknk4z1kqm6j7q",
           );
           break;
         case 'BTC':
