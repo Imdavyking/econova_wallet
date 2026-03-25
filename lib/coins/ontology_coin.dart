@@ -291,6 +291,7 @@ class OntologyCoin extends Coin {
     if (kDebugMode) print('ONT rawTx: $rawTxHex');
 
     final broadcastResult = await _rpc('sendrawtransaction', [rawTxHex]);
+    debugPrint(broadcastResult.toString());
     final hash = broadcastResult['hash'] as String? ?? _calcTxHash(rawTx);
 
     return (txHash: hash, txRaw: rawTxHex);
