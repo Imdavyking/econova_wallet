@@ -7,12 +7,14 @@ import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import 'package:wallet_app/fetchers/nano_trx_fetcher.dart';
 
 // Nano raw decimals: 1 NANO = 10^30 raw
 const nanoDecimals = 30;
@@ -149,6 +151,14 @@ class NanoCoin extends Coin {
       return stored ?? 0.0;
     }
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => NanoTransactionFetcher(
+        api: api,
+        symbol: symbol,
+        decimals: nanoDecimals,
+        blockExplorer: blockExplorer,
+      );
 
   // ── Fee ───────────────────────────────────────────────────────────────────
 
