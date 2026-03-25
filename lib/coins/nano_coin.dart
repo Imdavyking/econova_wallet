@@ -92,7 +92,7 @@ class NanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nanoCoinDetailsV1${walletImportType.name}';
+    final saveKey = 'nanoCoinDetailsV2${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -137,13 +137,12 @@ class NanoCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    await receivePending();
+    receivePending();
     final key = 'nanoBalance$address$api';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
       final bal = await getUserBalance(address: address);
-
       await pref.put(key, bal);
       return bal;
     } catch (_) {
@@ -157,15 +156,14 @@ class NanoCoin extends Coin {
   Future<double> getTransactionFee(String amount, String to) async => 0.0;
 
   // ── Receive pending ───────────────────────────────────────────────────────
-  // Nano requires explicitly pocketing inbound transactions.
-  // Call this on wallet open / refresh to credit any pending funds.
-
   Future<void> receivePending() async {
     try {
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final details = await importData(data);
       final address = details.address;
       final privateKeyHex = details.privateKey!.replaceFirst('0x', '');
+      final publicKeyHex =
+          NanoKeys.createPublicKey(privateKeyHex.toUpperCase());
 
       // 1. Find all pending (receivable) block hashes
       final receivableRes = await http.post(
@@ -175,20 +173,18 @@ class NanoCoin extends Coin {
           'action': 'receivable',
           'account': address,
           'count': '32',
-          'source': 'true', // include amount per block
+          'source': 'true',
         }),
       );
       final receivableData = jsonDecode(receivableRes.body);
-      print(receivableData);
       final blocks = receivableData['blocks'];
       if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
 
-      // 2. Pocket each block in order
       for (final entry in (blocks as Map<String, dynamic>).entries) {
         final pendingHash = entry.key;
         final pendingAmount = BigInt.parse(entry.value['amount'] as String);
 
-        // Get current account state (may still be unopened)
+        // 2. Get current account state
         final infoRes = await http.post(
           Uri.parse(api),
           headers: {'Content-Type': 'application/json'},
@@ -211,46 +207,65 @@ class NanoCoin extends Coin {
 
         final newBalance = currentBalance + pendingAmount;
 
-        // block_create — node handles PoW, we sign locally
-        final createRes = await http.post(
-          Uri.parse(api),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'action': 'block_create',
-            'type': 'state',
-            'account': address,
-            'previous': frontier,
-            'representative': representative,
-            'balance': newBalance.toString(),
-            'source': pendingHash, // link field = hash of the send block
-          }),
+        // 3. Build + hash the state block locally (no block_create RPC needed)
+        final blockHash = NanoBlocks.computeStateHash(
+          NanoAccountType.NANO,
+          address,
+          frontier,
+          representative,
+          newBalance,
+          pendingHash, // link = hash of the send block for a receive
         );
-        final createData = jsonDecode(createRes.body);
-        if (createData['error'] != null) continue; // skip, try next
 
-        final blockHash = createData['hash'] as String;
-        final block = createData['block'] as Map<String, dynamic>;
-
-        // Sign locally — private key never leaves device
-        block['signature'] = NanoSignatures.signBlock(
+        // 4. Sign locally
+        final signature = NanoSignatures.signBlock(
           blockHash,
           privateKeyHex.toUpperCase(),
         );
 
-        // Broadcast
-        await http.post(
+        // 5. Generate PoW on the node (work_generate is supported)
+        final workRes = await http.post(
+          Uri.parse(api),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'work_generate',
+            'hash': isNew ? publicKeyHex : frontier,
+          }),
+        );
+        final workData = jsonDecode(workRes.body);
+        if (workData['error'] != null) {
+          debugPrint('work_generate failed: ${workData['error']}');
+          continue;
+        }
+        final work = workData['work'] as String;
+
+        // 6. Broadcast
+        final processRes = await http.post(
           Uri.parse(api),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'action': 'process',
             'json_block': 'true',
             'subtype': 'receive',
-            'block': block,
+            'block': {
+              'type': 'state',
+              'account': address,
+              'previous': frontier,
+              'representative': representative,
+              'balance': newBalance.toString(),
+              'link': pendingHash,
+              'signature': signature,
+              'work': work,
+            },
           }),
         );
+        final processData = jsonDecode(processRes.body);
+        if (processData['error'] != null) {
+          debugPrint('process failed: ${processData['error']}');
+        }
       }
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('receivePending error: $e');
     }
   }
 
@@ -300,39 +315,38 @@ class NanoCoin extends Coin {
     final newBalance = currentBalance - sendRaw;
     if (newBalance < BigInt.zero) throw Exception('Insufficient balance');
 
-    // 2. block_create — node does PoW, phone does nothing heavy.
-    //    No 'key' field — private key never leaves the device.
-    //    The node returns an unsigned block + hash; we sign locally below.
-    final createRes = await http.post(
-      Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'action': 'block_create',
-        'type': 'state',
-        'account': address,
-        'previous': frontier,
-        'representative': representative,
-        'balance': newBalance.toString(),
-        'destination': to,
-      }),
+    // 2. Build + hash the state block locally
+    final blockHash = NanoBlocks.computeStateHash(
+      NanoAccountType.NANO,
+      address,
+      frontier,
+      representative,
+      newBalance,
+      to, // link = destination address for a send
     );
 
-    final createData = jsonDecode(createRes.body);
-    if (createData['error'] != null) {
-      throw Exception('block_create failed: ${createData['error']}');
-    }
-
-    final blockHash = createData['hash'] as String;
-    final block = createData['block'] as Map<String, dynamic>;
-
-    // 3. Sign locally with ed25519+Blake2b via pure-Dart nanodart (no FFI)
-    final sig = NanoSignatures.signBlock(
+    // 3. Sign locally — private key never leaves device
+    final signature = NanoSignatures.signBlock(
       blockHash,
       privateKeyHex.toUpperCase(),
     );
-    block['signature'] = sig;
 
-    // 4. Broadcast
+    // 4. Generate PoW on the node
+    final workRes = await http.post(
+      Uri.parse(api),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'work_generate',
+        'hash': frontier,
+      }),
+    );
+    final workData = jsonDecode(workRes.body);
+    if (workData['error'] != null) {
+      throw Exception('work_generate failed: ${workData['error']}');
+    }
+    final work = workData['work'] as String;
+
+    // 5. Broadcast
     final processRes = await http.post(
       Uri.parse(api),
       headers: {'Content-Type': 'application/json'},
@@ -340,7 +354,16 @@ class NanoCoin extends Coin {
         'action': 'process',
         'json_block': 'true',
         'subtype': 'send',
-        'block': block,
+        'block': {
+          'type': 'state',
+          'account': address,
+          'previous': frontier,
+          'representative': representative,
+          'balance': newBalance.toString(),
+          'link': to,
+          'signature': signature,
+          'work': work,
+        },
       }),
     );
 
@@ -429,7 +452,7 @@ List<NanoCoin> getNanoBlockChains() {
       default_: 'XNO',
       image: 'assets/nano.png',
       blockExplorer: 'https://nanolooker.com/block/$blockExplorerPlaceholder',
-      api: 'https://rpc.nano.to', // free public node, no API key
+      api: 'https://rpc.nano.to', // nano.to public node
       geckoID: 'nano',
       rampID: '',
       payScheme: 'nano',
