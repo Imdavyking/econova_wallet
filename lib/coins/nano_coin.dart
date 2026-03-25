@@ -12,6 +12,7 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 
 // Nano raw decimals: 1 NANO = 10^30 raw
 const nanoDecimals = 30;
@@ -91,7 +92,7 @@ class NanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nanoCoinDetails${walletImportType.name}';
+    final saveKey = 'nanoCoinDetailsV${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -284,15 +285,14 @@ class NanoDeriveArgs {
 Future<Map<String, dynamic>> calculateNanoKey(NanoDeriveArgs args) async {
   // Use first 32 bytes of BIP39 seed as Nano seed
   // This matches how most wallets (Natrium, Nault) handle BIP39→Nano
-  final nanoSeed = HEX.encode(args.seedRoot.seed.sublist(0, 32)).toUpperCase();
+  final keyData = await ED25519_HD_KEY.derivePath(
+    "m/44'/165'/0'",
+    args.seedRoot.seed, // full 64-byte BIP39 seed
+  );
+  final privateKeyHex = HEX.encode(keyData.key).toUpperCase();
 
-  // Derive index 0 private key
-  String privateKeyHex = NanoKeys.seedToPrivate(nanoSeed, 0);
-
-  // Derive public key
+  // Public key + address via nanodart as before
   final publicKeyHex = NanoKeys.createPublicKey(privateKeyHex);
-
-  // Derive address
   final address =
       NanoAccounts.createAccount(NanoAccountType.NANO, publicKeyHex);
 
