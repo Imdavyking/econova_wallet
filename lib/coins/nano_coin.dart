@@ -118,7 +118,10 @@ class NanoCoin extends Coin {
   Future<double> getUserBalance({required String address}) async {
     final response = await http.post(
       Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $nanoApiKey',
+      },
       body: jsonEncode({
         'action': 'account_balance',
         'account': address,
@@ -185,7 +188,10 @@ class NanoCoin extends Coin {
       // 1. Find all pending (receivable) block hashes
       final receivableRes = await http.post(
         Uri.parse(api),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $nanoApiKey',
+        },
         body: jsonEncode({
           'action': 'receivable',
           'account': address,
@@ -207,7 +213,10 @@ class NanoCoin extends Coin {
         // 2. Get current account state
         final infoRes = await http.post(
           Uri.parse(api),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $nanoApiKey',
+          },
           body: jsonEncode({
             'action': 'account_info',
             'account': address,
@@ -246,7 +255,10 @@ class NanoCoin extends Coin {
         // 5. Generate PoW on the node (work_generate is supported)
         final workRes = await http.post(
           Uri.parse(api),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $nanoApiKey',
+          },
           body: jsonEncode({
             'action': 'work_generate',
             'hash': isNew ? publicKeyHex : frontier,
@@ -262,7 +274,10 @@ class NanoCoin extends Coin {
         // 6. Broadcast
         final processRes = await http.post(
           Uri.parse(api),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $nanoApiKey',
+          },
           body: jsonEncode({
             'action': 'process',
             'json_block': 'true',
@@ -314,7 +329,10 @@ class NanoCoin extends Coin {
     // 1. Get account info
     final infoRes = await http.post(
       Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $nanoApiKey',
+      },
       body: jsonEncode({
         'action': 'account_info',
         'account': address,
@@ -358,22 +376,29 @@ class NanoCoin extends Coin {
     // 4. Generate PoW on the node
     final workRes = await http.post(
       Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $nanoApiKey',
+      },
       body: jsonEncode({
         'action': 'work_generate',
         'hash': frontier,
       }),
     );
     final workData = jsonDecode(workRes.body);
+
     if (workData['error'] != null) {
-      throw Exception('work_generate failed: ${workData['error']}');
+      throw Exception('work_generate failed: ${workData['message']}');
     }
     final work = workData['work'] as String;
 
     // 5. Broadcast
     final processRes = await http.post(
       Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $nanoApiKey',
+      },
       body: jsonEncode({
         'action': 'process',
         'json_block': 'true',

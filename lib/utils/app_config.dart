@@ -146,6 +146,7 @@ const newEVMChainKey = '5500a-8077-420a-a1cf-9aa7';
 const blastApiProjectId = '2f6ccf07-7b89-4bf4-be14-7a26f2eae72d';
 const appUnlockTime = 'applockksksietimeal382';
 const utxoApiKey = '07ddba0bd184344993fbc2a4a3d7059213e13469';
+const nanoApiKey = 'RPC-KEY-2ED61F5D83FF4BF5964B58A6E90F2B';
 // template tags
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
