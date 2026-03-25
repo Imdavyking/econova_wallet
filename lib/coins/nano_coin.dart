@@ -440,7 +440,7 @@ List<NanoCoin> getNanoBlockChains() {
         default_: 'XNO',
         image: 'assets/nano.png',
         blockExplorer:
-            'https://nanoticker.info/blocks/$blockExplorerPlaceholder',
+            'https://nanoticker.info/nano/blocks/$blockExplorerPlaceholder',
         api: 'https://beta.rpc.nano.to', // Nano Beta network public node
         geckoID: '', // no price feed for testnet
         rampID: '',
@@ -454,7 +454,7 @@ List<NanoCoin> getNanoBlockChains() {
       symbol: 'XNO',
       default_: 'XNO',
       image: 'assets/nano.png',
-      blockExplorer: 'https://nanexplorer.com/blocks/$blockExplorerPlaceholder',
+      blockExplorer: 'https://nanexplorer.com/nano/blocks/$blockExplorerPlaceholder',
       api: 'https://rpc.nano.to', // nano.to public node
       geckoID: 'nano',
       rampID: '',
