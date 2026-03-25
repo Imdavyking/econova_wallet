@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/ecc/curves/prime256v1.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -253,7 +254,7 @@ class OntologyCoin extends Coin {
     final privBytes = Uint8List.fromList(HEX.decode(keyData.privateKey!));
     final pubKeyBytes = Uint8List.fromList(HEX.decode(keyData.publicKey!));
 
-    final ontAmount = int.parse(amount.split('.').first);
+    final ontAmount = amount.toBigIntDec(decimals()).toInt();
     final script = _buildOntTransferScript(fromAddr, to, ontAmount);
     final blockCount = await _rpcRaw('getblockcount', []) as int;
     final nonce = blockCount & 0xffffffff;
