@@ -246,7 +246,6 @@ class OntologyCoin extends Coin {
 
     final ontAmount = int.parse(amount.split('.').first);
     final script = _buildOntTransferScript(fromAddr, to, ontAmount);
-
     final blockCount = await _rpcRaw('getblockcount', []) as int;
     final nonce = blockCount & 0xffffffff;
 

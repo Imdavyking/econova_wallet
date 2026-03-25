@@ -207,11 +207,16 @@ Future<Map<String, dynamic>> neoOntRpc(
     body: jsonEncode(
         {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1}),
   );
+
   if (res.statusCode > 399) {
     throw Exception('RPC HTTP error ${res.statusCode} ($rpcUrl)');
   }
+
   final data = jsonDecode(res.body) as Map<String, dynamic>;
-  if (data['error'] != null) throw Exception('RPC error: ${data['error']}');
+
+  if (data['error'] != null && data['error'] != 0) {
+    throw Exception('RPC error: ${data['error']} ${data['desc']}');
+  }
   return data['result'] as Map<String, dynamic>;
 }
 
@@ -228,11 +233,13 @@ Future<dynamic> neoOntRpcRaw(
     body: jsonEncode(
         {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1}),
   );
-  if (res.statusCode ~/ 100 != 2) {
+  if (res.statusCode > 399) {
     throw Exception('RPC HTTP error ${res.statusCode} ($rpcUrl)');
   }
   final data = jsonDecode(res.body) as Map<String, dynamic>;
-  if (data['error'] != null) throw Exception('RPC error: ${data['error']}');
+  if (data['error'] != null && data['error'] != 0) {
+    throw Exception('RPC error: ${data['error']}');
+  }
   return data['result'];
 }
 
@@ -240,7 +247,9 @@ Future<dynamic> neoOntRpcRaw(
 
 bool neoOntBytesEqual(Uint8List a, Uint8List b) {
   if (a.length != b.length) return false;
-  for (int i = 0; i < a.length; i++) if (a[i] != b[i]) return false;
+  for (int i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
   return true;
 }
 
