@@ -80,7 +80,7 @@ class _SendFormState extends State<SendForm> {
       }
       _coin.validateAddress(recipient);
     } catch (e) {
-      if (true) print(e); // kDebugMode
+      if (true) debugPrint(e.toString()); // kDebugMode
       setState(() => _isLoading = false);
       if (context.mounted) _showError(l.invalidAddress);
       return;
@@ -91,12 +91,12 @@ class _SendFormState extends State<SendForm> {
       return;
     }
 
-    if (!context.mounted) return;
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     if (WalletService.isPharseKey()) await reInstianteSeedRoot();
     setState(() => _isLoading = false);
 
-    if (!context.mounted) return;
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
