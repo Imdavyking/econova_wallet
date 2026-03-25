@@ -7,6 +7,7 @@ import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
 import 'package:wallet_app/coins/legacy_utxo_coin.dart';
+import 'package:wallet_app/coins/nano_coin.dart';
 import 'package:wallet_app/coins/tezos_coin.dart';
 import 'package:wallet_app/coins/algorand_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
@@ -107,6 +108,7 @@ List<StacksCoin> stackCoins = [
 
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
+    ...getNanoBlockChains(),
     ...getESDTCoins(),
     ...getIconBlockChains(),
     ...getPolkadotFungibleCoins(),
@@ -170,7 +172,7 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();

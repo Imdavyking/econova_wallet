@@ -1,7 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:nanodart/nanodart.dart';
 import 'package:hex/hex.dart';
@@ -288,7 +287,7 @@ Future<Map<String, dynamic>> calculateNanoKey(NanoDeriveArgs args) async {
   final nanoSeed = HEX.encode(args.seedRoot.seed.sublist(0, 32)).toUpperCase();
 
   // Derive index 0 private key
-  final privateKeyHex = NanoKeys.deriveSeedKey(nanoSeed, 0);
+  String privateKeyHex = NanoKeys.seedToPrivate(nanoSeed, 0);
 
   // Derive public key
   final publicKeyHex = NanoKeys.createPublicKey(privateKeyHex);
@@ -306,6 +305,23 @@ Future<Map<String, dynamic>> calculateNanoKey(NanoDeriveArgs args) async {
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 List<NanoCoin> getNanoBlockChains() {
+  if (enableTestNet) {
+    return [
+      NanoCoin(
+        name: 'Nano (Testnet)',
+        symbol: 'XNO',
+        default_: 'XNO',
+        image: 'assets/nano.png',
+        blockExplorer:
+            'https://nanoticker.info/block/$blockExplorerPlaceholder',
+        api:
+            'https://test-proxy.nanos.cc/proxy', // Nano Beta network public node
+        geckoID: '', // no price feed for testnet
+        rampID: '',
+        payScheme: 'nano',
+      )
+    ];
+  }
   return [
     NanoCoin(
       name: 'Nano',
@@ -315,17 +331,6 @@ List<NanoCoin> getNanoBlockChains() {
       blockExplorer: 'https://nanolooker.com/block/$blockExplorerPlaceholder',
       api: 'https://proxy.nanos.cc/proxy', // free public node, no API key
       geckoID: 'nano',
-      rampID: '',
-      payScheme: 'nano',
-    ),
-    NanoCoin(
-      name: 'Nano (Testnet)',
-      symbol: 'XNO',
-      default_: 'XNO',
-      image: 'assets/nano.png',
-      blockExplorer: 'https://nanoticker.info/block/$blockExplorerPlaceholder',
-      api: 'https://test-proxy.nanos.cc/proxy', // Nano Beta network public node
-      geckoID: '', // no price feed for testnet
       rampID: '',
       payScheme: 'nano',
     ),
