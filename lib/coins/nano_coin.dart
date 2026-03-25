@@ -454,7 +454,7 @@ List<NanoCoin> getNanoBlockChains() {
       symbol: 'XNO',
       default_: 'XNO',
       image: 'assets/nano.png',
-      blockExplorer: 'https://nanolooker.com/block/$blockExplorerPlaceholder',
+      blockExplorer: 'https://nanexplorer.com/block/$blockExplorerPlaceholder',
       api: 'https://rpc.nano.to', // nano.to public node
       geckoID: 'nano',
       rampID: '',
