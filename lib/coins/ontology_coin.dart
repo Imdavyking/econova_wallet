@@ -348,7 +348,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         blockExplorer:
             'https://explorer.ont.io/testnet/transaction/$blockExplorerPlaceholder',
         image: 'assets/ontology.png',
-        rpcUrl: 'https://polaris1.ont.io:20336',
+        rpcUrl: 'http://polaris1.ont.io:20336',
         geckoID: 'ontology',
         rampID: '',
         payScheme: 'ontology',
@@ -356,6 +356,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       ),
     ];
   }
+
   return [
     OntologyCoin(
       name: 'Ontology',
