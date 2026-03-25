@@ -178,7 +178,10 @@ class NanoCoin extends Coin {
       );
       final receivableData = jsonDecode(receivableRes.body);
       final blocks = receivableData['blocks'];
-      if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
+      if (blocks == null ||
+          blocks is String ||
+          blocks is List ||
+          (blocks as Map).isEmpty) return;
 
       for (final entry in (blocks as Map<String, dynamic>).entries) {
         final pendingHash = entry.key;
