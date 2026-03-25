@@ -18,6 +18,11 @@ class NanoTransactionFetcher implements TransactionFetcher {
     required this.blockExplorer,
   });
 
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $nanoApiKey',
+      };
+
   @override
   Future<List<WalletTransaction>> fetch({
     required String address,
@@ -25,7 +30,7 @@ class NanoTransactionFetcher implements TransactionFetcher {
   }) async {
     final res = await http.post(
       Uri.parse(api),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode({
         'action': 'account_history',
         'account': address,
