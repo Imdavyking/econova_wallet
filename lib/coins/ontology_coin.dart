@@ -240,6 +240,7 @@ class OntologyCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.01;
+
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
