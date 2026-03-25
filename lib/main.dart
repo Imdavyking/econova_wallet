@@ -85,7 +85,7 @@ List<SolanaCoin> solanaChains = [
   ...getSolanaBlockChains(),
 ];
 List<MultiversxCoin> multiversXchains = [
-  ...getEGLBBlockchains(),
+  ...getEGLDBlockchains(),
 ];
 
 List<TronCoin> tronChains = [

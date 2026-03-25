@@ -322,7 +322,7 @@ class MultiversxCoin extends Coin {
   String getRampID() => rampID;
 }
 
-List<MultiversxCoin> getEGLBBlockchains() {
+List<MultiversxCoin> getEGLDBlockchains() {
   List<MultiversxCoin> blockChains = [];
   if (enableTestNet) {
     blockChains.add(

@@ -27,7 +27,7 @@ class MultiversxHandler extends BaseWebViewHandler {
 
   Future<void> _onMessage(List<dynamic> callback) async {
     final response = json.decode(callback[0] as String) as Map;
-    final coin = getEGLBBlockchains().first;
+    final coin = getEGLDBlockchains().first;
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final multiversxRes = await coin.importData(data);
 
