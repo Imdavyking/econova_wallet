@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/ecc/curves/prime256v1.dart';
@@ -32,17 +33,17 @@ class OntDeriveArgs {
 }
 
 Map<String, dynamic> calculateOntologyKey(OntDeriveArgs args) {
-  final node = args.seedRoot.root.derivePath(_ontDerivationPath);
-  final privBytes = Uint8List.fromList(node.privateKey!);
+  // SLIP-0010 Nist256p1 — HMAC key = "Nist256p1 seed"
+  final privBytes = slip10Nist256p1Derive(
+    args.seedRoot.seed, // raw BIP39 seed bytes
+    [0x80000000 | 44, 0x80000000 | 1024, 0, 0, 0], // m/44'/1024'/0'/0/0
+  );
 
   final curve = ECCurve_prime256v1();
   final d = BigInt.parse(HEX.encode(privBytes), radix: 16);
   final pubKey = (curve.G * d)!.getEncoded(true); // 33 bytes compressed
 
-  // ONT verification script: 0x21 <pubKey> 0xAC
   final verScript = _ontVerScript(pubKey);
-
-  // Address: Base58Check(0x41 || hash160(verScript))  — big-endian, no reversal
   final scriptHash = neoOntHash160(verScript);
   final address = neoOntB58CheckEncode(_ontAddressVersion, scriptHash);
 
@@ -187,7 +188,7 @@ class OntologyCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'ontCoinDetail_${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'ontCoinDetail_V2${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));

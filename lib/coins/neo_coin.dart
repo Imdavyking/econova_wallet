@@ -32,19 +32,20 @@ class NeoDeriveArgs {
 }
 
 Map<String, dynamic> calculateNeoKey(NeoDeriveArgs args) {
-  final node = args.seedRoot.root.derivePath(_neoDerivationPath);
-  final privBytes = Uint8List.fromList(node.privateKey!);
+  // SLIP-0010 Nist256p1 — HMAC key = "Nist256p1 seed"
+  final privBytes = slip10Nist256p1Derive(
+    args.seedRoot.seed, // raw BIP39 seed bytes
+    [0x80000000 | 44, 0x80000000 | 888, 0, 0, 0], // m/44'/888'/0'/0/0
+  );
 
   final curve = ECCurve_prime256v1();
   final d = BigInt.parse(HEX.encode(privBytes), radix: 16);
-  final pubKey = (curve.G * d)!.getEncoded(true); // 33 bytes compressed
+  final pubKey = (curve.G * d)!.getEncoded(true);
 
-  // NEO N3 verification script: 0x0C 0x21 <pubKey 33 bytes> 0x41 0x56 0xe7 0xb3 0x27
   final verScript = _neoVerScript(pubKey);
-
-  // Address: Base58Check(0x35 || LE(hash160(verScript)))
-  final leScriptHash =
-      Uint8List.fromList(neoOntHash160(verScript).reversed.toList());
+  final leScriptHash = Uint8List.fromList(
+    neoOntHash160(verScript).reversed.toList(),
+  );
   final address = neoOntB58CheckEncode(_neoAddressVersion, leScriptHash);
 
   return {
