@@ -132,7 +132,7 @@ class NanoCoin extends Coin {
     final data = jsonDecode(response.body);
 
     if (data['error'] != null) {
-      debugPrint(data['error'].toString());
+      debugPrint(data['message']);
       throw Exception('couldnot get balance');
     }
 
