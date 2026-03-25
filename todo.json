@@ -1,0 +1,82 @@
+[
+  {
+    "id": "neo",
+    "name": "NEO",
+    "coinId": 888,
+    "symbol": "NEO",
+    "decimals": 8,
+    "blockchain": "NEO",
+    "derivation": [
+      {
+        "path": "m/44'/888'/0'/0/0"
+      }
+    ],
+    "curve": "nist256p1",
+    "publicKeyType": "nist256p1",
+    "explorer": {
+      "url": "https://neoscan.io",
+      "txPath": "/transaction/",
+      "accountPath": "/address/",
+      "sampleTx": "e0ddf7c81c732df26180aca0c36d5868ad009fdbbe6e7a56ebafc14bba41cd53",
+      "sampleAccount": "AcxuqWhTureEQGeJgbmtSWNAtssjMLU7pb"
+    },
+    "info": {
+      "url": "https://neo.org",
+      "source": "https://github.com/neo-project/neo",
+      "rpc": "http://seed1.ngd.network:10332",
+      "documentation": "https://neo.org/eco"
+    }
+  },
+  {
+    "id": "ontology",
+    "name": "Ontology",
+    "coinId": 1024,
+    "symbol": "ONT",
+    "decimals": 0,
+    "blockchain": "Ontology",
+    "derivation": [
+      {
+        "path": "m/44'/1024'/0'/0/0"
+      }
+    ],
+    "curve": "nist256p1",
+    "publicKeyType": "nist256p1",
+    "explorer": {
+      "url": "https://explorer.ont.io",
+      "txPath": "/transaction/",
+      "accountPath": "/address/"
+    },
+    "info": {
+      "url": "https://ont.io",
+      "source": "https://github.com/ontio/ontology",
+      "rpc": "http://dappnode1.ont.io:20336",
+      "documentation": "https://github.com/ontio/ontology/blob/master/docs/specifications/rpc_api.md"
+    }
+  },
+  {
+    "id": "waves",
+    "name": "Waves",
+    "coinId": 5741564,
+    "symbol": "WAVES",
+    "decimals": 8,
+    "blockchain": "Waves",
+    "derivation": [
+      {
+        "path": "m/44'/5741564'/0'/0'/0'"
+      }
+    ],
+    "curve": "ed25519",
+    "publicKeyType": "curve25519",
+    "explorer": {
+      "url": "https://wavesexplorer.com",
+      "txPath": "/tx/",
+      "accountPath": "/address/"
+    },
+    "info": {
+      "url": "https://wavesplatform.com",
+      "source": "https://github.com/wavesplatform/Waves",
+      "rpc": "https://nodes.wavesnodes.com",
+      "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
+    }
+  }
+]
