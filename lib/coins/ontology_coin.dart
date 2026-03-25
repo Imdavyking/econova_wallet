@@ -63,9 +63,18 @@ Uint8List _ontVerScript(Uint8List pubKey) => Uint8List(pubKey.length + 2)
 // ─── ONT address / script helpers ─────────────────────────────────────────
 
 /// Decode ONT address to 20-byte script hash (big-endian, no reversal).
+// Uint8List _ontAddressToHash(String address) {
+//   final decoded = neoOntB58Decode(address);
+//   if (decoded.length != 25) throw Exception('Invalid ONT address');
+//   return decoded.sublist(1, 21);
+// }
+
 Uint8List _ontAddressToHash(String address) {
-  final decoded = neoOntB58Decode(address);
-  if (decoded.length != 25) throw Exception('Invalid ONT address');
+  final decoded = neoOntB58CheckDecode(address);
+  if (decoded.length != 25) throw Exception('Invalid ONT address length');
+  if (decoded[0] != _ontAddressVersion) {
+    throw Exception('Wrong version byte');
+  }
   return decoded.sublist(1, 21);
 }
 
@@ -231,7 +240,6 @@ class OntologyCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.01;
-
   @override
   Future<({String txHash, String? txRaw})?> transferToken(
     String amount,
