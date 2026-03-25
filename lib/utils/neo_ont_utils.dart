@@ -26,16 +26,10 @@ import 'package:pointycastle/ecc/curves/prime256v1.dart';
 import 'package:pointycastle/export.dart' as pc;
 import 'package:blockchain_utils/blockchain_utils.dart';
 
-Uint8List slip10Nist256p1Derive(Uint8List seed, List<int> indices) {
+Uint8List slip10Nist256p1Derive(Uint8List seed, String path) {
   var node = Bip32Slip10Nist256p1.fromSeed(seed);
-  for (final idx in indices) {
-    node = node.childKey(
-      idx >= 0x80000000
-          ? Bip32KeyIndex.hardenIndex(idx - 0x80000000)
-          : Bip32KeyIndex(idx),
-    );
-  }
-  return Uint8List.fromList(node.privateKey.raw);
+
+  return Uint8List.fromList(node.derivePath(path).privateKey.raw);
 }
 
 // ─── Hash helpers ──────────────────────────────────────────────────────────

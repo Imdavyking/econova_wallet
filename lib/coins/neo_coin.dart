@@ -28,14 +28,15 @@ const _neoAddressVersion = 0x35;
 
 class NeoDeriveArgs {
   final SeedPhraseRoot seedRoot;
-  const NeoDeriveArgs({required this.seedRoot});
+  final String path;
+  const NeoDeriveArgs({required this.seedRoot, required this.path});
 }
 
 Map<String, dynamic> calculateNeoKey(NeoDeriveArgs args) {
   // SLIP-0010 Nist256p1 — HMAC key = "Nist256p1 seed"
   final privBytes = slip10Nist256p1Derive(
     args.seedRoot.seed, // raw BIP39 seed bytes
-    [0x80000000 | 44, 0x80000000 | 888, 0, 0, 0], // m/44'/888'/0'/0/0
+    args.path,
   );
 
   final curve = ECCurve_prime256v1();
@@ -189,8 +190,13 @@ class NeoCoin extends Coin {
         return AccountData.fromJson(cache[mnemonic]);
       }
     }
-    final result =
-        await compute(calculateNeoKey, NeoDeriveArgs(seedRoot: seedPhraseRoot));
+    final result = await compute(
+      calculateNeoKey,
+      NeoDeriveArgs(
+        seedRoot: seedPhraseRoot,
+        path: _neoDerivationPath,
+      ),
+    );
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);

@@ -20,7 +20,7 @@ import '../utils/rpc_urls.dart';
 // Transfer   : InvokeCode transaction (type 0xd1), P-256 ECDSA signed
 
 const _ontDerivationPath = "m/44'/1024'/0'/0/0";
-const _ontAddressVersion = 0x41;
+const _ontAddressVersion = 0x17;
 
 // ONT native contract address (little-endian hex, 20 bytes)
 const _ontContractAddrHex = '0000000000000000000000000000000000000001';
@@ -29,14 +29,15 @@ const _ontContractAddrHex = '0000000000000000000000000000000000000001';
 
 class OntDeriveArgs {
   final SeedPhraseRoot seedRoot;
-  const OntDeriveArgs({required this.seedRoot});
+  final String path;
+  const OntDeriveArgs({required this.seedRoot, required this.path});
 }
 
 Map<String, dynamic> calculateOntologyKey(OntDeriveArgs args) {
   // SLIP-0010 Nist256p1 — HMAC key = "Nist256p1 seed"
   final privBytes = slip10Nist256p1Derive(
     args.seedRoot.seed, // raw BIP39 seed bytes
-    [0x80000000 | 44, 0x80000000 | 1024, 0, 0, 0], // m/44'/1024'/0'/0/0
+    args.path, // m/44'/1024'/0'/0/0
   );
 
   final curve = ECCurve_prime256v1();
@@ -188,8 +189,10 @@ class OntologyCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'ontCoinDetail_V3${isTestnet_}_${walletImportType.name}';
+    final saveKey =
+        'ontCoinDetail_V3383883${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
+
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
       if (cache.containsKey(mnemonic)) {
@@ -198,7 +201,7 @@ class OntologyCoin extends Coin {
     }
     final result = await compute(
       calculateOntologyKey,
-      OntDeriveArgs(seedRoot: seedPhraseRoot),
+      OntDeriveArgs(seedRoot: seedPhraseRoot, path: _ontDerivationPath),
     );
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
