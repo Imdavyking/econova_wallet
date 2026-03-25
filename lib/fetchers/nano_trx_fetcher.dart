@@ -22,7 +22,6 @@ class NanoTransactionFetcher implements TransactionFetcher {
   Future<List<WalletTransaction>> fetch({
     required String address,
     int limit = 25,
-    String? head, // pass last hash for pagination
   }) async {
     final res = await http.post(
       Uri.parse(api),
@@ -32,7 +31,6 @@ class NanoTransactionFetcher implements TransactionFetcher {
         'account': address,
         'count': limit.toString(),
         'reverse': 'false', // newest first
-        if (head != null) 'head': head,
       }),
     );
 
