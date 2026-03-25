@@ -130,7 +130,10 @@ class NanoCoin extends Coin {
     }
 
     final data = jsonDecode(response.body);
-    if (data['error'] != null) return 0.0;
+
+    if (data['error'] != null) {
+      throw Exception('couldnot get balance');
+    }
 
     final raw = BigInt.parse(data['balance'] as String);
     return raw / BigInt.from(10).pow(nanoDecimals);
@@ -145,9 +148,12 @@ class NanoCoin extends Coin {
     if (useCache) return stored ?? 0.0;
     try {
       final bal = await getUserBalance(address: address);
+      print(bal);
+
       await pref.put(key, bal);
       return bal;
     } catch (_) {
+      print(_);
       return stored ?? 0.0;
     }
   }
