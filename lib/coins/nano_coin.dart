@@ -432,30 +432,17 @@ Future<Map<String, dynamic>> calculateNanoKey(NanoDeriveArgs args) async {
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 List<NanoCoin> getNanoBlockChains() {
-  if (enableTestNet) {
-    return [
-      NanoCoin(
-        name: 'Nano (Testnet)',
-        symbol: 'XNO',
-        default_: 'XNO',
-        image: 'assets/nano.png',
-        blockExplorer:
-            'https://nanoticker.info/nano/blocks/$blockExplorerPlaceholder',
-        api: 'https://beta.rpc.nano.to', // Nano Beta network public node
-        geckoID: '', // no price feed for testnet
-        rampID: '',
-        payScheme: 'nano',
-      ),
-    ];
-  }
+  // Note: No public testnet/beta RPC exists for Nano.
+  // Nano is feeless, so mainnet testing with small amounts (e.g. from nano-faucet.org) is standard practice.
   return [
     NanoCoin(
       name: 'Nano',
       symbol: 'XNO',
       default_: 'XNO',
       image: 'assets/nano.png',
-      blockExplorer: 'https://nanexplorer.com/nano/blocks/$blockExplorerPlaceholder',
-      api: 'https://rpc.nano.to', // nano.to public node
+      blockExplorer:
+          'https://nanexplorer.com/nano/blocks/$blockExplorerPlaceholder',
+      api: 'https://rpc.nano.to',
       geckoID: 'nano',
       rampID: '',
       payScheme: 'nano',
