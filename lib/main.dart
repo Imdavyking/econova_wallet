@@ -22,6 +22,8 @@ import 'package:wallet_app/coins/stack_coin.dart';
 import 'package:wallet_app/coins/icp_coin.dart';
 import 'package:wallet_app/coins/icon_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/coins/wave_coin.dart';
+import 'package:wallet_app/coins/ontology_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/xrp_coin.dart';
@@ -64,6 +66,7 @@ import 'screens/main_screen.dart';
 import '../coins/ethereum_coin.dart';
 import '../coins/near_coin.dart';
 import '../coins/solana_coin.dart';
+import '../coins/neo_coin.dart';
 import '../coins/stellar_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -109,6 +112,9 @@ List<StacksCoin> stackCoins = [
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getNanoBlockChains(),
+    ...getWavesBlockChains(),
+    ...getNeoBlockChains(),
+    ...getOntologyBlockChains(),
     ...getESDTCoins(),
     ...getIconBlockChains(),
     ...getPolkadotFungibleCoins(),
