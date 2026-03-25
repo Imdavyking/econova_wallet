@@ -130,31 +130,31 @@ class NanoCoin extends Coin {
     }
 
     final data = jsonDecode(response.body);
-
     if (data['error'] != null) {
       debugPrint(data['message']);
-      throw Exception('couldnot get balance');
+      throw Exception('could not get balance');
     }
 
-    final raw = BigInt.parse(data['balance'] as String);
-    return raw / BigInt.from(10).pow(nanoDecimals);
+    // Include receivable (pending) so the user sees their full incoming balance
+    // immediately — pocketing happens lazily via receivePending().
+    final confirmed = BigInt.parse(data['balance'] as String);
+    final receivable = BigInt.parse(data['receivable'] as String? ?? '0');
+    return (confirmed + receivable) / BigInt.from(10).pow(nanoDecimals);
   }
 
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    receivePending();
+
     final key = 'nanoBalance$address$api';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
       final bal = await getUserBalance(address: address);
-      print(bal);
 
       await pref.put(key, bal);
       return bal;
     } catch (_) {
-      print(_);
       return stored ?? 0.0;
     }
   }
@@ -302,6 +302,7 @@ class NanoCoin extends Coin {
     String to, {
     String? memo,
   }) async {
+    await receivePending();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
     final address = details.address;
