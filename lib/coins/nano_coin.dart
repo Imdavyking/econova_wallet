@@ -393,7 +393,7 @@ class NanoCoin extends Coin {
   Future<String> addressExplorer() async {
     final address = await getAddress();
     return blockExplorer
-        .replaceFirst('/block/', '/account/')
+        .replaceFirst('/blocks/', '/accounts/')
         .replaceFirst(blockExplorerPlaceholder, address);
   }
 }
@@ -440,7 +440,7 @@ List<NanoCoin> getNanoBlockChains() {
         default_: 'XNO',
         image: 'assets/nano.png',
         blockExplorer:
-            'https://nanoticker.info/block/$blockExplorerPlaceholder',
+            'https://nanoticker.info/blocks/$blockExplorerPlaceholder',
         api: 'https://beta.rpc.nano.to', // Nano Beta network public node
         geckoID: '', // no price feed for testnet
         rampID: '',
@@ -454,7 +454,7 @@ List<NanoCoin> getNanoBlockChains() {
       symbol: 'XNO',
       default_: 'XNO',
       image: 'assets/nano.png',
-      blockExplorer: 'https://nanexplorer.com/block/$blockExplorerPlaceholder',
+      blockExplorer: 'https://nanexplorer.com/blocks/$blockExplorerPlaceholder',
       api: 'https://rpc.nano.to', // nano.to public node
       geckoID: 'nano',
       rampID: '',
