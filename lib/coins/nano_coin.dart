@@ -302,11 +302,14 @@ class NanoCoin extends Coin {
     String to, {
     String? memo,
   }) async {
-    await receivePending();
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
     final address = details.address;
     final privateKeyHex = details.privateKey!.replaceFirst('0x', '');
+    final balance = await getBalance(true);
+    if (balance < double.parse(amount)) {
+      await receivePending();
+    }
 
     // 1. Get account info
     final infoRes = await http.post(
