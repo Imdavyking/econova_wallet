@@ -346,7 +346,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         symbol: 'ONT',
         default_: 'ONT',
         blockExplorer:
-            'https://explorer.ont.io/transaction/$blockExplorerPlaceholder',
+            'https://explorer.ont.io/testnet/transaction/$blockExplorerPlaceholder',
         image: 'assets/ontology.png',
         rpcUrl: 'http://polaris1.ont.io:20336',
         geckoID: 'ontology',
