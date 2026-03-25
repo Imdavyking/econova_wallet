@@ -123,12 +123,6 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
 
   final publicKey = await ED25519_HD_KEY.getPublicKey(seed);
 
-  print('first ${HEX.encode(publicKey)}');
-
-  final keyPair = ed.newKeyFromSeed(seed);
-  // final pubKey = Uint8List.fromList(keyPair.bytes.sublist(32));
-  // print('second ${HEX.encode(pubKey)}');
-
   final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
   final address = _buildWavesAddress(Uint8List.fromList(publicKey), chainId);
 
@@ -249,7 +243,7 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_V2${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'wavesCoinDetail_V23${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
