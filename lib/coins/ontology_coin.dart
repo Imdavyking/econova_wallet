@@ -37,7 +37,7 @@ Map<String, dynamic> calculateOntologyKey(OntDeriveArgs args) {
   // SLIP-0010 Nist256p1 — HMAC key = "Nist256p1 seed"
   final privBytes = slip10Nist256p1Derive(
     args.seedRoot.seed, // raw BIP39 seed bytes
-    args.path, // m/44'/1024'/0'/0/0
+    args.path,
   );
 
   final curve = ECCurve_prime256v1();
@@ -189,8 +189,7 @@ class OntologyCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey =
-        'ontCoinDetail_V3383883${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'ontCoinDetail_V5${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
@@ -203,6 +202,7 @@ class OntologyCoin extends Coin {
       calculateOntologyKey,
       OntDeriveArgs(seedRoot: seedPhraseRoot, path: _ontDerivationPath),
     );
+
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
