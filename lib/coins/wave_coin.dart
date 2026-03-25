@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:ed25519_edwards/ed25519_edwards.dart' as ed;
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
@@ -111,25 +112,25 @@ class WavesDeriveArgs {
   const WavesDeriveArgs({required this.seedRoot, required this.isTestnet});
 }
 
-Map<String, dynamic> calculateWavesKey(WavesDeriveArgs args) {
-  // BIP32 node → private key bytes (SLIP-0010 ed25519 path)
-  final node = args.seedRoot.root.derivePath(_wavesDerivationPath);
-  final seed = Uint8List.fromList(node.privateKey!);
+Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
+  // SLIP-0010 ed25519 derivation — uses HMAC-SHA512 keyed with "ed25519 seed"
+  // args.seedRoot.seed is the raw 64-byte BIP39 seed (not the BIP32 root node)
+  final derived = await ED25519_HD_KEY.derivePath(
+    _wavesDerivationPath, // "m/44'/5741564'/0'/0'/0'"
+    args.seedRoot.seed, // raw BIP39 seed bytes
+  );
+  final seed = Uint8List.fromList(derived.key); // 32-byte ed25519 seed
 
-  // Generate Ed25519 key pair from seed using ed25519_edwards
   final keyPair = ed.newKeyFromSeed(seed);
-  // keyPair is 64 bytes: seed(32) + publicKey(32)
-  final pubKey = Uint8List.fromList(
-      keyPair.bytes.sublist(32)); // 32-byte Ed25519 public key
+  final pubKey = Uint8List.fromList(keyPair.bytes.sublist(32));
 
-  // Waves uses the Ed25519 public key directly (Curve25519 compatible)
   final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
   final address = _buildWavesAddress(pubKey, chainId);
 
   return {
     'address': address,
-    'privateKey': HEX.encode(seed), // 32-byte seed
-    'publicKey': HEX.encode(pubKey), // 32-byte Ed25519 pubkey
+    'privateKey': HEX.encode(seed),
+    'publicKey': HEX.encode(pubKey),
   };
 }
 
@@ -243,12 +244,13 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'wavesCoinDetail_V${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(mnemonic))
+      if (cache.containsKey(mnemonic)) {
         return AccountData.fromJson(cache[mnemonic]);
+      }
     }
     final result = await compute(
       calculateWavesKey,
@@ -395,10 +397,12 @@ class WavesCoin extends Coin {
   void validateAddress(String address) {
     try {
       final decoded = _b58Decode(address);
-      if (decoded.length != 26)
+      if (decoded.length != 26) {
         throw Exception('bad length: ${decoded.length}');
-      if (decoded[0] != _wavesAddressVersion)
+      }
+      if (decoded[0] != _wavesAddressVersion) {
         throw Exception('bad version byte');
+      }
       if (decoded[1] != _chainId) {
         throw Exception(
             'wrong chain (expected ${isTestnet_ ? 'T' : 'W'}, got ${String.fromCharCode(decoded[1])})');
