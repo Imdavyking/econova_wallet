@@ -207,7 +207,7 @@ Future<Map<String, dynamic>> neoOntRpc(
     body: jsonEncode(
         {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1}),
   );
-  if (res.statusCode ~/ 100 != 2) {
+  if (res.statusCode > 399) {
     throw Exception('RPC HTTP error ${res.statusCode} ($rpcUrl)');
   }
   final data = jsonDecode(res.body) as Map<String, dynamic>;
