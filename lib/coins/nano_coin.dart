@@ -316,7 +316,7 @@ List<NanoCoin> getNanoBlockChains() {
             'https://nanoticker.info/block/$blockExplorerPlaceholder',
         api:
             'https://test-proxy.nanos.cc/proxy', // Nano Beta network public node
-        geckoID: '', // no price feed for testnet
+        geckoID: 'nano',
         rampID: '',
         payScheme: 'nano',
       )
