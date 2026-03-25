@@ -1,11 +1,9 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/ecc/curves/prime256v1.dart';
-import 'package:wallet_app/extensions/big_int_ext.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
