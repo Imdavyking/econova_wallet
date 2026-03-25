@@ -238,7 +238,7 @@ Future<dynamic> neoOntRpcRaw(
   }
   final data = jsonDecode(res.body) as Map<String, dynamic>;
   if (data['error'] != null && data['error'] != 0) {
-    throw Exception('RPC error: ${data['error']}');
+    throw Exception('RPC error: ${data['error']} ${data['desc']}');
   }
   return data['result'];
 }
