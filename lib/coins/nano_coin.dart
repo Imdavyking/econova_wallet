@@ -92,7 +92,7 @@ class NanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nanoCoinDetails${walletImportType.name}';
+    final saveKey = 'nanoCoinDetailsV1${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
