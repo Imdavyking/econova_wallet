@@ -137,13 +137,13 @@ class NanoCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-
+    await receivePending();
     final key = 'nanoBalance$address$api';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
       final bal = await getUserBalance(address: address);
-      await receivePending();
+
       await pref.put(key, bal);
       return bal;
     } catch (_) {
@@ -179,6 +179,7 @@ class NanoCoin extends Coin {
         }),
       );
       final receivableData = jsonDecode(receivableRes.body);
+      print(receivableData);
       final blocks = receivableData['blocks'];
       if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
 
@@ -414,8 +415,7 @@ List<NanoCoin> getNanoBlockChains() {
         image: 'assets/nano.png',
         blockExplorer:
             'https://nanoticker.info/block/$blockExplorerPlaceholder',
-        api:
-            'https://test-proxy.nanos.cc/proxy', // Nano Beta network public node
+        api: 'https://beta.rpc.nano.to', // Nano Beta network public node
         geckoID: '', // no price feed for testnet
         rampID: '',
         payScheme: 'nano',
@@ -429,7 +429,7 @@ List<NanoCoin> getNanoBlockChains() {
       default_: 'XNO',
       image: 'assets/nano.png',
       blockExplorer: 'https://nanolooker.com/block/$blockExplorerPlaceholder',
-      api: 'https://proxy.nanos.cc/proxy', // free public node, no API key
+      api: 'https://rpc.nano.to', // free public node, no API key
       geckoID: 'nano',
       rampID: '',
       payScheme: 'nano',

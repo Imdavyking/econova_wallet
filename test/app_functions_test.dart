@@ -809,6 +809,12 @@ void main() async {
             "xion15yk64u7zc9g9k2yr2wmzeva5qgwxps6yym4d04",
           );
           break;
+        case "XNO":
+          expect(
+            cryptoKeys.address,
+            "nano_3hn8hsuie854jhtzcg5xunap7jsg7qxtwpihijp5n5tmqznoqpxc98zkojri",
+          );
+          break;
         case "XLM":
           expect(
             cryptoKeys.address,
@@ -894,6 +900,12 @@ void main() async {
           );
           break;
         case "ICX":
+          expect(
+            cryptoKeys.address,
+            "hx1621355ce9e82899c5f5e1cfee3b99426f139e35",
+          );
+          break;
+        case "XNO":
           expect(
             cryptoKeys.address,
             "hx1621355ce9e82899c5f5e1cfee3b99426f139e35",
