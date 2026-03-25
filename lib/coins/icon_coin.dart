@@ -317,7 +317,7 @@ List<IconCoin> getIconBlockChains() {
   if (enableTestNet) {
     return [
       IconCoin(
-        name: 'ICON (Testnet)',
+        name: 'ICON (Lisbon Testnet)',
         symbol: 'ICX',
         default_: 'ICX',
         image: 'assets/icon.png',
