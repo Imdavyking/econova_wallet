@@ -188,7 +188,7 @@ class OntologyCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'ontCoinDetail_V2${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'ontCoinDetail_V3${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
