@@ -264,8 +264,8 @@ class NanoCoin extends Coin {
           debugPrint('process failed: ${processData['error']}');
         }
       }
-    } catch (e) {
-      debugPrint('receivePending error: $e');
+    } catch (e, sk) {
+      debugPrint('receivePending error: $e $sk');
     }
   }
 
