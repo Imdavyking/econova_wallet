@@ -1,8 +1,10 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:nanodart/nanodart.dart';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:wallet_app/extensions/big_int_ext.dart';
@@ -12,7 +14,6 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
-import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 
 // Nano raw decimals: 1 NANO = 10^30 raw
 const nanoDecimals = 30;
@@ -92,7 +93,7 @@ class NanoCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'nanoCoinDetailsV${walletImportType.name}';
+    final saveKey = 'nanoCoinDetails${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -153,6 +154,99 @@ class NanoCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.0;
+
+  // ── Receive pending ───────────────────────────────────────────────────────
+  // Nano requires explicitly pocketing inbound transactions.
+  // Call this on wallet open / refresh to credit any pending funds.
+
+  Future<void> receivePending() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final details = await importData(data);
+    final address = details.address;
+    final privateKeyHex = details.privateKey!.replaceFirst('0x', '');
+
+    // 1. Find all pending (receivable) block hashes
+    final receivableRes = await http.post(
+      Uri.parse(api),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'receivable',
+        'account': address,
+        'count': '32',
+        'source': 'true', // include amount per block
+      }),
+    );
+    final receivableData = jsonDecode(receivableRes.body);
+    final blocks = receivableData['blocks'];
+    if (blocks == null || blocks is String || (blocks as Map).isEmpty) return;
+
+    // 2. Pocket each block in order
+    for (final entry in (blocks as Map<String, dynamic>).entries) {
+      final pendingHash = entry.key;
+      final pendingAmount = BigInt.parse(entry.value['amount'] as String);
+
+      // Get current account state (may still be unopened)
+      final infoRes = await http.post(
+        Uri.parse(api),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'account_info',
+          'account': address,
+          'representative': true,
+        }),
+      );
+      final infoData = jsonDecode(infoRes.body);
+      final isNew = infoData['error'] != null;
+
+      final frontier = isNew
+          ? '0000000000000000000000000000000000000000000000000000000000000000'
+          : infoData['frontier'] as String;
+      final currentBalance =
+          isNew ? BigInt.zero : BigInt.parse(infoData['balance'] as String);
+      final representative =
+          isNew ? _nanoRep : infoData['representative'] as String;
+
+      final newBalance = currentBalance + pendingAmount;
+
+      // block_create — node handles PoW, we sign locally
+      final createRes = await http.post(
+        Uri.parse(api),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'block_create',
+          'type': 'state',
+          'account': address,
+          'previous': frontier,
+          'representative': representative,
+          'balance': newBalance.toString(),
+          'source': pendingHash, // link field = hash of the send block
+        }),
+      );
+      final createData = jsonDecode(createRes.body);
+      if (createData['error'] != null) continue; // skip, try next
+
+      final blockHash = createData['hash'] as String;
+      final block = createData['block'] as Map<String, dynamic>;
+
+      // Sign locally — private key never leaves device
+      block['signature'] = NanoSignatures.signBlock(
+        blockHash,
+        privateKeyHex.toUpperCase(),
+      );
+
+      // Broadcast
+      await http.post(
+        Uri.parse(api),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'process',
+          'json_block': 'true',
+          'subtype': 'receive',
+          'block': block,
+        }),
+      );
+    }
+  }
 
   // ── Transfer ──────────────────────────────────────────────────────────────
   // Flow:
@@ -283,15 +377,16 @@ class NanoDeriveArgs {
 }
 
 Future<Map<String, dynamic>> calculateNanoKey(NanoDeriveArgs args) async {
-  // Use first 32 bytes of BIP39 seed as Nano seed
-  // This matches how most wallets (Natrium, Nault) handle BIP39→Nano
+  // SLIP-0010 ed25519 derivation at m/44'/165'/0'
+  // Matches Trust Wallet and the official Nano coin config
   final keyData = await ED25519_HD_KEY.derivePath(
     "m/44'/165'/0'",
     args.seedRoot.seed, // full 64-byte BIP39 seed
   );
+
   final privateKeyHex = HEX.encode(keyData.key).toUpperCase();
 
-  // Public key + address via nanodart as before
+  // Derive public key + address via nanodart
   final publicKeyHex = NanoKeys.createPublicKey(privateKeyHex);
   final address =
       NanoAccounts.createAccount(NanoAccountType.NANO, publicKeyHex);
@@ -316,10 +411,10 @@ List<NanoCoin> getNanoBlockChains() {
             'https://nanoticker.info/block/$blockExplorerPlaceholder',
         api:
             'https://test-proxy.nanos.cc/proxy', // Nano Beta network public node
-        geckoID: 'nano',
+        geckoID: '', // no price feed for testnet
         rampID: '',
         payScheme: 'nano',
-      )
+      ),
     ];
   }
   return [
