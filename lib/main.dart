@@ -109,7 +109,6 @@ List<StacksCoin> stackCoins = [
 Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getNanoBlockChains(),
-    ...getBananoBlockChains(),
     ...getESDTCoins(),
     ...getIconBlockChains(),
     ...getPolkadotFungibleCoins(),

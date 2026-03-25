@@ -571,20 +571,3 @@ List<NanoCoin> getNanoBlockChains() {
     ),
   ];
 }
-
-List<BananoCoin> getBananoBlockChains() {
-  return [
-    BananoCoin(
-      name: 'Banano',
-      symbol: 'BAN',
-      default_: 'BAN',
-      image: 'assets/banano.png',
-      blockExplorer:
-          'https://creeper.banano.cc/block/$blockExplorerPlaceholder',
-      api: 'https://kaliumapi.appditto.com/api',
-      geckoID: 'banano',
-      rampID: '',
-      payScheme: 'banano',
-    ),
-  ];
-}
