@@ -39,8 +39,8 @@ export 'web3_bridge.dart';
 
 const satoshiDustAmount = 546;
 
-const Duration networkTimeOutDuration = Duration(seconds: 15);
-const Duration httpPollingDelay = Duration(seconds: 15);
+const Duration networkTimeOutDuration = Duration(seconds: 30);
+const Duration httpPollingDelay = Duration(seconds: 30);
 
 late SeedPhraseRoot seedPhraseRoot;
 
