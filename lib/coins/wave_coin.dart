@@ -334,6 +334,74 @@ class WavesCoin extends Coin {
     }
   }
 
+  /// Sign and broadcast a transfer using explicit keys (not the active wallet).
+  Future<({String txHash, String? txRaw})?> _transferWith({
+    required List<int> fromPrivKey, // 32 bytes
+    required List<int> fromPubKey, // 32 bytes Curve25519
+    required String to,
+    required String amount,
+    String? memo,
+  }) async {
+    final privSeed = Uint8List.fromList(fromPrivKey);
+    final curve25519Pub = Uint8List.fromList(fromPubKey);
+    // ignore: unused_local_variable
+    final attachment = memo != null
+        ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
+        : Uint8List(0);
+    final ed25519 = Ed25519();
+    final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
+
+    final amountWavelets = amount.toBigIntDec(decimals()).toInt();
+    const feeWavelets = 100000;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    final recipientBytes = _b58Decode(to);
+    if (recipientBytes.length != 26) throw Exception('Invalid WAVES address');
+
+    final signableBytes = _buildWavesTransferBytes(
+      senderPubKey: curve25519Pub,
+      recipientAddr: recipientBytes,
+      amountWavelets: amountWavelets,
+      feeWavelets: feeWavelets,
+      timestamp: timestamp,
+      attachment: Uint8List(0),
+    );
+
+    final sig = await ed25519.sign(signableBytes.toList(), keyPair: keyPair);
+    final sigBytes = Uint8List.fromList(sig.bytes);
+
+    final txJson = jsonEncode({
+      'type': 4,
+      'version': 2,
+      'senderPublicKey': _b58Encode(curve25519Pub),
+      'assetId': null,
+      'feeAssetId': null,
+      'timestamp': timestamp,
+      'amount': amountWavelets,
+      'fee': feeWavelets,
+      'chainId': chainId,
+      'recipient': to,
+      'attachment': _b58Encode(Uint8List(0)),
+      'proofs': [_b58Encode(sigBytes)],
+    });
+
+    final res = await http.post(
+      Uri.parse('$nodeUrl/transactions/broadcast'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: txJson,
+    );
+
+    if (res.statusCode ~/ 100 != 2) {
+      final err = jsonDecode(res.body);
+      throw Exception('WAVES fund failed: ${err['message'] ?? res.body}');
+    }
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    return (txHash: result['id'] as String, txRaw: txJson);
+  }
+
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.001;
 
@@ -354,81 +422,14 @@ class WavesCoin extends Coin {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final keyData = await importData(walletData);
 
-    // privateKey = derived SLIP-0010 seed (32 bytes)
-    final privSeed = Uint8List.fromList(HEX.decode(keyData.privateKey!));
-
-    // publicKey = Curve25519 pubkey (used in address + tx)
-    final curve25519PubKey = Uint8List.fromList(HEX.decode(keyData.publicKey!));
-
-    // Sign with Ed25519 using the derived seed
-    final ed25519 = Ed25519();
-    final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
-
-    final amountWavelets = amount.toBigIntDec(decimals()).toInt();
-    const feeWavelets = 100000; // 0.001 WAVES
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
-    final recipientBytes = _b58Decode(to);
-    if (recipientBytes.length != 26) throw Exception('Invalid WAVES address');
-
-    final attachment = memo != null
-        ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
-        : Uint8List(0);
-
-    // Build signable bytes using Curve25519 pubkey (what the network expects)
-    final signableBytes = _buildWavesTransferBytes(
-      senderPubKey: curve25519PubKey, // ← Curve25519, not Ed25519
-      recipientAddr: recipientBytes,
-      amountWavelets: amountWavelets,
-      feeWavelets: feeWavelets,
-      timestamp: timestamp,
-      attachment: attachment,
+    return _transferWith(
+      fromPrivKey: HEX.decode(keyData.privateKey!),
+      fromPubKey: HEX.decode(keyData.publicKey!),
+      to: to,
+      amount: amount,
+      memo: memo,
     );
-
-    // Sign with Ed25519
-    final sig = await ed25519.sign(signableBytes.toList(), keyPair: keyPair);
-    final sigBytes = Uint8List.fromList(sig.bytes);
-
-    // Encode for broadcast
-    final pubKeyB58 = _b58Encode(curve25519PubKey); // ← Curve25519
-    final sigB58 = _b58Encode(sigBytes);
-
-    final txJson = {
-      'type': 4,
-      'version': 2,
-      'senderPublicKey': pubKeyB58,
-      'assetId': null,
-      'feeAssetId': null,
-      'timestamp': timestamp,
-      'amount': amountWavelets,
-      'fee': feeWavelets,
-      'chainId': chainId,
-      'recipient': to,
-      'attachment': _b58Encode(attachment),
-      'proofs': [sigB58],
-    };
-
-    final txJsonStr = jsonEncode(txJson);
-    if (kDebugMode) print('WAVES tx JSON: $txJsonStr');
-
-    final res = await http.post(
-      Uri.parse('$nodeUrl/transactions/broadcast'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: txJsonStr,
-    );
-
-    if (res.statusCode ~/ 100 != 2) {
-      final err = jsonDecode(res.body);
-      throw Exception('WAVES broadcast failed: ${err['message'] ?? res.body}');
-    }
-
-    final result = jsonDecode(res.body) as Map<String, dynamic>;
-    return (txHash: result['id'] as String, txRaw: txJsonStr);
-  }
-  // ─── Address validation ──────────────────────────────────────────────────────
+  } // ─── Address validation ──────────────────────────────────────────────────────
   //
   // Decode from base58 → 26 bytes
   // Check: bytes[0] == 0x01 (version), bytes[1] == chainId
