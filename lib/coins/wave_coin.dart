@@ -183,11 +183,9 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
     args.seedRoot.seed, // raw 64-byte BIP39 seed
   );
 
-  // Step 2: Ed25519 keypair from derived private scalar
-  final algorithm = Ed25519();
-  final keyPair = await algorithm.newKeyPairFromSeed(derived.key);
-  final edPublicKey = await keyPair.extractPublicKey();
-  final edPubBytes = Uint8List.fromList(edPublicKey.bytes);
+  final pubKey1 = await ED25519_HD_KEY.getPublicKey(derived.key, false);
+
+  final edPubBytes = Uint8List.fromList(pubKey1);
 
   // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
   final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
@@ -312,7 +310,8 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_V5${isTestnet_}_${walletImportType.name}';
+    final saveKey =
+        'wavesCoinDetail_V51333${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -383,28 +382,31 @@ class WavesCoin extends Coin {
   }) async {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final keyData = await importData(walletData);
-    final privSeed = Uint8List.fromList(HEX.decode(keyData.privateKey!));
-    final pubKey = Uint8List.fromList(HEX.decode(keyData.publicKey!));
 
-    // Reconstruct ed25519 keypair (seed + pubkey = 64 bytes for ed25519_edwards)
-    final keyPair = ed.newKeyFromSeed(privSeed); // returns 64-byte key
+    // privateKey = derived SLIP-0010 seed (32 bytes)
+    final privSeed = Uint8List.fromList(HEX.decode(keyData.privateKey!));
+
+    // publicKey = Curve25519 pubkey (used in address + tx)
+    final curve25519PubKey = Uint8List.fromList(HEX.decode(keyData.publicKey!));
+
+    // Sign with Ed25519 using the derived seed
+    final ed25519 = Ed25519();
+    final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
 
     final amountWavelets = amount.toBigIntDec(decimals()).toInt();
-    const feeWavelets = 100000; // 0.001 WAVES minimum fee
+    const feeWavelets = 100000; // 0.001 WAVES
     final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-    // Decode recipient address from base58 → 26 raw bytes
     final recipientBytes = _b58Decode(to);
     if (recipientBytes.length != 26) throw Exception('Invalid WAVES address');
 
-    // Attachment: memo encoded as UTF-8 (max 140 bytes)
     final attachment = memo != null
         ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
         : Uint8List(0);
 
-    // Build signable bytes
+    // Build signable bytes using Curve25519 pubkey (what the network expects)
     final signableBytes = _buildWavesTransferBytes(
-      senderPubKey: pubKey,
+      senderPubKey: curve25519PubKey, // ← Curve25519, not Ed25519
       recipientAddr: recipientBytes,
       amountWavelets: amountWavelets,
       feeWavelets: feeWavelets,
@@ -413,37 +415,35 @@ class WavesCoin extends Coin {
     );
 
     // Sign with Ed25519
-    final signature = ed.sign(keyPair, signableBytes); // 64 bytes
+    final sig = await ed25519.sign(signableBytes.toList(), keyPair: keyPair);
+    final sigBytes = Uint8List.fromList(sig.bytes);
 
-    // Encode to base58 for JSON broadcast
-    final pubKeyB58 = _b58Encode(pubKey);
-    final sigB58 = _b58Encode(signature);
-    final recipientB58 = to; // already in base58
+    // Encode for broadcast
+    final pubKeyB58 = _b58Encode(curve25519PubKey); // ← Curve25519
+    final sigB58 = _b58Encode(sigBytes);
 
-    // Build JSON body for /transactions/broadcast
     final txJson = {
       'type': 4,
       'version': 2,
       'senderPublicKey': pubKeyB58,
-      'assetId': null, // WAVES
-      'feeAssetId': null, // WAVES fee
+      'assetId': null,
+      'feeAssetId': null,
       'timestamp': timestamp,
       'amount': amountWavelets,
       'fee': feeWavelets,
-      'recipient': recipientB58,
+      'recipient': to,
       'attachment': _b58Encode(attachment),
       'proofs': [sigB58],
     };
 
     final txJsonStr = jsonEncode(txJson);
-
     if (kDebugMode) print('WAVES tx JSON: $txJsonStr');
 
     final res = await http.post(
       Uri.parse('$nodeUrl/transactions/broadcast'),
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
       },
       body: txJsonStr,
     );
@@ -454,11 +454,8 @@ class WavesCoin extends Coin {
     }
 
     final result = jsonDecode(res.body) as Map<String, dynamic>;
-    final txHash = result['id'] as String;
-
-    return (txHash: txHash, txRaw: txJsonStr);
+    return (txHash: result['id'] as String, txRaw: txJsonStr);
   }
-
   // ─── Address validation ──────────────────────────────────────────────────────
   //
   // Decode from base58 → 26 bytes
