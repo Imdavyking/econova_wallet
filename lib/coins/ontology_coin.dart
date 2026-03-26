@@ -284,7 +284,8 @@ class OntologyCoin extends Coin {
     print('txBody: $txBody');
 
     // ONT: sign dsha256(txBody) directly (innerDigest = null)
-    final txHash256 = neoOntDsha256(txBody);
+    // CORRECT — ONT signs single SHA256 of the unsigned tx body
+    final txHash256 = neoOntSha256(txBody);
     final signature = neoOntP256Sign(privBytes, txHash256);
 
     // FIX 3 — ONT native Sig format: SigData[] | M | PubKeys[]
