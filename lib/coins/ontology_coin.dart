@@ -256,53 +256,53 @@ class OntologyCoin extends Coin {
 
     final ontAmount = amount.toBigIntDec(decimals()).toInt();
     final script = _buildOntTransferScript(fromAddr, to, ontAmount);
+
     final blockCount = await _rpcRaw('getblockcount', []) as int;
     final nonce = blockCount & 0xffffffff;
 
-    final payerHash = _ontAddressToHash(fromAddr);
-    final payer = Uint8List(21)
-      ..[0] = 0x00
-      ..setRange(1, 21, payerHash);
+    // FIX 1 — payer is the raw 20-byte hash, no version prefix
+    final payer = _ontAddressToHash(fromAddr);
 
     const gasPrice = 2500;
     const gasLimit = 20000;
 
+    // FIX 2 — include VarInt(0) for empty attributes (part of unsigned tx hash)
     final txBody = Uint8List.fromList([
-      0xd1,
-      0x00,
+      0xd1, 0x00,
       ...neoOntLeUInt32(nonce),
       ...neoOntLeUInt64(gasPrice),
       ...neoOntLeUInt64(gasLimit),
-      ...payer,
+      ...payer, // 20 bytes
       ...neoOntVarBytes(script),
+      ...neoOntVarInt(0), // attributes count = 0
     ]);
 
-    // ONT: sign dsha256(txBody) directly — no inner re-hash (innerDigest = null).
+    // ONT: sign dsha256(txBody) directly (innerDigest = null)
     final txHash256 = neoOntDsha256(txBody);
     final signature = neoOntP256Sign(privBytes, txHash256);
 
-    final verScript = _ontVerScript(pubKeyBytes);
-    final invocScript = Uint8List(signature.length + 2)
-      ..[0] = 0x40
-      ..[1] = signature.length
-      ..setRange(2, 2 + signature.length, signature);
-
+    // FIX 3 — ONT native Sig format: SigData[] | M | PubKeys[]
     final sigRecord = Uint8List.fromList([
-      ...neoOntVarInt(1),
-      ...pubKeyBytes,
-      ...neoOntVarBytes(invocScript),
-      ...neoOntVarBytes(verScript),
+      ...neoOntVarInt(1), // SigData count = 1
+      ...neoOntVarBytes(signature), // VarInt(64) + 64-byte sig
+      0x01, // M = 1
+      ...neoOntVarInt(1), // PubKey count = 1
+      ...neoOntVarBytes(pubKeyBytes), // VarInt(33) + 33-byte pubkey
     ]);
 
-    final rawTx =
-        Uint8List.fromList([...txBody, ...neoOntVarInt(1), ...sigRecord]);
+    final rawTx = Uint8List.fromList([
+      ...txBody,
+      ...neoOntVarInt(1), // number of Sig records
+      ...sigRecord,
+    ]);
     final rawTxHex = HEX.encode(rawTx);
 
     if (kDebugMode) print('ONT rawTx: $rawTxHex');
 
     final broadcastResult = await _rpc('sendrawtransaction', [rawTxHex]);
     debugPrint(broadcastResult.toString());
-    final hash = broadcastResult['hash'] as String? ?? _calcTxHash(rawTx);
+    // TX hash = dsha256 of the *unsigned* body, not the full signed tx
+    final hash = broadcastResult['hash'] as String? ?? _calcTxHash(txBody);
 
     return (txHash: hash, txRaw: rawTxHex);
   }
