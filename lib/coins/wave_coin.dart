@@ -277,7 +277,7 @@ class WavesCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey =
-        'wavesCoinDetail_V3638334334${chainId}_${walletImportType.name}';
+        'wavesCoinDetail_V4${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
