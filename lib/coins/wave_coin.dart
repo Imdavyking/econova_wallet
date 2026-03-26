@@ -161,7 +161,6 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
 
   final chainId = args.chainId;
   final address = _buildWavesAddress(curve25519PubBytes, chainId);
-  print('base58: ${base58.encode(derived.key as Uint8List)}');
   return {
     'address': address,
     'privateKey': HEX.encode(derived.key),
@@ -280,7 +279,7 @@ class WavesCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey =
-        'wavesCoinDetail_V833843834${chainId}_${walletImportType.name}';
+        'wavesCoinDetail_V83384384334${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
