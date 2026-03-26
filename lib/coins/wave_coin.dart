@@ -458,7 +458,7 @@ class WavesCoin extends Coin {
   Future<String> addressExplorer() async {
     final address = await getAddress();
     return blockExplorer
-        .replaceFirst('/tx/', '/address/')
+        .replaceFirst('/transactions/', '/addresses/')
         .replaceFirst(blockExplorerPlaceholder, address);
   }
 
@@ -490,7 +490,7 @@ List<WavesCoin> getWavesBlockChains() {
         symbol: 'WAVES',
         default_: 'WAVES',
         blockExplorer:
-            'https://wavesexplorer.com/tx/$blockExplorerPlaceholder/?network=testnet',
+            'https://wavesexplorer.com/transactions/$blockExplorerPlaceholder/?network=testnet',
         image: 'assets/waves.png',
         nodeUrl: 'https://nodes-testnet.wavesnodes.com',
         geckoID: 'waves',
@@ -503,7 +503,7 @@ List<WavesCoin> getWavesBlockChains() {
         symbol: 'WAVES',
         default_: 'WAVES',
         blockExplorer:
-            'https://wavesexplorer.com/tx/$blockExplorerPlaceholder/?network=stagenet',
+            'https://wavesexplorer.com/transactions/$blockExplorerPlaceholder/?network=stagenet',
         image: 'assets/waves.png',
         nodeUrl: 'https://nodes-stagenet.wavesnodes.com',
         geckoID: 'waves',
@@ -518,7 +518,8 @@ List<WavesCoin> getWavesBlockChains() {
       name: 'Waves',
       symbol: 'WAVES',
       default_: 'WAVES',
-      blockExplorer: 'https://wavesexplorer.com/tx/$blockExplorerPlaceholder',
+      blockExplorer:
+          'https://wavesexplorer.com/transactions/$blockExplorerPlaceholder',
       image: 'assets/waves.png',
       nodeUrl: 'https://nodes.wavesnodes.com',
       geckoID: 'waves',
