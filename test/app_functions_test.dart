@@ -811,7 +811,7 @@ void main() async {
           } else if (currCoin.getName() == 'Waves (Testnet)') {
             expect(
               cryptoKeys.address,
-              "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
+              "3N2XxzVJ78KwqJTgvpVcZEFZDSiAQ2kAWeT",
             );
           }
 
