@@ -1,9 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:crypto/crypto.dart' as crypto;
-import 'package:ed25519_edwards/ed25519_edwards.dart' as ed;
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
@@ -37,12 +34,9 @@ const _wavesAddressVersion = 0x01;
 
 // WAVES asset ID — null (empty) means native WAVES token
 // For the binary tx: absent assetId = 0x00 flag byte
-const _wavesAssetId = null; // native WAVES
+// native WAVES
 
 // ─── Crypto helpers ───────────────────────────────────────────────────────────
-
-Uint8List _sha256waves(Uint8List data) =>
-    Uint8List.fromList(crypto.sha256.convert(data).bytes);
 
 Uint8List _keccak256waves(Uint8List data) {
   final d = pc.KeccakDigest(256);
@@ -310,8 +304,7 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey =
-        'wavesCoinDetail_V51333${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'wavesCoinDetail_V6${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
