@@ -286,20 +286,21 @@ class OntologyCoin extends Coin {
     // ONT: sign dsha256(txBody) directly (innerDigest = null)
     final txHash256 = neoOntDsha256(txBody);
     final signature = neoOntP256Sign(privBytes, txHash256);
-    final ontPubKeyBytes = Uint8List.fromList([0x12, 0x02, ...pubKeyBytes]);
 
     // FIX 3 — ONT native Sig format: SigData[] | M | PubKeys[]
+    final invocationScript =
+        Uint8List.fromList([0x40, ...signature]); // 65 bytes
+    final verificationScript =
+        Uint8List.fromList([0x21, ...pubKeyBytes, 0xAC]); // 35 bytes
+
     final sigRecord = Uint8List.fromList([
-      ...neoOntVarInt(1), // SigData count = 1
-      ...neoOntVarBytes(signature), // VarInt(64) + 64-byte (r‖s) sig
-      ...neoOntLeUInt16(1), // M = 1  →  [0x01, 0x00]
-      ...neoOntVarInt(1), // PubKey count = 1
-      ...neoOntVarBytes(ontPubKeyBytes), // VarInt(35) + [12 02 + 33-byte key]
+      ...neoOntVarBytes(invocationScript), // 0x41 + 65 bytes
+      ...neoOntVarBytes(verificationScript), // 0x23 + 35 bytes
     ]);
 
     final rawTx = Uint8List.fromList([
       ...txBody,
-      ...neoOntVarInt(1), // number of Sig records
+      0x01, // VarInt(1) — number of Sig records
       ...sigRecord,
     ]);
     final rawTxHex = HEX.encode(rawTx);
