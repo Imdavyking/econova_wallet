@@ -151,7 +151,7 @@ const nanoApiKey = 'RPC-KEY-2ED61F5D83FF4BF5964B58A6E90F2B';
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 
 // enable
-bool enableTestNet = true;
+bool enableTestNet = false;
 const orange1 = Color.fromARGB(255, 233, 183, 9);
 
 // app theme
