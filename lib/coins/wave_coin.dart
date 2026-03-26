@@ -55,6 +55,7 @@ Uint8List _wavesAddressHash(Uint8List pubKey) =>
 const _b58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 String _b58Encode(Uint8List bytes) {
+  if (bytes.isEmpty) return '';
   BigInt value = BigInt.parse(HEX.encode(bytes), radix: 16);
   var result = '';
   while (value > BigInt.zero) {
@@ -357,7 +358,6 @@ class WavesCoin extends Coin {
   }) async {
     final privSeed = Uint8List.fromList(fromPrivKey);
     final curve25519Pub = Uint8List.fromList(fromPubKey);
-    // ignore: unused_local_variable
     final attachment = memo != null
         ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
         : Uint8List(0);
@@ -377,7 +377,7 @@ class WavesCoin extends Coin {
       amountWavelets: amountWavelets,
       feeWavelets: feeWavelets,
       timestamp: timestamp,
-      attachment: Uint8List(0),
+      attachment: attachment,
     );
 
     final sig = await ed25519.sign(signableBytes.toList(), keyPair: keyPair);
@@ -394,7 +394,7 @@ class WavesCoin extends Coin {
       'fee': feeWavelets,
       'chainId': chainId,
       'recipient': to,
-      'attachment': _b58Encode(Uint8List(0)),
+      'attachment': _b58Encode(attachment),
       'proofs': [_b58Encode(sigBytes)],
     });
 
@@ -406,6 +406,8 @@ class WavesCoin extends Coin {
       },
       body: txJson,
     );
+
+    print(res.body);
 
     if (res.statusCode ~/ 100 != 2) {
       final err = jsonDecode(res.body);
