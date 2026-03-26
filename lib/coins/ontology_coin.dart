@@ -359,7 +359,7 @@ class OntologyCoin extends Coin {
   Future<String> addressExplorer() async {
     final address = await getAddress();
     return blockExplorer
-        .replaceFirst('/transaction/', '/address/')
+        .replaceFirst('/tx/', '/address/')
         .replaceFirst(blockExplorerPlaceholder, address);
   }
 
@@ -388,7 +388,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         symbol: 'ONT',
         default_: 'ONT',
         blockExplorer:
-            'https://explorer.ont.io/testnet/transaction/$blockExplorerPlaceholder',
+            'https://explorer.ont.io/testnet/tx/$blockExplorerPlaceholder',
         image: 'assets/ontology.png',
         rpcUrl: 'http://polaris1.ont.io:20336',
         geckoID: 'ontology',
@@ -404,8 +404,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       name: 'Ontology',
       symbol: 'ONT',
       default_: 'ONT',
-      blockExplorer:
-          'https://explorer.ont.io/transaction/$blockExplorerPlaceholder',
+      blockExplorer: 'https://explorer.ont.io/tx/$blockExplorerPlaceholder',
       image: 'assets/ontology.png',
       rpcUrl: 'http://dappnode1.ont.io:20336',
       geckoID: 'ontology',
