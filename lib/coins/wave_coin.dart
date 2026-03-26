@@ -28,8 +28,6 @@ import 'package:cryptography/cryptography.dart';
 // The `ed25519_edwards` package (already in pubspec) provides Ed25519 sign/verify.
 
 const _wavesDerivationPath = "m/44'/5741564'/0'/0'/0'";
-const _wavesMainnetChainId = 0x57; // 'W'
-const _wavesTestnetChainId = 0x54; // 'T'
 const _wavesAddressVersion = 0x01;
 
 // WAVES asset ID — null (empty) means native WAVES token
@@ -104,40 +102,13 @@ String _buildWavesAddress(Uint8List pubKey, int chainId) {
 class WavesDeriveArgs {
   final SeedPhraseRoot seedRoot;
   final String mnemonic;
-  final bool isTestnet;
+  final int chainId;
   const WavesDeriveArgs({
     required this.seedRoot,
-    required this.isTestnet,
+    required this.chainId,
     required this.mnemonic,
   });
 }
-
-//  {
-//     "id": "waves",
-//     "name": "Waves",
-//     "coinId": 5741564,
-//     "symbol": "WAVES",
-//     "decimals": 8,
-//     "blockchain": "Waves",
-//     "derivation": [
-//       {
-//         "path": "m/44'/5741564'/0'/0'/0'"
-//       }
-//     ],
-//     "curve": "ed25519",
-//     "publicKeyType": "curve25519",
-//     "explorer": {
-//       "url": "https://wavesexplorer.com",
-//       "txPath": "/tx/",
-//       "accountPath": "/address/"
-//     },
-//     "info": {
-//       "url": "https://wavesplatform.com",
-//       "source": "https://github.com/wavesplatform/Waves",
-//       "rpc": "https://nodes.wavesnodes.com",
-//       "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
-//     }
-//   }import 'package:pointycastle/export.dart' as pc;
 
 /// Convert an Ed25519 public key (32 bytes) to Curve25519 (32 bytes)
 /// Uses the birational equivalence: u = (1+y)/(1-y) mod p
@@ -184,7 +155,7 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
   // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
   final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
 
-  final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
+  final chainId = args.chainId;
   final address = _buildWavesAddress(curve25519PubBytes, chainId);
 
   return {
@@ -264,7 +235,7 @@ class WavesCoin extends Coin {
   final String geckoID;
   final String rampID;
   final String payScheme;
-  final bool isTestnet_;
+  final int chainId;
 
   WavesCoin({
     required this.blockExplorer,
@@ -276,7 +247,7 @@ class WavesCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
-    required this.isTestnet_,
+    required this.chainId,
   });
 
   @override
@@ -298,13 +269,13 @@ class WavesCoin extends Coin {
   @override
   int decimals() => 8;
 
-  int get _chainId => isTestnet_ ? _wavesTestnetChainId : _wavesMainnetChainId;
+  int get _chainId => chainId;
 
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_V6${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'wavesCoinDetail_V6${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -316,7 +287,7 @@ class WavesCoin extends Coin {
       calculateWavesKey,
       WavesDeriveArgs(
         seedRoot: seedPhraseRoot,
-        isTestnet: isTestnet_,
+        chainId: chainId,
         mnemonic: mnemonic,
       ),
     );
@@ -344,7 +315,7 @@ class WavesCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'wavesBalance_${isTestnet_}_$address';
+    final key = 'wavesBalance_${chainId}_$address';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
@@ -424,6 +395,7 @@ class WavesCoin extends Coin {
       'timestamp': timestamp,
       'amount': amountWavelets,
       'fee': feeWavelets,
+      'chainId': chainId,
       'recipient': to,
       'attachment': _b58Encode(attachment),
       'proofs': [sigB58],
@@ -467,7 +439,7 @@ class WavesCoin extends Coin {
       }
       if (decoded[1] != _chainId) {
         throw Exception(
-            'wrong chain (expected ${isTestnet_ ? 'T' : 'W'}, got ${String.fromCharCode(decoded[1])})');
+            'wrong chain (expected $chainId, got ${String.fromCharCode(decoded[1])})');
       }
       final payload = decoded.sublist(0, 22);
       final checksum = decoded.sublist(22);
@@ -496,8 +468,8 @@ class WavesCoin extends Coin {
   @override
   Map<String, dynamic> toJson() => {
         'type': 'WavesCoin',
-        'isTestnet': isTestnet_,
         'symbol': symbol,
+        'chainId': chainId,
         'blockExplorer': blockExplorer,
         'nodeUrl': nodeUrl,
         'name': name,
@@ -524,7 +496,20 @@ List<WavesCoin> getWavesBlockChains() {
         geckoID: 'waves',
         rampID: '',
         payScheme: 'waves',
-        isTestnet_: true,
+        chainId: 0x54,
+      ),
+      WavesCoin(
+        name: 'Waves (Stagenet)',
+        symbol: 'WAVES',
+        default_: 'WAVES',
+        blockExplorer:
+            'https://stagenet.wavesexplorer.com/tx/$blockExplorerPlaceholder',
+        image: 'assets/waves.png',
+        nodeUrl: 'https://nodes-stagenet.wavesnodes.com',
+        geckoID: 'waves',
+        rampID: '',
+        payScheme: 'waves',
+        chainId: 0x53,
       ),
     ];
   }
@@ -539,7 +524,7 @@ List<WavesCoin> getWavesBlockChains() {
       geckoID: 'waves',
       rampID: '',
       payScheme: 'waves',
-      isTestnet_: false,
+      chainId: 0x57,
     ),
   ];
 }
