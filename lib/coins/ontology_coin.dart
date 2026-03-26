@@ -155,9 +155,10 @@ class OntologyCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final result = await _rpc('getbalance', [address]);
-    return double.tryParse(
-            result[getSymbol().toLowerCase()]?.toString() ?? '0') ??
-        0.0;
+    final balanceStr = result[getSymbol().toLowerCase()]?.toString() ?? '0';
+    final balanceBigInt = BigInt.tryParse(balanceStr) ?? BigInt.zero;
+    final divisor = BigInt.from(10).pow(decimals());
+    return balanceBigInt.toDouble() / divisor.toDouble();
   }
 
   @override
