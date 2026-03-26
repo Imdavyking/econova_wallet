@@ -16,6 +16,7 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import 'package:cryptography/cryptography.dart';
 
 // Waves — ed25519 curve with Curve25519 public keys, BIP44 coin type 5741564
 // Derivation : m/44'/5741564'/0'/0'/0'  (SLIP-0010 ed25519)
@@ -112,6 +113,32 @@ class WavesDeriveArgs {
   const WavesDeriveArgs({required this.seedRoot, required this.isTestnet});
 }
 
+//  {
+//     "id": "waves",
+//     "name": "Waves",
+//     "coinId": 5741564,
+//     "symbol": "WAVES",
+//     "decimals": 8,
+//     "blockchain": "Waves",
+//     "derivation": [
+//       {
+//         "path": "m/44'/5741564'/0'/0'/0'"
+//       }
+//     ],
+//     "curve": "ed25519",
+//     "publicKeyType": "curve25519",
+//     "explorer": {
+//       "url": "https://wavesexplorer.com",
+//       "txPath": "/tx/",
+//       "accountPath": "/address/"
+//     },
+//     "info": {
+//       "url": "https://wavesplatform.com",
+//       "source": "https://github.com/wavesplatform/Waves",
+//       "rpc": "https://nodes.wavesnodes.com",
+//       "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
+//     }
+//   }
 Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
   // SLIP-0010 ed25519 derivation — uses HMAC-SHA512 keyed with "ed25519 seed"
   // args.seedRoot.seed is the raw 64-byte BIP39 seed (not the BIP32 root node)
@@ -119,17 +146,29 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
     _wavesDerivationPath, // "m/44'/5741564'/0'/0'/0'"
     args.seedRoot.seed, // raw BIP39 seed bytes
   );
-  final seed = Uint8List.fromList(derived.key); // 32-byte ed25519 seed
 
-  final publicKey = await ED25519_HD_KEY.getPublicKey(seed);
+  final algorithm = X25519();
+
+  // We need the private key pair of Alice.
+
+  final keyPair = await algorithm.newKeyPairFromSeed(derived.key);
+
+  final publicKey = await keyPair.extractPublicKey();
 
   final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
-  final address = _buildWavesAddress(Uint8List.fromList(publicKey), chainId);
+  final address =
+      _buildWavesAddress(Uint8List.fromList(publicKey.bytes), chainId);
+
+  print({
+    'address': address,
+    'privateKey': '',
+    'publicKey': HEX.encode(publicKey.bytes),
+  });
 
   return {
     'address': address,
-    'privateKey': HEX.encode(seed),
-    'publicKey': HEX.encode(publicKey),
+    'privateKey': '',
+    'publicKey': HEX.encode(publicKey.bytes),
   };
 }
 
@@ -243,7 +282,8 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_V23${isTestnet_}_${walletImportType.name}';
+    final saveKey =
+        'wavesCoinDetail_V233345${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
