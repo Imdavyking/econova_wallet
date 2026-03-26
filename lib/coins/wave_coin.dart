@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'package:bs58check/bs58check.dart' hide getAddress;
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
@@ -149,16 +150,37 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
     args.seedRoot.seed, // raw 64-byte BIP39 seed
   );
 
+  final privKey = derived.key;
+
+  privKey[0] &= 0xF8;
+  privKey[31] &= 0x7F;
+  privKey[31] |= 0x40;
+  print('private test11');
+  print(base58.encode(privKey as Uint8List));
+  print('private test22');
+  print(base58.encode(derived.key as Uint8List));
+
+  // Step 4: Curve25519 public key
+  final x25519 = X25519();
+  final kp = await x25519.newKeyPairFromSeed(privKey);
+  final pub = await kp.extractPublicKey();
+  final curve25519Pub = Uint8List.fromList(pub.bytes);
+  print('pub1 ${base58.encode(curve25519Pub)}');
+
   final pubKey = await ED25519_HD_KEY.getPublicKey(derived.key, false);
 
   final edPubBytes = Uint8List.fromList(pubKey);
 
   // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
   final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
-
+  print('pub2 ${base58.encode(curve25519PubBytes)}');
   final chainId = args.chainId;
   final address = _buildWavesAddress(curve25519PubBytes, chainId);
-
+  print(
+      'address1 $address'); // trust wallet address correct(3MCVEaDgnuorK6XcC3CMFykc81Z6FLXXHf2)
+  final address2 = _buildWavesAddress(curve25519Pub, chainId);
+  print(
+      'address2 $address2'); // waves sdk address correct(3M39jZZ4bYtL8RPwTqB6T9ndr4iHbKMPPGy)
   return {
     'address': address,
     'privateKey': HEX.encode(derived.key),
@@ -277,7 +299,7 @@ class WavesCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey =
-        'wavesCoinDetail_V4${chainId}_${walletImportType.name}';
+        'wavesCoinDetail_V38=33333438${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -497,6 +519,8 @@ class WavesCoin extends Coin {
     privKey[0] &= 0xF8;
     privKey[31] &= 0x7F;
     privKey[31] |= 0x40;
+    print('private test');
+    print(base58.encode(privKey));
 
     // Step 4: Curve25519 public key
     final x25519 = X25519();
