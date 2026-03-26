@@ -405,7 +405,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         default_: 'ONG',
         blockExplorer:
             'https://explorer.ont.io/testnet/tx/$blockExplorerPlaceholder',
-        image: 'assets/ontology_gas.png',
+        image: 'assets/ong.png',
         rpcUrl: 'http://polaris1.ont.io:20336',
         geckoID: 'ong',
         rampID: '',
@@ -436,7 +436,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       symbol: 'ONG',
       default_: 'ONG',
       blockExplorer: 'https://explorer.ont.io/tx/$blockExplorerPlaceholder',
-      image: 'assets/ontology_gas.png',
+      image: 'assets/ong.png',
       rpcUrl: 'http://dappnode1.ont.io:20336',
       geckoID: 'ong',
       rampID: '',
