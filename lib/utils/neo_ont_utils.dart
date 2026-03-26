@@ -235,7 +235,7 @@ Future<Map<String, dynamic>> neoOntRpc(
         {'jsonrpc': '2.0', 'method': method, 'params': params, 'id': 1}),
   );
 
-  print(res.body);
+  print('result: ${res.body}');
 
   if (res.statusCode > 399) {
     throw Exception('RPC HTTP error ${res.statusCode} ($rpcUrl)');
@@ -245,6 +245,9 @@ Future<Map<String, dynamic>> neoOntRpc(
 
   if (data['error'] != null && data['error'] != 0) {
     throw Exception('RPC error: ${data['error']} ${data['desc']}');
+  }
+  if (method == 'sendrawtransaction' && data['result'] is String) {
+    return {'hash': data['result']};
   }
   return data['result'] as Map<String, dynamic>;
 }
