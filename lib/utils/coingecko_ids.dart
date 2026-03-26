@@ -3,6 +3,7 @@ const coinGeckoIDs = [
   'icon',
   'nano',
   'ontology',
+  'ong',
   'waves',
   'neo',
   'banano',

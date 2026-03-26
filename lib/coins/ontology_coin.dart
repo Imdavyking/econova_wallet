@@ -23,9 +23,6 @@ import '../utils/rpc_urls.dart';
 const _ontDerivationPath = "m/44'/1024'/0'/0/0";
 const _ontAddressVersion = 0x17;
 
-// ONT native contract address (little-endian hex, 20 bytes)
-const _ontContractAddrHex = '0000000000000000000000000000000000000001';
-
 // ─── Key derivation ────────────────────────────────────────────────────────
 
 class OntDeriveArgs {
@@ -78,96 +75,6 @@ Uint8List _ontAddressToHash(String address) {
   }
   return decoded.sublist(1, 21);
 }
-
-Uint8List _buildOntTransferScript(
-  String fromAddress,
-  String toAddress,
-  int amount,
-) {
-  final fromHash = _ontAddressToHash(fromAddress);
-  final toHash = _ontAddressToHash(toAddress);
-  // "Ontology.Native.Invoke" constant
-  final nativeInvoke =
-      Uint8List.fromList(utf8.encode('Ontology.Native.Invoke'));
-  final methodName = Uint8List.fromList(utf8.encode('transfer'));
-  final contractAddr = Uint8List.fromList(HEX.decode(_ontContractAddrHex));
-
-  final s = <int>[];
-
-  // pushHexString equivalent: raw len prefix for ≤75 bytes
-  void push(List<int> bytes) {
-    final n = bytes.length;
-    if (n <= 75) {
-      s.add(n);
-    } else if (n < 0x100) {
-      s
-        ..add(0x4C)
-        ..add(n);
-    } else {
-      s
-        ..add(0x4D)
-        ..add(n & 0xff)
-        ..add((n >> 8) & 0xff);
-    }
-    s.addAll(bytes);
-  }
-
-  void pushInt(int v) {
-    if (v == 0) {
-      s.add(0x00); // PUSH0
-    } else if (v >= 1 && v <= 16) {
-      s.add(0x50 + v); // PUSH1..PUSH16
-    } else {
-      final bytes = <int>[];
-      int x = v;
-      while (x > 0) {
-        bytes.add(x & 0xff);
-        x >>= 8;
-      }
-      if (bytes.last & 0x80 != 0) bytes.add(0x00);
-      push(bytes);
-    }
-  }
-
-  // ── NeoVM struct: PUSH0 + NEWSTRUCT + TOALTSTACK ──────────────────────
-  s.add(0x00); // PUSH0
-  s.add(0xc6); // NEWSTRUCT
-  s.add(0x6b); // TOALTSTACK
-
-  // from
-  push(fromHash);
-  s
-    ..add(0x6a)
-    ..add(0x7c)
-    ..add(0xc8); // DUP_FROM_ALT + SWAP + APPEND
-  // to
-  push(toHash);
-  s
-    ..add(0x6a)
-    ..add(0x7c)
-    ..add(0xc8);
-  // amount
-  pushInt(amount);
-  s
-    ..add(0x6a)
-    ..add(0x7c)
-    ..add(0xc8);
-
-  s.add(0x6c); // FROMALTSTACK
-
-  // wrap in a 1-element array
-  s.add(0x51); // PUSH1
-  s.add(0xc1); // PACK
-
-  // ── method + contract + SYSCALL ──────────────────────────────────────
-  push(methodName); // 0x08 + "transfer"
-  push(contractAddr); // 0x14 + 20-byte contract address
-  s.add(0x00); // PUSH0 (extra arg)
-  s.add(0x68); // SYSCALL opcode
-  push(nativeInvoke); // 0x16 + "Ontology.Native.Invoke"
-
-  return Uint8List.fromList(s);
-}
 // ─── OntologyCoin ──────────────────────────────────────────────────────────
 
 class OntologyCoin extends Coin {
@@ -180,6 +87,7 @@ class OntologyCoin extends Coin {
   final String geckoID;
   final String rampID;
   final String payScheme;
+  final String contractAddress;
   final bool isTestnet_;
 
   OntologyCoin({
@@ -192,6 +100,7 @@ class OntologyCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.contractAddress,
     required this.isTestnet_,
   });
 
@@ -244,7 +153,9 @@ class OntologyCoin extends Coin {
   @override
   Future<double> getUserBalance({required String address}) async {
     final result = await _rpc('getbalance', [address]);
-    return double.tryParse(result['ont']?.toString() ?? '0') ?? 0.0;
+    return double.tryParse(
+            result[getSymbol().toLowerCase()]?.toString() ?? '0') ??
+        0.0;
   }
 
   @override
@@ -260,6 +171,96 @@ class OntologyCoin extends Coin {
     } catch (_) {
       return stored ?? 0.0;
     }
+  }
+
+  Uint8List _buildOntTransferScript(
+    String fromAddress,
+    String toAddress,
+    int amount,
+  ) {
+    final fromHash = _ontAddressToHash(fromAddress);
+    final toHash = _ontAddressToHash(toAddress);
+    // "Ontology.Native.Invoke" constant
+    final nativeInvoke =
+        Uint8List.fromList(utf8.encode('Ontology.Native.Invoke'));
+    final methodName = Uint8List.fromList(utf8.encode('transfer'));
+    final contractAddr = Uint8List.fromList(HEX.decode(contractAddress));
+
+    final s = <int>[];
+
+    // pushHexString equivalent: raw len prefix for ≤75 bytes
+    void push(List<int> bytes) {
+      final n = bytes.length;
+      if (n <= 75) {
+        s.add(n);
+      } else if (n < 0x100) {
+        s
+          ..add(0x4C)
+          ..add(n);
+      } else {
+        s
+          ..add(0x4D)
+          ..add(n & 0xff)
+          ..add((n >> 8) & 0xff);
+      }
+      s.addAll(bytes);
+    }
+
+    void pushInt(int v) {
+      if (v == 0) {
+        s.add(0x00); // PUSH0
+      } else if (v >= 1 && v <= 16) {
+        s.add(0x50 + v); // PUSH1..PUSH16
+      } else {
+        final bytes = <int>[];
+        int x = v;
+        while (x > 0) {
+          bytes.add(x & 0xff);
+          x >>= 8;
+        }
+        if (bytes.last & 0x80 != 0) bytes.add(0x00);
+        push(bytes);
+      }
+    }
+
+    // ── NeoVM struct: PUSH0 + NEWSTRUCT + TOALTSTACK ──────────────────────
+    s.add(0x00); // PUSH0
+    s.add(0xc6); // NEWSTRUCT
+    s.add(0x6b); // TOALTSTACK
+
+    // from
+    push(fromHash);
+    s
+      ..add(0x6a)
+      ..add(0x7c)
+      ..add(0xc8); // DUP_FROM_ALT + SWAP + APPEND
+    // to
+    push(toHash);
+    s
+      ..add(0x6a)
+      ..add(0x7c)
+      ..add(0xc8);
+    // amount
+    pushInt(amount);
+    s
+      ..add(0x6a)
+      ..add(0x7c)
+      ..add(0xc8);
+
+    s.add(0x6c); // FROMALTSTACK
+
+    // wrap in a 1-element array
+    s.add(0x51); // PUSH1
+    s.add(0xc1); // PACK
+
+    // ── method + contract + SYSCALL ──────────────────────────────────────
+    push(methodName); // 0x08 + "transfer"
+    push(contractAddr); // 0x14 + 20-byte contract address
+    s.add(0x00); // PUSH0 (extra arg)
+    s.add(0x68); // SYSCALL opcode
+    push(nativeInvoke); // 0x16 + "Ontology.Native.Invoke"
+
+    return Uint8List.fromList(s);
   }
 
   @override
@@ -375,6 +376,7 @@ class OntologyCoin extends Coin {
         'geckoID': geckoID,
         'rampID': rampID,
         'payScheme': payScheme,
+        'contractAddress': contractAddress,
       };
 }
 
@@ -395,6 +397,22 @@ List<OntologyCoin> getOntologyBlockChains() {
         rampID: '',
         payScheme: 'ontology',
         isTestnet_: true,
+        contractAddress: '0000000000000000000000000000000000000001',
+      ),
+      OntologyCoin(
+        name: 'Ontology Gas (Testnet)',
+        symbol: 'ONG',
+        default_: 'ONG',
+        blockExplorer:
+            'https://explorer.ont.io/testnet/tx/$blockExplorerPlaceholder',
+        image: 'assets/ontology_gas.png',
+        rpcUrl: 'http://polaris1.ont.io:20336',
+        geckoID: 'ong',
+        rampID: '',
+        payScheme: 'ontology',
+        isTestnet_: true,
+        contractAddress:
+            '0000000000000000000000000000000000000002', // ONG contract
       ),
     ];
   }
@@ -411,6 +429,21 @@ List<OntologyCoin> getOntologyBlockChains() {
       rampID: '',
       payScheme: 'ontology',
       isTestnet_: false,
+      contractAddress: '0000000000000000000000000000000000000001',
+    ),
+    OntologyCoin(
+      name: 'Ontology Gas',
+      symbol: 'ONG',
+      default_: 'ONG',
+      blockExplorer: 'https://explorer.ont.io/tx/$blockExplorerPlaceholder',
+      image: 'assets/ontology_gas.png',
+      rpcUrl: 'http://dappnode1.ont.io:20336',
+      geckoID: 'ong',
+      rampID: '',
+      payScheme: 'ontology',
+      isTestnet_: false,
+      contractAddress:
+          '0000000000000000000000000000000000000002', // ONG contract
     ),
   ];
 }
