@@ -803,10 +803,18 @@ void main() async {
           );
           break;
         case "WAVES":
-          expect(
-            cryptoKeys.address,
-            "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
-          );
+          if (currCoin.getName() == 'Waves') {
+            expect(
+              cryptoKeys.address,
+              "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
+            );
+          } else if (currCoin.getName() == 'Waves (Testnet)') {
+            expect(
+              cryptoKeys.address,
+              "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
+            );
+          }
+
           break;
         case "WND":
           expect(
@@ -893,12 +901,7 @@ void main() async {
             "Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc",
           );
           break;
-        case "WAVES":
-          expect(
-            cryptoKeys.address,
-            "3P6qjv7Usb4LpA4zy6qzw9Wt53A5jh4mYQq",
-          );
-          break;
+
         case 'STRK':
           expect(
             cryptoKeys.address,
