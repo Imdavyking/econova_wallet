@@ -338,7 +338,7 @@ class WavesCoin extends Coin {
       }
     }
 
-    final key = 'wavesBalances_${chainId}_$address';
+    final key = 'wavesBalances_V1${chainId}_$address';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
