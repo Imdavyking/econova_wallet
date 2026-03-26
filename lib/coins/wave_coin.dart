@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'package:bs58check/bs58check.dart' hide getAddress;
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
@@ -276,7 +277,8 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'wavesCoinDetail_V6${chainId}_${walletImportType.name}';
+    final saveKey =
+        'wavesCoinDetail_V3638334334${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -292,6 +294,7 @@ class WavesCoin extends Coin {
         mnemonic: mnemonic,
       ),
     );
+
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
@@ -406,8 +409,6 @@ class WavesCoin extends Coin {
       },
       body: txJson,
     );
-
-    print(res.body);
 
     if (res.statusCode ~/ 100 != 2) {
       final err = jsonDecode(res.body);
