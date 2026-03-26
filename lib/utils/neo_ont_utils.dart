@@ -146,8 +146,14 @@ Uint8List neoOntLeUInt64(int v) =>
     (ByteData(8)..setUint64(0, v, Endian.little)).buffer.asUint8List();
 
 Uint8List neoOntP256SignOnt(Uint8List privKeyBytes, Uint8List txBody) {
-  // Step 1: SHA256(txBody) — matches SDK's computeHash(ECDSAwithSHA256)
-  final hash = neoOntSha256(txBody); // 32-byte digest
+  print('msg: ${HEX.encode(txBody)}');
+  final s_msg = HEX.decode(
+          '00d1749480c7c409000000000000204e000000000000fa6516ff71a114099edb9937e84a90ad361aed747100c66b14fa6516ff71a114099edb9937e84a90ad361aed746a7cc81403ce94cd107b5c53b70b1d929c32f9464b35e4cf6a7cc8516a7cc86c51c1087472616e736665721400000000000000000000000000000000000000010068164f6e746f6c6f67792e4e61746976652e496e766f6b650000')
+      as Uint8List; // Step 1: SHA256(txBody) — matches SDK's computeHash(ECDSAwithSHA256)
+  final hash = neoOntSha256(
+      neoOntSha256((s_msg.sublist(0, txBody.length - 1)))); // 32-byte digest
+
+  print('hash ${HEX.encode(hash)}');
 
   final domainParams = pc.ECDomainParameters('prime256v1');
   final privKey = pc.ECPrivateKey(

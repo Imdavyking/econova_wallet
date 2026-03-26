@@ -300,6 +300,10 @@ class OntologyCoin extends Coin {
       0x00, // sig count placeholder for hash pre-image
     ]);
 
+    // final txUnsigned = HEX.decode(
+    //         '00d186ab9407c409000000000000204e000000000000fa6516ff71a114099edb9937e84a90ad361aed747100c66b14fa6516ff71a114099edb9937e84a90ad361aed746a7cc81403ce94cd107b5c53b70b1d929c32f9464b35e4cf6a7cc8516a7cc86c51c1087472616e736665721400000000000000000000000000000000000000010068164f6e746f6c6f67792e4e61746976652e496e766f6b6500')
+    //     as Uint8List;
+
     if (kDebugMode) {
       print('=== DART unsigned tx hex ===');
       print(HEX.encode(txUnsigned));
@@ -308,6 +312,8 @@ class OntologyCoin extends Coin {
 
     // Single SHA256 of the unsigned body (matches SDK serializeUnsignedData)
     final signature = neoOntP256SignOnt(privBytes, txUnsigned);
+
+    // return null;
 
     // ONT invocation script: 0x41 (push 65 bytes) + 0x01 (ECDSA algo id) + sig
     // This differs from NEO which uses 0x40 + sig
