@@ -511,6 +511,11 @@ List<WavesCoin> getWavesBlockChains() {
         payScheme: 'waves',
         chainId: 0x53,
       ),
+// The private node comes with a pre-funded genesis account built in:
+
+// Seed: waves private node seed with waves tokens
+// Address: 3M4qwDomRabJKLZxuXhwfqLApQkU592nWxF
+// Balance: 100,000,000 WAVES 🎉
       WavesCoin(
         name: 'Waves (Local)',
         symbol: 'WAVES',
