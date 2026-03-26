@@ -309,8 +309,6 @@ class OntologyCoin extends Coin {
     // Single SHA256 of the unsigned body (matches SDK serializeUnsignedData)
     final signature = neoOntP256SignOnt(privBytes, txUnsigned);
 
-    // return null;
-
     // ONT invocation script: 0x41 (push 65 bytes) + 0x01 (ECDSA algo id) + sig
     // This differs from NEO which uses 0x40 + sig
     final invocationScript =
