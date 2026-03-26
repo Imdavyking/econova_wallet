@@ -148,21 +148,31 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
   );
 
   final algorithm = X25519();
+  final algorithm1 = Ed25519();
 
   // We need the private key pair of Alice.
 
   final keyPair = await algorithm.newKeyPairFromSeed(derived.key);
+  final keyPair1 = await algorithm1.newKeyPairFromSeed(derived.key);
 
   final publicKey = await keyPair.extractPublicKey();
+  final publicKey1 = await keyPair1.extractPublicKey();
 
   final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
   final address =
       _buildWavesAddress(Uint8List.fromList(publicKey.bytes), chainId);
+  final address1 =
+      _buildWavesAddress(Uint8List.fromList(publicKey1.bytes), chainId);
 
   print({
     'address': address,
     'privateKey': '',
     'publicKey': HEX.encode(publicKey.bytes),
+  });
+  print({
+    'address1': address1,
+    'privateKey': '',
+    'publicKey1': HEX.encode(publicKey1.bytes),
   });
 
   return {
