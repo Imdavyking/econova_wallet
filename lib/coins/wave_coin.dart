@@ -109,8 +109,13 @@ String _buildWavesAddress(Uint8List pubKey, int chainId) {
 
 class WavesDeriveArgs {
   final SeedPhraseRoot seedRoot;
+  final String mnemonic;
   final bool isTestnet;
-  const WavesDeriveArgs({required this.seedRoot, required this.isTestnet});
+  const WavesDeriveArgs({
+    required this.seedRoot,
+    required this.isTestnet,
+    required this.mnemonic,
+  });
 }
 
 //  {
@@ -138,47 +143,62 @@ class WavesDeriveArgs {
 //       "rpc": "https://nodes.wavesnodes.com",
 //       "documentation": "https://nodes.wavesnodes.com/api-docs/index.html"
 //     }
-//   }
+//   }import 'package:pointycastle/export.dart' as pc;
+
+/// Convert an Ed25519 public key (32 bytes) to Curve25519 (32 bytes)
+/// Uses the birational equivalence: u = (1+y)/(1-y) mod p
+Uint8List _ed25519PublicToCurve25519(Uint8List edPub) {
+  // Ed25519 stores y with sign bit of x in the high bit of byte[31]
+  final yBytes = Uint8List.fromList(edPub);
+  yBytes[31] &= 0x7F; // clear sign bit to get raw y
+
+  // p = 2^255 - 19
+  final p = (BigInt.one << 255) - BigInt.from(19);
+
+  // Decode y as little-endian
+  BigInt y = BigInt.zero;
+  for (int i = 31; i >= 0; i--) {
+    y = (y << 8) | BigInt.from(yBytes[i]);
+  }
+
+  // u = (1 + y) / (1 - y) mod p
+  final num = (BigInt.one + y) % p;
+  final den = (BigInt.one - y + p) % p;
+  final u = (num * den.modPow(p - BigInt.two, p)) % p;
+
+  // Encode u as little-endian 32 bytes
+  final uBytes = Uint8List(32);
+  BigInt tmp = u;
+  for (int i = 0; i < 32; i++) {
+    uBytes[i] = (tmp & BigInt.from(0xFF)).toInt();
+    tmp >>= 8;
+  }
+  return uBytes;
+}
+
 Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
-  // SLIP-0010 ed25519 derivation — uses HMAC-SHA512 keyed with "ed25519 seed"
-  // args.seedRoot.seed is the raw 64-byte BIP39 seed (not the BIP32 root node)
+  // Step 1: SLIP-0010 ed25519 derivation from BIP39 seed
   final derived = await ED25519_HD_KEY.derivePath(
     _wavesDerivationPath, // "m/44'/5741564'/0'/0'/0'"
-    args.seedRoot.seed, // raw BIP39 seed bytes
+    args.seedRoot.seed, // raw 64-byte BIP39 seed
   );
 
-  final algorithm = X25519();
-  final algorithm1 = Ed25519();
-
-  // We need the private key pair of Alice.
-
+  // Step 2: Ed25519 keypair from derived private scalar
+  final algorithm = Ed25519();
   final keyPair = await algorithm.newKeyPairFromSeed(derived.key);
-  final keyPair1 = await algorithm1.newKeyPairFromSeed(derived.key);
+  final edPublicKey = await keyPair.extractPublicKey();
+  final edPubBytes = Uint8List.fromList(edPublicKey.bytes);
 
-  final publicKey = await keyPair.extractPublicKey();
-  final publicKey1 = await keyPair1.extractPublicKey();
+  // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
+  final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
 
   final chainId = args.isTestnet ? _wavesTestnetChainId : _wavesMainnetChainId;
-  final address =
-      _buildWavesAddress(Uint8List.fromList(publicKey.bytes), chainId);
-  final address1 =
-      _buildWavesAddress(Uint8List.fromList(publicKey1.bytes), chainId);
-
-  print({
-    'address': address,
-    'privateKey': '',
-    'publicKey': HEX.encode(publicKey.bytes),
-  });
-  print({
-    'address1': address1,
-    'privateKey': '',
-    'publicKey1': HEX.encode(publicKey1.bytes),
-  });
+  final address = _buildWavesAddress(curve25519PubBytes, chainId);
 
   return {
     'address': address,
-    'privateKey': '',
-    'publicKey': HEX.encode(publicKey.bytes),
+    'privateKey': HEX.encode(derived.key),
+    'publicKey': HEX.encode(curve25519PubBytes),
   };
 }
 
@@ -292,8 +312,7 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey =
-        'wavesCoinDetail_V233345${isTestnet_}_${walletImportType.name}';
+    final saveKey = 'wavesCoinDetail_V5${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -303,7 +322,11 @@ class WavesCoin extends Coin {
     }
     final result = await compute(
       calculateWavesKey,
-      WavesDeriveArgs(seedRoot: seedPhraseRoot, isTestnet: isTestnet_),
+      WavesDeriveArgs(
+        seedRoot: seedPhraseRoot,
+        isTestnet: isTestnet_,
+        mnemonic: mnemonic,
+      ),
     );
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
