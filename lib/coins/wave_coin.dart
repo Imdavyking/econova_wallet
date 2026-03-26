@@ -511,6 +511,19 @@ List<WavesCoin> getWavesBlockChains() {
         payScheme: 'waves',
         chainId: 0x53,
       ),
+      WavesCoin(
+        name: 'Waves (Local)',
+        symbol: 'WAVES',
+        default_: 'WAVES',
+        blockExplorer:
+            'http://localhost:6869/transactions/info/$blockExplorerPlaceholder',
+        image: 'assets/waves.png',
+        nodeUrl: 'http://localhost:6869',
+        geckoID: 'waves',
+        rampID: '',
+        payScheme: 'waves',
+        chainId: 0x52, // 'R' = private network
+      ),
     ];
   }
   return [
