@@ -251,6 +251,7 @@ class OntologyCoin extends Coin {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final keyData = await importData(walletData);
     final fromAddr = keyData.address;
+    print(keyData.toJson());
     final privBytes = Uint8List.fromList(HEX.decode(keyData.privateKey!));
     final pubKeyBytes = Uint8List.fromList(HEX.decode(keyData.publicKey!));
 
@@ -258,10 +259,13 @@ class OntologyCoin extends Coin {
     final script = _buildOntTransferScript(fromAddr, to, ontAmount);
 
     final blockCount = await _rpcRaw('getblockcount', []) as int;
+    print('blockCount $blockCount');
     final nonce = blockCount & 0xffffffff;
 
     // FIX 1 — payer is the raw 20-byte hash, no version prefix
+    print('from :$fromAddr');
     final payer = _ontAddressToHash(fromAddr);
+    print('payer :$payer');
 
     const gasPrice = 2500;
     const gasLimit = 20000;
@@ -277,17 +281,20 @@ class OntologyCoin extends Coin {
       ...neoOntVarInt(0), // attributes count = 0
     ]);
 
+    print('txBody: $txBody');
+
     // ONT: sign dsha256(txBody) directly (innerDigest = null)
     final txHash256 = neoOntDsha256(txBody);
     final signature = neoOntP256Sign(privBytes, txHash256);
+    final ontPubKeyBytes = Uint8List.fromList([0x12, 0x02, ...pubKeyBytes]);
 
     // FIX 3 — ONT native Sig format: SigData[] | M | PubKeys[]
     final sigRecord = Uint8List.fromList([
       ...neoOntVarInt(1), // SigData count = 1
-      ...neoOntVarBytes(signature), // VarInt(64) + 64-byte sig
-      0x01, // M = 1
+      ...neoOntVarBytes(signature), // VarInt(64) + 64-byte (r‖s) sig
+      ...neoOntLeUInt16(1), // M = 1  →  [0x01, 0x00]
       ...neoOntVarInt(1), // PubKey count = 1
-      ...neoOntVarBytes(pubKeyBytes), // VarInt(33) + 33-byte pubkey
+      ...neoOntVarBytes(ontPubKeyBytes), // VarInt(35) + [12 02 + 33-byte key]
     ]);
 
     final rawTx = Uint8List.fromList([
