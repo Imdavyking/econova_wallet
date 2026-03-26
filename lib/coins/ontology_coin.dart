@@ -89,6 +89,7 @@ class OntologyCoin extends Coin {
   final String payScheme;
   final String contractAddress;
   final bool isTestnet_;
+  final int coinDecimals;
 
   OntologyCoin({
     required this.blockExplorer,
@@ -102,6 +103,7 @@ class OntologyCoin extends Coin {
     required this.payScheme,
     required this.contractAddress,
     required this.isTestnet_,
+    required this.coinDecimals,
   });
 
   @override
@@ -121,7 +123,7 @@ class OntologyCoin extends Coin {
   @override
   String getRampID() => rampID;
   @override
-  int decimals() => 0;
+  int decimals() => coinDecimals;
 
   Future<Map<String, dynamic>> _rpc(String method, List params) =>
       neoOntRpc(rpcUrl, method, params);
@@ -375,6 +377,7 @@ class OntologyCoin extends Coin {
         'image': image,
         'geckoID': geckoID,
         'rampID': rampID,
+        'decimals': coinDecimals,
         'payScheme': payScheme,
         'contractAddress': contractAddress,
       };
@@ -397,6 +400,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         rampID: '',
         payScheme: 'ontology',
         isTestnet_: true,
+        coinDecimals: 0,
         contractAddress: '0000000000000000000000000000000000000001',
       ),
       OntologyCoin(
@@ -411,6 +415,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         rampID: '',
         payScheme: 'ontology',
         isTestnet_: true,
+        coinDecimals: 9,
         contractAddress:
             '0000000000000000000000000000000000000002', // ONG contract
       ),
@@ -428,6 +433,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       geckoID: 'ontology',
       rampID: '',
       payScheme: 'ontology',
+      coinDecimals: 0,
       isTestnet_: false,
       contractAddress: '0000000000000000000000000000000000000001',
     ),
@@ -442,6 +448,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       rampID: '',
       payScheme: 'ontology',
       isTestnet_: false,
+      coinDecimals: 9,
       contractAddress:
           '0000000000000000000000000000000000000002', // ONG contract
     ),
