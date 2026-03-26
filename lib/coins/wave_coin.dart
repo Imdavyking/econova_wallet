@@ -14,7 +14,7 @@ import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'package:cryptography/cryptography.dart';
-
+import 'package:crypto/crypto.dart' as crypto;
 // Waves — ed25519 curve with Curve25519 public keys, BIP44 coin type 5741564
 // Derivation : m/44'/5741564'/0'/0'/0'  (SLIP-0010 ed25519)
 //
@@ -315,6 +315,13 @@ class WavesCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
+    if (chainId == 0x52) {
+      final genesis = await importFromWavesSeed(
+        'waves private node seed with waves tokens',
+      );
+      print('genesis: ${genesis.address}');
+    }
+
     final key = 'wavesBalance_${chainId}_$address';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
@@ -452,6 +459,42 @@ class WavesCoin extends Coin {
     } catch (e) {
       throw Exception('Invalid WAVES address: $e');
     }
+  }
+
+  /// Derive a Waves account from a native Waves seed string (not BIP39).
+  /// Used for the private node genesis account and any seed imported via
+  /// the Waves desktop/web client.
+  Future<AccountData> importFromWavesSeed(String wavesSeed) async {
+    final seedBytes = Uint8List.fromList(utf8.encode(wavesSeed));
+    final nonce = Uint8List.fromList([0, 0, 0, 0]);
+
+    // Step 1: keccak256(blake2b256(nonce + seed))  ← was wrong (sha256)
+    final nonceAndSeed = Uint8List.fromList([...nonce, ...seedBytes]);
+    final accountSeed = _keccak256waves(_blake2b256waves(nonceAndSeed));
+
+    // Step 2: sha256(accountSeed) → raw private scalar
+    var privKey = Uint8List.fromList(
+      crypto.sha256.convert(accountSeed).bytes,
+    );
+
+    // Step 3: Curve25519 clamping
+    privKey[0] &= 0xF8;
+    privKey[31] &= 0x7F;
+    privKey[31] |= 0x40;
+
+    // Step 4: Curve25519 public key
+    final x25519 = X25519();
+    final kp = await x25519.newKeyPairFromSeed(privKey);
+    final pub = await kp.extractPublicKey();
+    final curve25519Pub = Uint8List.fromList(pub.bytes);
+
+    final address = _buildWavesAddress(curve25519Pub, chainId);
+
+    return AccountData.fromJson({
+      'address': address,
+      'privateKey': HEX.encode(privKey),
+      'publicKey': HEX.encode(curve25519Pub),
+    });
   }
 
   @override
