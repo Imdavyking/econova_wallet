@@ -282,45 +282,50 @@ class OntologyCoin extends Coin {
 
     final blockCount = await _rpcRaw('getblockcount', []) as int;
     final nonce = blockCount & 0xffffffff;
-
     final payer = _ontAddressToHash(fromAddr);
 
     const gasPrice = 2500;
     const gasLimit = 20000;
 
-    // Unsigned tx body — the trailing 0x00 is the sig-count placeholder
-    // required by the ONT serialization format when computing the signing hash.
+    // Unsigned body — trailing 0x00 is the sig-count placeholder the SDK
+    // includes in the hash pre-image (serializeUnsignedData ends with 0x00)
     final txUnsigned = Uint8List.fromList([
       0x00, 0xd1,
       ...neoOntLeUInt32(nonce),
       ...neoOntLeUInt64(gasPrice),
       ...neoOntLeUInt64(gasLimit),
-      ...payer, // 20-byte script hash, no version prefix
+      ...payer,
       ...neoOntVarBytes(script),
       ...neoOntVarInt(0), // attributes count = 0
-      0x00, // sig count = 0 placeholder (hash pre-image only)
+      0x00, // sig count placeholder for hash pre-image
     ]);
 
-    // ONT signs single SHA256 of the unsigned tx body (NOT double-SHA256)
-    final txHash256 = neoOntSha256(txUnsigned);
-    final signature = neoOntP256Sign(privBytes, txHash256);
+    if (kDebugMode) {
+      print('=== DART unsigned tx hex ===');
+      print(HEX.encode(txUnsigned));
+      print('=== DART unsigned tx hex END ===');
+    }
 
+    // Single SHA256 of the unsigned body (matches SDK serializeUnsignedData)
+    final signature = neoOntP256SignOnt(privBytes, txUnsigned);
+
+    // ONT invocation script: 0x41 (push 65 bytes) + 0x01 (ECDSA algo id) + sig
+    // This differs from NEO which uses 0x40 + sig
     final invocationScript =
-        Uint8List.fromList([0x40, ...signature]); // 65 bytes
+        Uint8List.fromList([0x41, 0x01, ...signature]); // 66 bytes
     final verificationScript =
         Uint8List.fromList([0x21, ...pubKeyBytes, 0xAC]); // 35 bytes
 
     final sigRecord = Uint8List.fromList([
-      ...neoOntVarBytes(invocationScript),
-      ...neoOntVarBytes(verificationScript),
+      ...neoOntVarBytes(invocationScript), // 0x42 + 66 bytes
+      ...neoOntVarBytes(verificationScript), // 0x23 + 35 bytes
     ]);
 
-    // Broadcast tx: strip the trailing 0x00 placeholder, replace with
-    // VarInt(1) + the actual sig record.
+    // Strip the trailing 0x00 placeholder, replace with 0x01 + sigRecord
     final txBase = txUnsigned.sublist(0, txUnsigned.length - 1);
     final rawTx = Uint8List.fromList([
       ...txBase,
-      0x01, // VarInt(1) — number of sig records
+      0x01, // VarInt(1) sig records
       ...sigRecord,
     ]);
 

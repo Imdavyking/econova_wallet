@@ -145,6 +145,33 @@ Uint8List neoOntLeInt64(int v) =>
 Uint8List neoOntLeUInt64(int v) =>
     (ByteData(8)..setUint64(0, v, Endian.little)).buffer.asUint8List();
 
+Uint8List neoOntP256SignOnt(Uint8List privKeyBytes, Uint8List txBody) {
+  // Step 1: SHA256(txBody) — matches SDK's computeHash(ECDSAwithSHA256)
+  final hash = neoOntSha256(txBody); // 32-byte digest
+
+  final domainParams = pc.ECDomainParameters('prime256v1');
+  final privKey = pc.ECPrivateKey(
+    BigInt.parse(HEX.encode(privKeyBytes), radix: 16),
+    domainParams,
+  );
+
+  // Step 2: RFC 6979 sign the 32-byte hash directly (no re-hashing)
+  // null innerDigest = PointyCastle treats input as pre-hashed
+  // HMac(SHA256, 64) = RFC 6979 k derivation
+  final signer = pc.ECDSASigner(null, pc.HMac(pc.SHA256Digest(), 64));
+  signer.init(true, pc.PrivateKeyParameter<pc.ECPrivateKey>(privKey));
+
+  final sig = signer.generateSignature(hash) as pc.ECSignature;
+
+  final n = domainParams.n;
+  final s = sig.s > (n >> 1) ? domainParams.n - sig.s : sig.s;
+
+  Uint8List to32(BigInt v) =>
+      Uint8List.fromList(HEX.decode(v.toRadixString(16).padLeft(64, '0')));
+
+  return Uint8List.fromList([...to32(sig.r), ...to32(s)]);
+}
+
 // ─── ECDSA P-256 signing ───────────────────────────────────────────────────
 
 /// Signs [input] with the NIST P-256 private key [privKeyBytes].
@@ -169,30 +196,25 @@ Uint8List neoOntP256Sign(
     pc.ECDomainParameters('prime256v1'),
   );
 
-  final signer = pc.ECDSASigner(innerDigest)
+  // RFC 6979 deterministic ECDSA — HMac(SHA256) as the second argument
+  // tells PointyCastle to derive k deterministically from privKey + message.
+  // No SecureRandom needed. This matches elliptic.js { canonical: true }.
+  final signer = pc.ECDSASigner(innerDigest, pc.HMac(pc.SHA256Digest(), 64))
     ..init(
       true,
-      pc.ParametersWithRandom(
-        pc.PrivateKeyParameter<pc.ECPrivateKey>(privKey),
-        pc.SecureRandom('Fortuna')
-          ..seed(pc.KeyParameter(Uint8List.fromList(
-            List.generate(32, (i) => privKeyBytes[i % 32]),
-          ))),
-      ),
+      pc.PrivateKeyParameter<pc.ECPrivateKey>(privKey),
     );
 
   final sig = signer.generateSignature(input) as pc.ECSignature;
   final n = curve.n;
   BigInt s = sig.s;
-  if (s > (n >> 1)) s = n - s; // low-S normalisation
+  if (s > (n >> 1)) s = n - s; // low-S / canonical normalisation
 
   Uint8List to32(BigInt v) =>
       Uint8List.fromList(HEX.decode(v.toRadixString(16).padLeft(64, '0')));
 
   return Uint8List.fromList([...to32(sig.r), ...to32(s)]);
-}
-
-// ─── JSON-RPC 2.0 helpers ──────────────────────────────────────────────────
+} // ─── JSON-RPC 2.0 helpers ──────────────────────────────────────────────────
 
 /// Posts a JSON-RPC call to [rpcUrl] and returns the `result` as a
 /// `Map<String, dynamic>`.  Throws on HTTP error or `error` in the response.
