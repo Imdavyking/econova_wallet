@@ -289,20 +289,16 @@ class OntologyCoin extends Coin {
 
     // Unsigned body — trailing 0x00 is the sig-count placeholder the SDK
     // includes in the hash pre-image (serializeUnsignedData ends with 0x00)
-    // final txUnsigned = Uint8List.fromList([
-    //   0x00, 0xd1,
-    //   ...neoOntLeUInt32(nonce),
-    //   ...neoOntLeUInt64(gasPrice),
-    //   ...neoOntLeUInt64(gasLimit),
-    //   ...payer,
-    //   ...neoOntVarBytes(script),
-    //   ...neoOntVarInt(0), // attributes count = 0
-    //   0x00, // sig count placeholder for hash pre-image
-    // ]);
-
-    final txUnsigned = HEX.decode(
-            '00d1ee0004c5c409000000000000204e000000000000fa6516ff71a114099edb9937e84a90ad361aed747100c66b14fa6516ff71a114099edb9937e84a90ad361aed746a7cc81403ce94cd107b5c53b70b1d929c32f9464b35e4cf6a7cc8516a7cc86c51c1087472616e736665721400000000000000000000000000000000000000010068164f6e746f6c6f67792e4e61746976652e496e766f6b650000')
-        as Uint8List;
+    final txUnsigned = Uint8List.fromList([
+      0x00, 0xd1,
+      ...neoOntLeUInt32(nonce),
+      ...neoOntLeUInt64(gasPrice),
+      ...neoOntLeUInt64(gasLimit),
+      ...payer,
+      ...neoOntVarBytes(script),
+      ...neoOntVarInt(0), // attributes count = 0
+      0x00, // sig count placeholder for hash pre-image
+    ]);
 
     if (kDebugMode) {
       print('=== DART unsigned tx hex ===');
