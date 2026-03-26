@@ -148,9 +148,9 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
     args.seedRoot.seed, // raw 64-byte BIP39 seed
   );
 
-  final pubKey1 = await ED25519_HD_KEY.getPublicKey(derived.key, false);
+  final pubKey = await ED25519_HD_KEY.getPublicKey(derived.key, false);
 
-  final edPubBytes = Uint8List.fromList(pubKey1);
+  final edPubBytes = Uint8List.fromList(pubKey);
 
   // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
   final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
@@ -316,10 +316,23 @@ class WavesCoin extends Coin {
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
     if (chainId == 0x52) {
-      final genesis = await importFromWavesSeed(
-        'waves private node seed with waves tokens',
-      );
-      print('genesis: ${genesis.address}');
+      try {
+        final bal = await getUserBalance(address: address);
+        if (bal < 100) {
+          final genesis = await importFromWavesSeed(
+            'waves private node seed with waves tokens',
+          );
+          await _transferWith(
+            fromPrivKey: HEX.decode(genesis.privateKey!),
+            fromPubKey: HEX.decode(genesis.publicKey!),
+            to: address,
+            amount: '1000', // send 1000 WAVES
+          );
+          debugPrint('[WAVES local] funded $address with 1000 WAVES');
+        }
+      } catch (e) {
+        debugPrint('[WAVES local] auto-fund failed: $e');
+      }
     }
 
     final key = 'wavesBalance_${chainId}_$address';
