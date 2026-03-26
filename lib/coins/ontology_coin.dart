@@ -163,7 +163,7 @@ class OntologyCoin extends Coin {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'ontBalance_${isTestnet_}_$address';
+    final key = 'ontBalance_${isTestnet_}_$address$contractAddress';
     final stored = pref.get(key) as double?;
     if (useCache) return stored ?? 0.0;
     try {
