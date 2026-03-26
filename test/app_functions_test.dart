@@ -729,6 +729,12 @@ void main() async {
             "one12t2plmp43a2pqyl8wp5sgwktslnqt2dzd557mp",
           );
           break;
+        case "ONT":
+          expect(
+            cryptoKeys.address,
+            "AebqgJQDoJk5NLzv8kuiAZitPSk782igMx",
+          );
+          break;
         case "OSMO":
           expect(
             cryptoKeys.address,
@@ -794,6 +800,12 @@ void main() async {
           expect(
             cryptoKeys.address,
             "TWer2Ygk5TEheHp3TPuYeqxmB6SsGZmaL6",
+          );
+          break;
+        case "WAVES":
+          expect(
+            cryptoKeys.address,
+            "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
           );
           break;
         case "WND":
@@ -873,6 +885,18 @@ void main() async {
           expect(
             cryptoKeys.address,
             'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
+          );
+          break;
+        case "ONT":
+          expect(
+            cryptoKeys.address,
+            "Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc",
+          );
+          break;
+        case "WAVES":
+          expect(
+            cryptoKeys.address,
+            "3P6qjv7Usb4LpA4zy6qzw9Wt53A5jh4mYQq",
           );
           break;
         case 'STRK':
