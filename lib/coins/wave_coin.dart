@@ -490,7 +490,7 @@ List<WavesCoin> getWavesBlockChains() {
         symbol: 'WAVES',
         default_: 'WAVES',
         blockExplorer:
-            'https://testnet.wavesexplorer.com/tx/$blockExplorerPlaceholder',
+            'https://wavesexplorer.com/tx/$blockExplorerPlaceholder/?network=testnet',
         image: 'assets/waves.png',
         nodeUrl: 'https://nodes-testnet.wavesnodes.com',
         geckoID: 'waves',
@@ -503,7 +503,7 @@ List<WavesCoin> getWavesBlockChains() {
         symbol: 'WAVES',
         default_: 'WAVES',
         blockExplorer:
-            'https://stagenet.wavesexplorer.com/tx/$blockExplorerPlaceholder',
+            'https://wavesexplorer.com/tx/$blockExplorerPlaceholder/?network=stagenet',
         image: 'assets/waves.png',
         nodeUrl: 'https://nodes-stagenet.wavesnodes.com',
         geckoID: 'waves',
