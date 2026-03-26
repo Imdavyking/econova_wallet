@@ -86,65 +86,88 @@ Uint8List _buildOntTransferScript(
 ) {
   final fromHash = _ontAddressToHash(fromAddress);
   final toHash = _ontAddressToHash(toAddress);
+  // "Ontology.Native.Invoke" constant
+  final nativeInvoke =
+      Uint8List.fromList(utf8.encode('Ontology.Native.Invoke'));
+  final methodName = Uint8List.fromList(utf8.encode('transfer'));
   final contractAddr = Uint8List.fromList(HEX.decode(_ontContractAddrHex));
 
-  final script = <int>[];
+  final s = <int>[];
 
-  void pushBytes(List<int> bytes) {
-    if (bytes.isEmpty) {
-      script.add(0x00);
-      return;
-    }
-    if (bytes.length <= 75) {
-      script.add(bytes.length);
-    } else if (bytes.length <= 255) {
-      script
+  // pushHexString equivalent: raw len prefix for ≤75 bytes
+  void push(List<int> bytes) {
+    final n = bytes.length;
+    if (n <= 75) {
+      s.add(n);
+    } else if (n < 0x100) {
+      s
         ..add(0x4C)
-        ..add(bytes.length);
+        ..add(n);
     } else {
-      script
+      s
         ..add(0x4D)
-        ..add(bytes.length & 0xff)
-        ..add((bytes.length >> 8) & 0xff);
+        ..add(n & 0xff)
+        ..add((n >> 8) & 0xff);
     }
-    script.addAll(bytes);
+    s.addAll(bytes);
   }
 
-  void pushInt(int value) {
-    if (value == -1) {
-      script.add(0x4F);
-      return;
+  void pushInt(int v) {
+    if (v == 0) {
+      s.add(0x00); // PUSH0
+    } else if (v >= 1 && v <= 16) {
+      s.add(0x50 + v); // PUSH1..PUSH16
+    } else {
+      final bytes = <int>[];
+      int x = v;
+      while (x > 0) {
+        bytes.add(x & 0xff);
+        x >>= 8;
+      }
+      if (bytes.last & 0x80 != 0) bytes.add(0x00);
+      push(bytes);
     }
-    if (value == 0) {
-      script.add(0x00);
-      return;
-    }
-    if (value >= 1 && value <= 16) {
-      script.add(0x50 + value);
-      return;
-    }
-    final bytes = <int>[];
-    int v = value;
-    while (v > 0) {
-      bytes.add(v & 0xff);
-      v >>= 8;
-    }
-    if (bytes.last & 0x80 != 0) bytes.add(0x00);
-    pushBytes(bytes);
   }
 
+  // ── NeoVM struct: PUSH0 + NEWSTRUCT + TOALTSTACK ──────────────────────
+  s.add(0x00); // PUSH0
+  s.add(0xc6); // NEWSTRUCT
+  s.add(0x6b); // TOALTSTACK
+
+  // from
+  push(fromHash);
+  s
+    ..add(0x6a)
+    ..add(0x7c)
+    ..add(0xc8); // DUP_FROM_ALT + SWAP + APPEND
+  // to
+  push(toHash);
+  s
+    ..add(0x6a)
+    ..add(0x7c)
+    ..add(0xc8);
+  // amount
   pushInt(amount);
-  pushBytes(toHash);
-  pushBytes(fromHash);
-  pushInt(3);
-  script.add(0xC1); // PACK
-  pushBytes(utf8.encode('transfer'));
-  script.add(0x67);
-  script.addAll(contractAddr); // APPCALL
+  s
+    ..add(0x6a)
+    ..add(0x7c)
+    ..add(0xc8);
 
-  return Uint8List.fromList(script);
+  s.add(0x6c); // FROMALTSTACK
+
+  // wrap in a 1-element array
+  s.add(0x51); // PUSH1
+  s.add(0xc1); // PACK
+
+  // ── method + contract + SYSCALL ──────────────────────────────────────
+  push(methodName); // 0x08 + "transfer"
+  push(contractAddr); // 0x14 + 20-byte contract address
+  s.add(0x00); // PUSH0 (extra arg)
+  s.add(0x68); // SYSCALL opcode
+  push(nativeInvoke); // 0x16 + "Ontology.Native.Invoke"
+
+  return Uint8List.fromList(s);
 }
-
 // ─── OntologyCoin ──────────────────────────────────────────────────────────
 
 class OntologyCoin extends Coin {
@@ -251,7 +274,6 @@ class OntologyCoin extends Coin {
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final keyData = await importData(walletData);
     final fromAddr = keyData.address;
-    print(keyData.toJson());
     final privBytes = Uint8List.fromList(HEX.decode(keyData.privateKey!));
     final pubKeyBytes = Uint8List.fromList(HEX.decode(keyData.publicKey!));
 
@@ -259,60 +281,56 @@ class OntologyCoin extends Coin {
     final script = _buildOntTransferScript(fromAddr, to, ontAmount);
 
     final blockCount = await _rpcRaw('getblockcount', []) as int;
-    print('blockCount $blockCount');
     final nonce = blockCount & 0xffffffff;
 
-    // FIX 1 — payer is the raw 20-byte hash, no version prefix
-    print('from :$fromAddr');
     final payer = _ontAddressToHash(fromAddr);
-    print('payer :$payer');
 
     const gasPrice = 2500;
     const gasLimit = 20000;
 
-    // FIX 2 — include VarInt(0) for empty attributes (part of unsigned tx hash)
-    final txBody = Uint8List.fromList([
-      0xd1, 0x00,
+    // Unsigned tx body — the trailing 0x00 is the sig-count placeholder
+    // required by the ONT serialization format when computing the signing hash.
+    final txUnsigned = Uint8List.fromList([
+      0x00, 0xd1,
       ...neoOntLeUInt32(nonce),
       ...neoOntLeUInt64(gasPrice),
       ...neoOntLeUInt64(gasLimit),
-      ...payer, // 20 bytes
+      ...payer, // 20-byte script hash, no version prefix
       ...neoOntVarBytes(script),
       ...neoOntVarInt(0), // attributes count = 0
+      0x00, // sig count = 0 placeholder (hash pre-image only)
     ]);
 
-    print('txBody: $txBody');
-
-    // ONT: sign dsha256(txBody) directly (innerDigest = null)
-    // CORRECT — ONT signs single SHA256 of the unsigned tx body
-    final txHash256 = neoOntSha256(txBody);
+    // ONT signs single SHA256 of the unsigned tx body (NOT double-SHA256)
+    final txHash256 = neoOntSha256(txUnsigned);
     final signature = neoOntP256Sign(privBytes, txHash256);
 
-    // FIX 3 — ONT native Sig format: SigData[] | M | PubKeys[]
     final invocationScript =
         Uint8List.fromList([0x40, ...signature]); // 65 bytes
     final verificationScript =
         Uint8List.fromList([0x21, ...pubKeyBytes, 0xAC]); // 35 bytes
 
     final sigRecord = Uint8List.fromList([
-      ...neoOntVarBytes(invocationScript), // 0x41 + 65 bytes
-      ...neoOntVarBytes(verificationScript), // 0x23 + 35 bytes
+      ...neoOntVarBytes(invocationScript),
+      ...neoOntVarBytes(verificationScript),
     ]);
 
+    // Broadcast tx: strip the trailing 0x00 placeholder, replace with
+    // VarInt(1) + the actual sig record.
+    final txBase = txUnsigned.sublist(0, txUnsigned.length - 1);
     final rawTx = Uint8List.fromList([
-      ...txBody,
-      0x01, // VarInt(1) — number of Sig records
+      ...txBase,
+      0x01, // VarInt(1) — number of sig records
       ...sigRecord,
     ]);
-    final rawTxHex = HEX.encode(rawTx);
 
+    final rawTxHex = HEX.encode(rawTx);
     if (kDebugMode) print('ONT rawTx: $rawTxHex');
 
     final broadcastResult = await _rpc('sendrawtransaction', [rawTxHex]);
     debugPrint(broadcastResult.toString());
-    // TX hash = dsha256 of the *unsigned* body, not the full signed tx
-    final hash = broadcastResult['hash'] as String? ?? _calcTxHash(txBody);
 
+    final hash = broadcastResult['hash'] as String? ?? _calcTxHash(txUnsigned);
     return (txHash: hash, txRaw: rawTxHex);
   }
 
