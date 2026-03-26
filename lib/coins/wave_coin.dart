@@ -330,8 +330,8 @@ class WavesCoin extends Coin {
           );
           debugPrint('[WAVES local] funded $address with 1000 WAVES');
         }
-      } catch (e) {
-        debugPrint('[WAVES local] auto-fund failed: $e');
+      } catch (e, sk) {
+        debugPrint('[WAVES local] auto-fund failed: $e $sk');
       }
     }
 
