@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:solana/dto.dart' hide AccountData;
 import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
@@ -14,7 +16,6 @@ import 'package:wallet_app/utils/solana_meme.coin.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:solana_name_service/solana_name_service.dart';
 import '../extensions/resign_solana.dart';
 import 'package:solana/encoder.dart';
@@ -307,13 +308,9 @@ class SolanaCoin extends Coin {
   }
 
   Future<Map<String, dynamic>?> _loadTokenRegistry() async {
-    final res = await http
-        .get(Uri.parse(
-          'https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json',
-        ))
-        .timeout(networkTimeOutDuration);
-    if (res.statusCode != 200) return null;
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    final soltokens =
+        await rootBundle.loadString('json/solana_token_registry.json');
+    return jsonDecode(soltokens) as Map<String, dynamic>;
   }
 
   @override
