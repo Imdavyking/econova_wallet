@@ -1,6 +1,4 @@
 import 'package:wallet_app/coins/ethereum_coin.dart';
-import 'package:wallet_app/interface/coin.dart';
-
 import '../utils/app_config.dart';
 
 class RoninCoin extends EthereumCoin {
@@ -30,16 +28,6 @@ class RoninCoin extends EthereumCoin {
       image: json['image'],
       name: json['name'],
       geckoID: json['geckoID'],
-    );
-  }
-  @override
-  Future<AccountData> importData(String data) async {
-    final mnemonicDetails = await super.importData(data);
-    return AccountData.fromJson(
-      {
-        ...mnemonicDetails.toJson(),
-        'address': ethAddrToRonin(mnemonicDetails.address),
-      },
     );
   }
 

@@ -62,7 +62,6 @@ void main() async {
     'OSMO': 'osmo15yk64u7zc9g9k2yr2wmzeva5qgwxps6ywful0v',
     'PAS': '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
     'POL': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
-    'RON': 'ronin:f39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
     'SOL': 'BtELVjZSaWhMat94P9HyasX3Gvpv6C7WHXJGqWdZbwSQ',
     'STRK':
         '0x058ac366fa8dc98e25a85c7343bcca64324c2e7e65c017785c363d1066ce072a',
