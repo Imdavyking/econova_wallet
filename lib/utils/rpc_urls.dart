@@ -518,15 +518,6 @@ Future<Result<EnsAddressResult>> ensToAddr({
   }
 }
 
-// ─── Unstoppable Domains ──────────────────────────────────────────────────────
-
-const _udContracts = {
-  '0x049aba7510f45BA5b64ea9E658E342F904DB358D': 'Ethereum',
-  '0x1BDc0fD4fbABeed3E611fd6195fCd5d41dcEF393': 'Ethereum',
-  '0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f': 'Polygon Matic',
-};
-
-
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
 
 Future<Result<NFTResult>> multivrNFT(
