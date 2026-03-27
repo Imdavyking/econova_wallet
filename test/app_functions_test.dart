@@ -257,7 +257,7 @@ void main() async {
     HSL bgColor = blockInstance.createColor();
     HSL spotColor = blockInstance.createColor();
     List imageData = blockInstance.createImageData();
-    expect(sha3(json.encode(blockInstance.randseed)),
+    expect(solidityKeccak256(json.encode(blockInstance.randseed)),
         '89b8a19e375159267d7d16447f53766cbd210d6b0328779cc897a03a9922b914');
     expect(
         color.toString(), 'H: 25.0 S: 62.20454423791009 L: 50.21168109970711');
@@ -265,7 +265,7 @@ void main() async {
         'H: 108.0 S: 57.542195253792315 L: 43.62102017906542');
     expect(spotColor.toString(),
         'H: 31.0 S: 48.8115822751129 L: 50.77201500570961');
-    expect(sha3(json.encode(imageData)),
+    expect(solidityKeccak256(json.encode(imageData)),
         'd935e1c2fa18d0a7b7f92604e3ea282ab4572124852411306d70e302fb5447a4');
 
     // Account two
@@ -274,7 +274,7 @@ void main() async {
     HSL bgColorTwo = blockInstanceTwo.createColor();
     HSL spotColorTwo = blockInstanceTwo.createColor();
     List imageDataTwo = blockInstanceTwo.createImageData();
-    expect(sha3(json.encode(blockInstanceTwo.randseed)),
+    expect(solidityKeccak256(json.encode(blockInstanceTwo.randseed)),
         '491a7d9b769c9e62f67019b5ea33b5b100e8a38e55b1efc0680ac4edaaa18f79');
     expect(colorTwo.toString(),
         'H: 240.0 S: 77.89883877052871 L: 42.880431070402466');
@@ -282,7 +282,7 @@ void main() async {
         'H: 302.0 S: 52.13426684594446 L: 15.5695927401863');
     expect(spotColorTwo.toString(),
         'H: 252.0 S: 74.00470713805626 L: 64.89102061134344');
-    expect(sha3(json.encode(imageDataTwo)),
+    expect(solidityKeccak256(json.encode(imageDataTwo)),
         '0da3e2aa1ee73f4caae2c09cd4febd40ebdf3a0128b2e6c4686ec93055f221d7');
   });
 
@@ -319,7 +319,7 @@ void main() async {
         eip681String);
 
     expect(
-      sha3(json.encode(EIP681.parse(eip681String))),
+      solidityKeccak256(json.encode(EIP681.parse(eip681String))),
       '5a9e3c6f895795edc845d1bcc17a8e23fe4e176b887f9fb86e952e8a0a3e2908',
     );
   });
@@ -384,7 +384,7 @@ void main() async {
   });
 
   test('test solidity sha3(keccak256) returns correct data', () {
-    expect(sha3('hello world'),
+    expect(solidityKeccak256('hello world'),
         '47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad');
   });
 

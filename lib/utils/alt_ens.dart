@@ -75,9 +75,10 @@ String nameHash(String? inputName) {
       } else {
         final normalisedLabel = labels[i];
 
-        labelSha = sha3(normalisedLabel);
+        labelSha = solidityKeccak256(normalisedLabel);
       }
-      node = sha3(String.fromCharCodes(hex.decode('$node$labelSha')));
+      node =
+          solidityKeccak256(String.fromCharCodes(hex.decode('$node$labelSha')));
     }
   }
 
@@ -100,7 +101,7 @@ String _decodeLabelhash(String hash) {
   return hash.slice(1, -1);
 }
 
-String sha3(String string) {
+String solidityKeccak256(String string) {
   const keccakPadding = [1, 256, 65536, 16777216];
   final hash =
       SHA3(256, keccakPadding, 256).update(string.runes.toList()).digest();

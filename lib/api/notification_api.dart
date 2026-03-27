@@ -110,7 +110,7 @@ class NotificationApi {
     if (url == null) return null;
     try {
       final Directory directory = await getApplicationDocumentsDirectory();
-      final String filePath = '${directory.path}/${sha3(url)}';
+      final String filePath = '${directory.path}/${solidityKeccak256(url)}';
       final Response response = await get(Uri.parse(url));
       final File file = File(filePath);
       await file.writeAsBytes(response.bodyBytes);

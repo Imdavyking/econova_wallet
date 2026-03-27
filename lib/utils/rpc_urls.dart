@@ -108,7 +108,7 @@ class ERC20NFTResult {
 // ─── ABI helpers ──────────────────────────────────────────────────────────────
 
 solidityFunctionSig(String methodId) {
-  return '0x${sha3(methodId).substring(0, 8)}';
+  return '0x${solidityKeccak256(methodId).substring(0, 8)}';
 }
 
 AbiDecodedResult? decodeAbi(String txData) {
