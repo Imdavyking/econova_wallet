@@ -240,7 +240,7 @@ List<SplTokenCoin> getSplTokens() {
       ),
     ]);
   }
-  pref.delete(SplTokenCoin._splTokenMapKey);
+
   final raw = pref.get(SplTokenCoin._splTokenMapKey) as String?;
 
   if (raw != null && WalletService.isPharseKey()) {
