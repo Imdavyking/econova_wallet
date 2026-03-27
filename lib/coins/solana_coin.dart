@@ -142,12 +142,10 @@ class SolanaCoin extends Coin {
   /// the mint.
   @override
   Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async {
-    // ── Try Jupiter first — fast, has name/symbol/logo ────────────────────
+    // 1. Jupiter (mainnet only)
     try {
       final res = await http
-          .get(
-            Uri.parse('https://tokens.jup.ag/token/$contractAddress'),
-          )
+          .get(Uri.parse('https://tokens.jup.ag/token/$contractAddress'))
           .timeout(networkTimeOutDuration);
 
       if (res.statusCode == 200) {
@@ -161,19 +159,161 @@ class SolanaCoin extends Coin {
       }
     } catch (_) {}
 
-    // ── Fallback: on-chain mint account (decimals only) ───────────────────
+    // 2. SPL Token Registry (covers devnet USDC and legacy tokens)
+    try {
+      final meta = await _fetchFromTokenRegistry(contractAddress);
+      if (meta != null) return meta;
+    } catch (_) {}
+
+    // 3. Metaplex on-chain metadata (devnet + mainnet)
+    try {
+      final meta = await _fetchMetaplexMetadata(contractAddress);
+      if (meta != null) return meta;
+    } catch (_) {}
+
+    // 3. On-chain mint (decimals only, last resort)
     try {
       final mint = await getProxy().getMint(
         address: Ed25519HDPublicKey.fromBase58(contractAddress),
       );
       return CustomTokenMeta(
-        name: contractAddress, // unknown — user can't rename here
+        name: contractAddress,
         symbol: '???',
         decimals: mint.decimals,
       );
     } catch (_) {
       return null;
     }
+  }
+
+  static const _metaplexProgramId =
+      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
+
+  Future<CustomTokenMeta?> _fetchMetaplexMetadata(String mintAddress) async {
+    // ── 1. Derive the metadata PDA ─────────────────────────────────────
+    // seeds: ["metadata", metaplex_program_id, mint_address]
+    final metaplexProgram = Ed25519HDPublicKey.fromBase58(_metaplexProgramId);
+    final mint = Ed25519HDPublicKey.fromBase58(mintAddress);
+
+    final seeds = [
+      utf8.encode('metadata'),
+      metaplexProgram.bytes,
+      mint.bytes,
+    ];
+
+    final pda = await Ed25519HDPublicKey.findProgramAddress(
+      seeds: seeds,
+      programId: metaplexProgram,
+    );
+
+    // ── 2. Fetch the raw account bytes ─────────────────────────────────
+    final accountInfo = await getProxy().rpcClient.getAccountInfo(
+          pda.toBase58(),
+          encoding: Encoding.base64,
+          commitment: Commitment.confirmed,
+        );
+
+    final data = accountInfo.value?.data;
+
+    if (data is! BinaryAccountData) return null;
+    final bytes = data.data;
+
+    // ── 3. Parse Metaplex borsh layout ────────────────────────────────
+    // Layout (bytes):
+    //   1  - key (account discriminator)
+    //  32  - update authority
+    //  32  - mint
+    //   4  - name length (u32 LE)
+    //   N  - name (padded with null bytes)
+    //   4  - symbol length (u32 LE)
+    //   M  - symbol (padded with null bytes)
+    //   4  - uri length (u32 LE)
+    //   K  - uri
+    int offset = 1 + 32 + 32;
+
+    String readString(List<int> b, int off) {
+      final len = ByteData.sublistView(
+        Uint8List.fromList(b.sublist(off, off + 4)),
+      ).getUint32(0, Endian.little);
+      final raw = utf8.decode(
+        b.sublist(off + 4, off + 4 + len),
+        allowMalformed: true,
+      );
+      // Strip null padding Metaplex pads all strings to fixed widths
+      return raw.replaceAll('\x00', '').trim();
+    }
+
+    final name = readString(bytes, offset);
+    offset += 4 + 32; // name field is always padded to 32 chars on-chain
+
+    final symbol = readString(bytes, offset);
+    offset += 4 + 10; // symbol field is always padded to 10 chars on-chain
+
+    final uri = readString(bytes, offset);
+
+    // ── 4. Optionally fetch logo from the URI (off-chain JSON) ─────────
+    String? iconUrl;
+    if (uri.isNotEmpty) {
+      try {
+        final res =
+            await http.get(Uri.parse(uri)).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body) as Map<String, dynamic>;
+          iconUrl = json['image'] as String?;
+        }
+      } catch (_) {}
+    }
+
+    // ── 5. Fetch decimals from mint ────────────────────────────────────
+    final mintInfo = await getProxy().getMint(
+      address: Ed25519HDPublicKey.fromBase58(mintAddress),
+    );
+
+    return CustomTokenMeta(
+      name: name.isEmpty ? mintAddress : name,
+      symbol: symbol.isEmpty ? '???' : symbol,
+      decimals: mintInfo.decimals,
+      iconUrl: iconUrl,
+    );
+  }
+
+  static Map<String, dynamic>? _tokenRegistryCache;
+
+  Future<CustomTokenMeta?> _fetchFromTokenRegistry(String mintAddress) async {
+    try {
+      // Load once, reuse forever (file rarely changes)
+      _tokenRegistryCache ??= await _loadTokenRegistry();
+      if (_tokenRegistryCache == null) return null;
+
+      final tokens = _tokenRegistryCache!['tokens'] as List<dynamic>;
+      final match = tokens.cast<Map<String, dynamic>>().firstWhere(
+            (t) =>
+                (t['address'] as String).toLowerCase() ==
+                mintAddress.toLowerCase(),
+            orElse: () => {},
+          );
+
+      if (match.isEmpty) return null;
+
+      return CustomTokenMeta(
+        name: match['name'] as String? ?? mintAddress,
+        symbol: match['symbol'] as String? ?? '???',
+        decimals: (match['decimals'] as num?)?.toInt() ?? 0,
+        iconUrl: match['logoURI'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadTokenRegistry() async {
+    final res = await http
+        .get(Uri.parse(
+          'https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json',
+        ))
+        .timeout(networkTimeOutDuration);
+    if (res.statusCode != 200) return null;
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   @override
