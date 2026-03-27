@@ -108,7 +108,7 @@ List<StacksCoin> stackCoins = [
   ...getStacksBlockchains(),
 ];
 
-List<Coin> fetchSupportedChains() {
+Future<List<Coin>> fetchSupportedChains() async {
   List<Coin> blockchains = [
     ...getNanoBlockChains(),
     ...getWavesBlockChains(),
@@ -151,8 +151,23 @@ List<Coin> fetchSupportedChains() {
     ...getSIP010Coins(),
     ...getSegwitCoins(),
   ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
+  final cryptoPrice = await getCryptoPrice(useCache: true);
 
-  return blockchains;
+  // Compute total USD value for each coin
+  final List<MapEntry<Coin, double>> coinValues = [];
+  for (final coin in blockchains) {
+    final balance = await coin.getBalance(true); // async balance
+    final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
+    final value = balance * price;
+    coinValues.add(MapEntry(coin, value));
+  }
+
+  // Sort by USD value descending
+  coinValues.sort((a, b) => b.value.compareTo(a.value));
+
+  // Extract sorted coins
+  final sortedBlockchains = coinValues.map((e) => e.key).toList();
+  return sortedBlockchains;
 }
 
 late Box pref;
@@ -226,7 +241,7 @@ void main() async {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }
-  supportedChains = fetchSupportedChains();
+  supportedChains = await fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }

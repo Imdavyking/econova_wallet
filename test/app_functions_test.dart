@@ -681,7 +681,7 @@ void main() async {
     seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
-      supportedChains = fetchSupportedChains();
+      supportedChains = await fetchSupportedChains();
       debugPrint(
         '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
       );
