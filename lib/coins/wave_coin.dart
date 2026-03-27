@@ -332,6 +332,19 @@ class WavesCoin extends Coin {
     final pub = await kp.extractPublicKey();
     final curve25519Pub = Uint8List.fromList(pub.bytes);
 
+    if (kDebugMode) {
+      // ── debug prints ──
+      print('=== _transferWithNativeSeed debug ===');
+      print('privKey hex   : ${HEX.encode(privKey)}');
+      print('privKey b58   : ${base58.encode(privKey)}');
+      print('curve25519Pub : ${HEX.encode(curve25519Pub)}');
+      print('pubkey b58    : ${_b58Encode(curve25519Pub)}');
+      print('address       : ${_buildWavesAddress(curve25519Pub, chainId)}');
+      print('to            : $to');
+      print('amount        : $amount');
+      // ─────────────────
+    }
+
     // Sign using Ed25519 with sign bit patch
     final attachment = memo != null
         ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
@@ -405,7 +418,7 @@ class WavesCoin extends Coin {
           debugPrint('[WAVES local] funded $address with 1000 WAVES');
         }
       } catch (e, sk) {
-        debugPrint('[WAVES local] auto-fund failed: $e $sk');
+        debugPrint('[WAVES local send] auto-fund failed: $e $sk');
       }
     }
 
