@@ -113,7 +113,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'solanaSplAddressBalance$address$rpc';
+    final key = 'solanaSplAddressBalance$address$rpc$mint';
 
     final storedBalance = pref.get(key);
 
