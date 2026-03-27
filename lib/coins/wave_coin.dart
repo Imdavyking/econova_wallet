@@ -501,6 +501,17 @@ class WavesCoin extends Coin {
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.001;
+  Uint8List axlSign(Uint8List privateKey, Uint8List message) {
+    // tweetnacl uses same math as axlsign internally
+    final keyPair = TweetNaClExt.crypto_sign_keypair_from_seed(privateKey);
+    final sig = Signature(null, keyPair.secretKey).sign(message);
+
+    // embed sign bit
+    final signBit = keyPair.publicKey[31] & 0x80;
+    sig[63] = (sig[63] & 127) | signBit;
+    return sig.sublist(0, 64);
+  }
+
   Future<Uint8List> _wavesSign(Uint8List privSeed, Uint8List message) async {
     final ed25519 = Ed25519();
     final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
