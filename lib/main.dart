@@ -379,6 +379,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: AnimatedSplashScreen.withScreenFunction(
         curve: Curves.linear,
         splashIconSize: 100,
+        duration: 1000,
         backgroundColor: Theme.of(context).colorScheme.surface,
         disableNavigation: true,
         splash: 'assets/logo.png',
