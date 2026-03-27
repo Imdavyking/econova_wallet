@@ -9,6 +9,8 @@
 // Usage:
 //   final sig = axlSign(privateKeyBytes, messageBytes);  // returns 64-byte signature
 
+// ignore_for_file: non_constant_identifier_names, unused_element
+
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 
