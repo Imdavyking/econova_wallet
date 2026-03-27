@@ -13,7 +13,7 @@ import 'package:wallet_app/model/solana_transaction_versioned.dart'
 import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/solana_meme.coin.dart';
-
+import 'package:wallet_app/utils/logo_downloader.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:solana_name_service/solana_name_service.dart';
@@ -286,18 +286,22 @@ class SolanaCoin extends Coin {
 
   Future<CustomTokenMeta?> _fetchFromTokenRegistry(String mintAddress) async {
     try {
-      // Load once, reuse forever (file rarely changes)
       _tokenRegistryCache ??= await _loadTokenRegistry();
       if (_tokenRegistryCache == null) return null;
 
       if (_tokenRegistryCache!.containsKey(mintAddress)) {
         final match = _tokenRegistryCache![mintAddress];
         if (match['chainId'] == chainId) {
+          String? localIconPath;
+          if (match['logoURI'] != null) {
+            localIconPath = await downloadLogo(match['logoURI'], match['name']);
+          }
+
           return CustomTokenMeta(
             name: match['name'] as String? ?? mintAddress,
             symbol: match['symbol'] as String? ?? '???',
             decimals: (match['decimals'] as num?)?.toInt() ?? 0,
-            iconUrl: match['logoURI'] as String?,
+            iconUrl: localIconPath ?? match['logoURI'] as String?,
           );
         }
       }
