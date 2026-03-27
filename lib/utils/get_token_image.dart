@@ -13,18 +13,19 @@ class GetTokenImage extends StatelessWidget {
 
   ImageProvider _resolveImage() {
     final image = currCoin.getImage();
+
     try {
       return AssetImage(image);
     } catch (_) {}
 
     // 2️⃣ Try FileImage
     try {
-      print('file image $image');
       return FileImage(File(image));
     } catch (_) {}
 
     // 3️⃣ Try NetworkImage
     try {
+      print(image);
       return NetworkImage(image);
     } catch (_) {}
 
