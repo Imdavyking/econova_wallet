@@ -1,14 +1,11 @@
 // ignore_for_file: library_private_types_in_public_api
 
-import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/select_blockchain.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:pinput/pinput.dart';
-
-import '../coins/fungible_tokens/erc_fungible_coin.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -27,8 +24,13 @@ class _AddCustomTokenState extends State<AddCustomToken> {
   final _symbolCtrl = TextEditingController();
   final _decimalCtrl = TextEditingController();
 
-  final ValueNotifier<EthereumCoin> _coinNotifier =
-      ValueNotifier<EthereumCoin>(evmChains[0]);
+  // Seed with first coin that supports custom tokens
+  late final ValueNotifier<Coin> _coinNotifier = ValueNotifier<Coin>(
+    supportedChains.firstWhere(
+      (c) => c.canAddCustomToken,
+      orElse: () => supportedChains.first,
+    ),
+  );
 
   bool _loading = false;
   bool _saving = false;
@@ -52,9 +54,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
 
   // ── Auto-fill ─────────────────────────────────────────────────────────────
 
-  void _onContractChanged() {
-    _autoFill(_contractCtrl.text.trim());
-  }
+  void _onContractChanged() => _autoFill(_contractCtrl.text.trim());
 
   void _clearFields() {
     _nameCtrl.setText('');
@@ -68,20 +68,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
 
     setState(() => _loading = true);
     try {
-      final coin = ERCFungibleCoin(
-        contractAddress_: contractAddr,
-        geckoID: '',
-        rpc: _coinNotifier.value.rpc,
-        blockExplorer: _coinNotifier.value.blockExplorer,
-        image: _coinNotifier.value.image,
-        chainId: _coinNotifier.value.chainId,
-        coinType: _coinNotifier.value.coinType,
-        default_: _coinNotifier.value.default_,
-        mintDecimals: 18,
-        name: '',
-        symbol: '',
-      );
-      final meta = await coin.getERC20Meta();
+      final meta = await _coinNotifier.value.fetchCustomToken(contractAddr);
       if (meta == null) return;
       _nameCtrl.setText(meta.name);
       _symbolCtrl.setText(meta.symbol);
@@ -94,27 +81,16 @@ class _AddCustomTokenState extends State<AddCustomToken> {
 
   // ── Validation ────────────────────────────────────────────────────────────
 
-  String? _validate() {
-    final localization = AppLocalizations.of(context)!;
+  String? _validate(AppLocalizations loc) {
     final addr = _contractCtrl.text.trim();
     final name = _nameCtrl.text.trim();
     final symbol = _symbolCtrl.text.trim();
     final decimal = _decimalCtrl.text.trim();
 
     if (addr.isEmpty || name.isEmpty || symbol.isEmpty || decimal.isEmpty) {
-      return localization.enterContractAddress;
+      return loc.enterContractAddress;
     }
-
-    if (int.tryParse(decimal) == null) {
-      return localization.decimals;
-    }
-
-    final coin = _coinNotifier.value;
-    final alreadyExists = erc20Coins.any((c) =>
-        c.tokenAddress().toLowerCase() == addr.toLowerCase() &&
-        c.chainId == coin.chainId);
-
-    if (alreadyExists) return localization.tokenImportedAlready;
+    if (int.tryParse(decimal) == null) return loc.decimals;
 
     return null;
   }
@@ -125,16 +101,16 @@ class _AddCustomTokenState extends State<AddCustomToken> {
     FocusManager.instance.primaryFocus?.unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    // If fields are empty, try to auto-fill first
-    final name = _nameCtrl.text.trim();
-    final symbol = _symbolCtrl.text.trim();
-    final decimal = _decimalCtrl.text.trim();
-    if (name.isEmpty || symbol.isEmpty || decimal.isEmpty) {
+    // If fields empty, attempt auto-fill first
+    if (_nameCtrl.text.trim().isEmpty ||
+        _symbolCtrl.text.trim().isEmpty ||
+        _decimalCtrl.text.trim().isEmpty) {
       await _autoFill(_contractCtrl.text.trim());
       return;
     }
 
-    final error = _validate();
+    final loc = AppLocalizations.of(context)!;
+    final error = _validate(loc);
     if (error != null) {
       _showError(error);
       return;
@@ -142,30 +118,25 @@ class _AddCustomTokenState extends State<AddCustomToken> {
 
     setState(() => _saving = true);
     try {
-      final coin = _coinNotifier.value;
-      final ethToken = ERCFungibleCoin(
-        contractAddress_: _contractCtrl.text.trim(),
+      final meta = CustomTokenMeta(
         name: _nameCtrl.text.trim(),
-        geckoID: '',
         symbol: _symbolCtrl.text.trim(),
-        mintDecimals: int.parse(_decimalCtrl.text.trim()),
-        chainId: coin.chainId,
-        rpc: coin.rpc,
-        blockExplorer: coin.blockExplorer,
-        coinType: coin.coinType,
-        default_: coin.default_,
-        image: 'assets/ethereum-2.png',
+        decimals: int.parse(_decimalCtrl.text.trim()),
       );
 
-      final added = await ethToken.addCoinToStore();
+      final newCoin = await _coinNotifier.value.addCustomToken(
+        meta,
+        _contractCtrl.text.trim(),
+      );
+
       if (!mounted) return;
 
-      if (!added) {
-        _showError(AppLocalizations.of(context)!.tokenImportedAlready);
+      if (newCoin == null) {
+        _showError(loc.tokenImportedAlready);
         return;
       }
 
-      supportedChains.add(ethToken);
+      supportedChains.add(newCoin);
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -190,12 +161,11 @@ class _AddCustomTokenState extends State<AddCustomToken> {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(localization.addToken, style: const TextStyle(fontSize: 18)),
+        title: Text(loc.addToken, style: const TextStyle(fontSize: 18)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -203,60 +173,55 @@ class _AddCustomTokenState extends State<AddCustomToken> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Network selector
               _NetworkSelector(
-                  coinNotifier: _coinNotifier,
-                  onChanged: () {
-                    _clearFields();
-                    if (_contractCtrl.text.trim().isNotEmpty) {
-                      _autoFill(_contractCtrl.text.trim());
-                    }
-                  }),
+                coinNotifier: _coinNotifier,
+                onChanged: () {
+                  _clearFields();
+                  if (_contractCtrl.text.trim().isNotEmpty) {
+                    _autoFill(_contractCtrl.text.trim());
+                  }
+                },
+              ),
               const SizedBox(height: 40),
-              // Contract address
               _RoundedField(
                 controller: _contractCtrl,
-                hint: localization.enterContractAddress,
+                hint: loc.enterContractAddress,
                 suffix: _InputSuffix(
                   controller: _contractCtrl,
-                  pasteLabel: localization.paste,
+                  pasteLabel: loc.paste,
                 ),
               ),
               const SizedBox(height: 12),
-              // Loading indicator while fetching token metadata
               if (_loading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: LinearProgressIndicator(),
                 ),
               const SizedBox(height: 8),
-              // Auto-filled read-only fields
               _RoundedField(
                 controller: _nameCtrl,
-                hint: localization.name,
+                hint: loc.name,
                 readOnly: true,
               ),
               const SizedBox(height: 20),
               _RoundedField(
                 controller: _symbolCtrl,
-                hint: localization.symbol,
+                hint: loc.symbol,
                 readOnly: true,
               ),
               const SizedBox(height: 20),
               _RoundedField(
                 controller: _decimalCtrl,
-                hint: localization.decimals,
+                hint: loc.decimals,
                 readOnly: true,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               const SizedBox(height: 20),
-              // Scam warning
               const _ScamWarning(),
               const SizedBox(height: 40),
-              // Save button
               _SaveButton(
-                label: localization.done,
+                label: loc.done,
                 loading: _saving,
                 onPressed: _save,
               ),
@@ -268,10 +233,10 @@ class _AddCustomTokenState extends State<AddCustomToken> {
   }
 }
 
-// ── Network selector ──────────────────────────────────────────────────────────
+// ── Network selector — only shows chains that support custom tokens ────────────
 
 class _NetworkSelector extends StatelessWidget {
-  final ValueNotifier<EthereumCoin> coinNotifier;
+  final ValueNotifier<Coin> coinNotifier;
   final VoidCallback onChanged;
 
   const _NetworkSelector({
@@ -281,32 +246,29 @@ class _NetworkSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context)!;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          localization.network,
-          style: const TextStyle(fontSize: 20),
-        ),
+        Text(loc.network, style: const TextStyle(fontSize: 20)),
         GestureDetector(
           onTap: () async {
             final coin = await Navigator.push<Coin>(
               context,
               MaterialPageRoute(
                 builder: (_) => SelectBlockchain(
-                  filterFn: (c) =>
-                      c is EthereumCoin && c.tokenAddress() == null,
+                  // Only show chains that support custom token imports
+                  filterFn: (c) => c.canAddCustomToken,
                 ),
               ),
             );
-            if (coin is EthereumCoin) {
+            if (coin != null) {
               coinNotifier.value = coin;
               onChanged();
             }
           },
-          child: ValueListenableBuilder<EthereumCoin>(
+          child: ValueListenableBuilder<Coin>(
             valueListenable: coinNotifier,
             builder: (_, coin, __) => Row(
               children: [
@@ -425,8 +387,7 @@ class _ScamWarning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalizations.of(context)!;
-
+    final loc = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -445,7 +406,7 @@ class _ScamWarning extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  localization.anyoneCanCreateToken,
+                  loc.anyoneCanCreateToken,
                   style: const TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
@@ -454,11 +415,8 @@ class _ScamWarning extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  localization.includingScamTokens,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                  ),
+                  loc.includingScamTokens,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
               ],
             ),

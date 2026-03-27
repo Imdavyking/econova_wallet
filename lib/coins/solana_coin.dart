@@ -127,6 +127,83 @@ class SolanaCoin extends Coin {
   @override
   List<Coin> get networkTokens => getSplTokens();
 
+  // ─────────────────────────────────────────────────────────────────────────────
+// ADD these three overrides inside SolanaCoin (e.g. after getRampID())
+// Also add the new import at the top:
+//   import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
+//   (already imported in solana_coin.dart — just verify)
+// ─────────────────────────────────────────────────────────────────────────────
+
+  @override
+  bool get canAddCustomToken => true;
+
+  /// Fetches SPL token metadata via Jupiter token API.
+  /// Falls back to on-chain mint info (decimals only) if Jupiter doesn't know
+  /// the mint.
+  @override
+  Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async {
+    // ── Try Jupiter first — fast, has name/symbol/logo ────────────────────
+    try {
+      final res = await http
+          .get(
+            Uri.parse('https://tokens.jup.ag/token/$contractAddress'),
+          )
+          .timeout(networkTimeOutDuration);
+
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return CustomTokenMeta(
+          name: json['name'] as String? ?? contractAddress,
+          symbol: json['symbol'] as String? ?? '???',
+          decimals: (json['decimals'] as num?)?.toInt() ?? 0,
+          iconUrl: json['logoURI'] as String?,
+        );
+      }
+    } catch (_) {}
+
+    // ── Fallback: on-chain mint account (decimals only) ───────────────────
+    try {
+      final mint = await getProxy().getMint(
+        address: Ed25519HDPublicKey.fromBase58(contractAddress),
+      );
+      return CustomTokenMeta(
+        name: contractAddress, // unknown — user can't rename here
+        symbol: '???',
+        decimals: mint.decimals,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<Coin?> addCustomToken(
+    CustomTokenMeta meta,
+    String contractAddress,
+  ) async {
+    // Duplicate check against existing SPL tokens
+    final alreadyExists = getSplTokens().any(
+      (t) => t.tokenAddress().toLowerCase() == contractAddress.toLowerCase(),
+    );
+    if (alreadyExists) return null;
+
+    final token = SplTokenCoin(
+      mint: contractAddress,
+      name: meta.name,
+      geckoID: '',
+      symbol: meta.symbol,
+      mintDecimals: meta.decimals,
+      rpc: rpc,
+      ws: ws,
+      blockExplorer: blockExplorer,
+      default_: default_,
+      image: meta.iconUrl ?? 'assets/solana.webp',
+    );
+
+    final added = await token.addCoinToStore();
+    return added ? token : null;
+  }
+
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
     String saveKey = 'solanaDetailsPrivate${walletImportType.name}';

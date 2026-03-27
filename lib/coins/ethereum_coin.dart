@@ -637,31 +637,68 @@ class EthereumCoin extends Coin {
     return ud.valueOrNull?.address;
   }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD these three overrides inside EthereumCoin (e.g. after getRampID())
+// ─────────────────────────────────────────────────────────────────────────────
+
   @override
   bool get canAddCustomToken => true;
 
   @override
   Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async {
-    final coin = ERCFungibleCoin(
+    try {
+      final coin = ERCFungibleCoin(
+        contractAddress_: contractAddress,
+        geckoID: '',
+        rpc: rpc,
+        blockExplorer: blockExplorer,
+        image: image,
+        chainId: chainId,
+        coinType: coinType,
+        default_: default_,
+        mintDecimals: 18,
+        name: '',
+        symbol: '',
+      );
+      final meta = await coin.getERC20Meta();
+      if (meta == null) return null;
+      return CustomTokenMeta(
+        name: meta.name,
+        symbol: meta.symbol,
+        decimals: meta.decimals,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<Coin?> addCustomToken(
+    CustomTokenMeta meta,
+    String contractAddress,
+  ) async {
+    // Duplicate check
+    final alreadyExists = erc20Coins.any((c) =>
+        c.tokenAddress().toLowerCase() == contractAddress.toLowerCase() &&
+        c.chainId == chainId);
+    if (alreadyExists) return null;
+
+    final token = ERCFungibleCoin(
       contractAddress_: contractAddress,
+      name: meta.name,
       geckoID: '',
+      symbol: meta.symbol,
+      mintDecimals: meta.decimals,
+      chainId: chainId,
       rpc: rpc,
       blockExplorer: blockExplorer,
-      image: image,
-      chainId: chainId,
       coinType: coinType,
       default_: default_,
-      mintDecimals: 18,
-      name: '',
-      symbol: '',
+      image: meta.iconUrl ?? 'assets/ethereum-2.png',
     );
-    final meta = await coin.getERC20Meta();
-    if (meta == null) return null;
-    return CustomTokenMeta(
-      name: meta.name,
-      symbol: meta.symbol,
-      decimals: meta.decimals,
-    );
+
+    final added = await token.addCoinToStore();
+    return added ? token : null;
   }
 
   @override

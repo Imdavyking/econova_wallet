@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 
@@ -58,6 +60,23 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   @override
   String savedTransKey() {
     return 'solanaSplTokenTransfers$mint$rpc';
+  }
+
+  static const _splTokenMapKey = 'splCustomTokens';
+
+  Future<bool> addCoinToStore() async {
+    // mint address is globally unique on Solana — no need to include rpc
+    final uniqueKey = mint.toLowerCase();
+    final raw = pref.get(_splTokenMapKey) as String?;
+    final tokenMap = raw != null
+        ? Map<String, dynamic>.from(jsonDecode(raw))
+        : <String, dynamic>{};
+
+    if (tokenMap.containsKey(uniqueKey)) return false;
+
+    tokenMap[uniqueKey] = toJson();
+    await pref.put(_splTokenMapKey, jsonEncode(tokenMap));
+    return true;
   }
 
   @override
@@ -217,5 +236,13 @@ List<SplTokenCoin> getSplTokens() {
       ),
     ]);
   }
+  final raw = pref.get(SplTokenCoin._splTokenMapKey) as String?;
+  if (raw != null && WalletService.isPharseKey()) {
+    final saved = Map<String, dynamic>.from(jsonDecode(raw));
+    blockChains.addAll(
+      saved.values.map((e) => SplTokenCoin.fromJson(e as Map<String, dynamic>)),
+    );
+  }
+
   return blockChains;
 }
