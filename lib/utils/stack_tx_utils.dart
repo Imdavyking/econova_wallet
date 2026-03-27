@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 import 'package:pointycastle/export.dart' as pc;
 import 'package:wallet_app/utils/c32check.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -132,13 +133,7 @@ Uint8List stacksMemoBytes(String memo) {
   return buf;
 }
 
-bool stacksBytesEqual(Uint8List a, Uint8List b) {
-  if (a.length != b.length) return false;
-  for (int i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
+
 
 // ─── ECDSA helpers ────────────────────────────────────────────────────────────
 
@@ -229,7 +224,7 @@ pc.ECPoint? stacksRecoverPubKey(int recId, pc.ECSignature sig, Uint8List hash,
   for (int id = 0; id <= 1; id++) {
     final candidate = stacksRecoverPubKey(id, sig, hash, params);
     if (candidate == null) continue;
-    if (stacksBytesEqual(candidate.getEncoded(true), expected)) {
+    if (seqEqual(candidate.getEncoded(true), expected)) {
       return (sig, id);
     }
   }

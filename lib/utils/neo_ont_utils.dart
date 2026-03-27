@@ -25,6 +25,7 @@ import 'package:http/http.dart' as http;
 import 'package:pointycastle/ecc/curves/prime256v1.dart';
 import 'package:pointycastle/export.dart' as pc;
 import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 Uint8List slip10Nist256p1Derive(Uint8List seed, String path) {
   var node = Bip32Slip10Nist256p1.fromSeed(seed);
@@ -104,7 +105,7 @@ Uint8List neoOntB58CheckDecode(String address) {
   final payload = decoded.sublist(0, decoded.length - 4);
   final checksum = decoded.sublist(decoded.length - 4);
   final expected = neoOntDsha256(payload).sublist(0, 4);
-  if (!neoOntBytesEqual(checksum, expected)) {
+  if (!seqEqual(checksum, expected)) {
     throw Exception('Bad checksum');
   }
   return decoded;
@@ -277,13 +278,6 @@ Future<dynamic> neoOntRpcRaw(
 
 // ─── Misc ──────────────────────────────────────────────────────────────────
 
-bool neoOntBytesEqual(Uint8List a, Uint8List b) {
-  if (a.length != b.length) return false;
-  for (int i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
 
 // ─── Extension trick to avoid a local variable for the digest ─────────────
 extension _LetExt<T> on T {

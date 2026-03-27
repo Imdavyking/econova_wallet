@@ -335,7 +335,6 @@ class WavesCoin extends Coin {
             fromPubKey: HEX.decode(genesis.publicKey!),
             to: address,
             amount: amount.toString(), // send 1000 WAVES
-            isNativeSeed: true,
           );
           debugPrint('[WAVES local] funded $address with 1000 WAVES');
         }
@@ -363,7 +362,6 @@ class WavesCoin extends Coin {
     required String to,
     required String amount,
     String? memo,
-    bool isNativeSeed = false, // ← flag
   }) async {
     final privKey = Uint8List.fromList(fromPrivKey);
     final curve25519Pub = Uint8List.fromList(fromPubKey);
@@ -390,6 +388,19 @@ class WavesCoin extends Coin {
 
     // ← choose signing method based on key type
     final Uint8List sigBytes;
+
+    bool isNativeSeed = false;
+    try {
+      final ed25519 = Ed25519();
+      final kp = await ed25519.newKeyPairFromSeed(privKey);
+      final edPub = await kp.extractPublicKey();
+      final derived =
+          _ed25519PublicToCurve25519(Uint8List.fromList(edPub.bytes));
+      isNativeSeed = !seqEqual(derived, curve25519Pub);
+    } catch (_) {
+      isNativeSeed = true;
+    }
+
     if (isNativeSeed) {
       sigBytes = axlSign(privKey, signableBytes); // native Waves seed
     } else {
