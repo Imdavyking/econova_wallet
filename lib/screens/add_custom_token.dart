@@ -27,7 +27,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
   // Seed with first coin that supports custom tokens
   late final ValueNotifier<Coin> _coinNotifier = ValueNotifier<Coin>(
     supportedChains.firstWhere(
-      (c) => c.canAddCustomToken,
+      (c) => c.canAddCustomToken && c.tokenAddress() == null,
       orElse: () => supportedChains.first,
     ),
   );
@@ -259,7 +259,8 @@ class _NetworkSelector extends StatelessWidget {
               MaterialPageRoute(
                 builder: (_) => SelectBlockchain(
                   // Only show chains that support custom token imports
-                  filterFn: (c) => c.canAddCustomToken,
+                  filterFn: (c) =>
+                      c.canAddCustomToken && c.tokenAddress() == null,
                 ),
               ),
             );
