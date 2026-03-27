@@ -9,7 +9,7 @@ import '../utils/app_config.dart';
 import '../utils/qr_scan_view.dart';
 
 class ImportShamirSecret extends StatefulWidget {
-  const ImportShamirSecret({Key? key}) : super(key: key);
+  const ImportShamirSecret({super.key});
 
   @override
   State createState() => _ImportShamirSecretState();
@@ -174,10 +174,10 @@ class ImportShamirTextField extends StatefulWidget {
   final void Function(String) onChanged;
 
   const ImportShamirTextField({
-    Key? key,
+    super.key,
     this.initialValue,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   State createState() => _ImportShamirTextFieldState();

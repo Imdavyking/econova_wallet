@@ -28,13 +28,28 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
-  await Future.wait(
-    supportedChains.map((blockchain) {
+  final results = await Future.wait(
+    supportedChains.map((blockchain) async {
       EventBusService.instance
           .fire(SeedPharseInitializationEvent(coin: blockchain));
-      return blockchain.importData(mnemonic);
+      try {
+        return await blockchain.importData(mnemonic);
+      } catch (e) {
+        debugPrint('Failed to import ${blockchain.getName()}: $e');
+        return null; // Don't let one failure kill the rest
+      }
     }),
+    eagerError: false, // continue remaining futures if one throws
   );
+
+  final failed = supportedChains
+      .where((c) => results[supportedChains.indexOf(c)] == null)
+      .toList();
+
+  if (failed.isNotEmpty) {
+    debugPrint(
+        'Import failed for: ${failed.map((c) => c.getName()).join(', ')}');
+  }
 }
 
 String _getKeys(String password) {
