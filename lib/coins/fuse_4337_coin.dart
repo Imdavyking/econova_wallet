@@ -358,16 +358,8 @@ class FuseCoin extends Coin {
     if (resolver['success']) {
       return resolver['msg'];
     }
-
-    resolver = await udResolver(
-      domainName: address,
-      currency: getDefault(),
-    );
-
-    if (resolver['success']) {
-      return resolver['msg'];
-    }
-    return null;
+    final result = await udResolver(domainName: address, currency: default_);
+    return result.success ? result.address : null;
   }
 
   @override

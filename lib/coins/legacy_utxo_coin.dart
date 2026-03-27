@@ -467,7 +467,7 @@ class LegacyUtxoCoin extends Coin {
   @override
   Future<String?> resolveAddress(String address) async {
     final result = await udResolver(domainName: address, currency: default_);
-    return result['success'] == true ? result['msg'] as String? : null;
+    return result.success ? result.address : null;
   }
 
   // ── Balance ───────────────────────────────────────────────────────────────────

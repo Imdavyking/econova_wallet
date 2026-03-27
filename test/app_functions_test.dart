@@ -378,15 +378,18 @@ void main() async {
     }
 
     const domainAddress = unstoppableAddress;
-    Map domainResult = await udResolver(
+    debugPrint("hi");
+    UDResult domainResult = await udResolver(
       domainName: domainAddress,
       currency: 'BTC',
     );
+    debugPrint(domainResult.toString());
 
-    if (domainResult['success']) {
-      expect(domainResult['msg'], 'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
+    if (domainResult.success) {
+      expect(
+          domainResult.address, 'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
     } else {
-      throw Exception(domainResult['msg']);
+      throw Exception(domainResult.error);
     }
   });
 
