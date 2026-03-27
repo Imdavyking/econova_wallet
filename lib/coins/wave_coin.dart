@@ -8,6 +8,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:pointycastle/export.dart' as pc;
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
@@ -16,6 +17,7 @@ import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:wallet_app/utils/axlsign.dart';
+import 'package:wallet_app/fetchers/waves_trx_fetcher.dart';
 import 'package:crypto/crypto.dart' as crypto;
 // Waves — ed25519 curve with Curve25519 public keys, BIP44 coin type 5741564
 // Derivation : m/44'/5741564'/0'/0'/0'  (SLIP-0010 ed25519)
@@ -302,6 +304,14 @@ class WavesCoin extends Coin {
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => WavesTransactionFetcher(
+        nodeUrl: nodeUrl,
+        explorerUrl: blockExplorer,
+        symbol: symbol,
+        coinDecimals: decimals(),
+      );
 
   // ─── Balance ────────────────────────────────────────────────────────────────
 
