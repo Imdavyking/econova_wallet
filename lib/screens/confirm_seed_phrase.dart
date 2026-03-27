@@ -1,397 +1,287 @@
-// ignore_for_file: prefer__ructors, prefer_const_constructors, library_private_types_in_public_api
+// ignore_for_file: library_private_types_in_public_api
+
+import 'package:flutter/material.dart';
+import 'package:screenshot_callback/screenshot_callback.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
 import 'package:wallet_app/components/loader.dart';
-import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/components/mnemonic_step_indicator.dart';
+import 'package:wallet_app/components/mnemonic_word_grid.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/service/wallet_import_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:screenshot_callback/screenshot_callback.dart';
-import '../config/colors.dart';
-import '../model/seed_phrase_root.dart';
-import '../service/wallet_service.dart';
-import '../utils/rpc_urls.dart';
-import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:bip39/bip39.dart' as bip39;
+import 'package:wallet_app/utils/rpc_urls.dart';
 
-class Confirmmnemonic extends StatefulWidget {
-  final List<String> mmenomic;
-  const Confirmmnemonic({
-    super.key,
-    required this.mmenomic,
-  });
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const _totalSteps = 4;
+const _wordsPerStep = 3;
+
+// Words 1–12 split into four groups of three (1-indexed)
+const _stepWords = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9],
+  [10, 11, 12],
+];
+
+// ── Widget ───────────────────────────────────────────────────────────────────
+
+class ConfirmMnemonic extends StatefulWidget {
+  final List<String> mnemonic;
+
+  const ConfirmMnemonic({super.key, required this.mnemonic});
+
   @override
-  _ConfirmmnemonicState createState() => _ConfirmmnemonicState();
+  _ConfirmMnemonicState createState() => _ConfirmMnemonicState();
 }
 
-class _ConfirmmnemonicState extends State<Confirmmnemonic> {
-  bool finished = false;
-  bool firstStep = true;
-  bool secondStep = false;
-  bool thirdStep = false;
-  bool fourthStep = false;
-  final List numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  int currentCorrectItem = 0;
-  bool firstTime = true;
-  List<String> mmenomicArray = [];
-  List<String> mmenomicShuffled = [];
-  bool isLoading = false;
-  late AppLocalizations localization;
-  List<int> boxIndexGotten = [];
+class _ConfirmMnemonicState extends State<ConfirmMnemonic> {
+  // ── State ──────────────────────────────────────────────────────────────────
+  late List<String> _shuffled;
+  final Set<int> _confirmedIndexes = {};
 
-  // disallow screenshots
-  ScreenshotCallback screenshotCallback = ScreenshotCallback();
+  int _step = 0; // 0–3 (which group of 3 we're verifying)
+  int _confirmedInStep = 0; // how many words correct so far in this step (0–3)
+  bool _allDone = false;
+  bool _isLoading = false;
+
+  late AppLocalizations _loc;
+  final _screenshotCallback = ScreenshotCallback();
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
   @override
   void initState() {
     super.initState();
-    screenshotCallback.addListener(() {
-      showDialogWithMessage(
-        context: context,
-        message: localization.youCantScreenshot,
-      );
-    });
+    _shuffle();
     disEnableScreenShot();
+    _screenshotCallback.addListener(_onScreenshot);
   }
 
-  void verifySelection(int selectionIndex, List firstThree) {
-    if (mmenomicShuffled[selectionIndex] ==
-        mmenomicArray[firstThree[currentCorrectItem] - 1]) {
-      setState(() {
-        boxIndexGotten.add(selectionIndex);
-        if (currentCorrectItem == 2) {
-          if (firstStep == true) {
-            firstStep = false;
-            secondStep = true;
-          } else if (firstStep == false && secondStep == true) {
-            secondStep = false;
-            thirdStep = true;
-          } else if (secondStep == false && thirdStep == true) {
-            thirdStep = false;
-            fourthStep = true;
-          } else if (thirdStep == false && fourthStep == true) {
-            finished = true;
-          }
-          currentCorrectItem = 0;
+  void _shuffle() {
+    _shuffled = [...widget.mnemonic]..shuffle();
+  }
+
+  void _onScreenshot() => showDialogWithMessage(
+        context: context,
+        message: _loc.youCantScreenshot,
+      );
+
+  @override
+  void dispose() {
+    _screenshotCallback.dispose();
+    super.dispose();
+  }
+
+  // ── Logic ──────────────────────────────────────────────────────────────────
+
+  List<int> get _currentTargetWords => _stepWords[_step];
+
+  void _onWordTapped(int index) {
+    final expected = widget.mnemonic[_currentTargetWords[_confirmedInStep] - 1];
+    if (_shuffled[index] != expected) {
+      _onWrongWord();
+      return;
+    }
+
+    setState(() {
+      _confirmedIndexes.add(index);
+      _confirmedInStep++;
+
+      if (_confirmedInStep == _wordsPerStep) {
+        _confirmedInStep = 0;
+        if (_step == _totalSteps - 1) {
+          _allDone = true;
         } else {
-          currentCorrectItem++;
+          _step++;
         }
-      });
-    } else {
-      invalidSeedOrder();
+      }
+    });
+  }
+
+  void _onWrongWord() {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            _loc.invalidmnemonic,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    setState(() {
+      _shuffled = [];
+      _confirmedIndexes.clear();
+      _step = 0;
+      _confirmedInStep = 0;
+      _allDone = false;
+    });
+    // Defer shuffle so widget rebuilds with empty list first
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(_shuffle);
+    });
+  }
+
+  Future<void> _onContinue() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final mnemonics = widget.mnemonic.join(' ');
+    final walletList = WalletImportService.getNextWalletName();
+
+    final result = await WalletImportService.importFromMnemonic(
+      mnemonics: mnemonics,
+      walletName: walletList,
+    );
+
+    if (!mounted) return;
+
+    if (!result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            _errorMessage(result.error!),
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    await pref.put(currentUserWalletNameKey, null);
+
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const Wallet()),
+        (_) => false,
+      );
     }
   }
 
-  void invalidSeedOrder() {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.red,
-        content: Text(
-          localization.invalidmnemonic,
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-    setState(() {
-      finished = false;
-      firstStep = true;
-      secondStep = false;
-      thirdStep = false;
-      fourthStep = false;
-      currentCorrectItem = 0;
-      firstTime = true;
-      mmenomicShuffled.length = 0;
-      isLoading = false;
-      boxIndexGotten.length = 0;
-    });
-  }
+  String _errorMessage(WalletImportError error) => switch (error) {
+        WalletImportError.invalidMnemonic => _loc.invalidmnemonic,
+        WalletImportError.duplicate => _loc.mnemonicAlreadyImported,
+        WalletImportError.unknown => _loc.errorTryAgain,
+      };
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
-    if (firstTime) {
-      mmenomicArray = widget.mmenomic;
-      mmenomicShuffled = [...mmenomicArray]..shuffle();
-      firstTime = false;
-    }
-    List firstThree = [];
-    if (firstStep) {
-      firstThree = [numbers[0], numbers[1], numbers[2]];
-    } else if (secondStep) {
-      firstThree = [numbers[3], numbers[4], numbers[5]];
-    } else if (thirdStep) {
-      firstThree = [numbers[6], numbers[7], numbers[8]];
-    } else if (fourthStep) {
-      firstThree = [numbers[9], numbers[10], numbers[11]];
-    }
-
-    List<Widget> seedPhraseWidget = [];
-    final row = mmenomicShuffled.length ~/ 3;
-    const column = 3;
-    for (int index = 0; index < row; index++) {
-      seedPhraseWidget.addAll(
-        [
-          SizedBox(
-            height: 15,
-          ),
-          Row(
-            children: [
-              for (int inner = 0; inner < column; inner++)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: boxIndexGotten.contains(index * column + inner)
-                        ? null
-                        : () {
-                            verifySelection(
-                              index * column + inner,
-                              firstThree,
-                            );
-                          },
-                    child: Card(
-                      color: boxIndexGotten.contains(
-                        index * column + inner,
-                      )
-                          ? grey1
-                          : null,
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Text(
-                          mmenomicShuffled[index * column + inner],
-                          style: TextStyle(
-                            color: boxIndexGotten.contains(
-                              index * column + inner,
-                            )
-                                ? grey3
-                                : null,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      );
-    }
+    _loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          localization.confirmmnemonic,
-        ),
-      ),
+      appBar: AppBar(title: Text(_loc.confirmmnemonic)),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: 20,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!_allDone) ...[
+                MnemonicStepIndicator(
+                  wordNumbers: _currentTargetWords,
+                  wordValues: widget.mnemonic,
+                  confirmedCount: _confirmedInStep,
                 ),
-                if (!finished)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            localization.selectEachWordAsPresented,
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Card(
-                                  color:
-                                      currentCorrectItem >= 1 ? green1 : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Text(
-                                      currentCorrectItem >= 1
-                                          ? mmenomicArray[firstThree[0] - 1]
-                                          : firstThree[0].toString(),
-                                      style: TextStyle(
-                                        color: currentCorrectItem >= 1
-                                            ? green5
-                                            : null,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Card(
-                                  color:
-                                      currentCorrectItem == 2 ? green1 : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Text(
-                                      currentCorrectItem == 2
-                                          ? mmenomicArray[firstThree[1] - 1]
-                                              .toString()
-                                          : firstThree[1].toString(),
-                                      style: TextStyle(
-                                        color: currentCorrectItem == 2
-                                            ? green5
-                                            : null,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Text(
-                                      firstThree[2].toString(),
-                                      style: TextStyle(color: null),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                Container(
-                  color: Colors.transparent,
-                  width: double.infinity,
-                  child: Column(
-                    children: seedPhraseWidget,
-                  ),
-                ),
-                const SizedBox(
-                  height: 40,
-                ),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith(
-                        (states) => appBackgroundblue,
-                      ),
-                      shape: WidgetStateProperty.resolveWith(
-                        (states) => RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    onPressed: finished && !isLoading
-                        ? () async {
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            if (isLoading) return;
-                            setState(() {
-                              isLoading = true;
-                            });
-                            String mnemonics = widget.mmenomic.join(' ');
-                            try {
-                              final mnemonicValid = await compute(
-                                bip39.validateMnemonic,
-                                mnemonics,
-                              );
-                              if (!mnemonicValid) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.invalidmnemonic,
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                                setState(() {
-                                  isLoading = false;
-                                });
-                                return;
-                              }
-                              final mnemonicsList = WalletService.getActiveKeys(
-                                WalletType.secretPhrase,
-                              );
-
-                              final phraseData = SeedPhraseParams(
-                                data: mnemonics,
-                                name: 'Wallet ${mnemonicsList.length + 1}',
-                              );
-
-                              for (WalletParams? phrases in mnemonicsList) {
-                                if (phrases == phraseData) {
-                                  return;
-                                }
-                              }
-
-                              seedPhraseRoot = await compute(
-                                seedFromMnemonic,
-                                phraseData.data,
-                              );
-
-                              await WalletService.setActiveKey(
-                                WalletType.secretPhrase,
-                                phraseData,
-                              );
-
-                              await importAllKeys(phraseData.data);
-
-                              await pref.put(
-                                currentUserWalletNameKey,
-                                null,
-                              );
-
-                              if (context.mounted) {
-                                await Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(builder: (ctx) => Wallet()),
-                                  (r) => false,
-                                );
-                              }
-                            } catch (e) {
-                              if (kDebugMode) {
-                                print(e);
-                              }
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: Colors.red,
-                                  content: Text(
-                                    localization.errorTryAgain,
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              );
-
-                              setState(() {
-                                isLoading = false;
-                              });
-                            }
-                          }
-                        : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(15),
-                      child: isLoading
-                          ? Loader(color: Colors.black)
-                          : Text(
-                              localization.continue_,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 8),
+                _StepProgress(current: _step, total: _totalSteps),
+                const SizedBox(height: 4),
               ],
-            ),
+              MnemonicWordGrid(
+                words: _shuffled,
+                confirmedIndexes: _confirmedIndexes,
+                onTap: _allDone ? (_) {} : _onWordTapped,
+              ),
+              const SizedBox(height: 40),
+              _ContinueButton(
+                enabled: _allDone && !_isLoading,
+                isLoading: _isLoading,
+                label: _loc.continue_,
+                onPressed: _onContinue,
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Local sub-widgets ─────────────────────────────────────────────────────────
+
+class _StepProgress extends StatelessWidget {
+  final int current;
+  final int total;
+
+  const _StepProgress({required this.current, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(total, (i) {
+        final done = i <= current;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            height: 4,
+            decoration: BoxDecoration(
+              color: done
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).dividerColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ContinueButton extends StatelessWidget {
+  final bool enabled;
+  final bool isLoading;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _ContinueButton({
+    required this.enabled,
+    required this.isLoading,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: appBackgroundblue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.all(15),
+        ),
+        onPressed: enabled ? onPressed : null,
+        child: isLoading
+            ? const Loader(color: Colors.black)
+            : Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
       ),
     );
   }

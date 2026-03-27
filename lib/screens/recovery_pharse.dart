@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
-
 import '../utils/rpc_urls.dart';
 
 class RecoveryPhrase extends StatefulWidget {
@@ -319,8 +318,8 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (ctx) => Confirmmnemonic(
-                                    mmenomic: widget.data.split(' '),
+                                  builder: (ctx) => ConfirmMnemonic(
+                                    mnemonic: widget.data.split(' '),
                                   ),
                                 ),
                               );
