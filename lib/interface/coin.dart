@@ -35,11 +35,19 @@ abstract class Coin {
   }
 
   Future<({String key, String timeKey})?> approvalCacheKeys() async => null;
-
+  bool get canAddCustomToken => false;
+  Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async =>
+      null;
+  Future<Coin?> addCustomToken(
+    CustomTokenMeta meta,
+    String contractAddress,
+  ) async =>
+      null;
   Future<List<TokenApproval>>? getApprovals() => null;
   Future<bool>? revokeApproval(TokenApproval approval) => null;
   Future<String?>? testCreateApproval() => null;
   bool get haveTestAppproval => false;
+
   TransactionFetcher? get transactionFetcher => null;
   void validateAddress(String address);
   Future<String> addressExplorer();
@@ -272,5 +280,19 @@ class DeployMeme {
     required this.liquidityTx,
     required this.tokenAddress,
     required this.deployTokenTx,
+  });
+}
+
+class CustomTokenMeta {
+  final String name;
+  final String symbol;
+  final int decimals;
+  final String? iconUrl;
+
+  const CustomTokenMeta({
+    required this.name,
+    required this.symbol,
+    required this.decimals,
+    this.iconUrl,
   });
 }

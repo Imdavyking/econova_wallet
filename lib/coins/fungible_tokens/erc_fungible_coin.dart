@@ -222,7 +222,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     );
   }
 
-  Future<_ERC20Meta?> getERC20Meta() async {
+  Future<ERC20Meta?> getERC20Meta() async {
     final client = Web3Client(
       rpc,
       Client(),
@@ -247,7 +247,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 
     BigInt dec = decimals.first;
 
-    return _ERC20Meta(
+    return ERC20Meta(
       decimals: dec.toInt(),
       name: name.first,
       symbol: symbol.first,
@@ -588,12 +588,12 @@ List<ERCFungibleCoin> getERC20Coins() {
   return blockChains;
 }
 
-class _ERC20Meta {
+class ERC20Meta {
   String name;
   String symbol;
   int decimals;
 
-  _ERC20Meta({
+  ERC20Meta({
     required this.name,
     required this.symbol,
     required this.decimals,

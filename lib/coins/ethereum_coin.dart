@@ -638,6 +638,33 @@ class EthereumCoin extends Coin {
   }
 
   @override
+  bool get canAddCustomToken => true;
+
+  @override
+  Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async {
+    final coin = ERCFungibleCoin(
+      contractAddress_: contractAddress,
+      geckoID: '',
+      rpc: rpc,
+      blockExplorer: blockExplorer,
+      image: image,
+      chainId: chainId,
+      coinType: coinType,
+      default_: default_,
+      mintDecimals: 18,
+      name: '',
+      symbol: '',
+    );
+    final meta = await coin.getERC20Meta();
+    if (meta == null) return null;
+    return CustomTokenMeta(
+      name: meta.name,
+      symbol: meta.symbol,
+      decimals: meta.decimals,
+    );
+  }
+
+  @override
   Future<double> getUserBalance({required String address}) async {
     final ethClient = Web3Client(rpc, Client());
     final userAddress = EthereumAddress.fromHex(address);
