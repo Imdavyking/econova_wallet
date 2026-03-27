@@ -209,14 +209,12 @@ Uint8List _buildWavesTransferBytes({
   required int amountWavelets,
   required int feeWavelets,
   required int timestamp,
-  required int chainId,
   required Uint8List attachment, // 0..140 bytes
 }) {
   final buf = <int>[];
 
   buf.add(0x04); // tx type: Transfer
-  buf.add(0x03); // version 3
-  buf.add(chainId); // version 2
+  buf.add(0x03); // version 2
   buf.addAll(senderPubKey); // 32 bytes
   buf.add(0x00); // assetFlag: WAVES
   buf.add(0x00); // feeAssetFlag: WAVES
@@ -360,19 +358,19 @@ class WavesCoin extends Coin {
     if (recipientBytes.length != 26) throw Exception('Invalid WAVES address');
 
     final signableBytes = _buildWavesTransferBytes(
-        senderPubKey: curve25519Pub,
-        recipientAddr: recipientBytes,
-        amountWavelets: amountWavelets,
-        feeWavelets: feeWavelets,
-        timestamp: timestamp,
-        attachment: attachment,
-        chainId: chainId);
+      senderPubKey: curve25519Pub,
+      recipientAddr: recipientBytes,
+      amountWavelets: amountWavelets,
+      feeWavelets: feeWavelets,
+      timestamp: timestamp,
+      attachment: attachment,
+    );
 
     final sigBytes = await _wavesSign(privKey, signableBytes);
 
     final txJson = jsonEncode({
       'type': 4,
-      'version': 3,
+      'version': 2,
       'senderPublicKey': _b58Encode(curve25519Pub),
       'assetId': null,
       'feeAssetId': null,
@@ -464,7 +462,6 @@ class WavesCoin extends Coin {
       feeWavelets: feeWavelets,
       timestamp: timestamp,
       attachment: attachment,
-      chainId: chainId,
     );
 
     // ✅ use _wavesSign instead of ed25519.sign
@@ -472,7 +469,7 @@ class WavesCoin extends Coin {
 
     final txJson = jsonEncode({
       'type': 4,
-      'version': 3,
+      'version': 2,
       'senderPublicKey': _b58Encode(curve25519Pub),
       'assetId': null,
       'feeAssetId': null,
