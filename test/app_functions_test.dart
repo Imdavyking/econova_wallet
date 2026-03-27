@@ -28,6 +28,104 @@ import 'package:flutter_test/flutter_test.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool networkAvailable = true;
+  const mnemonic1Addresses = {
+    'Cardano':
+        'addr1qy4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8kswl6kh2',
+    'Cardano (Preprod)':
+        'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
+    'ALGO': 'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q',
+    'APT': '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
+    'ATOM': 'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7',
+    'BCH': 'qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf',
+    'BNB': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'Bitcoin (SegWit)': 'bc1q4qw42stdzjqs59xvlrlxr8526e3nunw7mp73te',
+    'Bitcoin (Legacy)': '1Ei9UmLQv4o4UJTy5r5mnGFeC9auM3W5P1',
+    'Bitcoin (SegWit Test4)': 'tb1qquv9lg5g2r4jkr0ahun0ddfg5xntxjelvmc7t8',
+    'Bitcoin (Legacy Test4)': 'muE6mpRPj6EKFQwaoR49cBTy49Bc9x7oq2',
+    'CELO': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'CRO_tcro': 'tcro12xhr9keewx46secesqlctta37jvrkntvu0muaq',
+    'CRO_cro': 'cro12xhr9keewx46secesqlctta37jvrkntvj6jca3',
+    'CRO_evm': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'DASH': 'XoXdZSiN9MWpmVLDFS65GfLHuERoHeuFCj',
+    'EGLD': 'erd1v38vje2t7rvccq2utxcamernpvchnshr6r8x4q9l2f0ekd3tqj2qcl7fs7',
+    'ETH': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'EVMOS': 'evmos17w0adeg64ky0daxwd2ugyuneellmjgnxpu2u3g',
+    'Filecoin': 'f1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
+    'Filecoin(Testnet)': 't1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
+    'FUSE': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'ICX': 'hx136a013895887b56b99d0b1ed27cd1922906646c',
+    'INJ': 'inj17w0adeg64ky0daxwd2ugyuneellmjgnxf5vkec',
+    'IOTX': 'io1yfpkvk8attt5vxc364jqj3emxvrvhjf8pcuyd8',
+    'NEAR': '82b08c7cedd90d57506d15f600a268adfb5b4122fd9380b2f7714f7291d86133',
+    'ONE': 'one12t2plmp43a2pqyl8wp5sgwktslnqt2dzd557mp',
+    'ONT': 'AebqgJQDoJk5NLzv8kuiAZitPSk782igMx',
+    'OSMO': 'osmo15yk64u7zc9g9k2yr2wmzeva5qgwxps6ywful0v',
+    'PAS': '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
+    'POL': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'RON': 'ronin:f39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'SOL': 'BtELVjZSaWhMat94P9HyasX3Gvpv6C7WHXJGqWdZbwSQ',
+    'STRK':
+        '0x058ac366fa8dc98e25a85c7343bcca64324c2e7e65c017785c363d1066ce072a',
+    'Stacks': 'SP3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNCM7KHP3',
+    'Stacks(Test)': 'ST3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNEGTCR6R',
+    'SUI': '0xc88ef07b9b8b2fc3b7daad9478f4e1337f01792e2eab9c3794494e610636026e',
+    'TON': 'UQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Ketu',
+    'TRX': 'TWer2Ygk5TEheHp3TPuYeqxmB6SsGZmaL6',
+    'Waves': '3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8',
+    'Waves (Testnet)': '3N2XxzVJ78KwqJTgvpVcZEFZDSiAQ2kAWeT',
+    'WND': '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
+    'XION': 'xion15yk64u7zc9g9k2yr2wmzeva5qgwxps6yym4d04',
+    'XNO': 'nano_3hn8hsuie854jhtzcg5xunap7jsg7qxtwpihijp5n5tmqznoqpxc98zkojri',
+    'XLM': 'GCRN5PMAG5FM5QLCH7BUZPRQ7UIW37LBZLF2BIDEOSG4ZQ6HYRC45ALA',
+    'XRP': 'rnrbiYDUYTJS4JVdSV5FtyCj4HFuRjfLKM',
+    'XTZ': 'tz1UiMU2fCPen52tf6F8wp1aLpRTEvuct1kW',
+    'Zcash (Test)': 'tmLoFfsS1hx5qnazZX6QTn9UoosxTPCYRwz',
+    'Zcash': 't1UxWM2wcKHaLeLo7rN6ivUp4CtsdqSwQh8',
+    'ZIL': 'zil1d4c4vntch9jpn3fj9d4ugpuap8cmdj7alnrxvv',
+  };
+
+  const mnemonic2Addresses = {
+    'ZIL': 'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
+    'ONT': 'Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc',
+    'STRK':
+        '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+    'ICP': 'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
+    'ONE': 'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
+    'EGLD': 'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
+    'ICX': 'hx1621355ce9e82899c5f5e1cfee3b99426f139e35',
+    'XNO': 'nano_33irdhma4h59muwm9zeqhqg6km9j684agbhzyr3o5ggzqgmknk4z1kqm6j7q',
+    'Bitcoin': 'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
+    'Bitcoin (Legacy)': '1Q9sh5HmBGVvysWfU8UAyFSMk7k2bzMnYW',
+    'Bitcoin (SegWit Test4)': 'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
+    'Bitcoin (Legacy Test4)': 'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
+    'Stacks': 'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
+    'Stacks(Test)': 'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+    'ETH': '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
+    'TON': 'UQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtA58',
+    'SUI': '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+    'APT': '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
+    'XTZ': 'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
+    'ETC': '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
+    'BCH': 'qr4rwp766lf2xysphv8wz2qglphuzx5y7gku3hqruj',
+    'LTC': 'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7',
+    'DASH': 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti',
+    'TRX': 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM',
+    'SOL': '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
+    'XLM': 'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT',
+    'ALGO': 'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U',
+    'ATOM': 'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne',
+    'Zcash (Test)': 'tmLDBDEPStxyzcC9Fv8bDNHZmw9n2LWFB7w',
+    'Zcash': 't1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU',
+    'Cardano':
+        'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
+    'Cardano (Preprod)':
+        'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
+    'XRP': 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
+    'Filecoin': 'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+    'Filecoin(Testnet)': 't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+    'DOT': '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
+    'WND': '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
+  };
 
   setUp(() async {
     await setUpTestHive();
@@ -548,562 +646,76 @@ void main() async {
     );
   });
 
-  test('check if seed phrase generates the correct crypto address', () async {
-    // WARNING: These accounts, and their private keys, are publicly known.
-    // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
-    walletImportType = WalletType.secretPhrase;
-    const mnemonic = testMnemonic;
+  // ─── shared address expectations ────────────────────────────────────────────
+
+// { coinName ?? coinDefault : expectedAddress }
+// coinName is used when the same symbol has multiple variants (BTC, ADA, etc.)
+
+// ─── lookup key: name takes priority over symbol ─────────────────────────────
+
+  String coinKey(Coin c) {
+    // CRO has three variants with same name — disambiguate by bech32Hrp
+    if (c is CosmosCoin && c.getDefault() == 'CRO') return 'CRO_${c.bech32Hrp}';
+    if (c is EthereumCoin && c.getDefault() == 'CRO') return 'CRO_evm';
+    // For multi-variant coins prefer the name, else fall back to symbol
+    const nameKeyed = {
+      'Cardano',
+      'Cardano (Preprod)',
+      'Bitcoin',
+      'Bitcoin (SegWit)',
+      'Bitcoin (Legacy)',
+      'Bitcoin (SegWit Test4)',
+      'Bitcoin (Legacy Test4)',
+      'Stacks',
+      'Stacks(Test)',
+      'Filecoin',
+      'Filecoin(Testnet)',
+      'Waves',
+      'Waves (Testnet)',
+      'Zcash',
+      'Zcash (Test)',
+    };
+    final name = c.getName();
+    return nameKeyed.contains(name) ? name : c.getDefault();
+  }
+
+// ─── helper ──────────────────────────────────────────────────────────────────
+
+  Future<void> runAddressTest(
+    String mnemonic,
+    Map<String, String> expected,
+  ) async {
     seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
       supportedChains = await fetchSupportedChains();
-      for (int i = 0; i < supportedChains.length; i++) {
-        Coin currCoin = supportedChains[i];
-        if (currCoin.getDefault() != currCoin.getSymbol()) continue;
-        AccountData cryptoKeys = await currCoin.importData(mnemonic);
-
-        switch (currCoin.getDefault()) {
-          case "ADA":
-            if (currCoin.getName() == 'Cardano') {
-              expect(
-                cryptoKeys.address,
-                'addr1qy4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8kswl6kh2',
-              );
-            } else if (currCoin.getName() == 'Cardano (Preprod)') {
-              expect(
-                cryptoKeys.address,
-                'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
-              );
-            }
-
-            break;
-          case "ALGO":
-            expect(
-              cryptoKeys.address,
-              "XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q",
-            );
-            break;
-          case "APT":
-            expect(
-              cryptoKeys.address,
-              "0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0",
-            );
-            break;
-          case "ATOM":
-            expect(
-              cryptoKeys.address,
-              "cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7",
-            );
-            break;
-          case "BCH":
-            expect(
-              cryptoKeys.address,
-              "qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf",
-            );
-            break;
-          case "BNB":
-            expect(
-              cryptoKeys.address,
-              "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "BTC":
-            if (currCoin.getName() == 'Bitcoin (SegWit)') {
-              expect(
-                cryptoKeys.address,
-                'bc1q4qw42stdzjqs59xvlrlxr8526e3nunw7mp73te',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (Legacy)') {
-              expect(
-                cryptoKeys.address,
-                '1Ei9UmLQv4o4UJTy5r5mnGFeC9auM3W5P1',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (SegWit Test4)') {
-              expect(
-                cryptoKeys.address,
-                'tb1qquv9lg5g2r4jkr0ahun0ddfg5xntxjelvmc7t8',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (Legacy Test4)') {
-              expect(
-                cryptoKeys.address,
-                'muE6mpRPj6EKFQwaoR49cBTy49Bc9x7oq2',
-              );
-            }
-            break;
-
-          case "CELO":
-            expect(
-              cryptoKeys.address,
-              "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "CRO":
-            if (currCoin is CosmosCoin && currCoin.bech32Hrp == 'tcro') {
-              expect(
-                cryptoKeys.address,
-                "tcro12xhr9keewx46secesqlctta37jvrkntvu0muaq",
-              );
-            } else if (currCoin is CosmosCoin && currCoin.bech32Hrp == 'cro') {
-              expect(
-                cryptoKeys.address,
-                "cro12xhr9keewx46secesqlctta37jvrkntvj6jca3",
-              );
-            } else if (currCoin is EthereumCoin) {
-              expect(
-                cryptoKeys.address,
-                "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-              );
-            }
-            break;
-          case "DASH":
-            expect(
-              cryptoKeys.address,
-              "XoXdZSiN9MWpmVLDFS65GfLHuERoHeuFCj",
-            );
-            break;
-          case "EGLD":
-            expect(
-              cryptoKeys.address,
-              "erd1v38vje2t7rvccq2utxcamernpvchnshr6r8x4q9l2f0ekd3tqj2qcl7fs7",
-            );
-            break;
-          case "ETH":
-            expect(
-              cryptoKeys.address,
-              "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "EVMOS":
-            expect(
-              cryptoKeys.address,
-              "evmos17w0adeg64ky0daxwd2ugyuneellmjgnxpu2u3g",
-            );
-            break;
-          case "FIL":
-            if (currCoin.getName() == 'Filecoin') {
-              expect(
-                cryptoKeys.address,
-                'f1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
-              );
-            } else if (currCoin.getName() == 'Filecoin(Testnet)') {
-              expect(
-                cryptoKeys.address,
-                't1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
-              );
-            }
-
-            break;
-          case "FUSE":
-            expect(
-              cryptoKeys.address,
-              "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "ICX":
-            expect(
-              cryptoKeys.address,
-              "hx136a013895887b56b99d0b1ed27cd1922906646c",
-            );
-            break;
-          case "INJ":
-            expect(
-              cryptoKeys.address,
-              "inj17w0adeg64ky0daxwd2ugyuneellmjgnxf5vkec",
-            );
-            break;
-          case "IOTX":
-            expect(
-              cryptoKeys.address,
-              "io1yfpkvk8attt5vxc364jqj3emxvrvhjf8pcuyd8",
-            );
-            break;
-          case "NEAR":
-            expect(
-              cryptoKeys.address,
-              "82b08c7cedd90d57506d15f600a268adfb5b4122fd9380b2f7714f7291d86133",
-            );
-            break;
-          case "ONE":
-            expect(
-              cryptoKeys.address,
-              "one12t2plmp43a2pqyl8wp5sgwktslnqt2dzd557mp",
-            );
-            break;
-          case "ONT":
-            expect(
-              cryptoKeys.address,
-              "AebqgJQDoJk5NLzv8kuiAZitPSk782igMx",
-            );
-            break;
-          case "OSMO":
-            expect(
-              cryptoKeys.address,
-              "osmo15yk64u7zc9g9k2yr2wmzeva5qgwxps6ywful0v",
-            );
-            break;
-          case "PAS":
-            expect(
-              cryptoKeys.address,
-              "5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU",
-            );
-            break;
-          case "POL":
-            expect(
-              cryptoKeys.address,
-              "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "RON":
-            expect(
-              cryptoKeys.address,
-              "ronin:f39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            );
-            break;
-          case "SOL":
-            expect(
-              cryptoKeys.address,
-              "BtELVjZSaWhMat94P9HyasX3Gvpv6C7WHXJGqWdZbwSQ",
-            );
-            break;
-          case "STRK":
-            expect(
-              cryptoKeys.address,
-              "0x058ac366fa8dc98e25a85c7343bcca64324c2e7e65c017785c363d1066ce072a",
-            );
-            break;
-          case "STX":
-            if (currCoin.getName() == 'Stacks') {
-              expect(
-                cryptoKeys.address,
-                'SP3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNCM7KHP3',
-              );
-            } else if (currCoin.getName() == 'Stacks(Test)') {
-              expect(
-                cryptoKeys.address,
-                'ST3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNEGTCR6R',
-              );
-            }
-            break;
-          case "SUI":
-            expect(
-              cryptoKeys.address,
-              "0xc88ef07b9b8b2fc3b7daad9478f4e1337f01792e2eab9c3794494e610636026e",
-            );
-            break;
-          case "TON":
-            expect(
-              cryptoKeys.address,
-              "UQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Ketu",
-            );
-            break;
-          case "TRX":
-            expect(
-              cryptoKeys.address,
-              "TWer2Ygk5TEheHp3TPuYeqxmB6SsGZmaL6",
-            );
-            break;
-          case "WAVES":
-            if (currCoin.getName() == 'Waves') {
-              expect(
-                cryptoKeys.address,
-                "3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8",
-              );
-            } else if (currCoin.getName() == 'Waves (Testnet)') {
-              expect(
-                cryptoKeys.address,
-                "3N2XxzVJ78KwqJTgvpVcZEFZDSiAQ2kAWeT",
-              );
-            }
-
-            break;
-          case "WND":
-            expect(
-              cryptoKeys.address,
-              "5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU",
-            );
-            break;
-
-          case "XION":
-            expect(
-              cryptoKeys.address,
-              "xion15yk64u7zc9g9k2yr2wmzeva5qgwxps6yym4d04",
-            );
-            break;
-          case "XNO":
-            expect(
-              cryptoKeys.address,
-              "nano_3hn8hsuie854jhtzcg5xunap7jsg7qxtwpihijp5n5tmqznoqpxc98zkojri",
-            );
-            break;
-          case "XLM":
-            expect(
-              cryptoKeys.address,
-              "GCRN5PMAG5FM5QLCH7BUZPRQ7UIW37LBZLF2BIDEOSG4ZQ6HYRC45ALA",
-            );
-            break;
-          case "XRP":
-            expect(
-              cryptoKeys.address,
-              "rnrbiYDUYTJS4JVdSV5FtyCj4HFuRjfLKM",
-            );
-            break;
-          case "XTZ":
-            expect(
-              cryptoKeys.address,
-              "tz1UiMU2fCPen52tf6F8wp1aLpRTEvuct1kW",
-            );
-            break;
-          case "ZEC":
-            if (currCoin.getName() == 'Zcash (Test)') {
-              expect(
-                cryptoKeys.address,
-                "tmLoFfsS1hx5qnazZX6QTn9UoosxTPCYRwz",
-              );
-            } else {
-              expect(
-                cryptoKeys.address,
-                "t1UxWM2wcKHaLeLo7rN6ivUp4CtsdqSwQh8",
-              );
-            }
-            break;
-          case "ZIL":
-            expect(
-              cryptoKeys.address,
-              "zil1d4c4vntch9jpn3fj9d4ugpuap8cmdj7alnrxvv",
-            );
-            break;
-          default:
-        }
+      debugPrint(
+        '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
+      );
+      for (final coin in supportedChains) {
+        if (coin.getDefault() != coin.getSymbol()) continue;
+        final key = coinKey(coin);
+        final want = expected[key];
+        if (want == null) continue; // not in map → skip (e.g. Waves Local)
+        final got = await coin.importData(mnemonic);
+        debugPrint(
+            '  [${testNet ? "T" : "M"}] ${coin.getName()} → ${got.address}');
+        expect(got.address, want, reason: '${coin.getName()} address mismatch');
       }
     }
+  }
+
+// ─── tests ───────────────────────────────────────────────────────────────────
+
+  test('check if seed phrase generates the correct crypto address', () async {
+    walletImportType = WalletType.secretPhrase;
+    await runAddressTest(testMnemonic, mnemonic1Addresses);
   });
 
   test('check if seed phrase 2 generates the correct crypto address', () async {
-    // WARNING: These accounts, and their private keys, are publicly known.
-    // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
     walletImportType = WalletType.secretPhrase;
-    const mnemonic = testMnemonic1;
-    seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
-    for (final testNet in [true, false]) {
-      enableTestNet = testNet;
-      supportedChains = await fetchSupportedChains();
-      for (int i = 0; i < supportedChains.length; i++) {
-        Coin currCoin = supportedChains[i];
-        if (currCoin.getDefault() != currCoin.getSymbol()) continue;
-        AccountData cryptoKeys = await currCoin.importData(mnemonic);
-        switch (currCoin.getDefault()) {
-          case 'ZIL':
-            expect(
-              cryptoKeys.address,
-              'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
-            );
-            break;
-          case "ONT":
-            expect(
-              cryptoKeys.address,
-              "Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc",
-            );
-            break;
-
-          case 'STRK':
-            expect(
-              cryptoKeys.address,
-              '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
-            );
-            break;
-          case 'ICP':
-            expect(
-              cryptoKeys.address,
-              'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
-            );
-            break;
-          case 'ONE':
-            expect(
-              cryptoKeys.address,
-              'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
-            );
-            break;
-          case 'EGLD':
-            expect(
-              cryptoKeys.address,
-              'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
-            );
-            break;
-          case "ICX":
-            expect(
-              cryptoKeys.address,
-              "hx1621355ce9e82899c5f5e1cfee3b99426f139e35",
-            );
-            break;
-          case "XNO":
-            expect(
-              cryptoKeys.address,
-              "nano_33irdhma4h59muwm9zeqhqg6km9j684agbhzyr3o5ggzqgmknk4z1kqm6j7q",
-            );
-            break;
-          case 'BTC':
-            if (currCoin.getName() == 'Bitcoin') {
-              expect(
-                cryptoKeys.address,
-                'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (Legacy)') {
-              expect(
-                cryptoKeys.address,
-                '1Q9sh5HmBGVvysWfU8UAyFSMk7k2bzMnYW',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (SegWit Test4)') {
-              expect(
-                cryptoKeys.address,
-                'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
-              );
-            } else if (currCoin.getName() == 'Bitcoin (Legacy Test4)') {
-              expect(
-                cryptoKeys.address,
-                'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
-              );
-            }
-            break;
-          case 'STX':
-            if (currCoin.getName() == 'Stacks') {
-              expect(
-                cryptoKeys.address,
-                'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
-              );
-            } else if (currCoin.getName() == 'Stacks(Test)') {
-              expect(
-                cryptoKeys.address,
-                'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
-              );
-            }
-            break;
-          case 'ETH':
-            expect(
-              cryptoKeys.address,
-              '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
-            );
-            break;
-          case 'TON':
-            expect(
-              cryptoKeys.address,
-              'UQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtA58',
-            );
-            break;
-          case 'SUI':
-            expect(
-              cryptoKeys.address,
-              '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
-            );
-            break;
-          case 'APT':
-            expect(
-              cryptoKeys.address,
-              '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
-            );
-            break;
-          case 'XTZ':
-            expect(
-              cryptoKeys.address,
-              'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
-            );
-            break;
-          case 'ETC':
-            expect(
-              cryptoKeys.address,
-              '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
-            );
-            break;
-          case 'BCH':
-            expect(cryptoKeys.address,
-                'qr4rwp766lf2xysphv8wz2qglphuzx5y7gku3hqruj');
-            break;
-          case 'LTC':
-            expect(cryptoKeys.address,
-                'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7');
-            break;
-          case 'DASH':
-            expect(cryptoKeys.address, 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti');
-            break;
-          case 'TRX':
-            expect(cryptoKeys.address, 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM');
-            break;
-          case 'SOL':
-            expect(
-              cryptoKeys.address,
-              '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
-            );
-            break;
-          case 'XLM':
-            expect(cryptoKeys.address,
-                'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT');
-            break;
-          case 'ALGO':
-            expect(cryptoKeys.address,
-                'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U');
-            break;
-          case 'ATOM':
-            expect(cryptoKeys.address,
-                'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
-            break;
-          case 'ZEC':
-            if (currCoin.getName() == 'Zcash (Test)') {
-              expect(
-                cryptoKeys.address,
-                "tmLDBDEPStxyzcC9Fv8bDNHZmw9n2LWFB7w",
-              );
-            } else {
-              expect(
-                cryptoKeys.address,
-                "t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU",
-              );
-            }
-            break;
-          case 'ADA':
-            if (currCoin.getName() == 'Cardano') {
-              expect(
-                cryptoKeys.address,
-                'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
-              );
-            } else if (currCoin.getName() == 'Cardano (Preprod)') {
-              expect(
-                cryptoKeys.address,
-                'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
-              );
-            }
-            break;
-          case 'XRP':
-            expect(cryptoKeys.address, 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL');
-            break;
-          case 'FIL':
-            if (currCoin.getName() == 'Filecoin') {
-              expect(cryptoKeys.address,
-                  'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa');
-            } else if (currCoin.getName() == 'Filecoin(Testnet)') {
-              expect(
-                cryptoKeys.address,
-                't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
-              );
-            }
-            break;
-          case 'DOT':
-            expect(
-              cryptoKeys.address,
-              '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
-            );
-            break;
-          case 'WND':
-            expect(
-              cryptoKeys.address,
-              '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
-            );
-            break;
-
-          default:
-        }
-      }
-    }
+    await runAddressTest(testMnemonic1, mnemonic2Addresses);
   });
-
   test('user pin length and pin trials is secured and correct.', () async {
     expect(pinLength, greaterThanOrEqualTo(4));
     expect(userPinTrials, greaterThanOrEqualTo(1));
