@@ -326,6 +326,8 @@ class SolanaCoin extends Coin {
     );
     if (alreadyExists) return null;
 
+    print(meta.iconUrl);
+
     final token = SplTokenCoin(
       mint: contractAddress,
       name: meta.name,
@@ -336,7 +338,7 @@ class SolanaCoin extends Coin {
       ws: ws,
       blockExplorer: blockExplorer,
       default_: default_,
-      image: meta.iconUrl ?? 'assets/solana.webp',
+      image: meta.iconUrl ?? '',
       chainId: chainId,
     );
 

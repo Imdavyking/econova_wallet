@@ -23,6 +23,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
   final _nameCtrl = TextEditingController();
   final _symbolCtrl = TextEditingController();
   final _decimalCtrl = TextEditingController();
+  String? image = '';
 
   // Seed with first coin that supports custom tokens
   late final ValueNotifier<Coin> _coinNotifier = ValueNotifier<Coin>(
@@ -72,6 +73,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
       if (meta == null) return;
       _nameCtrl.setText(meta.name);
       _symbolCtrl.setText(meta.symbol);
+      image = meta.iconUrl;
       _decimalCtrl.setText(meta.decimals.toString());
     } catch (_) {
     } finally {
@@ -122,6 +124,7 @@ class _AddCustomTokenState extends State<AddCustomToken> {
         name: _nameCtrl.text.trim(),
         symbol: _symbolCtrl.text.trim(),
         decimals: int.parse(_decimalCtrl.text.trim()),
+        iconUrl: image,
       );
 
       final newCoin = await _coinNotifier.value.addCustomToken(

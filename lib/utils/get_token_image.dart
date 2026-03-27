@@ -19,6 +19,7 @@ class GetTokenImage extends StatelessWidget {
 
     // 2️⃣ Try FileImage
     try {
+      print('file image $image');
       return FileImage(File(image));
     } catch (_) {}
 

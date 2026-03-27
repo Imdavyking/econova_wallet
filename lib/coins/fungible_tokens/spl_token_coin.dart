@@ -92,6 +92,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     data['ws'] = ws;
     data['mint'] = mint;
     data['geckoID'] = geckoID;
+    data['chainId'] = chainId;
     data['mintDecimals'] = mintDecimals;
 
     return data;
@@ -239,7 +240,9 @@ List<SplTokenCoin> getSplTokens() {
       ),
     ]);
   }
+  pref.delete(SplTokenCoin._splTokenMapKey);
   final raw = pref.get(SplTokenCoin._splTokenMapKey) as String?;
+
   if (raw != null && WalletService.isPharseKey()) {
     final saved = Map<String, dynamic>.from(jsonDecode(raw));
     blockChains.addAll(
