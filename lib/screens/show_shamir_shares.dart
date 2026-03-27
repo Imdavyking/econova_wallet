@@ -1,11 +1,12 @@
-import 'package:wallet_app/ntcdcrypto.dart';
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
-import '../utils/app_config.dart';
+import 'package:wallet_app/ntcdcrypto.dart';
+import 'package:wallet_app/utils/app_config.dart';
 
 class ShowShamirShares extends StatefulWidget {
   final String data;
@@ -17,313 +18,322 @@ class ShowShamirShares extends StatefulWidget {
 }
 
 class _ShowShamirSharesState extends State<ShowShamirShares> {
-  final ValueNotifier<List<String>> sharesList = ValueNotifier([]);
+  // ── Controllers & state ────────────────────────────────────────────────────
+  final _formKey = GlobalKey<FormState>();
+  final _thresholdCtrl = TextEditingController();
+  final _sharesCtrl = TextEditingController();
+  final _sharesList = ValueNotifier<List<String>>([]);
+  final _isBase64 = ValueNotifier<bool>(true);
 
-  final TextEditingController _thrsContrl = TextEditingController();
+  static const _maxShares = 8;
+  static const _minShares = 2;
 
-  final TextEditingController _shsContrl = TextEditingController();
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-  ValueNotifier<bool> isBase64 = ValueNotifier(true);
+  @override
+  void dispose() {
+    _thresholdCtrl.dispose();
+    _sharesCtrl.dispose();
+    _sharesList.dispose();
+    _isBase64.dispose();
+    super.dispose();
+  }
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  // ── Logic ──────────────────────────────────────────────────────────────────
 
-  int maxShares = 8;
-  int minShares = 2;
+  void _generateShares() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final minimum = int.parse(_thresholdCtrl.text.trim());
+    final shares = int.parse(_sharesCtrl.text.trim());
+    _sharesList.value =
+        SSS().create(minimum, shares, widget.data, _isBase64.value);
+  }
 
-  void _createShares() {
-    final int minimum = int.parse(_thrsContrl.text.trim());
-    final int shares = int.parse(_shsContrl.text.trim());
-    sharesList.value =
-        SSS().create(minimum, shares, widget.data, isBase64.value);
+  String? _validateThreshold(String? v, AppLocalizations loc) {
+    if (v == null || v.trim().isEmpty) return loc.enterValidthresholdCount;
+    final threshold = int.tryParse(v);
+    if (threshold == null || threshold <= 0)
+      return loc.enterValidthresholdCount;
+    final shares = int.tryParse(_sharesCtrl.text.trim());
+    if (shares == null) return loc.enterValidsharesCount;
+    if (threshold > shares) return loc.enterValidthresholdCount;
+    return null;
+  }
+
+  String? _validateShares(String? v, AppLocalizations loc) {
+    if (v == null || v.trim().isEmpty) return loc.enterValidsharesCount;
+    final shares = int.tryParse(v);
+    if (shares == null) return loc.enterValidsharesCount;
+    if (shares > _maxShares) return loc.maxSharesError;
+    if (shares < _minShares) return loc.minSharesError;
+    return null;
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(loc.exportAsShamirShares)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(25),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Threshold input
+                _NumberField(
+                  controller: _thresholdCtrl,
+                  hint: loc.thresholdCount,
+                  validator: (v) => _validateThreshold(v, loc),
+                ),
+                const SizedBox(height: 20),
+
+                // Shares count input
+                _NumberField(
+                  controller: _sharesCtrl,
+                  hint: loc.sharesCount,
+                  validator: (v) => _validateShares(v, loc),
+                ),
+                const SizedBox(height: 20),
+
+                // Base64 toggle
+                _Base64Toggle(notifier: _isBase64, label: loc.isBase64),
+                const SizedBox(height: 20),
+
+                // Generate button
+                _GenerateButton(
+                  label: loc.confirm,
+                  onPressed: _generateShares,
+                ),
+                const SizedBox(height: 20),
+
+                // Generated shares list
+                ValueListenableBuilder<List<String>>(
+                  valueListenable: _sharesList,
+                  builder: (_, shares, __) => shares.isEmpty
+                      ? const SizedBox.shrink()
+                      : Column(
+                          children: [
+                            ...shares.map(
+                              (share) => Padding(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                child: _ShareField(
+                                  share: share,
+                                  copiedLabel: loc.copiedToClipboard,
+                                ),
+                              ),
+                            ),
+                            _RecoveryWarning(
+                              threshold: _thresholdCtrl.text,
+                              total: _sharesCtrl.text,
+                              recoveryMessage: loc.recoverWithNofYShares(
+                                _thresholdCtrl.text,
+                                _sharesCtrl.text,
+                              ),
+                              warningMessage: loc.neverShareYourShamirSecrets,
+                            ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+
+/// Digits-only text field used for threshold and shares count.
+class _NumberField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final FormFieldValidator<String> validator;
+
+  const _NumberField({
+    required this.controller,
+    required this.hint,
+    required this.validator,
+  });
+
+  static const _border = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(10)),
+    borderSide: BorderSide.none,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: false),
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        border: _border,
+        focusedBorder: _border,
+        enabledBorder: _border,
+      ),
+    );
+  }
+}
+
+/// Labelled Cupertino switch for the Base64 / Hex toggle.
+class _Base64Toggle extends StatelessWidget {
+  final ValueNotifier<bool> notifier;
+  final String label;
+
+  const _Base64Toggle({required this.notifier, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: notifier,
+      builder: (_, value, __) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 18)),
+          CupertinoSwitch(
+            value: value,
+            activeColor: appBackgroundblue,
+            onChanged: (_) => notifier.value = !notifier.value,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-width generate / confirm button.
+class _GenerateButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _GenerateButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: appBackgroundblue,
+          padding: const EdgeInsets.all(15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Read-only field displaying a single share with a copy icon.
+class _ShareField extends StatelessWidget {
+  final String share;
+  final String copiedLabel;
+
+  const _ShareField({required this.share, required this.copiedLabel});
+
+  static const _border = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(10)),
+    borderSide: BorderSide.none,
+  );
+
+  Future<void> _copy(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: share));
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(copiedLabel),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
-    final localization = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          localization.exportAsShamirShares,
+    return TextFormField(
+      readOnly: true,
+      controller: TextEditingController(text: share),
+      decoration: InputDecoration(
+        filled: true,
+        border: _border,
+        focusedBorder: _border,
+        enabledBorder: _border,
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.copy),
+          onPressed: () => _copy(context),
         ),
       ),
-      body: SizedBox(
-        height: double.infinity,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Padding(
-                padding: const EdgeInsets.all(25),
-                child: ValueListenableBuilder<List<String>>(
-                  valueListenable: sharesList,
-                  builder: (context, value, child) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: <Widget>[
-                        TextFormField(
-                          validator: (v) {
-                            final error = localization.enterValidthresholdCount;
-                            if (v == null || v.trim().isEmpty) {
-                              return error;
-                            }
-                            int? thresholdCount = int.tryParse(v);
-                            if (thresholdCount == null) return error;
-                            int? sharesCount =
-                                int.tryParse(_shsContrl.text.trim());
-                            final shareserror =
-                                localization.enterValidsharesCount;
-                            if (sharesCount == null) return shareserror;
-                            if (thresholdCount > sharesCount) return error;
-                            if (thresholdCount <= 0) return error;
-                            return null;
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          controller: _thrsContrl,
-                          decoration: InputDecoration(
-                            hintText: localization.thresholdCount,
-                            focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            border: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none), // you
-                            filled: true,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        TextFormField(
-                          validator: (v) {
-                            final error = localization.enterValidsharesCount;
-                            final maxError = localization.maxSharesError;
-                            final minError = localization.minSharesError;
-                            if (v == null || v.trim().isEmpty) {
-                              return error;
-                            }
-                            int? shares = int.tryParse(v);
-                            if (shares == null) return error;
-                            if (shares > maxShares) return maxError;
-                            if (shares < minShares) return minError;
+    );
+  }
+}
 
-                            return null;
-                          },
-                          controller: _shsContrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: false,
-                          ),
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          decoration: InputDecoration(
-                            hintText: localization.sharesCount,
-                            focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            border: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none), // you
-                            filled: true,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: isBase64,
-                          builder: (context, value, child) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  localization.isBase64,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                  ),
-                                ),
-                                Transform.scale(
-                                  scale: 1,
-                                  child: CupertinoSwitch(
-                                    value: isBase64.value,
-                                    activeColor: appBackgroundblue,
-                                    onChanged: (bool enable) async {
-                                      isBase64.value = !isBase64.value;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                (states) => appBackgroundblue,
-                              ),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: () async {
-                              if (_formKey.currentState?.validate() ?? false) {
-                                _createShares();
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Text(
-                                localization.confirm,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        for (String share in sharesList.value) ...[
-                          TextFormField(
-                            readOnly: true,
-                            controller: TextEditingController()..text = share,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: false,
-                            ),
-                            inputFormatters: <TextInputFormatter>[
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                            decoration: InputDecoration(
-                              hintText: localization.sharesCount,
-                              focusedBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide: BorderSide.none),
-                              border: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide: BorderSide.none),
-                              enabledBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide: BorderSide.none), // you
-                              filled: true,
+/// Red warning box shown after shares are generated.
+class _RecoveryWarning extends StatelessWidget {
+  final String threshold;
+  final String total;
+  final String recoveryMessage;
+  final String warningMessage;
 
-                              suffixIcon: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: () async {
-                                      final snack =
-                                          ScaffoldMessenger.of(context);
+  const _RecoveryWarning({
+    required this.threshold,
+    required this.total,
+    required this.recoveryMessage,
+    required this.warningMessage,
+  });
 
-                                      snack.clearSnackBars();
-                                      await Clipboard.setData(
-                                        ClipboardData(
-                                          text: share,
-                                        ),
-                                      );
-
-                                      snack.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            localization.copiedToClipboard,
-                                          ),
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                    child: const Icon(Icons.copy),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 20,
-                          ),
-                        ],
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        if (sharesList.value.isNotEmpty)
-                          Align(
-                            alignment: Alignment.center,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(10)),
-                                color: Colors.red[100],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(15),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      localization.recoverWithNofYShares(
-                                        _thrsContrl.text,
-                                        _shsContrl.text,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      localization.neverShareYourShamirSecrets,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.red[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        children: [
+          Text(
+            recoveryMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            warningMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
