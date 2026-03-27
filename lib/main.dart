@@ -161,9 +161,9 @@ late WalletType walletImportType;
 late ByteData logoBytes;
 
 // DO NOT USE (public)
-const testMnemonic1 =
+const testMnemonic2 =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
-const testMnemonic =
+const testMnemonic1 =
     'test test test test test test test test test test test junk'; // do not use it in production
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -226,7 +226,7 @@ void main() async {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }
-  supportedChains =  fetchSupportedChains();
+  supportedChains = fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }

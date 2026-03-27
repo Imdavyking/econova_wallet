@@ -59,7 +59,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     });
     WidgetsBinding.instance.addObserver(this);
     disEnableScreenShot();
-    mnemonicController.text = kDebugMode ? testMnemonic : '';
+    mnemonicController.text = kDebugMode ? testMnemonic1 : '';
     walletNameController.text = kDebugMode ? 'Test Wallet(DO NOT USE)' : '';
   }
 

@@ -702,12 +702,12 @@ void main() async {
 
   test('check if seed phrase generates the correct crypto address', () async {
     walletImportType = WalletType.secretPhrase;
-    await runAddressTest(testMnemonic, mnemonic1Addresses);
+    await runAddressTest(testMnemonic1, mnemonic1Addresses);
   });
 
   test('check if seed phrase 2 generates the correct crypto address', () async {
     walletImportType = WalletType.secretPhrase;
-    await runAddressTest(testMnemonic1, mnemonic2Addresses);
+    await runAddressTest(testMnemonic2, mnemonic2Addresses);
   });
   test('user pin length and pin trials is secured and correct.', () async {
     expect(pinLength, greaterThanOrEqualTo(4));
