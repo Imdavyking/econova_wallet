@@ -17,6 +17,7 @@ import '../../utils/app_config.dart';
 class SplTokenCoin extends SolanaCoin implements FTExplorer {
   String mint;
   int mintDecimals;
+  int chainId;
 
   SplTokenCoin({
     required super.blockExplorer,
@@ -29,10 +30,8 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     required super.geckoID,
     required this.mint,
     required this.mintDecimals,
-  }) : super(
-          rampID: '',
-          payScheme: '',
-        );
+    required this.chainId,
+  }) : super(rampID: '', payScheme: '', chainId: chainId);
 
   factory SplTokenCoin.fromJson(Map<String, dynamic> json) {
     return SplTokenCoin(
@@ -46,6 +45,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
       mint: json['mint'],
       mintDecimals: json['mintDecimals'],
       geckoID: json['geckoID'],
+      chainId: json['chainId'],
     );
   }
 
@@ -204,6 +204,7 @@ List<SplTokenCoin> getSplTokens() {
         mint: 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT',
         mintDecimals: 6,
         geckoID: 'usd-coin',
+        chainId: 103,
       ),
     ]);
   } else {
@@ -220,6 +221,7 @@ List<SplTokenCoin> getSplTokens() {
         rpc: 'https://api.mainnet-beta.solana.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        chainId: 101,
       ),
       SplTokenCoin(
         name: 'Bonk',
@@ -233,6 +235,7 @@ List<SplTokenCoin> getSplTokens() {
         rpc: 'https://api.mainnet-beta.solana.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+        chainId: 101,
       ),
     ]);
   }

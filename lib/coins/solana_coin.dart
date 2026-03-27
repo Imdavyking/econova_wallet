@@ -41,6 +41,7 @@ class SolanaCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  int chainId;
 
   @override
   bool requireMemo() => true;
@@ -90,6 +91,7 @@ class SolanaCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.chainId,
   });
 
   factory SolanaCoin.fromJson(Map<String, dynamic> json) {
@@ -104,6 +106,7 @@ class SolanaCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      chainId: json['chainId'],
     );
   }
 
@@ -121,6 +124,7 @@ class SolanaCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['chainId'] = chainId;
 
     return data;
   }
@@ -288,17 +292,17 @@ class SolanaCoin extends Coin {
 
       if (_tokenRegistryCache!.containsKey(mintAddress)) {
         final match = _tokenRegistryCache![mintAddress];
-        return CustomTokenMeta(
-          name: match['name'] as String? ?? mintAddress,
-          symbol: match['symbol'] as String? ?? '???',
-          decimals: (match['decimals'] as num?)?.toInt() ?? 0,
-          iconUrl: match['logoURI'] as String?,
-        );
+        if (match['chainId'] == chainId) {
+          return CustomTokenMeta(
+            name: match['name'] as String? ?? mintAddress,
+            symbol: match['symbol'] as String? ?? '???',
+            decimals: (match['decimals'] as num?)?.toInt() ?? 0,
+            iconUrl: match['logoURI'] as String?,
+          );
+        }
       }
-      return null;
-    } catch (_) {
-      return null;
-    }
+    } catch (_) {}
+    return null;
   }
 
   Future<Map<String, dynamic>?> _loadTokenRegistry() async {
@@ -329,6 +333,7 @@ class SolanaCoin extends Coin {
       blockExplorer: blockExplorer,
       default_: default_,
       image: meta.iconUrl ?? 'assets/solana.webp',
+      chainId: chainId,
     );
 
     final added = await token.addCoinToStore();
@@ -1216,6 +1221,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         geckoID: 'solana',
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
+        chainId: 103,
       ),
     );
   } else {
@@ -1232,6 +1238,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         geckoID: 'solana',
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
+        chainId: 101,
       ),
     ]);
   }
