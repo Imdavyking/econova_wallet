@@ -25,12 +25,11 @@ class GetTokenImage extends StatelessWidget {
 
     // 3️⃣ Try NetworkImage
     try {
-      print(image);
       return NetworkImage(image);
     } catch (_) {}
 
     // 4️⃣ Fallback to default asset
-    return const AssetImage('assets/default_token.png');
+    return const AssetImage('assets/ai_icon.jpg');
   }
 
   @override
