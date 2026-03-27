@@ -325,7 +325,8 @@ class WavesCoin extends Coin {
     if (chainId == 0x52) {
       try {
         final bal = await getUserBalance(address: address);
-        if (bal < 100) {
+        const amount = 1000;
+        if (bal < amount) {
           final genesis = await importFromWavesSeed(
             'waves private node seed with waves tokens',
           );
@@ -333,7 +334,7 @@ class WavesCoin extends Coin {
             fromPrivKey: HEX.decode(genesis.privateKey!),
             fromPubKey: HEX.decode(genesis.publicKey!),
             to: address,
-            amount: '1000', // send 1000 WAVES
+            amount: amount.toString(), // send 1000 WAVES
             isNativeSeed: true,
           );
           debugPrint('[WAVES local] funded $address with 1000 WAVES');
