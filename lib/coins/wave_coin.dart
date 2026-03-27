@@ -318,6 +318,75 @@ class WavesCoin extends Coin {
     return wavelets / 1e8;
   }
 
+  Future<({String txHash, String? txRaw})?> _transferWithNativeSeed({
+    required List<int> fromPrivKey, // clamped Curve25519 scalar
+    required String to,
+    required String amount,
+    String? memo,
+  }) async {
+    final privKey = Uint8List.fromList(fromPrivKey);
+
+    // Derive Curve25519 pubkey (same as importFromWavesSeed)
+    final x25519 = X25519();
+    final kp = await x25519.newKeyPairFromSeed(privKey);
+    final pub = await kp.extractPublicKey();
+    final curve25519Pub = Uint8List.fromList(pub.bytes);
+
+    // Sign using Ed25519 with sign bit patch
+    final attachment = memo != null
+        ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
+        : Uint8List(0);
+
+    final amountWavelets = amount.toBigIntDec(decimals()).toInt();
+    const feeWavelets = 100000;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    final recipientBytes = _b58Decode(to);
+    if (recipientBytes.length != 26) throw Exception('Invalid WAVES address');
+
+    final signableBytes = _buildWavesTransferBytes(
+      senderPubKey: curve25519Pub,
+      recipientAddr: recipientBytes,
+      amountWavelets: amountWavelets,
+      feeWavelets: feeWavelets,
+      timestamp: timestamp,
+      attachment: attachment,
+    );
+
+    final sigBytes = await _wavesSign(privKey, signableBytes);
+
+    final txJson = jsonEncode({
+      'type': 4,
+      'version': 2,
+      'senderPublicKey': _b58Encode(curve25519Pub),
+      'assetId': null,
+      'feeAssetId': null,
+      'timestamp': timestamp,
+      'amount': amountWavelets,
+      'fee': feeWavelets,
+      'recipient': to,
+      'attachment': _b58Encode(attachment),
+      'proofs': [_b58Encode(sigBytes)],
+    });
+
+    final res = await http.post(
+      Uri.parse('$nodeUrl/transactions/broadcast'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: txJson,
+    );
+
+    if (res.statusCode ~/ 100 != 2) {
+      final err = jsonDecode(res.body);
+      throw Exception('WAVES fund failed: ${err['message'] ?? res.body}');
+    }
+
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    return (txHash: result['id'] as String, txRaw: txJson);
+  }
+
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
@@ -328,9 +397,8 @@ class WavesCoin extends Coin {
           final genesis = await importFromWavesSeed(
             'waves private node seed with waves tokens',
           );
-          await _transferWith(
+          await _transferWithNativeSeed(
             fromPrivKey: HEX.decode(genesis.privateKey!),
-            fromPubKey: HEX.decode(genesis.publicKey!),
             to: address,
             amount: '1000', // send 1000 WAVES
           );
