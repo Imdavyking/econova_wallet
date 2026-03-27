@@ -630,11 +630,11 @@ class EthereumCoin extends Coin {
 
   @override
   Future<String?> resolveAddress(String address) async {
-    Map resolver = await ensToAddr(domainName: address);
-    if (resolver['success']) return resolver['msg'];
+    final ens = await ensToAddr(domainName: address);
+    if (ens.isOk) return ens.value.address;
 
-    final result = await udResolver(domainName: address, currency: default_);
-    return result.success ? result.address : null;
+    final ud = await udResolver(domainName: address, currency: default_);
+    return ud.valueOrNull?.address;
   }
 
   @override

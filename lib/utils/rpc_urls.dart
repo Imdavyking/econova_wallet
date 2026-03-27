@@ -526,48 +526,6 @@ const _udContracts = {
   '0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f': 'Polygon Matic',
 };
 
-Future<Result<UDResult>> udResolver({
-  required String domainName,
-  String currency = 'ETH',
-}) async {
-  try {
-    final hash = BigInt.parse(nameHash(domainName.toLowerCase().trim()));
-    final key = 'crypto.$currency.address';
-    final evms = getEVMBlockchains();
-
-    final results = await Future.wait(
-      _udContracts.entries.map((e) async {
-        final evmDetails = evms.firstWhere(
-          (c) => c.name == e.value,
-          orElse: () => evms.firstWhere((c) => c.name == 'Ethereum'),
-        );
-        final contract = web3.DeployedContract(
-          web3.ContractAbi.fromJson(json.encode(unstoppableDomainAbi), ''),
-          web3.EthereumAddress.fromHex(e.key),
-        );
-        final client = web3.Web3Client(evmDetails.rpc, Client());
-        try {
-          final res = await client.call(
-            contract: contract,
-            function: contract.function('get'),
-            params: [key, hash],
-          );
-          return res.first as String;
-        } catch (_) {
-          return '';
-        }
-      }),
-    );
-
-    final address = results.firstWhere((r) => r.isNotEmpty, orElse: () => '');
-    if (address.isNotEmpty) return Ok(UDResult(address: address));
-
-    return const Err('Domain not found');
-  } catch (e) {
-    debugPrint('udResolver: $e');
-    return Err(e.toString());
-  }
-}
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
 

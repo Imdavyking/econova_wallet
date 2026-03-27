@@ -26,13 +26,14 @@ class ViewErcNFTs extends StatelessWidget {
       fetchNfts: (useCache) async {
         final data = WalletService.getActiveKey(walletImportType)!.data;
         final response = await ethCoin.importData(data);
+        // ViewErcNFTs
         final result = await erc20NFTs(
           ethCoin.chainId,
           response.address,
           useCache: useCache,
         );
-        if (result['success'] != true) return [];
-        final list = result['msg']['ownedNfts'] as List;
+        if (!result.isOk) return [];
+        final list = result.value.data['ownedNfts'] as List;
         return list.map((x) {
           final nft = ERC20NftDetails.fromMap(x);
           return NftCardData(
@@ -104,8 +105,8 @@ class ViewMultixNFTs extends StatelessWidget {
           multiversxApi: coin.nftApi!,
           useCache: useCache,
         );
-        if (result['success'] != true) return [];
-        final list = result['msg'] as List;
+        if (!result.isOk) return [];
+        final list = result.value.items;
         return list.map((x) {
           final nft = MultiversxNft.fromJson(x);
           String? image;

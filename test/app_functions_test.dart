@@ -345,30 +345,20 @@ void main() async {
     }
     enableTestNet = false;
 
-    Map ensToAddressMap = await ensToAddr(
-      domainName: ensAddress,
-    );
+    final ensToAddressMap = await ensToAddr(domainName: ensAddress);
+    final ensToContentHash =
+        await ensToContentHashAndIPFS(cryptoDomainName: ensAddress);
 
-    Map ensToContentHash = await ensToContentHashAndIPFS(
-      cryptoDomainName: ensAddress,
-    );
-
-    if (ensToAddressMap['success']) {
-      expect(
-        ensToAddressMap['msg'],
-        startsWith('0x'),
-      );
+    if (ensToAddressMap.isOk) {
+      expect(ensToAddressMap.value.address, startsWith('0x'));
     } else {
-      throw Exception(ensToAddressMap['msg']);
+      throw Exception(ensToAddressMap.error);
     }
 
-    if (ensToContentHash['success']) {
-      expect(
-        ensToContentHash['msg'],
-        startsWith('https://ipfs.io/ipfs/'),
-      );
+    if (ensToContentHash.isOk) {
+      expect(ensToContentHash.value.url, startsWith('https://ipfs.io/ipfs/'));
     } else {
-      throw Exception(ensToContentHash['msg']);
+      throw Exception(ensToContentHash.error);
     }
   });
 
@@ -379,15 +369,15 @@ void main() async {
     }
     enableTestNet = false;
 
-    UDResult domainResult = await udResolver(
+    final domainResult = await udResolver(
       domainName: unstoppableAddress,
       currency: 'BTC',
     );
-    debugPrint(domainResult.toString());
+    debugPrint(domainResult.valueOrNull?.address ?? domainResult.error);
 
-    if (domainResult.success) {
-      expect(
-          domainResult.address, 'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
+    if (domainResult.isOk) {
+      expect(domainResult.value.address,
+          'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
     } else {
       throw Exception(domainResult.error);
     }

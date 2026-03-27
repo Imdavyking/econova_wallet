@@ -4,23 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:convert/convert.dart';
 import 'package:sha3/sha3.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:web3dart/web3dart.dart' as web3;
 import '../coins/ethereum_coin.dart';
 import 'abis.dart';
-
-class UDResult {
-  final bool success;
-  final String address; // empty string on failure
-  final String? error;
-
-  const UDResult.ok(this.address)
-      : success = true,
-        error = null;
-
-  const UDResult.fail(this.error)
-      : success = false,
-        address = '';
-}
 
 // ─── contract config ──────────────────────────────────────────────────────────
 
@@ -30,7 +17,7 @@ const _udContracts = {
   '0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f': 'Polygon Matic',
 };
 
-Future<UDResult> udResolver({
+Future<Result<UDResult>> udResolver({
   required String domainName,
   String currency = 'ETH',
 }) async {
@@ -41,7 +28,10 @@ Future<UDResult> udResolver({
 
     final results = await Future.wait(
       _udContracts.entries.map((e) async {
-        final evmDetails = evms.firstWhere((c) => c.name == e.value);
+        final evmDetails = evms.firstWhere(
+          (c) => c.name == e.value,
+          orElse: () => evms.firstWhere((c) => c.name == 'Ethereum'),
+        );
         final contract = web3.DeployedContract(
           web3.ContractAbi.fromJson(json.encode(unstoppableDomainAbi), ''),
           web3.EthereumAddress.fromHex(e.key),
@@ -61,12 +51,12 @@ Future<UDResult> udResolver({
     );
 
     final address = results.firstWhere((r) => r.isNotEmpty, orElse: () => '');
-    if (address.isNotEmpty) return UDResult.ok(address);
+    if (address.isNotEmpty) return Ok(UDResult(address: address));
 
-    return const UDResult.fail('Domain not found');
+    return const Err('Domain not found');
   } catch (e) {
     debugPrint('udResolver: $e');
-    return UDResult.fail(e.toString());
+    return Err(e.toString());
   }
 }
 
