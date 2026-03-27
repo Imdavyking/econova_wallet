@@ -214,7 +214,7 @@ Uint8List _buildWavesTransferBytes({
   final buf = <int>[];
 
   buf.add(0x04); // tx type: Transfer
-  buf.add(0x03); // version 2
+  buf.add(0x02); // version 2
   buf.addAll(senderPubKey); // 32 bytes
   buf.add(0x00); // assetFlag: WAVES
   buf.add(0x00); // feeAssetFlag: WAVES
