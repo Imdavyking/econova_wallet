@@ -297,8 +297,6 @@ class WavesCoin extends Coin {
       ),
     );
 
-    print('new');
-    print(result);
     cache[mnemonic] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
@@ -517,8 +515,6 @@ class WavesCoin extends Coin {
     privKey[0] &= 0xF8;
     privKey[31] &= 0x7F;
     privKey[31] |= 0x40;
-    print('private test');
-    print(base58.encode(privKey));
 
     // Step 4: Curve25519 public key
     final x25519 = X25519();
