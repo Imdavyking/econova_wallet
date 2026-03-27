@@ -343,6 +343,7 @@ void main() async {
       debugPrint("Cannot run ENS test: network offline");
       return;
     }
+    enableTestNet = false;
 
     Map ensToAddressMap = await ensToAddr(
       domainName: ensAddress,
@@ -376,11 +377,10 @@ void main() async {
       debugPrint("Cannot run UD domain test: network offline");
       return;
     }
+    enableTestNet = false;
 
-    const domainAddress = unstoppableAddress;
-    debugPrint("hi");
     UDResult domainResult = await udResolver(
-      domainName: domainAddress,
+      domainName: unstoppableAddress,
       currency: 'BTC',
     );
     debugPrint(domainResult.toString());
@@ -691,7 +691,7 @@ void main() async {
     seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
-      supportedChains = await fetchSupportedChains();
+      supportedChains = fetchSupportedChains();
       debugPrint(
         '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
       );

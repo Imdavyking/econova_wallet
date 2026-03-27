@@ -108,7 +108,7 @@ List<StacksCoin> stackCoins = [
   ...getStacksBlockchains(),
 ];
 
-Future<List<Coin>> fetchSupportedChains() async {
+List<Coin> fetchSupportedChains() {
   List<Coin> blockchains = [
     ...getNanoBlockChains(),
     ...getWavesBlockChains(),
@@ -226,7 +226,7 @@ void main() async {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }
-  supportedChains = await fetchSupportedChains();
+  supportedChains =  fetchSupportedChains();
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }
