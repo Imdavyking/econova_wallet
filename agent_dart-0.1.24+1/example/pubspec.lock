@@ -76,10 +76,10 @@ packages:
     dependency: transitive
     description:
       name: cbor
-      sha256: "1e0094d5f034c9dfc23f46cf8f8550da1d537c6f5c4ca196a7e02de80d7bbd55"
+      sha256: e60380c7329da6b415841be93884b8d4380cbd86cd4cecb2067baa221b8d88b5
       url: "https://pub.dev"
     source: hosted
-    version: "4.1.0"
+    version: "6.3.5"
   characters:
     dependency: transitive
     description:
@@ -199,6 +199,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.2"
+  ieee754:
+    dependency: transitive
+    description:
+      name: ieee754
+      sha256: "7d87451c164a56c156180d34a4e93779372edd191d2c219206100b976203128c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   js:
     dependency: transitive
     description:

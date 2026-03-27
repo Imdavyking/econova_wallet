@@ -52,6 +52,59 @@ const coinGeckoBaseurl = 'https://api.coingecko.com/api/v3';
 const coinGeckoSupportedCurrencies =
     '$coinGeckoBaseurl/simple/supported_vs_currencies';
 
+// ─── Result types ─────────────────────────────────────────────────────────────
+
+/// Generic success/failure wrapper. Prefer domain-specific subtypes below
+/// when the payload shape is known at compile time.
+sealed class Result<T> {
+  const Result();
+}
+
+final class Ok<T> extends Result<T> {
+  final T value;
+  const Ok(this.value);
+}
+
+final class Err<T> extends Result<T> {
+  final String message;
+  const Err(this.message);
+}
+
+extension ResultX<T> on Result<T> {
+  bool get isOk => this is Ok<T>;
+  T get value => (this as Ok<T>).value;
+  String get error => (this as Err<T>).message;
+  T? get valueOrNull => isOk ? value : null;
+}
+
+// ─── Domain result types ──────────────────────────────────────────────────────
+
+class EnsAddressResult {
+  final String address; // EIP-55 checksummed
+  const EnsAddressResult({required this.address});
+}
+
+class EnsContentResult {
+  /// Resolved URL — either https://ipfs.io/ipfs/… or bzz://…
+  final String url;
+  const EnsContentResult({required this.url});
+}
+
+class UDResult {
+  final String address;
+  const UDResult({required this.address});
+}
+
+class NFTResult {
+  final List<dynamic> items;
+  const NFTResult({required this.items});
+}
+
+class ERC20NFTResult {
+  final Map<String, dynamic> data;
+  const ERC20NFTResult({required this.data});
+}
+
 // ─── ABI helpers ──────────────────────────────────────────────────────────────
 
 solidityFunctionSig(String methodId) {
@@ -166,9 +219,9 @@ bool seqEqual(List<int> a, List<int> b) {
 }
 
 class Erc8117 {
-  final String str; // original unchanged
-  final String? unicode; // subscript notation  e.g. 0x0₈abcd… / 0.0₆9
-  final String? ascii; // parenthesis notation e.g. 0x0(8)abcd… / 0.0(6)9
+  final String str;
+  final String? unicode;
+  final String? ascii;
 
   const Erc8117({
     required this.str,
@@ -192,23 +245,15 @@ class Erc8117 {
   static String _toSubscript(int n) =>
       n.toString().split('').map((c) => _sub[c]!).join();
 
-  // ERC-8117 §address — counts leading zero nibbles after 0x
   static Erc8117 fromAddress(String address) {
     final trimmed = address.trim();
     if (!trimmed.startsWith('0x') && !trimmed.startsWith('0X')) {
       return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
-
-    final body = trimmed.substring(2).toLowerCase(); // nibbles after 0x
+    final body = trimmed.substring(2).toLowerCase();
     int n = 0;
-    while (n < body.length && body[n] == '0') {
-      n++;
-    }
-
-    if (n <= 4) {
-      return Erc8117(str: trimmed, unicode: null, ascii: null);
-    }
-
+    while (n < body.length && body[n] == '0') n++;
+    if (n <= 4) return Erc8117(str: trimmed, unicode: null, ascii: null);
     final rest = body.substring(n);
     return Erc8117(
       str: trimmed,
@@ -217,28 +262,19 @@ class Erc8117 {
     );
   }
 
-  // Token price convention — counts leading zeros after the decimal point
   static Erc8117 fromTokenPrice(String price) {
     final trimmed = price.trim();
     if (!trimmed.startsWith('0.')) {
       return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
-
     final afterDot = trimmed.substring(2);
     int n = 0;
-    while (n < afterDot.length && afterDot[n] == '0') {
-      n++;
-    }
-
-    if (n <= 4) {
-      return Erc8117(str: trimmed, unicode: null, ascii: null);
-    }
-
+    while (n < afterDot.length && afterDot[n] == '0') n++;
+    if (n <= 4) return Erc8117(str: trimmed, unicode: null, ascii: null);
     final significant = afterDot.substring(n);
     if (significant.isEmpty) {
       return Erc8117(str: trimmed, unicode: null, ascii: null);
     }
-
     return Erc8117(
       str: trimmed,
       unicode: '0.0${_toSubscript(n)}$significant',
@@ -253,11 +289,8 @@ String ellipsify({required String str, int? maxLength}) {
   if (str.length <= maxLength) return str;
   if (str.startsWith('0x')) {
     final eipData = Erc8117.fromAddress(str);
-    if (eipData.unicode != null) {
-      return eipData.unicode!;
-    } else if (eipData.ascii != null) {
-      return eipData.ascii!;
-    }
+    if (eipData.unicode != null) return eipData.unicode!;
+    if (eipData.ascii != null) return eipData.ascii!;
   }
   final first = str.substring(0, maxLength ~/ 2);
   final last = str.substring((str.length - maxLength / 2).toInt(), str.length);
@@ -305,7 +338,6 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
     parsedPrices = jsonDecode(
       jsonDecode(savedCryptoPrice)['data'],
     ) as Map<String, dynamic>;
-
     return CryptoPrice(
       prices: parsedPrices,
       symbol: symbol,
@@ -318,7 +350,6 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
       parsedPrices = jsonDecode(
         jsonDecode(savedCryptoPrice)['data'],
       ) as Map<String, dynamic>;
-
       return CryptoPrice(
         prices: parsedPrices,
         symbol: symbol,
@@ -348,7 +379,6 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
     );
 
     parsedPrices = jsonDecode(response.body) as Map<String, dynamic>;
-
     return CryptoPrice(
       prices: parsedPrices,
       symbol: symbol,
@@ -359,7 +389,6 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
       parsedPrices = jsonDecode(
         jsonDecode(savedCryptoPrice)['data'],
       ) as Map<String, dynamic>;
-
       return CryptoPrice(
         prices: parsedPrices,
         symbol: symbol,
@@ -414,18 +443,22 @@ Future<web3.DeployedContract> getEnsResolverContract(
   );
 }
 
-Future<Map> ensToContentHashAndIPFS({required String cryptoDomainName}) async {
+Future<Result<EnsContentResult>> ensToContentHashAndIPFS({
+  required String cryptoDomainName,
+}) async {
   try {
     final client = web3.Web3Client(evmFromChainId(1)!.rpc, Client());
     final nameHash_ = nameHash(cryptoDomainName);
     final ensResolverContract =
         await getEnsResolverContract(cryptoDomainName, client);
+
     List<int> contentHashList = (await client.call(
       contract: ensResolverContract,
       function: ensResolverContract.function('contenthash'),
       params: [hexToBytes(nameHash_)],
     ))
         .first;
+
     String contentHash = bytesToHex(contentHashList);
     if (!contentHash.startsWith('0x')) contentHash = '0x$contentHash';
 
@@ -438,27 +471,32 @@ Future<Map> ensToContentHashAndIPFS({required String cryptoDomainName}) async {
     if (match != null) {
       final length = int.parse(match.group(3)!, radix: 16);
       if (match.group(4)!.length == length * 2) {
-        return {
-          'success': true,
-          'msg': ipfsTohttp(
+        return Ok(EnsContentResult(
+          url: ipfsTohttp(
             'ipfs://${bs58check.base58.encode(HEX.decode(match.group(1)!) as Uint8List)}',
-          )
-        };
+          ),
+        ));
       }
-      throw Exception('invalid IPFS checksum');
-    } else if (swarmMatch != null) {
-      if (swarmMatch.group(1)!.length == 32 * 2) {
-        return {'success': true, 'msg': 'bzz://${swarmMatch.group(2)!}'};
-      }
-      throw Exception('invalid SWARM checksum');
+      return const Err('Invalid IPFS checksum');
     }
-    throw Exception('invalid ENS checksum');
+
+    if (swarmMatch != null) {
+      if (swarmMatch.group(1)!.length == 32 * 2) {
+        return Ok(EnsContentResult(url: 'bzz://${swarmMatch.group(2)!}'));
+      }
+      return const Err('Invalid SWARM checksum');
+    }
+
+    return const Err('Unrecognised ENS content hash format');
   } catch (e) {
-    return {'success': false, 'msg': 'Error resolving ens'};
+    debugPrint('ensToContentHashAndIPFS: $e');
+    return Err('Error resolving ENS content hash: $e');
   }
 }
 
-Future<Map> ensToAddr({required String domainName}) async {
+Future<Result<EnsAddressResult>> ensToAddr({
+  required String domainName,
+}) async {
   try {
     domainName = domainName.toLowerCase().trim();
     final client = web3.Web3Client(evmFromChainId(1)!.rpc, Client());
@@ -471,84 +509,135 @@ Future<Map> ensToAddr({required String domainName}) async {
       params: [hexToBytes(nameHash_)],
     ))
         .first;
-    return {
-      'success': true,
-      'msg': web3.EthereumAddress.fromHex(userAddress.toString()).hexEip55
-    };
+    return Ok(EnsAddressResult(
+      address: web3.EthereumAddress.fromHex(userAddress.toString()).hexEip55,
+    ));
   } catch (e) {
-    return {'success': false, 'msg': 'Error resolving ens'};
+    debugPrint('ensToAddr: $e');
+    return Err('Error resolving ENS address: $e');
+  }
+}
+
+// ─── Unstoppable Domains ──────────────────────────────────────────────────────
+
+const _udContracts = {
+  '0x049aba7510f45BA5b64ea9E658E342F904DB358D': 'Ethereum',
+  '0x1BDc0fD4fbABeed3E611fd6195fCd5d41dcEF393': 'Ethereum',
+  '0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f': 'Polygon Matic',
+};
+
+Future<Result<UDResult>> udResolver({
+  required String domainName,
+  String currency = 'ETH',
+}) async {
+  try {
+    final hash = BigInt.parse(nameHash(domainName.toLowerCase().trim()));
+    final key = 'crypto.$currency.address';
+    final evms = getEVMBlockchains();
+
+    final results = await Future.wait(
+      _udContracts.entries.map((e) async {
+        final evmDetails = evms.firstWhere(
+          (c) => c.name == e.value,
+          orElse: () => evms.firstWhere((c) => c.name == 'Ethereum'),
+        );
+        final contract = web3.DeployedContract(
+          web3.ContractAbi.fromJson(json.encode(unstoppableDomainAbi), ''),
+          web3.EthereumAddress.fromHex(e.key),
+        );
+        final client = web3.Web3Client(evmDetails.rpc, Client());
+        try {
+          final res = await client.call(
+            contract: contract,
+            function: contract.function('get'),
+            params: [key, hash],
+          );
+          return res.first as String;
+        } catch (_) {
+          return '';
+        }
+      }),
+    );
+
+    final address = results.firstWhere((r) => r.isNotEmpty, orElse: () => '');
+    if (address.isNotEmpty) return Ok(UDResult(address: address));
+
+    return const Err('Domain not found');
+  } catch (e) {
+    debugPrint('udResolver: $e');
+    return Err(e.toString());
   }
 }
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
 
-Future<Map> multivrNFT(
+Future<Result<NFTResult>> multivrNFT(
   String address, {
   required String multiversxApi,
   required bool useCache,
 }) async {
   final tokenListKey = 'multiversnListKey_$address$multiversxApi';
   final tokenList = pref.get(tokenListKey);
-  Map userTokens = {'msg': 'could not fetch tokens', 'success': false};
+
+  Result<NFTResult>? cached;
   if (tokenList != null) {
-    userTokens = {'msg': json.decode(tokenList) as List, 'success': true};
+    cached = Ok(NFTResult(items: json.decode(tokenList) as List));
   }
-  if (useCache) return userTokens;
+
+  if (useCache) return cached ?? const Err('No cached NFT data');
+
   try {
     final response =
         await get(Uri.parse('$multiversxApi/accounts/$address/nfts'));
-    final responseBody = response.body;
     if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
-      throw Exception(responseBody);
+      throw Exception('HTTP ${response.statusCode}');
     }
     await pref.put(tokenListKey, response.body);
-    return {'msg': json.decode(response.body), 'success': true};
-  } catch (_) {
-    return userTokens;
+    return Ok(NFTResult(items: json.decode(response.body) as List));
+  } catch (e) {
+    debugPrint('multivrNFT: $e');
+    return cached ?? Err('Failed to fetch MultiversX NFTs: $e');
   }
 }
 
-Future<Map> erc20NFTs(int chainId, String address,
-    {required bool useCache}) async {
+Future<Result<ERC20NFTResult>> erc20NFTs(
+  int chainId,
+  String address, {
+  required bool useCache,
+}) async {
   final tokenListKey = 'tokenListKey_$chainId-$address/__';
   final tokenList = pref.get(tokenListKey);
-  Map userTokens = {'msg': 'could not fetch tokens', 'success': false};
+
+  Result<ERC20NFTResult>? cached;
   if (tokenList != null) {
-    userTokens = {'msg': json.decode(tokenList) as Map, 'success': true};
+    cached = Ok(
+        ERC20NFTResult(data: json.decode(tokenList) as Map<String, dynamic>));
   }
-  if (useCache) return userTokens;
+
+  if (useCache) return cached ?? const Err('No cached ERC20 NFT data');
+
+  const _alchemyBaseUrls = {
+    1: 'https://eth-mainnet.g.alchemy.com/v2/$alchemyEthMainnetApiKey',
+    5: 'https://eth-goerli.g.alchemy.com/v2/$alchemyEthGoerliApiKey',
+    137: 'https://polygon-mainnet.g.alchemy.com/v2/$alchemyPolygonApiKey',
+    80001: 'https://polygon-mumbai.g.alchemy.com/v2/$alchemyMumbaiApiKey',
+    42161: 'https://arb-mainnet.g.alchemy.com/v2/$alchemyArbitriumApiKey',
+  };
+
+  final baseUrl = _alchemyBaseUrls[chainId];
+  if (baseUrl == null) return Err('Unsupported chain ID: $chainId');
+
   try {
-    String baseUrl = '';
-    switch (chainId) {
-      case 1:
-        baseUrl =
-            'https://eth-mainnet.g.alchemy.com/v2/$alchemyEthMainnetApiKey';
-        break;
-      case 5:
-        baseUrl = 'https://eth-goerli.g.alchemy.com/v2/$alchemyEthGoerliApiKey';
-        break;
-      case 137:
-        baseUrl =
-            'https://polygon-mainnet.g.alchemy.com/v2/$alchemyPolygonApiKey';
-        break;
-      case 80001:
-        baseUrl =
-            'https://polygon-mumbai.g.alchemy.com/v2/$alchemyMumbaiApiKey';
-        break;
-      case 42161:
-        baseUrl =
-            'https://arb-mainnet.g.alchemy.com/v2/$alchemyArbitriumApiKey';
-        break;
-    }
     final response = await get(Uri.parse('$baseUrl/getNFTs?owner=$address'));
-    final responseBody = response.body;
     if (response.statusCode ~/ 100 == 4 || response.statusCode ~/ 100 == 5) {
-      throw Exception(responseBody);
+      throw Exception('HTTP ${response.statusCode}');
     }
     await pref.put(tokenListKey, response.body);
-    return {'msg': json.decode(response.body), 'success': true};
-  } catch (_) {
-    return userTokens;
+    return Ok(ERC20NFTResult(
+        data: json.decode(response.body) as Map<String, dynamic>));
+  } catch (e) {
+    debugPrint('erc20NFTs: $e');
+    return cached ?? Err('Failed to fetch ERC20 NFTs: $e');
   }
 }
 
@@ -559,7 +648,7 @@ Future<Map> get1InchUrlList(int chainId) async {
   return Map.from(json.decode(response.body));
 }
 
-// ─── WalletConnect helper ─────────────────────────────────────────────────────
+// ─── WalletConnect ────────────────────────────────────────────────────────────
 
 web3.Transaction wcEthTxToWeb3Tx(WCEthereumTransaction tx) {
   return web3.Transaction(
@@ -574,6 +663,8 @@ web3.Transaction wcEthTxToWeb3Tx(WCEthereumTransaction tx) {
     nonce: tx.nonce != null ? int.tryParse(tx.nonce!) : null,
   );
 }
+
+// ─── CryptoPrice ─────────────────────────────────────────────────────────────
 
 class CryptoPrice {
   final Map<String, dynamic> prices;
