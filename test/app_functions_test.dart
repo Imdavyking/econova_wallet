@@ -737,6 +737,7 @@ void main() async {
       debugPrint("Cannot run import token test: network offline");
       return;
     }
+    enableTestNet = false;
 
     final chainCoin = evmFromChainId(56)!;
     final coin = ERCFungibleCoin(
