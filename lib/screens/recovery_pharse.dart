@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
-
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/confirm_seed_phrase.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
