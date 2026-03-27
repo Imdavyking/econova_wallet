@@ -286,22 +286,16 @@ class SolanaCoin extends Coin {
       _tokenRegistryCache ??= await _loadTokenRegistry();
       if (_tokenRegistryCache == null) return null;
 
-      final tokens = _tokenRegistryCache!['tokens'] as List<dynamic>;
-      final match = tokens.cast<Map<String, dynamic>>().firstWhere(
-            (t) =>
-                (t['address'] as String).toLowerCase() ==
-                mintAddress.toLowerCase(),
-            orElse: () => {},
-          );
-
-      if (match.isEmpty) return null;
-
-      return CustomTokenMeta(
-        name: match['name'] as String? ?? mintAddress,
-        symbol: match['symbol'] as String? ?? '???',
-        decimals: (match['decimals'] as num?)?.toInt() ?? 0,
-        iconUrl: match['logoURI'] as String?,
-      );
+      if (_tokenRegistryCache!.containsKey(mintAddress)) {
+        final match = _tokenRegistryCache![mintAddress];
+        return CustomTokenMeta(
+          name: match['name'] as String? ?? mintAddress,
+          symbol: match['symbol'] as String? ?? '???',
+          decimals: (match['decimals'] as num?)?.toInt() ?? 0,
+          iconUrl: match['logoURI'] as String?,
+        );
+      }
+      return null;
     } catch (_) {
       return null;
     }
