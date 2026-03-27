@@ -161,6 +161,9 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
 
   final chainId = args.chainId;
   final address = _buildWavesAddress(curve25519PubBytes, chainId);
+  debugPrint(
+    'base58: ${base58.encode(derived.key as Uint8List)}, address: $address pubkey: ${base58.encode(curve25519PubBytes)}',
+  );
   return {
     'address': address,
     'privateKey': HEX.encode(derived.key),
@@ -203,9 +206,9 @@ Uint8List _beUInt16(int value) {
 Uint8List _buildWavesTransferBytes({
   required Uint8List senderPubKey, // 32 bytes
   required Uint8List recipientAddr, // 26 bytes (decoded)
-  required int amountWavelets, // amount in wavelets (1 WAVES = 1e8)
-  required int feeWavelets, // fee in wavelets
-  required int timestamp, // millis
+  required int amountWavelets,
+  required int feeWavelets,
+  required int timestamp,
   required Uint8List attachment, // 0..140 bytes
 }) {
   final buf = <int>[];
@@ -213,19 +216,17 @@ Uint8List _buildWavesTransferBytes({
   buf.add(0x04); // tx type: Transfer
   buf.add(0x02); // version 2
   buf.addAll(senderPubKey); // 32 bytes
-  buf.add(0x00); // assetFlag: WAVES (no assetId)
+  buf.add(0x00); // assetFlag: WAVES
   buf.add(0x00); // feeAssetFlag: WAVES
   buf.addAll(_beInt64(timestamp)); // 8 bytes
   buf.addAll(_beInt64(amountWavelets)); // 8 bytes
   buf.addAll(_beInt64(feeWavelets)); // 8 bytes
-  buf.add(0x01); // recipient type: address
-  buf.addAll(recipientAddr); // 26 bytes
+  buf.addAll(recipientAddr); // 26 bytes — no 0x01 prefix
   buf.addAll(_beUInt16(attachment.length)); // 2 bytes
   buf.addAll(attachment); // attachment
 
   return Uint8List.fromList(buf);
 }
-
 // ─── WavesCoin ────────────────────────────────────────────────────────────────
 
 class WavesCoin extends Coin {
@@ -279,7 +280,7 @@ class WavesCoin extends Coin {
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey =
-        'wavesCoinDetail_V83384384334${chainId}_${walletImportType.name}';
+        'wavesCoinDetail_V8338438434343334${chainId}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
@@ -356,8 +357,8 @@ class WavesCoin extends Coin {
 
   /// Sign and broadcast a transfer using explicit keys (not the active wallet).
   Future<({String txHash, String? txRaw})?> _transferWith({
-    required List<int> fromPrivKey, // 32 bytes
-    required List<int> fromPubKey, // 32 bytes Curve25519
+    required List<int> fromPrivKey,
+    required List<int> fromPubKey,
     required String to,
     required String amount,
     String? memo,
@@ -367,8 +368,6 @@ class WavesCoin extends Coin {
     final attachment = memo != null
         ? Uint8List.fromList(utf8.encode(memo).take(140).toList())
         : Uint8List(0);
-    final ed25519 = Ed25519();
-    final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
 
     final amountWavelets = amount.toBigIntDec(decimals()).toInt();
     const feeWavelets = 100000;
@@ -386,8 +385,8 @@ class WavesCoin extends Coin {
       attachment: attachment,
     );
 
-    final sig = await ed25519.sign(signableBytes.toList(), keyPair: keyPair);
-    final sigBytes = Uint8List.fromList(sig.bytes);
+    // ✅ use _wavesSign instead of ed25519.sign
+    final sigBytes = await _wavesSign(privSeed, signableBytes);
 
     final txJson = jsonEncode({
       'type': 4,
@@ -398,7 +397,6 @@ class WavesCoin extends Coin {
       'timestamp': timestamp,
       'amount': amountWavelets,
       'fee': feeWavelets,
-      'chainId': chainId,
       'recipient': to,
       'attachment': _b58Encode(attachment),
       'proofs': [_b58Encode(sigBytes)],
@@ -415,15 +413,32 @@ class WavesCoin extends Coin {
 
     if (res.statusCode ~/ 100 != 2) {
       final err = jsonDecode(res.body);
-      throw Exception('WAVES fund failed: ${err['message'] ?? res.body}');
+      throw Exception('WAVES broadcast failed: ${err['message'] ?? res.body}');
     }
+
     final result = jsonDecode(res.body) as Map<String, dynamic>;
     return (txHash: result['id'] as String, txRaw: txJson);
   }
 
   @override
   Future<double> getTransactionFee(String amount, String to) async => 0.001;
+  Future<Uint8List> _wavesSign(Uint8List privSeed, Uint8List message) async {
+    final ed25519 = Ed25519();
+    final keyPair = await ed25519.newKeyPairFromSeed(privSeed);
 
+    // Get Ed25519 public key for the sign bit
+    final edPub = await keyPair.extractPublicKey();
+    final signBit = edPub.bytes[31] & 0x80;
+
+    // Standard Ed25519 sign
+    final sig = await ed25519.sign(message.toList(), keyPair: keyPair);
+    final sigBytes = Uint8List.fromList(sig.bytes);
+
+    // Patch byte 63 with sign bit from Ed25519 pubkey
+    sigBytes[63] = (sigBytes[63] & 127) | signBit;
+
+    return sigBytes;
+  }
   // ─── Transfer ───────────────────────────────────────────────────────────────
   //
   // Full Waves transfer transaction v2:
@@ -449,6 +464,7 @@ class WavesCoin extends Coin {
       memo: memo,
     );
   } // ─── Address validation ──────────────────────────────────────────────────────
+
   //
   // Decode from base58 → 26 bytes
   // Check: bytes[0] == 0x01 (version), bytes[1] == chainId
