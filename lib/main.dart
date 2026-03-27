@@ -150,24 +150,25 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...stackCoins,
     ...getSIP010Coins(),
     ...getSegwitCoins(),
-  ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
+  ];
   final cryptoPrice = await getCryptoPrice(useCache: true);
 
-  // Compute total USD value for each coin
-  final List<MapEntry<Coin, double>> coinValues = [];
-  for (final coin in blockchains) {
-    final balance = await coin.getBalance(true); // async balance
-    final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
-    final value = balance * price;
-    coinValues.add(MapEntry(coin, value));
-  }
+  // Fetch all balances in parallel
+  final balances = await Future.wait(
+    blockchains.map((coin) async {
+      final balance = await coin.getBalance(true);
+      final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
+      final usdValue = balance * price;
+      return MapEntry<Coin, double>(coin, usdValue);
+    }),
+    eagerError: false,
+  );
 
-  // Sort by USD value descending
-  coinValues.sort((a, b) => b.value.compareTo(a.value));
+  // Sort descending by USD value
+  balances.sort((a, b) => b.value.compareTo(a.value));
 
   // Extract sorted coins
-  final sortedBlockchains = coinValues.map((e) => e.key).toList();
-  return sortedBlockchains;
+  return balances.map((e) => e.key).toList();
 }
 
 late Box pref;
