@@ -155,6 +155,22 @@ void main() async {
 
       expect(utf8.decode(result), equals('hello ecies'));
     });
+    test('encrypt then decrypt returns original plaintext', () {
+      final knownPrivKey = HEX.decode(
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
+          as Uint8List;
+      final knownPubKey = HEX.decode(
+              '038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75')
+          as Uint8List;
+      const knowAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+      final plaintext = Uint8List.fromList(utf8.encode('hello ecies'));
+
+      final cipher = eciesEncrypt(knownPubKey, plaintext);
+      final result = eciesDecrypt(knownPrivKey, cipher);
+
+      expect(utf8.decode(result), equals('hello ecies'));
+      expect(publicKeyToAddress(HEX.encode(knownPubKey)), knowAddress);
+    });
 
     test(
         'encrypting same plaintext twice gives different ciphertext (ephemeral key)',
