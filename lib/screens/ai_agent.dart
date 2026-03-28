@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
@@ -286,118 +287,126 @@ class _AIAgent extends State<AIAgent>
           ),
         ],
       ),
-      body: DashChat(
-        typingUsers: typingUsers,
-        currentUser: Constants.user,
-        messageOptions: const MessageOptions(
-          timeTextColor: Colors.white,
-          showTime: true,
-          showCurrentUserAvatar: true,
-          showOtherUsersAvatar: true,
-          containerColor: Color.fromRGBO(127, 76, 222, 0.8),
-          showOtherUsersName: true,
-        ),
-        inputOptions: InputOptions(
-          textController: chatController,
-          trailing: [
-            if (isMobiletPlatform)
-              Theme(
-                data: Theme.of(context).copyWith(
-                  popupMenuTheme: PopupMenuThemeData(
-                    color: Theme.of(context).cardColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                child: PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.add_a_photo,
-                    color: appPrimaryColor,
-                  ),
-                  onSelected: (String value) {
-                    if (typingUsers.isEmpty) {
-                      if (value == 'camera') {
-                        _pickAndShowImageDialog(source: ImageSource.camera);
-                      } else if (value == 'gallery') {
-                        _pickAndShowImageDialog();
-                      }
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem<String>(
-                      value: 'camera',
-                      child: Row(
-                        children: [
-                          Icon(Icons.camera_alt, color: appPrimaryColor),
-                          SizedBox(width: 8),
-                          Text(
-                            'Camera',
-                            style: TextStyle(color: appPrimaryColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'gallery',
-                      child: Row(
-                        children: [
-                          Icon(Icons.image, color: appPrimaryColor),
-                          SizedBox(width: 8),
-                          Text(
-                            'Gallery',
-                            style: TextStyle(color: appPrimaryColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: DashChat(
+              typingUsers: typingUsers,
+              currentUser: Constants.user,
+              messageOptions: const MessageOptions(
+                timeTextColor: Colors.white,
+                showTime: true,
+                showCurrentUserAvatar: true,
+                showOtherUsersAvatar: true,
+                containerColor: Color.fromRGBO(127, 76, 222, 0.8),
+                showOtherUsersName: true,
               ),
-            if (isMobiletPlatform)
-              ValueListenableBuilder(
-                valueListenable: isListening,
-                builder: (context, value, child) {
-                  return IconButton(
-                    icon: value
-                        ? ScaleTransition(
-                            scale: _micScaleAnimation,
-                            child: const Icon(
-                              Icons.mic,
-                              color: appPrimaryColor,
+              inputOptions: InputOptions(
+                textController: chatController,
+                trailing: [
+                  if (isMobiletPlatform)
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        popupMenuTheme: PopupMenuThemeData(
+                          color: Theme.of(context).cardColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      child: PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.add_a_photo,
+                          color: appPrimaryColor,
+                        ),
+                        onSelected: (String value) {
+                          if (typingUsers.isEmpty) {
+                            if (value == 'camera') {
+                              _pickAndShowImageDialog(
+                                  source: ImageSource.camera);
+                            } else if (value == 'gallery') {
+                              _pickAndShowImageDialog();
+                            }
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          const PopupMenuItem<String>(
+                            value: 'camera',
+                            child: Row(
+                              children: [
+                                Icon(Icons.camera_alt, color: appPrimaryColor),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Camera',
+                                  style: TextStyle(color: appPrimaryColor),
+                                ),
+                              ],
                             ),
-                          )
-                        : const Icon(
-                            Icons.mic_off,
-                            color: appPrimaryColor,
                           ),
-                    onPressed: !value ? _startListening : _stopListening,
-                  );
-                },
+                          const PopupMenuItem<String>(
+                            value: 'gallery',
+                            child: Row(
+                              children: [
+                                Icon(Icons.image, color: appPrimaryColor),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Gallery',
+                                  style: TextStyle(color: appPrimaryColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (isMobiletPlatform)
+                    ValueListenableBuilder(
+                      valueListenable: isListening,
+                      builder: (context, value, child) {
+                        return IconButton(
+                          icon: value
+                              ? ScaleTransition(
+                                  scale: _micScaleAnimation,
+                                  child: const Icon(
+                                    Icons.mic,
+                                    color: appPrimaryColor,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.mic_off,
+                                  color: appPrimaryColor,
+                                ),
+                          onPressed: !value ? _startListening : _stopListening,
+                        );
+                      },
+                    ),
+                ],
+                inputDecoration: InputDecoration(
+                  hintText: "${localization.hi}, I am $walletName",
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                    borderSide: BorderSide.none,
+                  ),
+                  border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                      borderSide: BorderSide.none),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                ),
+                inputDisabled: typingUsers.isNotEmpty,
+                sendOnEnter: true,
+                alwaysShowSend: true,
+                showTraillingBeforeSend: true,
               ),
-          ],
-          inputDecoration: InputDecoration(
-            hintText: "${localization.hi}, I am $walletName",
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-              borderSide: BorderSide.none,
+              onSend: _handleOnSendPressed,
+              messages: messages,
             ),
-            border: const OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                borderSide: BorderSide.none),
-            enabledBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-              borderSide: BorderSide.none,
-            ),
-            filled: true,
           ),
-          inputDisabled: typingUsers.isNotEmpty,
-          sendOnEnter: true,
-          alwaysShowSend: true,
-          showTraillingBeforeSend: true,
-        ),
-        onSend: _handleOnSendPressed,
-        messages: messages,
+        ],
       ),
     );
   }

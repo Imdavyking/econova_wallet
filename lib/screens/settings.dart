@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
 import 'package:wallet_app/education/eip4337.edu.dart';
 import 'package:wallet_app/screens/contact.dart';
@@ -77,430 +78,444 @@ class _SettingsState extends State<Settings>
       appBar: AppBar(
         title: Text(localization.settings),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              children: [
-                // ── Account ─────────────────────────────────────────────────
-                _SectionHeader(label: localization.account),
-                const SizedBox(height: 10),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: UserDetailsPlaceHolder(size: .5, textSize: 18),
-                  ),
-                ),
-                const SizedBox(height: 20),
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    children: [
+                      // ── Account ─────────────────────────────────────────────────
+                      _SectionHeader(label: localization.account),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: UserDetailsPlaceHolder(size: .5, textSize: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
 
-                // ── Wallet ───────────────────────────────────────────────────
-                _SectionHeader(label: localization.wallet),
-                const SizedBox(height: 10),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SettingsRow(
-                          icon: Image(
-                            image: AssetImage('assets/currency_new.png'),
-                            width: 25,
-                          ),
-                          label: localization.currency,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const SetCurrency()),
-                          ),
+                      // ── Wallet ───────────────────────────────────────────────────
+                      _SectionHeader(label: localization.wallet),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 142, 141, 148),
-                            icon: FontAwesomeIcons.icons,
-                          ),
-                          label: localization.accountIdenticon,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ChangeIdenticon()),
-                          ),
-                        ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 176, 116, 13),
-                            icon: FontAwesomeIcons.key,
-                          ),
-                          label: localization.google2FA,
-                          trailing: GoogleFAStatus(),
-                        ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 255, 95, 82),
-                            icon: Icons.language,
-                            iconSize: 22,
-                          ),
-                          label: localization.language,
-                          onTap: () async => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const Language()),
-                          ),
-                        ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 255, 95, 82),
-                            icon: FontAwesomeIcons.book,
-                            iconSize: 22,
-                          ),
-                          label: localization.education,
-                          onTap: () async => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const EIP4337Education()),
-                          ),
-                        ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 50, 117, 186),
-                            icon: FontAwesomeIcons.user,
-                          ),
-                          label: localization.contact,
-                          onTap: () async => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => Contact()),
-                          ),
-                        ),
-                        if (!WalletService.isViewKey())
-                          _SettingsRow(
-                            icon: Image(
-                              image:
-                                  AssetImage('assets/wallet_connect_new.png'),
-                              width: 25,
-                            ),
-                            label: 'Wallet Connect',
-                            onTap: () async {
-                              try {
-                                WcConnectorV2.signClient;
-                                await Navigator.push(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SettingsRow(
+                                icon: Image(
+                                  image: AssetImage('assets/currency_new.png'),
+                                  width: 25,
+                                ),
+                                label: localization.currency,
+                                onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => const WalletConnect()),
-                                );
-                              } catch (e) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context)
-                                  ..hideCurrentSnackBar()
-                                  ..showSnackBar(SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.errorTryAgain,
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ));
-                              }
-                            },
-                          ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 50, 185, 55),
-                            icon: FontAwesomeIcons.wallet,
-                          ),
-                          label: localization.allWallets,
-                          onTap: () async => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => AllWallets()),
+                                      builder: (_) => const SetCurrency()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 142, 141, 148),
+                                  icon: FontAwesomeIcons.icons,
+                                ),
+                                label: localization.accountIdenticon,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => ChangeIdenticon()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 176, 116, 13),
+                                  icon: FontAwesomeIcons.key,
+                                ),
+                                label: localization.google2FA,
+                                trailing: GoogleFAStatus(),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 95, 82),
+                                  icon: Icons.language,
+                                  iconSize: 22,
+                                ),
+                                label: localization.language,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const Language()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 95, 82),
+                                  icon: FontAwesomeIcons.book,
+                                  iconSize: 22,
+                                ),
+                                label: localization.education,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const EIP4337Education()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 50, 117, 186),
+                                  icon: FontAwesomeIcons.user,
+                                ),
+                                label: localization.contact,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => Contact()),
+                                ),
+                              ),
+                              if (!WalletService.isViewKey())
+                                _SettingsRow(
+                                  icon: Image(
+                                    image: AssetImage(
+                                        'assets/wallet_connect_new.png'),
+                                    width: 25,
+                                  ),
+                                  label: 'Wallet Connect',
+                                  onTap: () async {
+                                    try {
+                                      WcConnectorV2.signClient;
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const WalletConnect()),
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                            localization.errorTryAgain,
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                        ));
+                                    }
+                                  },
+                                ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 50, 185, 55),
+                                  icon: FontAwesomeIcons.wallet,
+                                ),
+                                label: localization.allWallets,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => AllWallets()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 233, 68, 123),
+                                  icon: FontAwesomeIcons.fileImport,
+                                ),
+                                label: localization.importWallet,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const MainScreen()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(168, 255, 123, 233),
+                                  icon: FontAwesomeIcons.headset,
+                                ),
+                                label: localization.support,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const Support()),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 233, 68, 123),
-                            icon: FontAwesomeIcons.fileImport,
-                          ),
-                          label: localization.importWallet,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const MainScreen()),
-                          ),
-                        ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(168, 255, 123, 233),
-                            icon: FontAwesomeIcons.headset,
-                          ),
-                          label: localization.support,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const Support()),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                      ),
+                      const SizedBox(height: 20),
 
-                // ── Security ─────────────────────────────────────────────────
-                _SectionHeader(label: localization.security),
-                const SizedBox(height: 10),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 238, 20, 139),
-                            icon: FontAwesomeIcons.fingerprint,
-                          ),
-                          label: localization.useBiometrics,
-                          trailing: UnlockWithBiometrics(),
+                      // ── Security ─────────────────────────────────────────────────
+                      _SectionHeader(label: localization.security),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        if (WalletService.isPrivateKey())
-                          _SettingsRow(
-                            icon: _CircleIcon(
-                              color: Color.fromARGB(255, 142, 141, 148),
-                              icon: FontAwesomeIcons.key,
-                            ),
-                            label: localization.showPrivateKey,
-                            onTap: () async {
-                              final data = WalletService.getActiveKey(
-                                walletImportType,
-                              )!
-                                  .data;
-                              if (await authenticate(context)) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentSnackBar();
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ShowPrivateKey(data: data),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 238, 20, 139),
+                                  icon: FontAwesomeIcons.fingerprint,
+                                ),
+                                label: localization.useBiometrics,
+                                trailing: UnlockWithBiometrics(),
+                              ),
+                              if (WalletService.isPrivateKey())
+                                _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: Color.fromARGB(255, 142, 141, 148),
+                                    icon: FontAwesomeIcons.key,
                                   ),
-                                );
-                              } else {
-                                if (!context.mounted) return;
-                                _showAuthFailed();
-                              }
-                            },
-                          ),
-                        if (WalletService.isPharseKey())
-                          _SettingsRow(
-                            icon: _CircleIcon(
-                              color: Color.fromARGB(255, 142, 141, 148),
-                              icon: FontAwesomeIcons.key,
-                            ),
-                            label: localization.showmnemonic,
-                            onTap: () async {
-                              final data = WalletService.getActiveKey(
-                                walletImportType,
-                              )!
-                                  .data;
-                              if (await authenticate(context)) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentSnackBar();
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => RecoveryPhrase(
-                                      data: data,
-                                      viewOnly: true,
-                                    ),
+                                  label: localization.showPrivateKey,
+                                  onTap: () async {
+                                    final data = WalletService.getActiveKey(
+                                      walletImportType,
+                                    )!
+                                        .data;
+                                    if (await authenticate(context)) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .hideCurrentSnackBar();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ShowPrivateKey(data: data),
+                                        ),
+                                      );
+                                    } else {
+                                      if (!context.mounted) return;
+                                      _showAuthFailed();
+                                    }
+                                  },
+                                ),
+                              if (WalletService.isPharseKey())
+                                _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: Color.fromARGB(255, 142, 141, 148),
+                                    icon: FontAwesomeIcons.key,
                                   ),
-                                );
-                              } else {
-                                if (!context.mounted) return;
-                                _showAuthFailed();
-                              }
-                            },
+                                  label: localization.showmnemonic,
+                                  onTap: () async {
+                                    final data = WalletService.getActiveKey(
+                                      walletImportType,
+                                    )!
+                                        .data;
+                                    if (await authenticate(context)) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .hideCurrentSnackBar();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => RecoveryPhrase(
+                                            data: data,
+                                            viewOnly: true,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      if (!context.mounted) return;
+                                      _showAuthFailed();
+                                    }
+                                  },
+                                ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 61, 46),
+                                  icon: FontAwesomeIcons.lock,
+                                ),
+                                label: localization.changePin,
+                                onTap: () async {
+                                  if (await authenticate(context,
+                                      useLocalAuth: false)) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context)
+                                        .hideCurrentSnackBar();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const Security(isChangingPin: true),
+                                      ),
+                                    );
+                                  } else {
+                                    if (!context.mounted) return;
+                                    _showAuthFailed();
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                        _SettingsRow(
-                          icon: _CircleIcon(
-                            color: Color.fromARGB(255, 255, 61, 46),
-                            icon: FontAwesomeIcons.lock,
-                          ),
-                          label: localization.changePin,
-                          onTap: () async {
-                            if (await authenticate(context,
-                                useLocalAuth: false)) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context)
-                                  .hideCurrentSnackBar();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const Security(isChangingPin: true),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Network ───────────────────────────────────────────────────
+                      _SectionHeader(label: 'Network'),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: testNetNotifier,
+                            builder: (_, isTestNet, __) {
+                              debugPrint('enableTestNet = $enableTestNet');
+                              return _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: isTestNet
+                                      ? Color.fromARGB(255, 255, 149, 0)
+                                      : Color.fromARGB(255, 50, 185, 55),
+                                  icon: FontAwesomeIcons.networkWired,
+                                ),
+                                label: isTestNet ? 'Testnet' : 'Mainnet',
+                                trailing: Switch(
+                                  value: isTestNet,
+                                  activeColor: appBackgroundblue,
+                                  onChanged: _onTestNetToggle,
                                 ),
                               );
-                            } else {
-                              if (!context.mounted) return;
-                              _showAuthFailed();
-                            }
-                          },
+                            },
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Network ───────────────────────────────────────────────────
-                _SectionHeader(label: 'Network'),
-                const SizedBox(height: 10),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: testNetNotifier,
-                      builder: (_, isTestNet, __) {
-                        debugPrint('enableTestNet = $enableTestNet');
-                        return _SettingsRow(
-                          icon: _CircleIcon(
-                            color: isTestNet
-                                ? Color.fromARGB(255, 255, 149, 0)
-                                : Color.fromARGB(255, 50, 185, 55),
-                            icon: FontAwesomeIcons.networkWired,
-                          ),
-                          label: isTestNet ? 'Testnet' : 'Mainnet',
-                          trailing: Switch(
-                            value: isTestNet,
-                            activeColor: appBackgroundblue,
-                            onChanged: _onTestNetToggle,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ── Web ──────────────────────────────────────────────────────
-                _SectionHeader(label: localization.web),
-                const SizedBox(height: 10),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: _SettingsRow(
-                      icon: _CircleIcon(
-                        color: Color.fromARGB(255, 28, 119, 255),
-                        icon: FontAwesomeIcons.bookmark,
                       ),
-                      label: localization.bookMark,
-                      onTap: () async {
-                        List data = [];
-                        if (pref.get(bookMarkKey) != null) {
-                          data = jsonDecode(pref.get(bookMarkKey)) as List;
-                        }
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SavedUrls(
-                              localization.bookMark,
-                              localization.noBookMark,
-                              bookMarkKey,
-                              data: data,
+                      const SizedBox(height: 10),
+
+                      // ── Web ──────────────────────────────────────────────────────
+                      _SectionHeader(label: localization.web),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: _SettingsRow(
+                            icon: _CircleIcon(
+                              color: Color.fromARGB(255, 28, 119, 255),
+                              icon: FontAwesomeIcons.bookmark,
                             ),
+                            label: localization.bookMark,
+                            onTap: () async {
+                              List data = [];
+                              if (pref.get(bookMarkKey) != null) {
+                                data =
+                                    jsonDecode(pref.get(bookMarkKey)) as List;
+                              }
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SavedUrls(
+                                    localization.bookMark,
+                                    localization.noBookMark,
+                                    bookMarkKey,
+                                    data: data,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Community ────────────────────────────────────────────────
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localization.joinOurCommunities,
-                          style: TextStyle(fontSize: 18),
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            if (_isValidUrl(telegramLink)) ...[
-                              _SocialIcon(
-                                icon: FontAwesomeIcons.telegram,
-                                url: telegramLink,
-                              ),
-                              const SizedBox(width: 20),
-                            ],
-                            if (_isValidUrl(twitterLink)) ...[
-                              _SocialIcon(
-                                icon: FontAwesomeIcons.twitter,
-                                url: twitterLink,
-                              ),
-                              const SizedBox(width: 20),
-                            ],
-                            if (_isValidUrl(mediumLink)) ...[
-                              _SocialIcon(
-                                icon: FontAwesomeIcons.medium,
-                                url: mediumLink,
-                              ),
-                              const SizedBox(width: 20),
-                            ],
-                            if (_isValidUrl(discordLink)) ...[
-                              _SocialIcon(
-                                icon: FontAwesomeIcons.discord,
-                                url: discordLink,
-                              ),
-                              const SizedBox(width: 20),
-                            ],
-                            if (_isValidUrl(instagramLink))
-                              _SocialIcon(
-                                icon: FontAwesomeIcons.instagram,
-                                url: instagramLink,
-                              ),
-                          ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Community ────────────────────────────────────────────────
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                      ],
-                    ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                localization.joinOurCommunities,
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  if (_isValidUrl(telegramLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.telegram,
+                                      url: telegramLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(twitterLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.twitter,
+                                      url: twitterLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(mediumLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.medium,
+                                      url: mediumLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(discordLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.discord,
+                                      url: discordLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(instagramLink))
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.instagram,
+                                      url: instagramLink,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── App version ──────────────────────────────────────────────
+                      FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform(),
+                        builder: (_, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox.shrink();
+                          final info = snapshot.data!;
+                          return Text(
+                            '${info.appName} v${info.version} (${info.buildNumber})',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // ── App version ──────────────────────────────────────────────
-                FutureBuilder<PackageInfo>(
-                  future: PackageInfo.fromPlatform(),
-                  builder: (_, snapshot) {
-                    if (!snapshot.hasData) return const SizedBox.shrink();
-                    final info = snapshot.data!;
-                    return Text(
-                      '${info.appName} v${info.version} (${info.buildNumber})',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
