@@ -72,12 +72,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
       child: ValueListenableBuilder<List<Coin>>(
         valueListenable: coinListener,
         builder: (_, chains, __) {
-          print(chains.first.getName());
-          final visibleCoins = [chains.first]
-              .where((coin) => !WalletService.removeCoin(coin))
-              .toList();
-
-          print(visibleCoins);
+          final visibleCoins =
+              chains.where((coin) => !WalletService.removeCoin(coin)).toList();
 
           return RefreshIndicator(
             onRefresh: () async {

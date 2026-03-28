@@ -13,8 +13,11 @@ class WalletCoinList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final coin in coins) ...[
-            WalletCoinListItem(coin: coin),
+          for (final (i, coin) in coins.indexed) ...[
+            WalletCoinListItem(
+              key: ValueKey('${i}_${coin.getName()}'),
+              coin: coin,
+            ),
             const SizedBox(height: 20),
           ],
         ],
