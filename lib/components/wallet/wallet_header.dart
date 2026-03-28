@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
-import 'package:wallet_app/utils/app_config.dart';
 
 class WalletHeader extends StatelessWidget {
   const WalletHeader({super.key});

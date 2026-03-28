@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:wallet_app/components/portfolio.dart';
-import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/wallet/wallet_assets_header.dart';
 import 'package:wallet_app/components/wallet/wallet_coin_list.dart';
 import 'package:wallet_app/components/wallet/wallet_header.dart';
