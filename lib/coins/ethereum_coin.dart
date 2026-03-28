@@ -678,7 +678,7 @@ class EthereumCoin extends Coin {
     String contractAddress,
   ) async {
     // Duplicate check
-    final alreadyExists = erc20Coins.any((c) =>
+    final alreadyExists = getChains<ERCFungibleCoin>().any((c) =>
         c.tokenAddress().toLowerCase() == contractAddress.toLowerCase() &&
         c.chainId == chainId);
     if (alreadyExists) return null;

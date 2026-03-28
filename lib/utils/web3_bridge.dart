@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wallet_app/coins/solana_coin.dart';
 
 import '../coins/ethereum_coin.dart';
 import '../main.dart';
@@ -23,7 +24,7 @@ Future<String> setupWebViewWalletBridge(int chainId, String rpc) async {
                     address: "$address"
                 },
                 solana: {
-                     cluster: "${solanaChains.first.rpc}",
+                     cluster: "${getChains<SolanaCoin>().first.rpc}",
                      useLegacySign: true
                 },
                 aptos: {

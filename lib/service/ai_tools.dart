@@ -2,6 +2,7 @@ import "dart:convert";
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
+import "package:wallet_app/coins/stack_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
 import 'package:wallet_app/interface/coin.dart';
 import "package:wallet_app/interface/user_quote.dart";
@@ -22,7 +23,7 @@ import './ai_agent_service.dart';
 import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
-  static Coin coin = stackCoins.first;
+  static Coin coin = getChains<StacksCoin>().first;
 
   AItools();
 
@@ -806,7 +807,7 @@ class AItools {
           return 'USDC not found. Make sure you are on the Ethereum network.';
         }
 
-        final stacksAddress = await stackCoins.first.getAddress();
+        final stacksAddress = await getChains<StacksCoin>().first.getAddress();
 
         final message = 'Bridge ${input.amount} USDC → USDCx on Stacks\n\n'
             'Your Stacks address: $stacksAddress\n'

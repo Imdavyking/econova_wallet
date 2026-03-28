@@ -49,7 +49,7 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
   String? tokenAddress() => tokenContractAddress;
 
   @override
-  String? get badgeImage => starkNetCoins.first.image;
+  String? get badgeImage => getChains<StarknetCoin>().first.image;
 }
 
 List<StarknetFungibleCoin> getStarknetFungibleCoins() {

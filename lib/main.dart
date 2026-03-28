@@ -76,40 +76,8 @@ late String trustWalletProvider;
 late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
-List<EthereumCoin> evmChains = [
-  ...getEVMBlockchains(),
-];
-
-List<NearCoin> nearChains = [
-  ...getNearBlockChains(),
-];
-List<SolanaCoin> solanaChains = [
-  ...getSolanaBlockChains(),
-];
-List<MultiversxCoin> multiversXchains = [
-  ...getEGLDBlockchains(),
-];
-
-List<TronCoin> tronChains = [
-  ...getTronBlockchains(),
-];
-List<TonCoin> tonChains = [
-  ...getTonBlockChains(),
-];
-
-List<ERCFungibleCoin> erc20Coins = [
-  ...getERC20Coins(),
-];
-
-List<StarknetCoin> starkNetCoins = [
-  ...getStarknetBlockchains(),
-];
-List<StacksCoin> stackCoins = [
-  ...getStacksBlockchains(),
-];
-
-Future<List<Coin>> fetchSupportedChains() async {
-  List<Coin> blockchains = [
+List<T> getChains<T extends Coin>() {
+  List<Coin> all = [
     ...getNanoBlockChains(),
     ...getWavesBlockChains(),
     ...getOntologyBlockChains(),
@@ -118,12 +86,12 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getPolkadotFungibleCoins(),
     ...getTonFungibleCoins(),
     ...getCardanoBlockChains(),
-    ...tonChains,
-    ...evmChains,
-    ...nearChains,
-    ...tronChains,
-    ...solanaChains,
-    ...multiversXchains,
+    ...getTonBlockChains(),
+    ...getEVMBlockchains(),
+    ...getNearBlockChains(),
+    ...getTronBlockchains(),
+    ...getSolanaBlockChains(),
+    ...getEGLDBlockchains(),
     ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
     ...getICPBlockchains(),
@@ -138,36 +106,38 @@ Future<List<Coin>> fetchSupportedChains() async {
     ...getFUSEFTBlockchains(),
     ...getLegacyUtxoCoins(),
     ...getSplTokens(),
-    ...erc20Coins,
+    ...getERC20Coins(),
     ...getCosmosBlockChains(),
     ...getFilecoinBlockChains(),
-    ...starkNetCoins,
+    ...getStarknetBlockchains(),
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
     ...getTronFungibleCoins(),
-    ...stackCoins,
+    ...getStacksBlockchains(),
     ...getSIP010Coins(),
     ...getSegwitCoins(),
   ];
+
+  return (T == Coin ? all : all.whereType<T>().toList()) as List<T>;
+}
+
+Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
+  final coins = getChains<T>();
   final cryptoPrice = await getCryptoPrice(useCache: true);
 
-  // Fetch all balances in parallel
   final balances = await Future.wait(
-    blockchains.map((coin) async {
+    coins.map((coin) async {
       final balance = await coin.getBalance(true);
       final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
-      final usdValue = balance * price;
-      return MapEntry<Coin, double>(coin, usdValue);
+      return MapEntry(coin, balance * price);
     }),
     eagerError: false,
   );
 
-  // Sort descending by USD value
   balances.sort((a, b) => b.value.compareTo(a.value));
 
-  // Extract sorted coins
   return balances.map((e) => e.key).toList();
 }
 
@@ -242,7 +212,7 @@ void main() async {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }
-  supportedChains = await fetchSupportedChains();
+  supportedChains = await getChainsSortedByBalance();
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }

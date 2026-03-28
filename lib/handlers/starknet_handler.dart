@@ -26,7 +26,7 @@ class StarknetHandler extends BaseWebViewHandler {
   }
 
   Future<void> _onMessage(List<dynamic> args) async {
-    final coin = starkNetCoins.first;
+    final coin = getChains<StarknetCoin>().first;
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final coinData = await coin.importData(data);
     final payload = jsonDecode(args.first as String) as Map<String, dynamic>;
