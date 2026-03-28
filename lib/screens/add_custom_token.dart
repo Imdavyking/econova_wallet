@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../interface/coin.dart';
-import '../main.dart';
 import '../utils/app_config.dart';
 import '../utils/qr_scan_view.dart';
 

@@ -16,7 +16,6 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
-import '../main.dart';
 import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import 'app_config.dart';
