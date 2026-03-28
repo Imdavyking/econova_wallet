@@ -72,8 +72,12 @@ class _WalletMainBodyState extends State<WalletMainBody>
       child: ValueListenableBuilder<List<Coin>>(
         valueListenable: coinListener,
         builder: (_, chains, __) {
-          final visibleCoins =
-              chains.where((coin) => !WalletService.removeCoin(coin)).toList();
+          print(chains.first.getName());
+          final visibleCoins = [chains.first]
+              .where((coin) => !WalletService.removeCoin(coin))
+              .toList();
+
+          print(visibleCoins);
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -86,6 +90,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(chains.first.getName()),
                     const WalletHeader(),
                     const SizedBox(height: 30),
                     const Portfolio(),

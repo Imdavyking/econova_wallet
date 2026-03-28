@@ -164,9 +164,7 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
 
   final chainId = args.chainId;
   final address = _buildWavesAddress(curve25519PubBytes, chainId);
-  debugPrint(
-    'base58: ${base58.encode(derived.key as Uint8List)}, address: $address pubkey: ${base58.encode(curve25519PubBytes)}',
-  );
+
   return {
     'address': address,
     'privateKey': HEX.encode(derived.key),
@@ -346,11 +344,8 @@ class WavesCoin extends Coin {
             to: address,
             amount: amount.toString(), // send 1000 WAVES
           );
-          debugPrint('[WAVES local] funded $address with 1000 WAVES');
         }
-      } catch (e, sk) {
-        debugPrint('[WAVES local send] auto-fund failed: $e $sk');
-      }
+      } catch (__, _) {}
     }
 
     final key = 'wavesBalances_V1${chainId}_$address';
