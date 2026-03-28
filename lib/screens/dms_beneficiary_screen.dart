@@ -152,6 +152,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
             'Shares are still time-locked — drand round has not fired yet.';
       });
     } catch (e) {
+      // flutter: Decryption error: Instance of 'InvalidCipherTextException'
       debugPrint('Decryption error: $e');
       if (!mounted) return;
       setState(() {
