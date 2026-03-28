@@ -1,0 +1,21 @@
+{
+  "passwordHistory": [],
+  "revisionDate": null,
+  "creationDate": null,
+  "deletedDate": null,
+  "archivedDate": null,
+  "organizationId": null,
+  "collectionIds": null,
+  "folderId": null,
+  "type": 2,
+  "name": "econova .env",
+  "notes": "OPENROUTER_API_KEY=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\nCOVAL_API_KEY=cqt_rQVJMhq83DXd3Jw3WK4GfBBwkBq9\nALCHEMY_ETH_MAINNET=DyEtOvLwpEw43cr-lTgQWre7HfjPeUlq\nALCHEMY_ETH_GOERLI=s00aWtjDOmCnUYS7cFBFIL3fbVCzsc8Z\nALCHEMY_ARBITRUM=T2_T1IKID7xte8PYAhLK2FyCAu2lIcq-\nALCHEMY_MUMBAI=gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa\nALCHEMY_POLYGON=DtU0__wTk6KUpZElU8pYQRpaHK0b8mip\nRAMP_API_KEY=9842oj9c45xuzc93bm7zd7z4rn8cub3fs45decqh\nBSC_API_KEY=2WQ9Q2TTNSMD5DJ7GJR8F7TAEMZUCNCI5B\nTRON_GRID_API_KEY=e09b6df9-0abc-4463-a623-43eaf291ef22\nINFURA_API_KEY=53163c736f1d4ba78f0a39ffda8d87b4\nWALLET_CONNECT_KEY=73801621aec60dfaa2197c7640c15858\nCOIN_MARKET_CAP_KEY=c354e715-9e18-4fee-806d-ae32d38d5d5c\nBLAST_API_PROJECT_ID=2f6ccf07-7b89-4bf4-be14-7a26f2eae72d\nUTXO_API_KEY=07ddba0bd184344993fbc2a4a3d7059213e13469\nPURE_STAKE_API_KEY=G322hXkYM4749xUANJXm02d6M98WvYjtaWeAgJ4m\nNANO_API_KEY=RPC-KEY-2ED61F5D83FF4BF5964B58A6E90F2B",
+  "favorite": false,
+  "fields": [],
+  "login": null,
+  "secureNote": null,
+  "card": null,
+  "identity": null,
+  "sshKey": null,
+  "reprompt": 0
+}

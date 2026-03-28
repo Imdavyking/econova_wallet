@@ -312,6 +312,66 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
 ---
 
+## 🔐 Secrets Management
+
+API keys are stored encrypted in Bitwarden. Never commit `.env` to version control.
+
+```bash
+# Ensure .env is gitignored
+echo ".env" >> .gitignore
+```
+
+### Setup (one-time)
+
+Install the Bitwarden CLI and add an unlock alias to your shell config (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+npm install -g @bitwarden/cli
+
+# Add to ~/.zshrc
+bwu() {
+  export BW_SESSION="$(bw unlock --raw)"
+}
+```
+
+### Upload
+
+Run this after creating or updating your `.env`:
+
+```bash
+bwu  # unlock vault
+
+bw get template item > item.json
+jq --arg notes "$(cat .env)" \
+  '.type = 2 | .name = "econova .env" | .notes = $notes | .secureNote = {"type": 0}' \
+  item.json > filled.json
+bw encode < filled.json | bw create item
+rm item.json filled.json
+```
+
+To update an existing entry instead of creating a new one:
+
+```bash
+ID=$(bw get item "econova .env" | jq -r '.id')
+bw get template item > item.json
+jq --arg notes "$(cat .env)" \
+  '.type = 2 | .name = "econova .env" | .notes = $notes | .secureNote = {"type": 0}' \
+  item.json > filled.json
+bw encode < filled.json | bw edit item "$ID"
+rm item.json filled.json
+```
+
+### Retrieve
+
+Run this on a fresh machine after cloning:
+
+```bash
+bwu  # unlock vault
+bw get notes "econova .env" > .env
+```
+
+---
+
 ## 📈 Market Opportunity
 
 | Segment                    | Opportunity                                          |
