@@ -400,7 +400,6 @@ class DeadManSwitchService {
       _DecryptArgs(
         encryptedShares: encryptedShares,
         privKeyBytes: privKeyBytes,
-        drandRandomness: drandRandom,
       ),
     );
 
@@ -621,11 +620,9 @@ List<EncryptedShare> _encryptAllShares(_EncryptArgs args) {
 class _DecryptArgs {
   final List<EncryptedShare> encryptedShares;
   final Uint8List privKeyBytes;
-  final Uint8List drandRandomness;
   const _DecryptArgs({
     required this.encryptedShares,
     required this.privKeyBytes,
-    required this.drandRandomness,
   });
 }
 
@@ -633,8 +630,13 @@ List<String> _decryptAllShares(_DecryptArgs args) {
   return args.encryptedShares.map((es) {
     final eciesCipher = base64.decode(es.ciphertext);
     final aesCipher = eciesDecrypt(args.privKeyBytes, eciesCipher);
-    final revealKey = _deriveRevealKey(args.drandRandomness);
-    final plainBytes = aesGcmDecrypt(revealKey, aesCipher);
+
+    // ✅ Must match _encryptAllShares: derive key from round number, not randomness
+    final roundBytes = Uint8List(8)
+      ..buffer.asByteData().setUint64(0, es.drandRound);
+    final timelockKey = _deriveTimelockKey(roundBytes);
+
+    final plainBytes = aesGcmDecrypt(timelockKey, aesCipher);
     return utf8.decode(plainBytes);
   }).toList();
 }
