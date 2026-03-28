@@ -182,6 +182,11 @@ abstract class Coin {
     final details = await importData(data);
     return details.address;
   }
+  Future<String?> getPublicKey() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final details = await importData(data);
+    return details.publicKey;
+  }
 
   String? getDexScreener(String tokenaddress) {
     return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';

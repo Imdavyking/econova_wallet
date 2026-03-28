@@ -217,22 +217,23 @@ class _SettingsState extends State<Settings>
                                     }
                                   },
                                 ),
-                              // Add to security Card's Column children, after the changePin row:
-                              _SettingsRow(
-                                icon: _CircleIcon(
-                                  color: Color.fromARGB(255, 180, 30, 30),
-                                  icon: FontAwesomeIcons.heartPulse,
-                                  iconSize: 14,
-                                ),
-                                label: 'Dead Man\'s Switch',
-                                trailing: _DmsStatusBadge(),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const DeadManSwitchScreen(),
+                              if (!WalletService.isPharseKey())
+                                _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: Color.fromARGB(255, 180, 30, 30),
+                                    icon: FontAwesomeIcons.heartPulse,
+                                    iconSize: 14,
+                                  ),
+                                  label: 'Dead Man\'s Switch',
+                                  trailing: _DmsStatusBadge(),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const DeadManSwitchScreen(),
+                                    ),
                                   ),
                                 ),
-                              ),
                               _SettingsRow(
                                 icon: _CircleIcon(
                                   color: Color.fromARGB(255, 50, 185, 55),
