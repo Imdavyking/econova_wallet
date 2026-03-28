@@ -69,8 +69,6 @@ import '../coins/solana_coin.dart';
 import '../coins/stellar_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-
-
 late String currencyJson;
 late String currencyJsonSearch;
 late String trustWalletProvider;
@@ -214,6 +212,11 @@ void main() async {
     debugPrint('Reinstantiated seed root');
   }
   supportedChains = await getChainsSortedByBalance();
+  testNetNotifier.addListener(() async {
+    debugPrint('enableTestNet = $enableTestNet — reloading chains');
+    supportedChains = await getChainsSortedByBalance();
+  });
+
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }

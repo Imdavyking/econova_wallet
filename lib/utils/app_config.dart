@@ -43,10 +43,10 @@ set enableTestNet(bool value) =>
     _testNetNotifier.value = value; // writes to notifier
 
 // After
-final _coinListener = ValueNotifier<List<Coin>>([]);
-final supportedChains = _coinListener.value;
+final coinListener = ValueNotifier<List<Coin>>([]);
+final supportedChains = coinListener.value;
 set supportedChains(List<Coin> value) =>
-    _coinListener.value = value; // writes to notifier
+    coinListener.value = value; // writes to notifier
 
 // ── API keys (loaded from .env) ───────────────────────────────────────────────
 
