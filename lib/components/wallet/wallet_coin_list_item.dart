@@ -39,7 +39,11 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
         beneficiaryPublicKeyHex: pubKey,
       );
 
-      debugPrint('shares: $shares');
+      if (shares == null) return;
+
+      await DeadManSwitchService.saveShares(shares.$1, shares.$2);
+
+      debugPrint('current shares: $shares');
     } catch (_) {}
   }
 

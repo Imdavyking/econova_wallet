@@ -10,6 +10,7 @@ import 'package:wallet_app/main.dart';
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/service/dms_relay_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
 
 // ── Debug flag ─────────────────────────────────────────────────────────────────
 const kDmsTestMode = bool.fromEnvironment('DMS_TEST', defaultValue: true);
@@ -369,9 +370,82 @@ class DeadManSwitchService {
     return sss.combine(plainShares.take(threshold).toList(), false);
   }
 
+  static Future saveShares(
+    String sessionId,
+    List<EncryptedShare> shares,
+  ) async {
+    // Load existing storage
+    Map<String, dynamic> existing = {};
+    if (pref.containsKey(deadSwitchSaveKey)) {
+      final raw = pref.get(deadSwitchSaveKey);
+      if (raw != null) {
+        existing = Map<String, dynamic>.from(jsonDecode(raw));
+      }
+    }
+    if (existing.containsKey(sessionId)) {
+      debugPrint(
+          'Session $sessionId already exists in storage, skipping save.');
+      return;
+    } else {
+      debugPrint(
+          'Saving session $sessionId with ${shares.length} shares to storage.');
+      existing[sessionId] = shares.map((e) => e.toJson()).toList();
+      await pref.put(deadSwitchSaveKey, jsonEncode(existing));
+    }
+  }
+
+  static Future<List<EncryptedShare>?> loadShares(String sessionId) async {
+    if (!pref.containsKey(deadSwitchSaveKey)) {
+      debugPrint('No saved sessions found in storage.');
+      return null;
+    }
+    final raw = pref.get(deadSwitchSaveKey);
+    if (raw == null) {
+      debugPrint('Saved sessions key exists but is null.');
+      return null;
+    }
+    final existing = Map<String, dynamic>.from(jsonDecode(raw));
+    if (!existing.containsKey(sessionId)) {
+      debugPrint('Session $sessionId not found in storage.');
+      return null;
+    }
+    final sharesJson = existing[sessionId] as List;
+    final shares = sharesJson
+        .map((e) => EncryptedShare.fromJson(e as Map<String, dynamic>))
+        .toList();
+    debugPrint(
+        'Loaded session $sessionId with ${shares.length} shares from storage.');
+    return shares;
+  }
+
+  // load all saved shares
+  static Future<List<EncryptedShare>?> fetchAllShares() async {
+    if (!pref.containsKey(deadSwitchSaveKey)) {
+      debugPrint('No saved sessions found in storage.');
+      return null;
+    }
+    final raw = pref.get(deadSwitchSaveKey);
+    if (raw == null) {
+      debugPrint('Saved sessions key exists but is null.');
+      return null;
+    }
+    final existing = Map<String, dynamic>.from(jsonDecode(raw));
+    List<EncryptedShare> allShares = [];
+    existing.forEach((sessionId, sharesJson) {
+      final shares = (sharesJson as List)
+          .map((e) => EncryptedShare.fromJson(e as Map<String, dynamic>))
+          .toList();
+      allShares.addAll(shares);
+      debugPrint(
+          'Loaded session $sessionId with ${shares.length} shares from storage.');
+    });
+    debugPrint('Total loaded shares from all sessions: ${allShares.length}');
+    return allShares;
+  }
+
   // ── Fetch shares from relay (beneficiary side) ─────────────────────────────────
 
-  static Future<List<EncryptedShare>?> fetchSharesFromRelay({
+  static Future<(String, List<EncryptedShare>)?> fetchSharesFromRelay({
     required String beneficiaryPublicKeyHex,
     Duration timeout = const Duration(seconds: 15),
   }) async {
@@ -380,20 +454,38 @@ class DeadManSwitchService {
     try {
       await DmsRelayService.connect(roomId: roomId, role: 'receiver');
 
-      final completer = Completer<List<EncryptedShare>>();
-      final collected = <int, EncryptedShare>{};
-      int? totalShares;
+      final completer = Completer<(String, List<EncryptedShare>)>();
+
+      // sessionId → (shareIndex → share)
+      final collected = <String, Map<int, EncryptedShare>>{};
+      final totalSharesMap = <String, int>{};
 
       final sub = DmsRelayService.messages.listen((msg) {
         debugPrint('RAW MSG: $msg');
+
         if (msg is DmsWsShareReceived) {
-          collected[msg.shareIndex] = msg.share;
-          totalShares ??= msg.totalShares;
+          final sessionId = msg.sessionId;
+
+          // init session bucket
+          collected.putIfAbsent(sessionId, () => {});
+          final sessionShares = collected[sessionId]!;
+
+          // store share
+          sessionShares[msg.shareIndex] = msg.share;
+          totalSharesMap[sessionId] ??= msg.totalShares;
+
           debugPrint(
-              'DMS relay: received share ${msg.shareIndex + 1}/${msg.totalShares}');
-          if (totalShares != null && collected.length >= totalShares!) {
+            'DMS relay [$sessionId]: ${sessionShares.length}/${msg.totalShares}',
+          );
+
+          // check completion for THIS session
+          final expectedTotal = totalSharesMap[sessionId]!;
+          if (sessionShares.length >= expectedTotal) {
             if (!completer.isCompleted) {
-              completer.complete(collected.values.toList());
+              completer.complete((
+                sessionId,
+                sessionShares.values.toList(),
+              ));
             }
           }
         } else if (msg is DmsWsError) {
@@ -403,13 +495,25 @@ class DeadManSwitchService {
         }
       });
 
-      List<EncryptedShare>? result;
+      (String, List<EncryptedShare>)? result;
+
       try {
         result = await completer.future.timeout(timeout);
       } on TimeoutException {
-        debugPrint('DMS relay: fetch timed out after ${timeout.inSeconds}s');
-        // Return whatever we collected so far, if anything
-        result = collected.isNotEmpty ? collected.values.toList() : null;
+        debugPrint(
+          'DMS relay: fetch timed out after ${timeout.inSeconds}s',
+        );
+
+        // fallback: return first available session (if any)
+        if (collected.isNotEmpty) {
+          final firstSession = collected.entries.first;
+          result = (
+            firstSession.key,
+            firstSession.value.values.toList(),
+          );
+        } else {
+          result = null;
+        }
       } finally {
         await sub.cancel();
         await DmsRelayService.disconnect();
@@ -422,7 +526,6 @@ class DeadManSwitchService {
       return null;
     }
   }
-
   // ── Internal: push shares to relay ────────────────────────────────────────────
 
   static Future<void> _pushSharesToRelay({

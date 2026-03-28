@@ -621,7 +621,6 @@ class EthereumCoin extends Coin {
     );
 
     final keys = await compute(calculateEthereumKey, args);
-    print(keys);
     mnemonicMap[mnemonic] = keys;
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);

@@ -67,7 +67,6 @@ String get utxoApiKey => dotenv.env['UTXO_API_KEY'] ?? '';
 String get pureStakeApiKey => dotenv.env['PURE_STAKE_API_KEY'] ?? '';
 String get nanoApiKey => dotenv.env['NANO_API_KEY'] ?? '';
 String get openRouterApiKey => dotenv.env['OPENROUTER_API_KEY'] ?? '';
-String get pieSocketApiKey => dotenv.env['PIE_SOCKET_API_KEY'] ?? '';
 
 // ── External links ────────────────────────────────────────────────────────────
 
@@ -156,6 +155,7 @@ const newEVMChainKey = '5500a-8077-420a-a1cf-9aa7';
 const appUnlockTime = 'applockksksietimeal382';
 const supportedCurrencyKey = 'supportedCurrencies';
 const defaultCurrencyKey = 'defaultCurrency';
+const deadSwitchSaveKey = '9c840bf-95d0-8331-8148-eded0b9';
 
 // ── Sign types ────────────────────────────────────────────────────────────────
 
