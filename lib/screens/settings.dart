@@ -6,6 +6,7 @@ import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
 import 'package:wallet_app/education/eip4337.edu.dart';
 import 'package:wallet_app/screens/contact.dart';
+import 'package:wallet_app/screens/dead_man_switch_screen.dart';
 import 'package:wallet_app/screens/language.dart';
 import 'package:wallet_app/screens/saved_urls.dart';
 import 'package:wallet_app/screens/security.dart';
@@ -17,6 +18,7 @@ import 'package:wallet_app/screens/support.dart';
 import 'package:wallet_app/screens/unlock_with_biometrics.dart';
 import 'package:wallet_app/screens/all_wallets.dart';
 import 'package:wallet_app/screens/wallet_connect.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -215,6 +217,22 @@ class _SettingsState extends State<Settings>
                                     }
                                   },
                                 ),
+                              // Add to security Card's Column children, after the changePin row:
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 180, 30, 30),
+                                  icon: FontAwesomeIcons.heartPulse,
+                                  iconSize: 14,
+                                ),
+                                label: 'Dead Man\'s Switch',
+                                trailing: _DmsStatusBadge(),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DeadManSwitchScreen(),
+                                  ),
+                                ),
+                              ),
                               _SettingsRow(
                                 icon: _CircleIcon(
                                   color: Color.fromARGB(255, 50, 185, 55),
@@ -639,6 +657,30 @@ class _SocialIcon extends StatelessWidget {
     return GestureDetector(
       onTap: () => launchPageUrl(context: context, url: url),
       child: Icon(icon),
+    );
+  }
+}
+
+class _DmsStatusBadge extends StatelessWidget {
+  const _DmsStatusBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = DeadManSwitchService.state;
+    final (color, label) = switch (state) {
+      DmsState.active => (Colors.green, 'Armed'),
+      DmsState.triggered => (Colors.red, 'Triggered'),
+      DmsState.cancelled => (Colors.orange, 'Off'),
+      DmsState.inactive => (Colors.grey, 'Off'),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 11, color: color)),
     );
   }
 }

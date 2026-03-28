@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/token.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/utils/get_blockchain_widget.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
@@ -30,6 +31,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
       final balance =
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
+      await DeadManSwitchService.recordActivity();
     } catch (_) {}
   }
 
