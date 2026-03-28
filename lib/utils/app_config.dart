@@ -38,6 +38,8 @@ ValueNotifier<bool> get testNetNotifier => _testNetNotifier;
 
 // Bool getter/setter — use exactly like before
 bool get enableTestNet => _testNetNotifier.value;
+set enableTestNet(bool value) =>
+    _testNetNotifier.value = value; // writes to notifier
 
 // ── API keys (loaded from .env) ───────────────────────────────────────────────
 
