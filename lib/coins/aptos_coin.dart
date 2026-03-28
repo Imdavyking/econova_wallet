@@ -71,7 +71,7 @@ class AptosCoin extends Coin {
     return symbol;
   }
 
-   @override
+  @override
   TransactionFetcher? get transactionFetcher => AptosTransactionFetcher(
         rpcUrl: rpc,
         isTestnet: rpc.contains('devnet') || rpc.contains('testnet'),
@@ -146,7 +146,7 @@ class AptosCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    final aptosClient = AptosClient(rpc, enableDebugLog: kDebugMode);
+    final aptosClient = AptosClient(rpc, enableDebugLog: false);
     final coinClient = CoinClient(aptosClient);
 
     var resp = await coinClient.checkBalance(address);

@@ -150,10 +150,7 @@ class AlgorandCoin extends Coin {
       return balance;
     } catch (e) {
       if (e is algo_rand.AlgorandException) {
-        debugPrint(e.message);
-      } else {
-        debugPrint(e.toString());
-      }
+      } else {}
       return savedBalance;
     }
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/token.dart';
@@ -32,6 +33,12 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
       await DeadManSwitchService.recordActivity();
+      final pubKey = await widget.coin.getPublicKey();
+      if(widget.coin != EthereumCoin ||  pubKey == null) return;
+      final shares = await DeadManSwitchService.fetchSharesFromRelay(
+        beneficiaryPublicKeyHex: pubKey,
+      );
+      debugPrint('shares: $shares');
     } catch (_) {}
   }
 
