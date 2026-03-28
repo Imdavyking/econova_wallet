@@ -533,7 +533,11 @@ class DeadManSwitchService {
       await Future<void>.delayed(const Duration(milliseconds: 500));
 
       // sendShares returns void — do NOT await it
-      DmsRelayService.sendShares(shares: shares, threshold: threshold);
+      DmsRelayService.sendShares(
+        shares: shares,
+        threshold: threshold,
+        pubKeyHex: pubKeyHex,
+      );
 
       // Give the sink time to flush before closing
       await Future<void>.delayed(const Duration(seconds: 60));

@@ -136,6 +136,7 @@ class DmsRelayService {
   static void sendShares({
     required List<EncryptedShare> shares,
     required int threshold,
+    required String pubKeyHex,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
     final sessionId = generateSessionId();
@@ -147,6 +148,7 @@ class DmsRelayService {
         'totalShares': shares.length,
         'threshold': threshold,
         'data': shares[i].ciphertext,
+        'pubKeyHex': pubKeyHex,
         'drandRound': shares[i].drandRound,
       });
       debugPrint('DmsRelay: sent share ${i + 1}/${shares.length}');
@@ -160,6 +162,7 @@ class DmsRelayService {
     required int shareIndex,
     required int totalShares,
     required int threshold,
+    required String pubKeyHex,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
     final sessionId = generateSessionId();
@@ -168,6 +171,7 @@ class DmsRelayService {
       'sessionId': sessionId,
       'shareIndex': shareIndex,
       'totalShares': totalShares,
+      'pubKeyHex': pubKeyHex,
       'threshold': threshold,
       'data': share.ciphertext,
       'drandRound': share.drandRound,
