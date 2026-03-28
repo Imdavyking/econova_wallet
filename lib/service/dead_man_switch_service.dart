@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -7,10 +8,10 @@ import 'package:pointycastle/export.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/ntcdcrypto.dart';
+import 'package:wallet_app/service/dms_relay_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 
 // ── Debug flag ─────────────────────────────────────────────────────────────────
-// flutter run --dart-define=DMS_TEST=true
 const kDmsTestMode = bool.fromEnvironment('DMS_TEST', defaultValue: true);
 
 // ── Pref keys ──────────────────────────────────────────────────────────────────
@@ -28,12 +29,8 @@ enum DmsState { inactive, active, triggered, cancelled }
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 class DmsConfig {
-  /// Compressed secp256k1 public key (hex, 66 chars / 33 bytes).
   final String beneficiaryPublicKey;
-
-  /// Timeout in seconds. Use [DmsTimeouts] presets.
   final int timeoutSeconds;
-
   final int threshold;
   final int totalShares;
 
@@ -44,10 +41,8 @@ class DmsConfig {
     required this.totalShares,
   });
 
-  /// Derived from public key — never stored separately.
   String get beneficiaryAddress => publicKeyToAddress(beneficiaryPublicKey);
 
-  /// Human-readable timeout for display.
   String get timeoutLabel {
     if (timeoutSeconds < 3600) {
       final mins = timeoutSeconds ~/ 60;
@@ -70,7 +65,6 @@ class DmsConfig {
 
   factory DmsConfig.fromJson(Map<String, dynamic> j) => DmsConfig(
         beneficiaryPublicKey: j['beneficiaryPublicKey'] as String,
-        // Legacy: old configs stored timeoutDays
         timeoutSeconds: j.containsKey('timeoutSeconds')
             ? j['timeoutSeconds'] as int
             : (j['timeoutDays'] as int) * 86400,
@@ -104,7 +98,6 @@ class DmsTimeouts {
   ];
 
   static List<DmsTimeout> get current => kDmsTestMode ? debug : production;
-
   static int get defaultSeconds => kDmsTestMode ? 120 : 30 * 86400;
 }
 
@@ -146,7 +139,7 @@ class DmsErr extends DmsResult {
 class DeadManSwitchService {
   DeadManSwitchService._();
 
-  // ── Getters ──────────────────────────────────────────────────────────────────
+  // ── Getters ───────────────────────────────────────────────────────────────────
 
   static DmsState get state {
     final s = pref.get(_kState) as String?;
@@ -203,7 +196,21 @@ class DeadManSwitchService {
     return last.add(Duration(seconds: cfg.timeoutSeconds));
   }
 
-  // ── Activate ──────────────────────────────────────────────────────────────────
+  // ── Room ID from public key ────────────────────────────────────────────────────
+
+  static String roomIdFromPubKey(String pubKeyHex) {
+    final bytes = _hexToBytes(pubKeyHex.replaceFirst('0x', ''));
+    final digest = SHA256Digest();
+    digest.update(bytes, 0, bytes.length);
+    final hash = Uint8List(32);
+    digest.doFinal(hash, 0);
+    return hash
+        .sublist(0, 16)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+  }
+
+  // ── Activate ───────────────────────────────────────────────────────────────────
 
   static Future<DmsResult> activate({
     required String mnemonic,
@@ -247,6 +254,13 @@ class DeadManSwitchService {
       await pref.put(_kLastActivity, activatedAt.toIso8601String());
       await pref.put(_kState, DmsState.active.name);
 
+      // Auto-send shares to beneficiary via relay (non-fatal if relay is down)
+      await _pushSharesToRelay(
+        pubKeyHex: cfg.beneficiaryPublicKey,
+        shares: encShares,
+        threshold: cfg.threshold,
+      );
+
       return DmsOk(encShares);
     } catch (e, st) {
       debugPrint('DMS activate error: $e\n$st');
@@ -254,14 +268,14 @@ class DeadManSwitchService {
     }
   }
 
-  // ── Record activity ───────────────────────────────────────────────────────────
+  // ── Record activity ────────────────────────────────────────────────────────────
 
   static Future<void> recordActivity() async {
     if (state != DmsState.active) return;
     await pref.put(_kLastActivity, DateTime.now().toIso8601String());
   }
 
-  // ── Heartbeat ─────────────────────────────────────────────────────────────────
+  // ── Heartbeat ──────────────────────────────────────────────────────────────────
 
   static Future<DmsResult> heartbeat() async {
     if (state != DmsState.active) return DmsErr('Switch is not active');
@@ -274,11 +288,20 @@ class DeadManSwitchService {
       final newRound = DrandService.roundForTime(newDeadline);
       await pref.put(_kDrandRound, newRound);
       debugPrint('DMS heartbeat: new drand round = $newRound');
+
+      final shares = encryptedShares;
+      if (shares != null) {
+        await _pushSharesToRelay(
+          pubKeyHex: cfg.beneficiaryPublicKey,
+          shares: shares,
+          threshold: cfg.threshold,
+        );
+      }
     }
     return DmsOk();
   }
 
-  // ── Cancel ────────────────────────────────────────────────────────────────────
+  // ── Cancel ─────────────────────────────────────────────────────────────────────
 
   static Future<DmsResult> cancel() async {
     if (state != DmsState.active) return DmsErr('Switch is not active');
@@ -290,7 +313,7 @@ class DeadManSwitchService {
     return DmsOk();
   }
 
-  // ── Reset ─────────────────────────────────────────────────────────────────────
+  // ── Reset ──────────────────────────────────────────────────────────────────────
 
   static Future<void> reset() async {
     await pref.put(_kState, DmsState.inactive.name);
@@ -300,7 +323,7 @@ class DeadManSwitchService {
     await pref.delete(_kDrandRound);
   }
 
-  // ── Check on app open ─────────────────────────────────────────────────────────
+  // ── Check on app open ──────────────────────────────────────────────────────────
 
   static Future<List<EncryptedShare>?> checkOnAppOpen() async {
     if (state != DmsState.active) return null;
@@ -316,7 +339,7 @@ class DeadManSwitchService {
     return null;
   }
 
-  // ── Decrypt (beneficiary side) ────────────────────────────────────────────────
+  // ── Decrypt (beneficiary side) ─────────────────────────────────────────────────
 
   static Future<String> decryptAndRecombine({
     required List<EncryptedShare> encryptedShares,
@@ -344,6 +367,87 @@ class DeadManSwitchService {
 
     final sss = SSS();
     return sss.combine(plainShares.take(threshold).toList(), false);
+  }
+
+  // ── Fetch shares from relay (beneficiary side) ─────────────────────────────────
+
+  static Future<List<EncryptedShare>?> fetchSharesFromRelay({
+    required String beneficiaryPublicKeyHex,
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final roomId = roomIdFromPubKey(beneficiaryPublicKeyHex);
+
+    try {
+      await DmsRelayService.connect(roomId: roomId, role: 'receiver');
+
+      final completer = Completer<List<EncryptedShare>>();
+      final collected = <int, EncryptedShare>{};
+      int? totalShares;
+
+      final sub = DmsRelayService.messages.listen((msg) {
+        if (msg is DmsWsShareReceived) {
+          collected[msg.shareIndex] = msg.share;
+          totalShares ??= msg.totalShares;
+          debugPrint(
+              'DMS relay: received share ${msg.shareIndex + 1}/${msg.totalShares}');
+          if (totalShares != null && collected.length >= totalShares!) {
+            if (!completer.isCompleted) {
+              completer.complete(collected.values.toList());
+            }
+          }
+        } else if (msg is DmsWsError) {
+          if (!completer.isCompleted) {
+            completer.completeError(Exception(msg.message));
+          }
+        }
+      });
+
+      List<EncryptedShare>? result;
+      try {
+        result = await completer.future.timeout(timeout);
+      } on TimeoutException {
+        debugPrint('DMS relay: fetch timed out after ${timeout.inSeconds}s');
+        // Return whatever we collected so far, if anything
+        result = collected.isNotEmpty ? collected.values.toList() : null;
+      } finally {
+        await sub.cancel();
+        await DmsRelayService.disconnect();
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('DMS fetchSharesFromRelay error: $e');
+      await DmsRelayService.disconnect();
+      return null;
+    }
+  }
+
+  // ── Internal: push shares to relay ────────────────────────────────────────────
+
+  static Future<void> _pushSharesToRelay({
+    required String pubKeyHex,
+    required List<EncryptedShare> shares,
+    required int threshold,
+  }) async {
+    final roomId = roomIdFromPubKey(pubKeyHex);
+    try {
+      await DmsRelayService.connect(roomId: roomId, role: 'sender');
+
+      // Small delay to ensure WS handshake completes before sending frames
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      // sendShares returns void — do NOT await it
+      DmsRelayService.sendShares(shares: shares, threshold: threshold);
+
+      // Give the sink time to flush before closing
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      await DmsRelayService.disconnect();
+      debugPrint('DMS: shares pushed to relay room $roomId');
+    } catch (e) {
+      debugPrint('DMS: relay push failed (non-fatal): $e');
+      await DmsRelayService.disconnect();
+    }
   }
 }
 

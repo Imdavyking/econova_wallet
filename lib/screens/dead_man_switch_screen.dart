@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
-import 'package:wallet_app/service/dms_relay_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -73,7 +72,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     switch (result) {
       case DmsOk():
         _refresh();
-        _showSnack('Heartbeat recorded — timer reset');
+        _showSnack('Heartbeat recorded — timer reset & shares re-sent');
       case DmsErr(:final message):
         _showSnack(message, isError: true);
     }
@@ -172,7 +171,8 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Encrypting shares…', style: TextStyle(color: Colors.grey)),
+              Text('Encrypting & sending shares…',
+                  style: TextStyle(color: Colors.grey)),
             ],
           ),
         ),
@@ -221,7 +221,7 @@ class _DmsStatusCard extends StatelessWidget {
           Colors.green,
           FontAwesomeIcons.heartPulse,
           'Active',
-          'Armed. Shares time-locked via drand & encrypted to beneficiary key.'
+          'Armed. Shares sent to beneficiary & time-locked via drand.'
         ),
       DmsState.triggered => (
           Colors.red,
@@ -352,10 +352,9 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
         const _InfoBanner(
           color: Colors.blue,
           text: 'Your seed phrase is split via Shamir\'s Secret Sharing. '
-              'Each share is time-locked using drand (a distributed randomness '
-              'beacon) so it cannot be decrypted before your deadline, then '
-              'encrypted to the beneficiary\'s public key so only they can '
-              'read it.',
+              'Each share is time-locked using drand so it cannot be decrypted '
+              'before your deadline, then encrypted to the beneficiary\'s public '
+              'key and sent to them automatically.',
         ),
         const SizedBox(height: 20),
 
@@ -374,7 +373,8 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
         const SizedBox(height: 4),
         const Text(
           'Compressed secp256k1 hex (02... or 03..., 66 chars). '
-          'The wallet address is derived from this automatically.',
+          'The beneficiary can find this in their EcoNova wallet. '
+          'Shares are sent to them automatically on activation.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 6),
@@ -457,7 +457,7 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
           child: ElevatedButton.icon(
             onPressed: _valid ? _submit : null,
             icon: const Icon(FontAwesomeIcons.heartPulse, size: 16),
-            label: const Text('Arm Switch'),
+            label: const Text('Arm Switch & Send Shares'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -527,10 +527,21 @@ class _DmsActiveView extends StatelessWidget {
     final last = DeadManSwitchService.lastActivity;
     final dl = DeadManSwitchService.deadline;
     final round = DeadManSwitchService.drandRound;
+    final roomId = DeadManSwitchService.roomIdFromPubKey(
+      config.beneficiaryPublicKey,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Relay sent banner ─────────────────────────────────────────────────
+        _InfoBanner(
+          color: Colors.blue,
+          text: '✓ Shares automatically sent to beneficiary.\n'
+              'Room ID: ${roomId.substring(0, 8)}…${roomId.substring(roomId.length - 8)}',
+        ),
+        const SizedBox(height: 16),
+
         _CountdownCard(remaining: remaining, deadline: dl),
         const SizedBox(height: 16),
         _InfoCard(children: [
@@ -562,6 +573,8 @@ class _DmsActiveView extends StatelessWidget {
             ),
         ]),
         const SizedBox(height: 20),
+
+        // ── Heartbeat ─────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -578,21 +591,8 @@ class _DmsActiveView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        if (encryptedShares != null)
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _openRelaySheet(context),
-              icon: const Icon(Icons.send_outlined, size: 16),
-              label: const Text('Send shares via EcoNova relay'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-        const SizedBox(height: 10),
+
+        // ── View shares ───────────────────────────────────────────────────────
         if (onViewShares != null)
           SizedBox(
             width: double.infinity,
@@ -608,6 +608,8 @@ class _DmsActiveView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
+
+        // ── Cancel ────────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -628,155 +630,9 @@ class _DmsActiveView extends StatelessWidget {
     );
   }
 
-  void _openRelaySheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _RelayBottomSheet(
-        encryptedShares: encryptedShares!,
-        threshold: config.threshold,
-      ),
-    );
-  }
-
   String _fmt(DateTime dt) => '${dt.day}/${dt.month}/${dt.year} '
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
-}
-
-// ── Relay bottom sheet ────────────────────────────────────────────────────────
-
-class _RelayBottomSheet extends StatefulWidget {
-  final List<EncryptedShare> encryptedShares;
-  final int threshold;
-  const _RelayBottomSheet(
-      {required this.encryptedShares, required this.threshold});
-
-  @override
-  State<_RelayBottomSheet> createState() => _RelayBottomSheetState();
-}
-
-class _RelayBottomSheetState extends State<_RelayBottomSheet> {
-  final _roomController = TextEditingController();
-  bool _connected = false;
-  bool _sent = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _roomController.dispose();
-    DmsRelayService.disconnect();
-    super.dispose();
-  }
-
-  Future<void> _connect() async {
-    final roomId = _roomController.text.trim();
-    if (roomId.isEmpty) return;
-    try {
-      await DmsRelayService.connect(roomId: roomId, role: 'sender');
-      if (!mounted) return;
-      setState(() {
-        _connected = true;
-        _error = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = 'Connection failed: $e');
-    }
-  }
-
-  void _send() {
-    DmsRelayService.sendShares(
-      shares: widget.encryptedShares,
-      threshold: widget.threshold,
-    );
-    setState(() => _sent = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Send Shares via EcoNova Relay',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text(
-            'Both devices must use the same Room ID. The beneficiary opens '
-            'EcoNova → DMS → Receive Shares and enters the same room.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          if (!_connected) ...[
-            TextField(
-              controller: _roomController,
-              decoration: InputDecoration(
-                labelText: 'Room ID',
-                hintText: 'e.g. alice-to-bob-2026',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _connect,
-                child: const Text('Connect'),
-              ),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!,
-                    style: const TextStyle(color: Colors.red, fontSize: 13)),
-              ),
-          ] else if (!_sent) ...[
-            _InfoBanner(
-              color: Colors.green,
-              text: 'Connected to room "${_roomController.text.trim()}". '
-                  'Tap Send to push ${widget.encryptedShares.length} encrypted '
-                  'shares to the receiver.',
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _send,
-                icon: const Icon(Icons.send),
-                label: Text(
-                    'Send ${widget.encryptedShares.length} encrypted shares'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ] else ...[
-            const _InfoBanner(
-              color: Colors.green,
-              text: 'All shares sent! The receiver holds them encrypted — '
-                  'only unlockable with their private key after the drand deadline.',
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 // ── Triggered view ────────────────────────────────────────────────────────────
@@ -1018,7 +874,6 @@ class _CountdownCard extends StatelessWidget {
 
   bool get _isUrgent {
     if (remaining == null) return false;
-    // Urgent if less than 10% of timeout remains or less than 3 days
     return remaining!.inSeconds < 3 * 86400 || remaining!.inMinutes < 1;
   }
 
