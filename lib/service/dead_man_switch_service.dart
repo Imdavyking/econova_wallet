@@ -11,7 +11,7 @@ import 'package:wallet_app/service/drand_service.dart';
 
 // ── Debug flag ─────────────────────────────────────────────────────────────────
 // flutter run --dart-define=DMS_TEST=true
-const kDmsTestMode = bool.fromEnvironment('DMS_TEST', defaultValue: false);
+const kDmsTestMode = bool.fromEnvironment('DMS_TEST', defaultValue: true);
 
 // ── Pref keys ──────────────────────────────────────────────────────────────────
 

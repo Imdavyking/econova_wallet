@@ -1135,7 +1135,12 @@ class _TimeoutPicker extends StatelessWidget {
       children: options.map((opt) {
         final isSelected = opt.seconds == selected;
         return ChoiceChip(
-          label: Text(opt.label),
+          label: Text(
+            opt.label,
+            style: TextStyle(
+              color: isSelected ? Colors.black : Colors.white,
+            ),
+          ),
           selected: isSelected,
           onSelected: (_) => onChanged(opt.seconds),
           selectedColor: appBackgroundblue,
