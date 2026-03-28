@@ -41,6 +41,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
   Future<void> _tryFetchBeneficiaryShares() async {
     if (widget.coin is! EthereumCoin) return;
     try {
+      debugPrint('ok:nice');
       final pubKey = await widget.coin.getPublicKey();
       if (pubKey == null) return;
       final session = await DeadManSwitchService.fetchSharesFromRelay(
