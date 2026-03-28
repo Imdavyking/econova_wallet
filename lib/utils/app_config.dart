@@ -1,57 +1,98 @@
-import 'dart:convert';
-
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/web_home/econova_web.dart';
+import 'dart:convert';
+
 import '../coins/ethereum_coin.dart';
+
+// ── App identity ──────────────────────────────────────────────────────────────
 
 const walletAbbr = 'ECA';
 const walletName = 'Econova';
+const walletURL = 'https://econova.vercel.app';
+const walletIconURL = '$walletURL/img/logo.png';
+const blockExplorerPlaceholder = '{{TransactionHash}}';
+
 final base64Logo = base64Encode(logoBytes.buffer.asUint8List());
 
-// Convert to base64 URI
 final browserUrl = Uri.dataFromString(
   walletHomePage,
   mimeType: 'text/html',
   encoding: Encoding.getByName('utf-8'),
 ).toString();
-const walletURL = "https://econova.vercel.app";
-const walletIconURL = "$walletURL/img/logo.png";
-const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
 
-const String fallbackMessage =
-    "Unspecified error message. This is a bug, please report it.";
+// ── Network toggle ────────────────────────────────────────────────────────────
+
+/// Flip this to switch the entire app between mainnet and testnet.
+/// Use [enableTestNet.value] to read, [enableTestNet.value = x] to write.
+///
+/// Example:
+///   enableTestNet.value = true;  // → all chains switch to testnet
+///   enableTestNet.value = false; // → all chains switch to mainnet
+final _testNetNotifier = ValueNotifier<bool>(true);
+
+// Public notifier for ValueListenableBuilder
+ValueNotifier<bool> get testNetNotifier => _testNetNotifier;
+
+// Bool getter/setter — use exactly like before
+bool get enableTestNet => _testNetNotifier.value;
+
+// ── API keys (loaded from .env) ───────────────────────────────────────────────
+
+String get covalApiKey => dotenv.env['COVAL_API_KEY'] ?? '';
+String get alchemyEthMainnetApiKey => dotenv.env['ALCHEMY_ETH_MAINNET'] ?? '';
+String get alchemyEthGoerliApiKey => dotenv.env['ALCHEMY_ETH_GOERLI'] ?? '';
+String get alchemyArbitriumApiKey => dotenv.env['ALCHEMY_ARBITRUM'] ?? '';
+String get alchemyMumbaiApiKey => dotenv.env['ALCHEMY_MUMBAI'] ?? '';
+String get alchemyPolygonApiKey => dotenv.env['ALCHEMY_POLYGON'] ?? '';
+String get rampApiKey => dotenv.env['RAMP_API_KEY'] ?? '';
+String get bscApiKey => dotenv.env['BSC_API_KEY'] ?? '';
+String get tronGridApiKey => dotenv.env['TRON_GRID_API_KEY'] ?? '';
+String get infuraApiKey => dotenv.env['INFURA_API_KEY'] ?? '';
+String get walletConnectKey => dotenv.env['WALLET_CONNECT_KEY'] ?? '';
+String get coinMarketCapApiKey => dotenv.env['COIN_MARKET_CAP_KEY'] ?? '';
+String get blastApiProjectId => dotenv.env['BLAST_API_PROJECT_ID'] ?? '';
+String get utxoApiKey => dotenv.env['UTXO_API_KEY'] ?? '';
+String get pureStakeApiKey => dotenv.env['PURE_STAKE_API_KEY'] ?? '';
+String get nanoApiKey => dotenv.env['NANO_API_KEY'] ?? '';
+
+// ── External links ────────────────────────────────────────────────────────────
+
+const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
 const walletDexProviderUrl =
     'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
 const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
 
 // dapp links
-const blogUrl = "https://www.stacks.co/blog";
+const blogUrl = 'https://www.stacks.co/blog';
 const marketPlaceUrl = 'https://gamma.io/';
+const stacksMarketUrl = 'http://localhost:3000/api/market';
 
-// social media links
+// social media
 const telegramLink = '';
 const twitterLink = 'https://x.com/econova/';
 const mediumLink = '';
 const discordLink = '';
 const instagramLink =
     'https://www.instagram.com/econova?igsh=ZTJidG9kNTQwemp1&utm_source=qr';
-const stacksMarketUrl = 'http://localhost:3000/api/market';
 
-// color
+// ── Colors ────────────────────────────────────────────────────────────────────
+
+const appPrimaryColor = Color.fromARGB(255, 43, 249, 215);
+const appBackgroundblue = appPrimaryColor;
+const appBackgroundblueDim = Color.fromARGB(140, 233, 185, 9);
 const settingIconColor = Colors.white;
 const dividerColor = Color(0xffE6E6E3);
-const appPrimaryColor = Color.fromARGB(255, 43, 249, 215);
 const red = Color(0xffeb6a61);
 const green = Color(0xff01aa78);
 const grey = Colors.grey;
 const colorForAddress = Color(0xffEBF3FF);
-const appBackgroundblue = appPrimaryColor;
-const appBackgroundblueDim = Color.fromARGB(140, 233, 185, 9);
 const portfolioCardColor = Color(0xFF4B4B4B);
 const portfolioCardColorLowerSection = Color.fromARGB(255, 39, 39, 39);
 const orangTxt = Colors.orange;
+const orange1 = Color.fromARGB(255, 233, 183, 9);
 
 const primaryMaterialColor = MaterialColor(
   0xff2469E9,
@@ -68,6 +109,7 @@ const primaryMaterialColor = MaterialColor(
     900: appPrimaryColor,
   },
 );
+
 const alterPrimaryColor = MaterialColor(
   0xff2469E9,
   <int, Color>{
@@ -84,46 +126,9 @@ const alterPrimaryColor = MaterialColor(
   },
 );
 
-// security
+// ── Security / storage keys ───────────────────────────────────────────────────
+
 const secureStorageKey = 'box28aldk3qka';
-const covalApiKey = 'cqt_rQVJMhq83DXd3Jw3WK4GfBBwkBq9';
-const alchemyEthMainnetApiKey = 'DyEtOvLwpEw43cr-lTgQWre7HfjPeUlq';
-const alchemyEthGoerliApiKey = 's00aWtjDOmCnUYS7cFBFIL3fbVCzsc8Z';
-const alchemyArbitriumApiKey = 'T2_T1IKID7xte8PYAhLK2FyCAu2lIcq-';
-const alchemyMumbaiApiKey = 'gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa';
-const alchemyPolygonApiKey = 'DtU0__wTk6KUpZElU8pYQRpaHK0b8mip';
-const rampApiKey = '9842oj9c45xuzc93bm7zd7z4rn8cub3fs45decqh';
-const bscApiKey = '2WQ9Q2TTNSMD5DJ7GJR8F7TAEMZUCNCI5B';
-const tronGridApiKey = 'e09b6df9-0abc-4463-a623-43eaf291ef22';
-const supportedCurrencyKey = 'supportedCurrencies';
-const defaultCurrencyKey = 'defaultCurrency';
-
-List getAlchemyNFTs(EthereumCoin ethCoin) {
-  List allowedNFTNames = [];
-
-  if (enableTestNet) {
-    allowedNFTNames.addAll([
-      'Polygon (Mumbai)',
-      'Ethereum(Goerli)',
-    ]);
-  } else {
-    allowedNFTNames.addAll([
-      'Ethereum',
-      'Polygon Matic',
-    ]);
-  }
-
-  if (allowedNFTNames.contains(ethCoin.name)) return [ethCoin.name];
-  return [];
-}
-
-const infuraApiKey = '53163c736f1d4ba78f0a39ffda8d87b4';
-const pureStakeApiKey = 'G322hXkYM4749xUANJXm02d6M98WvYjtaWeAgJ4m';
-const walletConnectKey = "73801621aec60dfaa2197c7640c15858";
-
-// settings key...not to be edited
-
-final iv = encrypt.IV.fromLength(16);
 const biometricsKey = 's3ialdkal3aksleidla83aidildilsiei83019';
 const userUnlockPasscodeKey = 'userUnlockPasscode';
 const languageKey = 'languageksks38q830qialdkjd';
@@ -131,30 +136,52 @@ const useBlockiesKey = 'skkeiealdkalD88Ad2204AD54B417e8a0CCs3eiasl';
 const darkModekey = 'userTheme';
 const hideBalanceKey = 'hideUserBalance';
 const dappChainIdKey = 'dappBrowserChainIdKey';
-const eIP681ProcessingErrorMsg =
-    'Ethereum request format not supported or Network Time Out';
-const personalSignKey = 'Personal';
-const normalSignKey = 'Normal Sign';
-const typedMessageSignKey = "Typed Message";
 const userSignInDataKey = 'user-sign-in-data';
 const currentUserWalletNameKey = 'current__walletNameKey';
 const coinGeckoCryptoPriceKey = 'cryptoPricesKey';
 const bookMarkKey = 'bookMarks';
 const historyKey = 'broswer_kehsi_history';
-const coinMarketCapApiKey = "c354e715-9e18-4fee-806d-ae32d38d5d5c";
 const newEVMChainKey = '5500a-8077-420a-a1cf-9aa7';
-const blastApiProjectId = '2f6ccf07-7b89-4bf4-be14-7a26f2eae72d';
 const appUnlockTime = 'applockksksietimeal382';
-const utxoApiKey = '07ddba0bd184344993fbc2a4a3d7059213e13469';
-const nanoApiKey = 'RPC-KEY-2ED61F5D83FF4BF5964B58A6E90F2B';
-// template tags
-const blockExplorerPlaceholder = '{{TransactionHash}}';
+const supportedCurrencyKey = 'supportedCurrencies';
+const defaultCurrencyKey = 'defaultCurrency';
 
-// enable
-bool enableTestNet = true;
-const orange1 = Color.fromARGB(255, 233, 183, 9);
+// ── Sign types ────────────────────────────────────────────────────────────────
 
-// app theme
+const eIP681ProcessingErrorMsg =
+    'Ethereum request format not supported or Network Time Out';
+const personalSignKey = 'Personal';
+const normalSignKey = 'Normal Sign';
+const typedMessageSignKey = 'Typed Message';
+const fallbackMessage =
+    'Unspecified error message. This is a bug, please report it.';
+
+// ── App limits ────────────────────────────────────────────────────────────────
+
+const userPinTrials = 3;
+const pinLength = 6;
+const faLength = 6;
+const maximumTransactionToSave = 30;
+const maximumBrowserHistoryToSave = 20;
+const swapSlippage = 10;
+
+// ── Encryption ────────────────────────────────────────────────────────────────
+
+final iv = encrypt.IV.fromLength(16);
+
+// ── NFT helpers ───────────────────────────────────────────────────────────────
+
+List getAlchemyNFTs(EthereumCoin ethCoin) {
+  final allowedNFTNames = enableTestNet
+      ? ['Polygon (Mumbai)', 'Ethereum(Goerli)']
+      : ['Ethereum', 'Polygon Matic'];
+
+  if (allowedNFTNames.contains(ethCoin.name)) return [ethCoin.name];
+  return [];
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
 final darkTheme = ThemeData(
   useMaterial3: true,
   dialogBackgroundColor: const Color.fromARGB(255, 26, 26, 26),
@@ -165,18 +192,15 @@ final darkTheme = ThemeData(
     backgroundColor: Color.fromARGB(255, 47, 47, 47),
     selectedItemColor: appPrimaryColor,
   ),
-
   scaffoldBackgroundColor: const Color.fromARGB(255, 26, 26, 26),
   cardColor: const Color.fromARGB(255, 47, 47, 47),
   dividerColor: const Color.fromARGB(255, 57, 57, 57),
   bottomSheetTheme: const BottomSheetThemeData(
     backgroundColor: Color.fromARGB(255, 26, 26, 26),
   ),
-
   cardTheme: const CardTheme(
     color: Color.fromARGB(255, 47, 47, 47),
   ),
-  // cardColor: const Color.fromARGB(255, 26, 26, 26),
   inputDecorationTheme: const InputDecorationTheme(
     fillColor: Color.fromARGB(255, 47, 47, 47),
     filled: true,
@@ -189,9 +213,6 @@ final darkTheme = ThemeData(
   ),
   appBarTheme: const AppBarTheme(
     color: Color.fromARGB(255, 47, 47, 47),
-    // systemOverlayStyle: SystemUiOverlayStyle(
-    //   statusBarBrightness: Brightness.dark,
-    // ),
   ),
   iconTheme: const IconThemeData(color: Colors.white),
   iconButtonTheme: IconButtonThemeData(
@@ -199,7 +220,6 @@ final darkTheme = ThemeData(
       iconColor: WidgetStateProperty.all(Colors.white),
     ),
   ),
-
   colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.grey)
       .copyWith(
         secondary: Colors.white,
@@ -209,41 +229,3 @@ final darkTheme = ThemeData(
       )
       .copyWith(surface: const Color.fromARGB(255, 26, 26, 26)),
 );
-
-// final lightTheme = ThemeData(
-//   useMaterial3: true,
-//   appBarTheme: const AppBarTheme(
-//     systemOverlayStyle: SystemUiOverlayStyle(
-//       statusBarBrightness: Brightness.light,
-//     ),
-//   ),
-//   fontFamily: 'Roboto',
-//   primaryColor: Colors.white,
-//   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-//     type: BottomNavigationBarType.fixed,
-//     backgroundColor: Color(0xffEBF3FF),
-//     unselectedItemColor: Colors.grey,
-//   ),
-//   checkboxTheme: CheckboxThemeData(
-//     fillColor: WidgetStateProperty.all(appPrimaryColor),
-//     checkColor: WidgetStateProperty.all(appPrimaryColor),
-//     overlayColor: WidgetStateProperty.all(appPrimaryColor),
-//   ),
-//   dividerColor: dividerColor,
-//   colorScheme: ColorScheme.fromSwatch(
-//     primarySwatch: alterPrimaryColor,
-//   )
-//       .copyWith(
-//         secondary: Colors.black,
-//         brightness: Brightness.light,
-//       )
-//       .copyWith(surface: const Color(0xFFE5E5E5)),
-// );
-
-// preferences keys and app data
-const userPinTrials = 3;
-const pinLength = 6;
-const faLength = 6;
-const maximumTransactionToSave = 30;
-const maximumBrowserHistoryToSave = 20;
-const swapSlippage = 10;

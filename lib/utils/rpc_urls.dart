@@ -569,7 +569,7 @@ Future<Result<ERC20NFTResult>> erc20NFTs(
 
   if (useCache) return cached ?? const Err('No cached ERC20 NFT data');
 
-  const _alchemyBaseUrls = {
+  final _alchemyBaseUrls = {
     1: 'https://eth-mainnet.g.alchemy.com/v2/$alchemyEthMainnetApiKey',
     5: 'https://eth-goerli.g.alchemy.com/v2/$alchemyEthGoerliApiKey',
     137: 'https://polygon-mainnet.g.alchemy.com/v2/$alchemyPolygonApiKey',
