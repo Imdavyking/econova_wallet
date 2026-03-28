@@ -127,11 +127,12 @@ class EVMHrpCoin extends Coin {
       }
     }
 
-    final address = await etherPrivateKeyToAddress(privateKey);
+    final account = await deriveEthereumAccount(privateKey);
 
     final keys = AccountData(
-      address: _ethAddrToHrp(address, hrp),
-      hex_address: address,
+      publicKey: account.publicKey,
+      address: _ethAddrToHrp(account.address, hrp),
+      hex_address: account.address,
       privateKey: privateKey,
     );
 
@@ -380,12 +381,12 @@ Future<Map> calculateEVMHrpKey(EVMHrpArgs config) async {
   final node = seedRoot_.root.derivePath(path);
   final privateKey = HEX.encode(node.privateKey!);
   final privatekeyStr = "0x$privateKey";
-  final address = await etherPrivateKeyToAddress(privatekeyStr);
+  final account = await deriveEthereumAccount(privatekeyStr);
 
   return {
-    'address': _ethAddrToHrp(address, config.hrp),
+    'address': _ethAddrToHrp(account.address, config.hrp),
     'privateKey': privatekeyStr,
-    'hex_address': address,
+    'hex_address': account,
   };
 }
 

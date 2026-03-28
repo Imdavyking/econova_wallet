@@ -590,8 +590,12 @@ class EthereumCoin extends Coin {
       }
     }
 
-    final address = await etherPrivateKeyToAddress(privateKey);
-    final keys = AccountData(address: address, privateKey: privateKey);
+    final account = await deriveEthereumAccount(privateKey);
+    final keys = AccountData(
+      address: account.address,
+      privateKey: privateKey,
+      publicKey: account.publicKey,
+    );
     privateKeyMap[privateKey] = keys.toJson();
     await pref.put(saveKey, jsonEncode(privateKeyMap));
     return keys;
@@ -1198,14 +1202,21 @@ Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
   final node = seedRoot_.root.derivePath(path);
   final privateKey = HEX.encode(node.privateKey!);
   final privatekeyStr = '0x$privateKey';
-  final address = await etherPrivateKeyToAddress(privatekeyStr);
+  final address = await deriveEthereumAccount(privatekeyStr);
   return {'address': address, 'privateKey': privatekeyStr};
 }
 
-Future<String> etherPrivateKeyToAddress(String privateKey) async {
-  EthPrivateKey ethereumPrivateKey = EthPrivateKey.fromHex(privateKey);
-  final uncheckedAddr = ethereumPrivateKey.address;
-  return EthereumAddress.fromHex('$uncheckedAddr').hexEip55;
+Future<({String address, String publicKey})> deriveEthereumAccount(
+    String privateKey) async {
+  final ethPrivKey = EthPrivateKey.fromHex(privateKey);
+
+  // compressed = true (default) → 33 bytes, starts with 02 or 03
+  final pubKeyBytes = ethPrivKey.publicKey.getEncoded();
+  final compressedPubKey = HEX.encode(pubKeyBytes);
+
+  final address = EthereumAddress.fromHex('${ethPrivKey.address}').hexEip55;
+
+  return (address: address, publicKey: compressedPubKey);
 }
 
 String roninAddrToEth(String address) => address.replaceFirst('ronin:', '0x');
