@@ -15,7 +15,8 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-
+import 'dart:convert';
+import 'package:pointycastle/export.dart';
 import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import 'app_config.dart';
@@ -145,4 +146,30 @@ selectImage({
       onSelect(file);
     },
   ).show();
+}
+
+({Uint8List priv, Uint8List pub}) generateKeyPair() {
+  final domain = ECDomainParameters('secp256k1');
+  final rng = FortunaRandom()
+    ..seed(KeyParameter(
+      Uint8List.fromList(List.generate(64, (i) => i * 3 + 7)),
+    ));
+  final keyGen = ECKeyGenerator()
+    ..init(ParametersWithRandom(ECKeyGeneratorParameters(domain), rng));
+  final pair = keyGen.generateKeyPair();
+
+  final priv = pair.privateKey as ECPrivateKey;
+  final pub = pair.publicKey as ECPublicKey;
+
+  // private key → 32 bytes
+  final privHex = priv.d!.toRadixString(16).padLeft(64, '0');
+  final privBytes = Uint8List.fromList(
+    List.generate(
+        32, (i) => int.parse(privHex.substring(i * 2, i * 2 + 2), radix: 16)),
+  );
+
+  // public key → compressed 33 bytes
+  final pubBytes = pub.Q!.getEncoded(true);
+
+  return (priv: privBytes, pub: pubBytes);
 }

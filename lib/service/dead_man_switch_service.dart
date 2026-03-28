@@ -367,10 +367,10 @@ List<EncryptedShare> _encryptAllShares(_EncryptArgs args) {
       ..buffer.asByteData().setUint64(0, args.drandRound);
     final timelockKey = _deriveTimelockKey(roundBytes);
     final sharePlain = Uint8List.fromList(utf8.encode(share));
-    final aesCipher = _aesGcmEncrypt(timelockKey, sharePlain);
+    final aesCipher = aesGcmEncrypt(timelockKey, sharePlain);
 
     // Step 2 — ECIES with beneficiary's secp256k1 public key.
-    final eciesCipher = _eciesEncrypt(args.pubKeyBytes, aesCipher);
+    final eciesCipher = eciesEncrypt(args.pubKeyBytes, aesCipher);
 
     return EncryptedShare(
       ciphertext: base64.encode(eciesCipher),
@@ -396,12 +396,12 @@ List<String> _decryptAllShares(_DecryptArgs args) {
   return args.encryptedShares.map((es) {
     // Step 1 — ECIES decrypt.
     final eciesCipher = base64.decode(es.ciphertext);
-    final aesCipher = _eciesDecrypt(args.privKeyBytes, eciesCipher);
+    final aesCipher = eciesDecrypt(args.privKeyBytes, eciesCipher);
 
     // Step 2 — AES-GCM decrypt with drand randomness.
     //   key = SHA-256("dms-timelock-reveal" || drand_randomness)
     final revealKey = _deriveRevealKey(args.drandRandomness);
-    final plainBytes = _aesGcmDecrypt(revealKey, aesCipher);
+    final plainBytes = aesGcmDecrypt(revealKey, aesCipher);
 
     return utf8.decode(plainBytes);
   }).toList();
@@ -438,7 +438,7 @@ Uint8List _deriveRevealKey(Uint8List drandRandomness) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /// Returns iv(12) + tag(16) + ciphertext.
-Uint8List _aesGcmEncrypt(Uint8List key, Uint8List plaintext) {
+Uint8List aesGcmEncrypt(Uint8List key, Uint8List plaintext) {
   final iv = _randomBytes(12);
   final cipher = GCMBlockCipher(AESEngine())
     ..init(true, AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)));
@@ -453,7 +453,7 @@ Uint8List _aesGcmEncrypt(Uint8List key, Uint8List plaintext) {
 }
 
 /// Expects iv(12) + tag(16) + ciphertext.
-Uint8List _aesGcmDecrypt(Uint8List key, Uint8List data) {
+Uint8List aesGcmDecrypt(Uint8List key, Uint8List data) {
   final iv = data.sublist(0, 12);
   final payload = data.sublist(12);
 
@@ -472,7 +472,7 @@ Uint8List _aesGcmDecrypt(Uint8List key, Uint8List data) {
 // Layout: ephPubKey(65) | iv(12) | tag(16) | ciphertext
 // ──────────────────────────────────────────────────────────────────────────────
 
-Uint8List _eciesEncrypt(Uint8List recipientPubKeyBytes, Uint8List plaintext) {
+Uint8List eciesEncrypt(Uint8List recipientPubKeyBytes, Uint8List plaintext) {
   final domain = ECDomainParameters('secp256k1');
 
   // Parse recipient public key.
@@ -509,7 +509,7 @@ Uint8List _eciesEncrypt(Uint8List recipientPubKeyBytes, Uint8List plaintext) {
   return Uint8List.fromList([...ephPubBytes, ...iv, ...ciphertext]);
 }
 
-Uint8List _eciesDecrypt(Uint8List privKeyBytes, Uint8List data) {
+Uint8List eciesDecrypt(Uint8List privKeyBytes, Uint8List data) {
   final domain = ECDomainParameters('secp256k1');
 
   // Parse ephemeral public key (first 65 bytes).

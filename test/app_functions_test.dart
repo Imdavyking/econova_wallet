@@ -5,6 +5,7 @@ import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/utils/coingecko_ids.dart';
 import 'dart:convert';
 import 'package:wallet_app/eip/eip681.dart';
@@ -134,6 +135,117 @@ void main() async {
 
   tearDown(() async {
     await tearDownTestHive();
+  });
+
+  group('ECIES (secp256k1)', () {
+    late Uint8List privKey;
+    late Uint8List pubKey;
+
+    setUp(() {
+      final pair = generateKeyPair();
+      privKey = pair.priv;
+      pubKey = pair.pub;
+    });
+
+    test('encrypt then decrypt returns original plaintext', () {
+      final plaintext = Uint8List.fromList(utf8.encode('hello ecies'));
+
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+
+      expect(utf8.decode(result), equals('hello ecies'));
+    });
+
+    test(
+        'encrypting same plaintext twice gives different ciphertext (ephemeral key)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('same input'));
+
+      final cipher1 = eciesEncrypt(pubKey, plaintext);
+      final cipher2 = eciesEncrypt(pubKey, plaintext);
+
+      expect(cipher1, isNot(equals(cipher2)));
+
+      // Both still decrypt correctly
+      expect(eciesDecrypt(privKey, cipher1), equals(plaintext));
+      expect(eciesDecrypt(privKey, cipher2), equals(plaintext));
+    });
+
+    test('ciphertext has correct minimum length (65 ephPub + 12 IV + 16 tag)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('x'));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+
+      // 65 (uncompressed ephPubKey) + 12 (IV) + 16 (GCM tag) + 1 (plaintext)
+      expect(cipher.length, greaterThanOrEqualTo(65 + 12 + 16 + 1));
+    });
+
+    test('wrong private key throws or produces garbage that fails GCM tag', () {
+      final plaintext = Uint8List.fromList(utf8.encode('secret'));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+
+      final wrongPair = generateKeyPair();
+      expect(
+        () => eciesDecrypt(wrongPair.priv, cipher),
+        throwsA(anything),
+      );
+    });
+
+    test('tampered ephemeral public key throws', () {
+      final plaintext = Uint8List.fromList(utf8.encode('tamper test'));
+      final cipher = Uint8List.fromList(eciesEncrypt(pubKey, plaintext));
+
+      // Corrupt a byte inside the ephemeral public key (first 65 bytes)
+      cipher[10] ^= 0xFF;
+
+      expect(() => eciesDecrypt(privKey, cipher), throwsA(anything));
+    });
+
+    test('tampered ciphertext body throws (GCM auth tag)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('tamper body'));
+      final cipher = Uint8List.fromList(eciesEncrypt(pubKey, plaintext));
+
+      // Corrupt a byte well past the ephPubKey (65) + IV (12) header
+      cipher[90] ^= 0xFF;
+
+      expect(() => eciesDecrypt(privKey, cipher), throwsA(anything));
+    });
+
+    test('empty plaintext round-trips', () {
+      final cipher = eciesEncrypt(pubKey, Uint8List(0));
+      final result = eciesDecrypt(privKey, cipher);
+      expect(result, isEmpty);
+    });
+
+    test('large plaintext round-trips', () {
+      final plaintext =
+          Uint8List.fromList(List.generate(10000, (i) => i % 256));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+      expect(result, equals(plaintext));
+    });
+
+    test('mnemonic phrase round-trips', () {
+      const mnemonic =
+          'abandon ability able about above absent absorb abstract absurd abuse access accident';
+      final plaintext = Uint8List.fromList(utf8.encode(mnemonic));
+
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+
+      expect(utf8.decode(result), equals(mnemonic));
+    });
+
+    test('different recipient key pairs cannot decrypt each other\'s messages',
+        () {
+      final pair2 = generateKeyPair();
+
+      final plaintext = Uint8List.fromList(utf8.encode('for alice only'));
+      final cipher = eciesEncrypt(pubKey, plaintext); // encrypted for pair 1
+
+      // pair 2 private key must not decrypt it
+      expect(() => eciesDecrypt(pair2.priv, cipher), throwsA(anything));
+    });
   });
 
   final blockInstance = EthereumBlockies();
