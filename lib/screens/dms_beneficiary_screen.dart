@@ -77,6 +77,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     try {
       final sessions = await DeadManSwitchService.fetchAllShares();
 
+      print(sessions);
+
       if (!mounted) return;
 
       if (sessions == null || sessions.isEmpty) {

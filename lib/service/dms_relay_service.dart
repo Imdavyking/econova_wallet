@@ -105,7 +105,6 @@ class DmsRelayService {
     // Listen for messages.
     _channel!.stream.listen(
       (raw) {
-        debugPrint('RAW WS: $raw');
         _handleRaw(raw as String);
       },
       onError: (e) {

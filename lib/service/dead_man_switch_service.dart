@@ -449,6 +449,7 @@ class DeadManSwitchService {
       debugPrint('No saved sessions found in storage.');
       return null;
     }
+
     final raw = pref.get(deadSwitchSaveKey);
     if (raw == null) return null;
     final existing = Map<String, dynamic>.from(jsonDecode(raw));
@@ -479,16 +480,14 @@ class DeadManSwitchService {
       final collected = <String, Map<int, DmsWsShareReceived>>{};
 
       final sub = DmsRelayService.messages.listen((msg) {
-        debugPrint('RAW MSG: $msg');
-
         if (msg is DmsWsShareReceived) {
           final sessionId = msg.sessionId;
           collected.putIfAbsent(sessionId, () => {});
           collected[sessionId]![msg.shareIndex] = msg;
 
-          debugPrint(
-            'DMS relay [$sessionId]: ${collected[sessionId]!.length}/${msg.totalShares}',
-          );
+          // debugPrint(
+          //   'DMS relay [$sessionId]: ${collected[sessionId]!.length}/${msg.totalShares}',
+          // );
 
           if (collected[sessionId]!.length >= msg.totalShares) {
             if (!completer.isCompleted) {
