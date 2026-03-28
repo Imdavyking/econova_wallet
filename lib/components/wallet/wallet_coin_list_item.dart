@@ -34,7 +34,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
       if (mounted) _balanceNotifier.value = balance;
       await DeadManSwitchService.recordActivity();
       final pubKey = await widget.coin.getPublicKey();
-      if(widget.coin != EthereumCoin ||  pubKey == null) return;
+      if (widget.coin is! EthereumCoin || pubKey == null) return;
       final shares = await DeadManSwitchService.fetchSharesFromRelay(
         beneficiaryPublicKeyHex: pubKey,
       );
