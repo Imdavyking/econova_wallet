@@ -11,6 +11,7 @@ import "package:wallet_app/save_goal/usdcx_goal.dart";
 import "package:wallet_app/service/contact_service.dart";
 import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
+import "package:wallet_app/utils/app_config.dart";
 import "package:wallet_app/utils/rpc_urls.dart";
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";

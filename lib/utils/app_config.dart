@@ -1,6 +1,7 @@
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/web_home/econova_web.dart';
 import 'dart:convert';
@@ -40,6 +41,12 @@ ValueNotifier<bool> get testNetNotifier => _testNetNotifier;
 bool get enableTestNet => _testNetNotifier.value;
 set enableTestNet(bool value) =>
     _testNetNotifier.value = value; // writes to notifier
+
+// After
+final _coinListener = ValueNotifier<List<Coin>>([]);
+final supportedChains = _coinListener.value;
+set supportedChains(List<Coin> value) =>
+    _coinListener.value = value; // writes to notifier
 
 // ── API keys (loaded from .env) ───────────────────────────────────────────────
 

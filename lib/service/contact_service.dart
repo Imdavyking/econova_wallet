@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/utils/app_config.dart';
 
 import '../main.dart';
 

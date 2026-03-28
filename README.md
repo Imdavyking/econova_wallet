@@ -13,10 +13,10 @@ natural language interface.
 
 EcoNova is a direct submission for all three Buidl Battle bounties:
 
-| Bounty                             | How EcoNova qualifies                                                                                                                                                                                           |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🥇 **Best Use of USDCx**           | Native USDCx send/receive + Clarity 2 savings goals vault — users create named saving plans, deposit USDCx incrementally, and track progress. All built without stacks.js.                                      |
-| 🥇 **Best x402 Integration**       | The AI pays for paywalled APIs autonomously using STX, sBTC, or USDCx via x402. Multi-version (v0/v1/v2), separate signing paths for STX and SIP-010 tokens. The first mobile wallet where the AI funds itself. |
+| Bounty                       | How EcoNova qualifies                                                                                                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🥇 **Best Use of USDCx**     | Native USDCx send/receive + Clarity 2 savings goals vault — users create named saving plans, deposit USDCx incrementally, and track progress. All built without stacks.js.                                      |
+| 🥇 **Best x402 Integration** | The AI pays for paywalled APIs autonomously using STX, sBTC, or USDCx via x402. Multi-version (v0/v1/v2), separate signing paths for STX and SIP-010 tokens. The first mobile wallet where the AI funds itself. |
 
 ---
 
@@ -294,9 +294,13 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
 3. Configure your environment:
 
+   ```bash
+   cp .env.example .env
    ```
-   OPENROUTER_API_KEY=your_openrouter_api_key_here
-   ```
+
+   Open `.env` and fill in your API keys.
+   Each key is commented with a link to where you can get it for free.
+   See [`.env.example`](.env.example) for the full list.
 
 4. Run the app:
 
