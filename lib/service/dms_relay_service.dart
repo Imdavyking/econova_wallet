@@ -48,12 +48,16 @@ class DmsWsShareReceived extends DmsWsMessage {
   final int shareIndex;
   final int totalShares;
   final int threshold;
+  final String pubKeyHex;
+  final int milliSeconds;
   DmsWsShareReceived({
     required this.share,
     required this.shareIndex,
     required this.totalShares,
     required this.threshold,
     required this.sessionId,
+    required this.milliSeconds,
+    required this.pubKeyHex,
   });
 }
 
@@ -136,6 +140,7 @@ class DmsRelayService {
   static void sendShares({
     required List<EncryptedShare> shares,
     required int threshold,
+    required int milliSeconds,
     required String pubKeyHex,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
@@ -144,6 +149,7 @@ class DmsRelayService {
       _send({
         'type': 'share',
         'sessionId': sessionId,
+        'milliSeconds': milliSeconds,
         'shareIndex': i,
         'totalShares': shares.length,
         'threshold': threshold,
@@ -163,6 +169,7 @@ class DmsRelayService {
     required int totalShares,
     required int threshold,
     required String pubKeyHex,
+    required int milliSeconds,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
     final sessionId = generateSessionId();
@@ -172,6 +179,7 @@ class DmsRelayService {
       'shareIndex': shareIndex,
       'totalShares': totalShares,
       'pubKeyHex': pubKeyHex,
+      'milliSeconds': milliSeconds,
       'threshold': threshold,
       'data': share.ciphertext,
       'drandRound': share.drandRound,
@@ -201,7 +209,9 @@ class DmsRelayService {
 
         case 'share':
           _controller.add(DmsWsShareReceived(
+            pubKeyHex: msg['pubKeyHex'] as String,
             sessionId: msg['sessionId'] as String,
+            milliSeconds: (msg['milliSeconds'] as num).toInt(),
             shareIndex: (msg['shareIndex'] as num).toInt(),
             totalShares: (msg['totalShares'] as num).toInt(),
             threshold: (msg['threshold'] as num).toInt(),

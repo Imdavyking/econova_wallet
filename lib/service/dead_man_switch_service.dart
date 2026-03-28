@@ -537,6 +537,7 @@ class DeadManSwitchService {
         shares: shares,
         threshold: threshold,
         pubKeyHex: pubKeyHex,
+        milliSeconds: DateTime.now().millisecond,
       );
 
       // Give the sink time to flush before closing
