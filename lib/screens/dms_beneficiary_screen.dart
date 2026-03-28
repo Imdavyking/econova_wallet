@@ -77,8 +77,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     try {
       final sessions = await DeadManSwitchService.fetchAllShares();
 
-      print(sessions);
-
       if (!mounted) return;
 
       if (sessions == null || sessions.isEmpty) {
@@ -154,6 +152,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
             'Shares are still time-locked — drand round has not fired yet.';
       });
     } catch (e) {
+      debugPrint('Decryption error: $e');
       if (!mounted) return;
       setState(() {
         _step = _BeneficiaryStep.sharesReceived;

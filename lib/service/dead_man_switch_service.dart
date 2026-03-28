@@ -391,6 +391,7 @@ class DeadManSwitchService {
 
     final round = encryptedShares.first.drandRound;
     final drandRandom = await DrandService.fetchRandomness(round);
+    debugPrint('randome: $drandRandom');
     final privKeyBytes =
         _hexToBytes(beneficiaryPrivateKeyHex.replaceFirst('0x', ''));
 
