@@ -352,6 +352,8 @@ rm item.json filled.json
 To update an existing entry instead of creating a new one:
 
 ```bash
+echo "item.json" >> .gitignore
+echo "filled.json" >> .gitignore
 ID=$(bw get item "econova .env" | jq -r '.id')
 bw get template item > item.json
 jq --arg notes "$(cat .env)" \
