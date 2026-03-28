@@ -440,7 +440,7 @@ class DeadManSwitchService {
       DmsRelayService.sendShares(shares: shares, threshold: threshold);
 
       // Give the sink time to flush before closing
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(seconds: 60));
 
       await DmsRelayService.disconnect();
       debugPrint('DMS: shares pushed to relay room $roomId');
