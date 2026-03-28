@@ -5,6 +5,7 @@ import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/token.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
+import 'package:wallet_app/service/dms_background_listener.dart';
 import 'package:wallet_app/utils/get_blockchain_widget.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
@@ -16,17 +17,30 @@ class WalletCoinListItem extends StatefulWidget {
   State<WalletCoinListItem> createState() => _WalletCoinListItemState();
 }
 
-class _WalletCoinListItemState extends State<WalletCoinListItem> {
+class _WalletCoinListItemState extends State<WalletCoinListItem>
+    with WidgetsBindingObserver {
   final ValueNotifier<double?> _balanceNotifier = ValueNotifier(null);
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadBalance();
     _timer = Timer.periodic(httpPollingDelay, (_) => _loadBalance());
-    // One-shot passive share fetch — not polled, relay opens a WS.
-    _tryFetchBeneficiaryShares();
+    _startListener();
+  }
+
+  Future<void> _startListener() async {
+    if (widget.coin is! EthereumCoin) return;
+    try {
+      final pubKey = await widget.coin.getPublicKey();
+      if (pubKey == null) return;
+      // Singleton — safe to call multiple times, no-op if already running
+      await DmsBackgroundListener.instance.start(pubKey);
+    } catch (e) {
+      debugPrint('DMS listener start error: $e');
+    }
   }
 
   Future<void> _loadBalance() async {
@@ -38,26 +52,21 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
     } catch (_) {}
   }
 
-  Future<void> _tryFetchBeneficiaryShares() async {
-    if (widget.coin is! EthereumCoin) return;
-    try {
-      debugPrint('ok:nice');
-      final pubKey = await widget.coin.getPublicKey();
-      if (pubKey == null) return;
-      final session = await DeadManSwitchService.fetchSharesFromRelay(
-        beneficiaryPublicKeyHex: pubKey,
-      );
-      if (session == null) return;
-      await DeadManSwitchService.saveShares(session);
-      debugPrint('DMS: cached ${session.shares.length} shares '
-          'for session ${session.sessionId}');
-    } catch (_) {}
+  // Reconnect when app comes back to foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startListener();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _balanceNotifier.dispose();
+    // Do NOT stop the listener here — it's a singleton that should
+    // outlive this widget. It will keep running across rebuilds.
     super.dispose();
   }
 

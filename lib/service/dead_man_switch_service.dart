@@ -480,6 +480,7 @@ class DeadManSwitchService {
       final collected = <String, Map<int, DmsWsShareReceived>>{};
 
       final sub = DmsRelayService.messages.listen((msg) {
+        debugPrint('new msg:$msg');
         if (msg is DmsWsShareReceived) {
           final sessionId = msg.sessionId;
           collected.putIfAbsent(sessionId, () => {});
