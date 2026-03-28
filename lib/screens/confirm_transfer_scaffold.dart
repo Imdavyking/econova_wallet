@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
+import '../components/testnet_banner.dart';
+
 // ── Shared label + value row used across all transfer screens ─────────────────
 
 class TransferInfoRow extends StatelessWidget {
@@ -170,67 +172,74 @@ class _ConfirmTransferScaffoldState extends State<ConfirmTransferScaffold> {
 
     return Scaffold(
       appBar: AppBar(title: Text(localization.transfer)),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            await Future.delayed(const Duration(seconds: 2));
-            setState(() {});
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(25),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '-${widget.amount} ${ellipsify(str: widget.coin.getSymbol())}',
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  ...widget.rows,
-                  TransferInfoRow(
-                    label: localization.transactionFee,
-                    value:
-                        Text(feeDisplay, style: const TextStyle(fontSize: 16)),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.resolveWith(
-                            (_) => appBackgroundblue),
-                        shape: WidgetStateProperty.resolveWith(
-                          (_) => RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await Future.delayed(const Duration(seconds: 2));
+                  setState(() {});
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(25),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '-${widget.amount} ${ellipsify(str: widget.coin.getSymbol())}',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      onPressed: _isSending ? null : _submit,
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: _isSending
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: Loader(color: black),
-                              )
-                            : Text(
-                                localization.send,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
+                        const SizedBox(height: 20),
+                        ...widget.rows,
+                        TransferInfoRow(
+                          label: localization.transactionFee,
+                          value: Text(feeDisplay,
+                              style: const TextStyle(fontSize: 16)),
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.resolveWith(
+                                  (_) => appBackgroundblue),
+                              shape: WidgetStateProperty.resolveWith(
+                                (_) => RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                               ),
-                      ),
+                            ),
+                            onPressed: _isSending ? null : _submit,
+                            child: Padding(
+                              padding: const EdgeInsets.all(15),
+                              child: _isSending
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: Loader(color: black),
+                                    )
+                                  : Text(
+                                      localization.send,
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

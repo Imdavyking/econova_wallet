@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -140,39 +141,46 @@ class _TokenState extends State<Token> {
       ),
       body: SizedBox(
         height: double.infinity,
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {},
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(25),
-                child: Column(
-                  children: [
-                    _CoinCard(
-                      coin: _coin,
-                      description: _description!,
-                      infoController: _infoController,
-                      infoService: _infoService,
-                      tokenBalanceController: _tokenBalanceController,
-                      tokenBalanceService: _tokenBalanceService,
-                      onTransferBlocked: _showTransferBlockedSnackbar,
-                      currentAddress: _currentAddress,
-                      localization: localization,
+        child: Column(
+          children: [
+            const TestnetBanner(),
+            Expanded(
+              child: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: () async {},
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(25),
+                      child: Column(
+                        children: [
+                          _CoinCard(
+                            coin: _coin,
+                            description: _description!,
+                            infoController: _infoController,
+                            infoService: _infoService,
+                            tokenBalanceController: _tokenBalanceController,
+                            tokenBalanceService: _tokenBalanceService,
+                            onTransferBlocked: _showTransferBlockedSnackbar,
+                            currentAddress: _currentAddress,
+                            localization: localization,
+                          ),
+                          NeedDeploymentWidget(coin: _coin),
+                          const SizedBox(height: 20),
+                          _TransactionSection(
+                            transactionsController: _transactionsController,
+                            transactionService: _transactionService,
+                            coin: _coin,
+                            trxOpen: _trxOpen,
+                          ),
+                        ],
+                      ),
                     ),
-                    NeedDeploymentWidget(coin: _coin),
-                    const SizedBox(height: 20),
-                    _TransactionSection(
-                      transactionsController: _transactionsController,
-                      transactionService: _transactionService,
-                      coin: _coin,
-                      trxOpen: _trxOpen,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

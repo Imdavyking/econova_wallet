@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:wallet_app/components/portfolio.dart';
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/wallet/wallet_assets_header.dart';
 import 'package:wallet_app/components/wallet/wallet_coin_list.dart';
 import 'package:wallet_app/components/wallet/wallet_header.dart';
@@ -68,39 +69,46 @@ class _WalletMainBodyState extends State<WalletMainBody>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return SafeArea(
-      child: ValueListenableBuilder<List<Coin>>(
-        valueListenable: coinListener,
-        builder: (_, chains, __) {
-          final visibleCoins =
-              chains.where((coin) => !WalletService.removeCoin(coin)).toList();
+    return Column(
+      children: [
+        Expanded(
+          child: SafeArea(
+            child: ValueListenableBuilder<List<Coin>>(
+              valueListenable: coinListener,
+              builder: (_, chains, __) {
+                final visibleCoins = chains
+                    .where((coin) => !WalletService.removeCoin(coin))
+                    .toList();
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              supportedChains = await getChainsSortedByBalance();
-            },
-            child: UpgradeAlert(
-              upgrader: Upgrader(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const WalletHeader(),
-                    const SizedBox(height: 30),
-                    const Portfolio(),
-                    const SizedBox(height: 20),
-                    const WalletSearchBar(),
-                    const WalletAssetsHeader(),
-                    WalletCoinList(coins: visibleCoins),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    supportedChains = await getChainsSortedByBalance();
+                  },
+                  child: UpgradeAlert(
+                    upgrader: Upgrader(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const WalletHeader(),
+                          const SizedBox(height: 30),
+                          const Portfolio(),
+                          const SizedBox(height: 20),
+                          const WalletSearchBar(),
+                          const WalletAssetsHeader(),
+                          WalletCoinList(coins: visibleCoins),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

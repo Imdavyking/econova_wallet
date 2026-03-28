@@ -3,6 +3,7 @@
 import 'dart:math';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
@@ -123,103 +124,111 @@ class _ReceiveTokenState extends State<ReceiveToken> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(25),
-            child: FutureBuilder<String>(
-              future: _coin.getAddress(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const SizedBox();
-                _userAddress = snapshot.data!;
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(25),
+                  child: FutureBuilder<String>(
+                    future: _coin.getAddress(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+                      _userAddress = snapshot.data!;
 
-                return ValueListenableBuilder<ReceivePayParams>(
-                  valueListenable: _receiveParams,
-                  builder: (context, params, _) {
-                    return Column(
-                      children: [
-                        // QR code
-                        SizedBox(
-                          width: 270,
-                          height: 270,
-                          child: Card(
-                            color: const Color(0xffF1F1F1),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Center(
-                              child: QrImageView(
-                                padding: const EdgeInsets.all(10),
-                                data: params.requestUrl ?? _userAddress,
-                                version: QrVersions.auto,
-                                size: 250,
+                      return ValueListenableBuilder<ReceivePayParams>(
+                        valueListenable: _receiveParams,
+                        builder: (context, params, _) {
+                          return Column(
+                            children: [
+                              // QR code
+                              SizedBox(
+                                width: 270,
+                                height: 270,
+                                child: Card(
+                                  color: const Color(0xffF1F1F1),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Center(
+                                    child: QrImageView(
+                                      padding: const EdgeInsets.all(10),
+                                      data: params.requestUrl ?? _userAddress,
+                                      version: QrVersions.auto,
+                                      size: 250,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        // Tappable address card
-                        GestureDetector(
-                          onTap: _copyAddress,
-                          child: Card(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                            color: colorForAddress,
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Text(
-                                _userAddress,
+                              const SizedBox(height: 40),
+                              // Tappable address card
+                              GestureDetector(
+                                onTap: _copyAddress,
+                                child: Card(
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                  color: colorForAddress,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(
+                                      _userAddress,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          fontSize: 14, color: Colors.black),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (params.amount != null) Text(params.amount!),
+                              const SizedBox(height: 40),
+                              Text.rich(
+                                TextSpan(children: [
+                                  TextSpan(
+                                    text: _l.sendOnly(
+                                        '$_nameDisplay ($_symbolDisplay)'),
+                                  ),
+                                ]),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    fontSize: 14, color: Colors.black),
                               ),
-                            ),
-                          ),
-                        ),
-                        if (params.amount != null) Text(params.amount!),
-                        const SizedBox(height: 40),
-                        Text.rich(
-                          TextSpan(children: [
-                            TextSpan(
-                              text: _l
-                                  .sendOnly('$_nameDisplay ($_symbolDisplay)'),
-                            ),
-                          ]),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 40),
-                        // Action buttons
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _ReceiveAction(
-                              icon: Icons.copy,
-                              label: _l.copy,
-                              onTap: _copyAddress,
-                            ),
-                            _ReceiveAction(
-                              icon: Icons.share,
-                              label: _l.share,
-                              onTap: () => Share.share(
-                                '${_l.publicAddressToReceive} ${_coin.getSymbol()} $_userAddress',
+                              const SizedBox(height: 40),
+                              // Action buttons
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _ReceiveAction(
+                                    icon: Icons.copy,
+                                    label: _l.copy,
+                                    onTap: _copyAddress,
+                                  ),
+                                  _ReceiveAction(
+                                    icon: Icons.share,
+                                    label: _l.share,
+                                    onTap: () => Share.share(
+                                      '${_l.publicAddressToReceive} ${_coin.getSymbol()} $_userAddress',
+                                    ),
+                                  ),
+                                  _ReceiveAction(
+                                    icon: Icons.add,
+                                    label: _l.request,
+                                    iconBackground: Colors.black,
+                                    iconColor: Colors.white,
+                                    onTap: () => _showRequestDialog(context),
+                                  ),
+                                ],
                               ),
-                            ),
-                            _ReceiveAction(
-                              icon: Icons.add,
-                              label: _l.request,
-                              iconBackground: Colors.black,
-                              iconColor: Colors.white,
-                              onTap: () => _showRequestDialog(context),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

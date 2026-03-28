@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/send_form_widgets.dart';
 import 'package:wallet_app/screens/confirm_transfer.dart';
@@ -127,39 +128,46 @@ class _SendFormState extends State<SendForm> {
 
     return Scaffold(
       appBar: AppBar(title: Text("${l.send} $symbol")),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(25),
-            child: Column(
-              children: [
-                RecipientField(
-                  controller: _recipientCtrl,
-                  amountController: _amountCtrl,
-                  memoController: _memoCtrl,
-                  qrMode: _coin.tokenAddress() != null
-                      ? QrParseMode.eip681
-                      : QrParseMode.both,
-                  showMemoFromContact: true,
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(25),
+                  child: Column(
+                    children: [
+                      RecipientField(
+                        controller: _recipientCtrl,
+                        amountController: _amountCtrl,
+                        memoController: _memoCtrl,
+                        qrMode: _coin.tokenAddress() != null
+                            ? QrParseMode.eip681
+                            : QrParseMode.both,
+                        showMemoFromContact: true,
+                      ),
+                      const SizedBox(height: 20),
+                      AmountField(
+                        controller: _amountCtrl,
+                        onMax: () => _coin.getMaxTransfer(),
+                      ),
+                      if (_coin.requireMemo()) ...[
+                        const SizedBox(height: 20),
+                        _MemoField(controller: _memoCtrl, localization: l),
+                      ],
+                      const SizedBox(height: 30),
+                      SendContinueButton(
+                        isLoading: _isLoading,
+                        onPressed: _onContinue,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                AmountField(
-                  controller: _amountCtrl,
-                  onMax: () => _coin.getMaxTransfer(),
-                ),
-                if (_coin.requireMemo()) ...[
-                  const SizedBox(height: 20),
-                  _MemoField(controller: _memoCtrl, localization: l),
-                ],
-                const SizedBox(height: 30),
-                SendContinueButton(
-                  isLoading: _isLoading,
-                  onPressed: _onContinue,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
