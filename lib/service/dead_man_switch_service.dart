@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -11,6 +12,7 @@ import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/service/dms_relay_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/crypto_utils.dart';
 
 // ── Debug flag ─────────────────────────────────────────────────────────────────
 const kDmsTestMode = bool.fromEnvironment('DMS_TEST', defaultValue: true);
@@ -548,28 +550,48 @@ class DeadManSwitchService {
     required int threshold,
   }) async {
     final roomId = roomIdFromPubKey(pubKeyHex);
+    WebSocket? ws;
     try {
-      await DmsRelayService.connect(roomId: roomId, role: 'sender');
+      // ✅ Raw WebSocket — completely independent from DmsRelayService singleton
+      ws = await WebSocket.connect('ws://localhost:8080')
+          .timeout(const Duration(seconds: 10));
 
-      // Small delay to ensure WS handshake completes before sending frames
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      debugPrint('DMS sender: connected to room $roomId');
 
-      // sendShares returns void — do NOT await it
-      DmsRelayService.sendShares(
-        shares: shares,
-        threshold: threshold,
-        pubKeyHex: pubKeyHex,
-        milliSeconds: DateTime.now().millisecond,
-      );
+      // Join room as sender
+      ws.add(jsonEncode({'type': 'join', 'room': roomId, 'role': 'sender'}));
 
-      // Give the sink time to flush before closing
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      // Wait for joined ack
+      await ws.firstWhere((raw) {
+        final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+        return msg['type'] == 'joined';
+      }).timeout(const Duration(seconds: 5));
 
-      await DmsRelayService.disconnect();
-      debugPrint('DMS: shares pushed to relay room $roomId');
+      final sessionId = generateSessionId();
+
+      for (var i = 0; i < shares.length; i++) {
+        ws.add(jsonEncode({
+          'type': 'share',
+          'sessionId': sessionId,
+          'shareIndex': i,
+          'totalShares': shares.length,
+          'threshold': threshold,
+          'pubKeyHex': pubKeyHex,
+          'milliSeconds': DateTime.now().millisecondsSinceEpoch,
+          'share': shares[i].toJson(),
+        }));
+        debugPrint('DMS sender: sent share ${i + 1}/${shares.length}');
+      }
+
+      // Flush
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await ws.close();
+      debugPrint('DMS sender: done, room $roomId');
     } catch (e) {
-      debugPrint('DMS: relay push failed (non-fatal): $e');
-      await DmsRelayService.disconnect();
+      debugPrint('DMS sender: failed (non-fatal): $e');
+      try {
+        await ws?.close();
+      } catch (_) {}
     }
   }
 }
