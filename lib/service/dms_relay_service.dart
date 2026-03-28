@@ -30,7 +30,7 @@ import 'package:wallet_app/service/dead_man_switch_service.dart';
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Default relay.  Replace with your own server.
-const _kDefaultRelayUrl = 'ws://localhost:8080';
+const wsDefaultRelayUrl = 'ws://localhost:8080';
 
 // ── Incoming message types ─────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ class DmsRelayService {
   static Future<void> connect({
     required String roomId,
     required String role, // 'sender' | 'receiver'
-    String relayUrl = _kDefaultRelayUrl,
+    String relayUrl = wsDefaultRelayUrl,
   }) async {
     await disconnect(); // clean up any previous connection
 

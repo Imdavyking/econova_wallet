@@ -553,7 +553,7 @@ class DeadManSwitchService {
     WebSocket? ws;
     try {
       // ✅ Raw WebSocket — completely independent from DmsRelayService singleton
-      ws = await WebSocket.connect('ws://localhost:8080')
+      ws = await WebSocket.connect(wsDefaultRelayUrl)
           .timeout(const Duration(seconds: 10));
 
       debugPrint('DMS sender: connected to room $roomId');
