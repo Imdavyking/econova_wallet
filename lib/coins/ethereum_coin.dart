@@ -580,7 +580,8 @@ class EthereumCoin extends Coin {
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
-    String saveKey = 'ethereumDetailsPrivate$coinType${walletImportType.name}';
+    String saveKey =
+        'ethereumDetailsPrivateV1$coinType${walletImportType.name}';
     Map<String, dynamic> privateKeyMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -603,7 +604,7 @@ class EthereumCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'ethereumDetails$coinType${walletImportType.name}';
+    String saveKey = 'ethereumDetailsV2$coinType${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -1202,8 +1203,12 @@ Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
   final node = seedRoot_.root.derivePath(path);
   final privateKey = HEX.encode(node.privateKey!);
   final privatekeyStr = '0x$privateKey';
-  final address = await deriveEthereumAccount(privatekeyStr);
-  return {'address': address, 'privateKey': privatekeyStr};
+  final account = await deriveEthereumAccount(privatekeyStr);
+  return {
+    'address': account.address,
+    'privateKey': privatekeyStr,
+    'publicKey': account.publicKey
+  };
 }
 
 Future<({String address, String publicKey})> deriveEthereumAccount(
