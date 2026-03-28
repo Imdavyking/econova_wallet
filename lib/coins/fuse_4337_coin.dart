@@ -438,11 +438,7 @@ class FuseCoin extends Coin {
       await pref.put(tokenKey, fuseBalance);
 
       return fuseBalance;
-    } catch (e, s) {
-      if (kDebugMode) {
-        print(e);
-        print(s);
-      }
+    } catch (__, _) {
       return savedBalance;
     }
   }
