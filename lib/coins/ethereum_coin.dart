@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
+import 'package:pointycastle/pointycastle.dart';
 import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
 
@@ -1226,3 +1227,19 @@ Future<({String address, String publicKey})> deriveEthereumAccount(
 
 String roninAddrToEth(String address) => address.replaceFirst('ronin:', '0x');
 String ethAddrToRonin(String address) => address.replaceFirst('0x', 'ronin:');
+
+String publicKeyToAddress(String compressedPubKeyHex) {
+  final domain = ECDomainParameters('secp256k1');
+  final pubKeyBytes = HEX.decode(compressedPubKeyHex.replaceFirst('0x', ''));
+
+  // Decompress to 64-byte uncompressed form (strip the 04 prefix)
+  final point = domain.curve.decodePoint(pubKeyBytes)!;
+  final uncompressed = point.getEncoded(false); // 65 bytes with 04 prefix
+  final pubKeyOnly = uncompressed.sublist(1); // drop 04 prefix → 64 bytes
+
+  // keccak256 → take last 20 bytes → EIP-55 checksum
+  final hash = keccak256(pubKeyOnly);
+  final addressHex =
+      hash.sublist(12).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  return EthereumAddress.fromHex('0x$addressHex').hexEip55;
+}

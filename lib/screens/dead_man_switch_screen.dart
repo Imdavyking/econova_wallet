@@ -321,7 +321,6 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
   void _submit() {
     if (!_valid) return;
     widget.onActivate(DmsConfig(
-      beneficiaryAddress: _addressController.text.trim(),
       beneficiaryPublicKey: _pubKeyController.text.trim(),
       timeoutDays: _timeoutDays,
       threshold: _threshold,
@@ -335,7 +334,7 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── How it works banner ──────────────────────────────────────────────
-        _InfoBanner(
+        const _InfoBanner(
           color: Colors.blue,
           text: 'Your seed phrase is split via Shamir\'s Secret Sharing. Each '
               'share is time-locked using drand (a distributed randomness '
@@ -348,17 +347,6 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
         // ── Beneficiary address ──────────────────────────────────────────────
         const _FormLabel('Beneficiary Wallet Address'),
         const SizedBox(height: 6),
-        TextField(
-          controller: _addressController,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: '0x...',
-            prefixIcon: const Icon(Icons.account_circle_outlined),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        const SizedBox(height: 20),
-
         // ── Beneficiary public key ───────────────────────────────────────────
         const _FormLabel('Beneficiary secp256k1 Public Key'),
         const SizedBox(height: 4),
@@ -1076,13 +1064,26 @@ class _TimeoutPicker extends StatelessWidget {
       children: options.map((days) {
         final isSelected = days == selected;
         return ChoiceChip(
-          label: Text(days >= 365 ? '1 year' : '${days}d'),
+          label: Text(
+            days >= 365 ? '1 year' : '${days}d',
+            style: TextStyle(
+              color: isSelected ? Colors.black : Colors.white,
+            ),
+          ),
           selected: isSelected,
           onSelected: (_) => onChanged(days),
           selectedColor: appBackgroundblue,
+          backgroundColor: Theme.of(context).cardColor, // ← add this
           labelStyle: TextStyle(
             color: isSelected ? Colors.white : null,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color:
+                  isSelected ? appBackgroundblue : Colors.grey.withOpacity(0.3),
+            ),
           ),
         );
       }).toList(),

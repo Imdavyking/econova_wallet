@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:pointycastle/export.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/service/drand_service.dart';
@@ -23,7 +23,7 @@ enum DmsState { inactive, active, triggered, cancelled }
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 class DmsConfig {
-  final String beneficiaryAddress;
+  String get beneficiaryAddress => publicKeyToAddress(beneficiaryPublicKey);
 
   /// Compressed secp256k1 public key (hex, 66 chars / 33 bytes) belonging to
   /// the beneficiary.  Only the holder of the matching private key can decrypt
@@ -35,7 +35,6 @@ class DmsConfig {
   final int totalShares;
 
   const DmsConfig({
-    required this.beneficiaryAddress,
     required this.beneficiaryPublicKey,
     required this.timeoutDays,
     required this.threshold,
@@ -51,7 +50,6 @@ class DmsConfig {
       };
 
   factory DmsConfig.fromJson(Map<String, dynamic> j) => DmsConfig(
-        beneficiaryAddress: j['beneficiaryAddress'] as String,
         beneficiaryPublicKey: j['beneficiaryPublicKey'] as String,
         timeoutDays: j['timeoutDays'] as int,
         threshold: j['threshold'] as int,
