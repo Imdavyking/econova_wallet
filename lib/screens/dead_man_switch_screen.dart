@@ -123,7 +123,27 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dead Man\'s Switch')),
+      appBar: AppBar(
+        title: const Text('Dead Man\'s Switch'),
+        actions: [
+          if (kDmsTestMode)
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'TEST MODE',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -259,6 +279,7 @@ class _DmsStatusCard extends StatelessWidget {
 
 class _NotSupportedCard extends StatelessWidget {
   const _NotSupportedCard();
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -294,35 +315,29 @@ class _DmsSetupForm extends StatefulWidget {
 }
 
 class _DmsSetupFormState extends State<_DmsSetupForm> {
-  final _addressController = TextEditingController();
   final _pubKeyController = TextEditingController();
-  int _timeoutDays = 30;
+  int _timeoutSeconds = DmsTimeouts.defaultSeconds;
   int _threshold = 2;
   int _totalShares = 3;
 
-  static const _timeoutOptions = [7, 14, 30, 90, 180, 365];
-
   @override
   void dispose() {
-    _addressController.dispose();
     _pubKeyController.dispose();
     super.dispose();
   }
 
-  bool get _valid {
-    final addr = _addressController.text.trim();
+  bool get _pubKeyValid {
     final pub = _pubKeyController.text.trim().replaceFirst('0x', '');
-    // Compressed secp256k1 public key = 33 bytes = 66 hex chars.
-    final pubValid =
-        pub.length == 66 && (pub.startsWith('02') || pub.startsWith('03'));
-    return addr.isNotEmpty && pubValid && _threshold <= _totalShares;
+    return pub.length == 66 && (pub.startsWith('02') || pub.startsWith('03'));
   }
+
+  bool get _valid => _pubKeyValid && _threshold <= _totalShares;
 
   void _submit() {
     if (!_valid) return;
     widget.onActivate(DmsConfig(
       beneficiaryPublicKey: _pubKeyController.text.trim(),
-      timeoutDays: _timeoutDays,
+      timeoutSeconds: _timeoutSeconds,
       threshold: _threshold,
       totalShares: _totalShares,
     ));
@@ -333,26 +348,33 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── How it works banner ──────────────────────────────────────────────
+        // ── Info banner ──────────────────────────────────────────────────────
         const _InfoBanner(
           color: Colors.blue,
-          text: 'Your seed phrase is split via Shamir\'s Secret Sharing. Each '
-              'share is time-locked using drand (a distributed randomness '
+          text: 'Your seed phrase is split via Shamir\'s Secret Sharing. '
+              'Each share is time-locked using drand (a distributed randomness '
               'beacon) so it cannot be decrypted before your deadline, then '
               'encrypted to the beneficiary\'s public key so only they can '
               'read it.',
         ),
         const SizedBox(height: 20),
 
-        // ── Beneficiary address ──────────────────────────────────────────────
-        const _FormLabel('Beneficiary Wallet Address'),
-        const SizedBox(height: 6),
-        // ── Beneficiary public key ───────────────────────────────────────────
-        const _FormLabel('Beneficiary secp256k1 Public Key'),
+        // ── Debug banner ─────────────────────────────────────────────────────
+        if (kDmsTestMode) ...[
+          const _InfoBanner(
+            color: Colors.orange,
+            text: '⚠️ TEST MODE — short timeouts enabled. '
+                'Run without --dart-define=DMS_TEST=true for production.',
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Public key ───────────────────────────────────────────────────────
+        const _FormLabel('Beneficiary Public Key'),
         const SizedBox(height: 4),
         const Text(
-          'Compressed hex (03... or 02..., 66 characters). '
-          'Only the matching private key can decrypt the shares.',
+          'Compressed secp256k1 hex (02... or 03..., 66 chars). '
+          'The wallet address is derived from this automatically.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 6),
@@ -364,27 +386,52 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
             hintText: '02a1b2c3...  (66 hex chars)',
             prefixIcon: const Icon(Icons.vpn_key_outlined),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            errorText: _pubKeyController.text.isNotEmpty && !_pubKeyHint
+            errorText: _pubKeyController.text.isNotEmpty && !_pubKeyValid
                 ? 'Must be 66 hex chars starting with 02 or 03'
                 : null,
           ),
         ),
+
+        // ── Derived address preview ──────────────────────────────────────────
+        if (_pubKeyValid) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 14),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Address: ${DmsConfig(
+                    beneficiaryPublicKey: _pubKeyController.text.trim(),
+                    timeoutSeconds: _timeoutSeconds,
+                    threshold: _threshold,
+                    totalShares: _totalShares,
+                  ).beneficiaryAddress}',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.green,
+                      fontFamily: 'monospace'),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 20),
 
         // ── Timeout ──────────────────────────────────────────────────────────
-        const _FormLabel('Inactivity Timeout'),
+        _FormLabel(
+            kDmsTestMode ? 'Inactivity Timeout (Test)' : 'Inactivity Timeout'),
         const SizedBox(height: 6),
         _TimeoutPicker(
-          selected: _timeoutDays,
-          options: _timeoutOptions,
-          onChanged: (v) => setState(() => _timeoutDays = v),
+          selected: _timeoutSeconds,
+          options: DmsTimeouts.current,
+          onChanged: (v) => setState(() => _timeoutSeconds = v),
         ),
         const SizedBox(height: 4),
-        // Show the drand round that will be used.
-        _DrandRoundPreview(timeoutDays: _timeoutDays),
+        _DrandRoundPreview(timeoutSeconds: _timeoutSeconds),
         const SizedBox(height: 20),
 
-        // ── Shares config ─────────────────────────────────────────────────────
+        // ── Shares config ────────────────────────────────────────────────────
         _SharesConfig(
           threshold: _threshold,
           total: _totalShares,
@@ -423,32 +470,32 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
       ],
     );
   }
-
-  bool get _pubKeyHint {
-    final pub = _pubKeyController.text.trim().replaceFirst('0x', '');
-    return pub.isEmpty ||
-        (pub.length == 66 && (pub.startsWith('02') || pub.startsWith('03')));
-  }
 }
 
 // ── drand round preview ───────────────────────────────────────────────────────
 
 class _DrandRoundPreview extends StatelessWidget {
-  final int timeoutDays;
-  const _DrandRoundPreview({required this.timeoutDays});
+  final int timeoutSeconds;
+  const _DrandRoundPreview({required this.timeoutSeconds});
 
   @override
   Widget build(BuildContext context) {
-    final deadline = DateTime.now().add(Duration(days: timeoutDays));
+    final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
     final round = DrandService.roundForTime(deadline);
+
+    final deadlineLabel = timeoutSeconds < 86400
+        ? '${deadline.hour.toString().padLeft(2, '0')}:'
+            '${deadline.minute.toString().padLeft(2, '0')}:'
+            '${deadline.second.toString().padLeft(2, '0')}'
+        : '${deadline.day}/${deadline.month}/${deadline.year}';
+
     return Row(
       children: [
         const Icon(Icons.access_time, size: 14, color: Colors.grey),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'drand lock round: #$round  '
-            '(≈ ${deadline.day}/${deadline.month}/${deadline.year})',
+            'drand lock round: #$round  (≈ $deadlineLabel)',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
@@ -500,7 +547,7 @@ class _DmsActiveView extends StatelessWidget {
           _InfoRow(
             icon: Icons.calendar_today,
             label: 'Timeout',
-            value: '${config.timeoutDays} days',
+            value: config.timeoutLabel,
           ),
           _InfoRow(
             icon: Icons.lock_outline,
@@ -515,8 +562,6 @@ class _DmsActiveView extends StatelessWidget {
             ),
         ]),
         const SizedBox(height: 20),
-
-        // ── Heartbeat ─────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -533,8 +578,6 @@ class _DmsActiveView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-
-        // ── Send via relay ────────────────────────────────────────────────────
         if (encryptedShares != null)
           SizedBox(
             width: double.infinity,
@@ -550,8 +593,6 @@ class _DmsActiveView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-
-        // ── View shares ───────────────────────────────────────────────────────
         if (onViewShares != null)
           SizedBox(
             width: double.infinity,
@@ -567,8 +608,6 @@ class _DmsActiveView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-
-        // ── Cancel ────────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -703,8 +742,7 @@ class _RelayBottomSheetState extends State<_RelayBottomSheet> {
               color: Colors.green,
               text: 'Connected to room "${_roomController.text.trim()}". '
                   'Tap Send to push ${widget.encryptedShares.length} encrypted '
-                  'shares to the receiver. They can only decrypt them after '
-                  'the drand deadline.',
+                  'shares to the receiver.',
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -721,11 +759,10 @@ class _RelayBottomSheetState extends State<_RelayBottomSheet> {
               ),
             ),
           ] else ...[
-            _InfoBanner(
+            const _InfoBanner(
               color: Colors.green,
-              text: 'All ${widget.encryptedShares.length} shares sent! '
-                  'The receiver now holds them encrypted — only unlockable '
-                  'with their private key after the drand deadline.',
+              text: 'All shares sent! The receiver holds them encrypted — '
+                  'only unlockable with their private key after the drand deadline.',
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -943,9 +980,7 @@ class _CountdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = remaining?.inDays ?? 0;
-    final hours = (remaining?.inHours ?? 0) % 24;
-    final color = days < 3 ? Colors.red : Colors.green;
+    final color = _isUrgent ? Colors.red : Colors.green;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -962,7 +997,7 @@ class _CountdownCard extends StatelessWidget {
                 Icon(FontAwesomeIcons.hourglassHalf, color: color, size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  remaining == null ? '—' : '$days days, $hours hours',
+                  remaining == null ? '—' : _formatRemaining(remaining!),
                   style: TextStyle(
                       fontSize: 22, fontWeight: FontWeight.bold, color: color),
                 ),
@@ -971,7 +1006,7 @@ class _CountdownCard extends StatelessWidget {
             if (deadline != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Triggers: ${deadline!.day}/${deadline!.month}/${deadline!.year}',
+                'Triggers: ${_formatDeadline(deadline!)}',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
@@ -979,6 +1014,38 @@ class _CountdownCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool get _isUrgent {
+    if (remaining == null) return false;
+    // Urgent if less than 10% of timeout remains or less than 3 days
+    return remaining!.inSeconds < 3 * 86400 || remaining!.inMinutes < 1;
+  }
+
+  String _formatRemaining(Duration d) {
+    if (d.inSeconds < 60) return '${d.inSeconds}s';
+    if (d.inMinutes < 60) {
+      final mins = d.inMinutes;
+      final secs = d.inSeconds % 60;
+      return '${mins}m ${secs}s';
+    }
+    if (d.inHours < 24) {
+      final hrs = d.inHours;
+      final mins = d.inMinutes % 60;
+      return '${hrs}h ${mins}m';
+    }
+    final days = d.inDays;
+    final hrs = d.inHours % 24;
+    return '$days days, ${hrs}h';
+  }
+
+  String _formatDeadline(DateTime dt) {
+    if (kDmsTestMode) {
+      return '${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}:'
+          '${dt.second.toString().padLeft(2, '0')}';
+    }
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
 
@@ -1051,29 +1118,28 @@ class _InfoRow extends StatelessWidget {
 
 class _TimeoutPicker extends StatelessWidget {
   final int selected;
-  final List<int> options;
+  final List<DmsTimeout> options;
   final ValueChanged<int> onChanged;
 
-  const _TimeoutPicker(
-      {required this.selected, required this.options, required this.onChanged});
+  const _TimeoutPicker({
+    required this.selected,
+    required this.options,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
-      children: options.map((days) {
-        final isSelected = days == selected;
+      runSpacing: 8,
+      children: options.map((opt) {
+        final isSelected = opt.seconds == selected;
         return ChoiceChip(
-          label: Text(
-            days >= 365 ? '1 year' : '${days}d',
-            style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
-            ),
-          ),
+          label: Text(opt.label),
           selected: isSelected,
-          onSelected: (_) => onChanged(days),
+          onSelected: (_) => onChanged(opt.seconds),
           selectedColor: appBackgroundblue,
-          backgroundColor: Theme.of(context).cardColor, // ← add this
+          backgroundColor: Theme.of(context).cardColor,
           labelStyle: TextStyle(
             color: isSelected ? Colors.white : null,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -1147,11 +1213,12 @@ class _Counter extends StatelessWidget {
   final int max;
   final ValueChanged<int> onChanged;
 
-  const _Counter(
-      {required this.value,
-      required this.min,
-      required this.max,
-      required this.onChanged});
+  const _Counter({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
