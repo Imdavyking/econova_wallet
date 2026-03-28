@@ -605,7 +605,7 @@ class EthereumCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'ethereumDetailsV3$coinType${walletImportType.name}';
+    String saveKey = 'ethereumDetailsV4$coinType${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -621,6 +621,7 @@ class EthereumCoin extends Coin {
     );
 
     final keys = await compute(calculateEthereumKey, args);
+    print(keys);
     mnemonicMap[mnemonic] = keys;
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);
