@@ -51,7 +51,7 @@ class _SettingsState extends State<Settings>
   void _onTestNetToggle(bool value) {
     enableTestNet = value;
 
-    debugPrint('enableTestNet changed → ${enableTestNet}');
+    debugPrint('enableTestNet changed → $enableTestNet');
 
     // Notify user so they know a restart/refresh is needed
     ScaffoldMessenger.of(context)

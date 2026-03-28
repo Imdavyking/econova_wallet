@@ -15,7 +15,6 @@ import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 typedef DashChatMessage = dash_chat.ChatMessage;
 typedef DashChatMedia = dash_chat.ChatMedia;
@@ -164,7 +163,7 @@ class AIAgentService {
   // ── LLM ─────────────────────────────────────────────────────────────────────
 
   final llm = ChatOpenAI(
-    apiKey: dotenv.env['OPENROUTER_API_KEY'],
+    apiKey: openRouterApiKey,
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultOptions: const ChatOpenAIOptions(
       temperature: 0,

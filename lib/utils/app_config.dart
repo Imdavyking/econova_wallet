@@ -59,6 +59,7 @@ String get blastApiProjectId => dotenv.env['BLAST_API_PROJECT_ID'] ?? '';
 String get utxoApiKey => dotenv.env['UTXO_API_KEY'] ?? '';
 String get pureStakeApiKey => dotenv.env['PURE_STAKE_API_KEY'] ?? '';
 String get nanoApiKey => dotenv.env['NANO_API_KEY'] ?? '';
+String get openRouterApiKey => dotenv.env['OPENROUTER_API_KEY'] ?? '';
 
 // ── External links ────────────────────────────────────────────────────────────
 
