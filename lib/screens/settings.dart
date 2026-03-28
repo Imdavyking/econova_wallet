@@ -329,7 +329,7 @@ class _SettingsState extends State<Settings>
                         _SettingsRow(
                           icon: _CircleIcon(
                             color: Color.fromARGB(255, 255, 61, 46),
-                            icon: FontAwesomeIcons.shieldHalved,
+                            icon: FontAwesomeIcons.lock,
                           ),
                           label: localization.changePin,
                           onTap: () async {
