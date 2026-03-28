@@ -42,6 +42,8 @@ class DmsWsJoined extends DmsWsMessage {
 }
 
 class DmsWsShareReceived extends DmsWsMessage {
+  final String sessionId;
+
   final EncryptedShare share;
   final int shareIndex;
   final int totalShares;
@@ -51,6 +53,7 @@ class DmsWsShareReceived extends DmsWsMessage {
     required this.shareIndex,
     required this.totalShares,
     required this.threshold,
+    required this.sessionId,
   });
 }
 
@@ -135,9 +138,11 @@ class DmsRelayService {
     required int threshold,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
     for (var i = 0; i < shares.length; i++) {
       _send({
         'type': 'share',
+        'sessionId': sessionId,
         'shareIndex': i,
         'totalShares': shares.length,
         'threshold': threshold,
@@ -157,8 +162,10 @@ class DmsRelayService {
     required int threshold,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
+    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
     _send({
       'type': 'share',
+      'sessionId': sessionId,
       'shareIndex': shareIndex,
       'totalShares': totalShares,
       'threshold': threshold,
@@ -190,6 +197,7 @@ class DmsRelayService {
 
         case 'share':
           _controller.add(DmsWsShareReceived(
+            sessionId: msg['sessionId'] as String,
             shareIndex: (msg['shareIndex'] as num).toInt(),
             totalShares: (msg['totalShares'] as num).toInt(),
             threshold: (msg['threshold'] as num).toInt(),
