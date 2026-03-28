@@ -38,8 +38,8 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
       final shares = await DeadManSwitchService.fetchSharesFromRelay(
         beneficiaryPublicKeyHex: pubKey,
       );
-      
-      // debugPrint('shares: $shares');
+
+      debugPrint('shares: $shares');
     } catch (_) {}
   }
 

@@ -29,9 +29,7 @@ import 'package:wallet_app/service/dead_man_switch_service.dart';
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Default relay.  Replace with your own server.
-const _kDefaultRelayUrl =
-    'wss://demo.piesocket.com/v3/1?api_key=oCdCMcMPQpbvNjUIzqtvF1d2X4H8Ep93pKNULnzF';
-// const _kDefaultRelayUrl = 'wss://relay.econova.app/dms';
+const _kDefaultRelayUrl = 'ws://localhost:8080';
 
 // ── Incoming message types ─────────────────────────────────────────────────────
 
@@ -99,7 +97,10 @@ class DmsRelayService {
 
     // Listen for messages.
     _channel!.stream.listen(
-      (raw) => _handleRaw(raw as String),
+      (raw) {
+        debugPrint('RAW WS: $raw');
+        _handleRaw(raw as String);
+      },
       onError: (e) {
         debugPrint('DmsRelay error: $e');
         _controller.add(DmsWsError('Connection error: $e'));

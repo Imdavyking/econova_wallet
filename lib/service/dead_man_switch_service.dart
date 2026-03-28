@@ -385,6 +385,7 @@ class DeadManSwitchService {
       int? totalShares;
 
       final sub = DmsRelayService.messages.listen((msg) {
+        debugPrint('RAW MSG: $msg');
         if (msg is DmsWsShareReceived) {
           collected[msg.shareIndex] = msg.share;
           totalShares ??= msg.totalShares;
