@@ -248,6 +248,91 @@ void main() async {
     });
   });
 
+  group('AES-GCM', () {
+    // Fixed 32-byte key for all tests
+    final key = Uint8List.fromList(List.generate(32, (i) => i));
+
+    test('encrypt then decrypt returns original plaintext', () {
+      final plaintext = Uint8List.fromList(utf8.encode('hello world'));
+
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+
+      expect(utf8.decode(result), equals('hello world'));
+    });
+
+    test(
+        'encrypting same plaintext twice gives different ciphertext (random IV)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('same input'));
+
+      final cipher1 = aesGcmEncrypt(key, plaintext);
+      final cipher2 = aesGcmEncrypt(key, plaintext);
+
+      // Ciphertexts must differ because IV is random
+      expect(cipher1, isNot(equals(cipher2)));
+
+      // But both must decrypt to the same thing
+      expect(aesGcmDecrypt(key, cipher1), equals(plaintext));
+      expect(aesGcmDecrypt(key, cipher2), equals(plaintext));
+    });
+
+    test('ciphertext is longer than plaintext (IV + tag overhead)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('test'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      // 12 bytes IV + 16 bytes GCM tag = exactly 28 bytes overhead
+      expect(cipher.length, equals(plaintext.length + 28));
+    });
+
+    test('decrypt with wrong key throws', () {
+      final plaintext = Uint8List.fromList(utf8.encode('secret'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      final wrongKey = Uint8List.fromList(List.generate(32, (i) => 255 - i));
+
+      expect(() => aesGcmDecrypt(wrongKey, cipher), throwsA(anything));
+    });
+
+    test('tampered ciphertext throws (GCM auth tag fails)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('do not tamper'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      // Flip one byte in the ciphertext body (after the 12-byte IV)
+      final tampered = Uint8List.fromList(cipher);
+      tampered[20] ^= 0xFF;
+
+      expect(() => aesGcmDecrypt(key, tampered), throwsA(anything));
+    });
+
+    test('empty plaintext round-trips', () {
+      final plaintext = Uint8List(0);
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+      expect(result, isEmpty);
+    });
+
+    test('large plaintext round-trips', () {
+      final plaintext = Uint8List.fromList(
+        List.generate(10000, (i) => i % 256),
+      );
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+      expect(result, equals(plaintext));
+    });
+
+    test('mnemonic phrase round-trips', () {
+      const mnemonic =
+          'abandon ability able about above absent absorb abstract absurd abuse access accident';
+      final plaintext = Uint8List.fromList(utf8.encode(mnemonic));
+
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+
+      expect(utf8.decode(result), equals(mnemonic));
+    });
+  });
+
   final blockInstance = EthereumBlockies();
   final blockInstanceTwo = EthereumBlockies();
   const busdContractAddress = '0xe9e7cea3dedca5984780bafc599bd69add087d56';
