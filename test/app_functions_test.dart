@@ -138,8 +138,8 @@ void main() async {
   });
 
   group('ECIES (secp256k1)', () {
-    late Uint8List privKey;
-    late Uint8List pubKey;
+    Uint8List privKey = Uint8List.fromList([]);
+    Uint8List pubKey = Uint8List.fromList([]);
 
     setUp(() {
       final pair = generateKeyPair();

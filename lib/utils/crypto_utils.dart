@@ -1,5 +1,6 @@
 import 'dart:convert' hide Encoding;
 import 'dart:io';
+import 'dart:math';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:encrypt/encrypt.dart';
 import 'package:flutter/foundation.dart';
@@ -150,10 +151,10 @@ selectImage({
 
 ({Uint8List priv, Uint8List pub}) generateKeyPair() {
   final domain = ECDomainParameters('secp256k1');
-  final rng = FortunaRandom()
-    ..seed(KeyParameter(
-      Uint8List.fromList(List.generate(64, (i) => i * 3 + 7)),
-    ));
+  final seed = Uint8List.fromList(
+    List.generate(32, (_) => Random.secure().nextInt(256)),
+  );
+  final rng = FortunaRandom()..seed(KeyParameter(seed));
   final keyGen = ECKeyGenerator()
     ..init(ParametersWithRandom(ECKeyGeneratorParameters(domain), rng));
   final pair = keyGen.generateKeyPair();

@@ -437,22 +437,22 @@ Uint8List _deriveRevealKey(Uint8List drandRandomness) {
 // AES-256-GCM
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Returns iv(12) + tag(16) + ciphertext.
+// ── AES-256-GCM fix ────────────────────────────────────────────────────────────
+
 Uint8List aesGcmEncrypt(Uint8List key, Uint8List plaintext) {
   final iv = _randomBytes(12);
   final cipher = GCMBlockCipher(AESEngine())
     ..init(true, AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)));
 
-  final output = Uint8List(cipher.getOutputSize(plaintext.length));
-  var offset = 0;
-  offset += cipher.processBytes(plaintext, 0, plaintext.length, output, offset);
-  cipher.doFinal(output, offset);
+  final buf = Uint8List(cipher.getOutputSize(plaintext.length));
+  var off = 0;
+  off += cipher.processBytes(plaintext, 0, plaintext.length, buf, off);
+  off += cipher.doFinal(buf, off); // ← capture return value
 
-  // Prepend IV so the receiver can extract it.
-  return Uint8List.fromList([...iv, ...output]);
+  // Trim to actual bytes written, then prepend IV
+  return Uint8List.fromList([...iv, ...buf.sublist(0, off)]);
 }
 
-/// Expects iv(12) + tag(16) + ciphertext.
 Uint8List aesGcmDecrypt(Uint8List key, Uint8List data) {
   final iv = data.sublist(0, 12);
   final payload = data.sublist(12);
@@ -460,85 +460,66 @@ Uint8List aesGcmDecrypt(Uint8List key, Uint8List data) {
   final cipher = GCMBlockCipher(AESEngine())
     ..init(false, AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)));
 
-  final output = Uint8List(cipher.getOutputSize(payload.length));
-  var offset = 0;
-  offset += cipher.processBytes(payload, 0, payload.length, output, offset);
-  cipher.doFinal(output, offset);
-  return output;
+  final buf = Uint8List(cipher.getOutputSize(payload.length));
+  var off = 0;
+  off += cipher.processBytes(payload, 0, payload.length, buf, off);
+  off += cipher.doFinal(buf, off); // ← capture return value
+
+  return buf.sublist(0, off); // ← trim
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// ECIES  (secp256k1, ECDH + HKDF-SHA256 + AES-256-GCM)
-// Layout: ephPubKey(65) | iv(12) | tag(16) | ciphertext
-// ──────────────────────────────────────────────────────────────────────────────
+// ── ECIES fix ──────────────────────────────────────────────────────────────────
 
 Uint8List eciesEncrypt(Uint8List recipientPubKeyBytes, Uint8List plaintext) {
   final domain = ECDomainParameters('secp256k1');
-
-  // Parse recipient public key.
   final recipientQ = domain.curve.decodePoint(recipientPubKeyBytes)!;
-  final recipientPub = ECPublicKey(recipientQ, domain);
 
-  // Generate ephemeral key pair.
-  final rng = FortunaRandom()..seed(KeyParameter(_randomBytes(64)));
+  final rng = FortunaRandom()..seed(KeyParameter(_randomBytes(32)));
   final keyGen = ECKeyGenerator()
     ..init(ParametersWithRandom(ECKeyGeneratorParameters(domain), rng));
   final ephPair = keyGen.generateKeyPair();
   final ephPriv = ephPair.privateKey as ECPrivateKey;
   final ephPub = ephPair.publicKey as ECPublicKey;
 
-  // ECDH shared secret.
-  final agreement = ECDHBasicAgreement()..init(ephPriv);
-  final sharedSecret = agreement.calculateAgreement(recipientPub);
-  final sharedSecretBytes = _bigIntToBytes32(sharedSecret);
-
-  // HKDF-SHA256 → 32-byte AES key.
+  final sharedPoint = recipientQ * ephPriv.d;
+  final sharedSecretBytes = _bigIntToBytes32(sharedPoint!.x!.toBigInteger()!);
   final aesKey = _hkdfSha256(sharedSecretBytes, 'ecies-aes256gcm');
 
-  // AES-256-GCM encrypt.
   final iv = _randomBytes(12);
   final gcm = GCMBlockCipher(AESEngine())
     ..init(true, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
-  final ciphertext = Uint8List(gcm.getOutputSize(plaintext.length));
-  var off = 0;
-  off += gcm.processBytes(plaintext, 0, plaintext.length, ciphertext, off);
-  gcm.doFinal(ciphertext, off);
 
-  // Serialise: uncompressed ephPubKey | iv | ciphertext(+tag)
+  final buf = Uint8List(gcm.getOutputSize(plaintext.length));
+  var off = 0;
+  off += gcm.processBytes(plaintext, 0, plaintext.length, buf, off);
+  off += gcm.doFinal(buf, off); // ← capture return value
+
   final ephPubBytes = ephPub.Q!.getEncoded(false); // 65 bytes uncompressed
-  return Uint8List.fromList([...ephPubBytes, ...iv, ...ciphertext]);
+  // Layout: ephPubKey(65) | iv(12) | trimmed ciphertext+tag
+  return Uint8List.fromList([...ephPubBytes, ...iv, ...buf.sublist(0, off)]);
 }
 
 Uint8List eciesDecrypt(Uint8List privKeyBytes, Uint8List data) {
   final domain = ECDomainParameters('secp256k1');
-
-  // Parse ephemeral public key (first 65 bytes).
   final ephQ = domain.curve.decodePoint(data.sublist(0, 65))!;
-  final ephPub = ECPublicKey(ephQ, domain);
+  final privD = _bytesToBigInt(privKeyBytes);
 
-  // Parse recipient private key.
-  final privKey = ECPrivateKey(_bytesToBigInt(privKeyBytes), domain);
-
-  // ECDH — note: we derive the same shared secret by doing ECDH(priv, ephPub).
-  final agreement = ECDHBasicAgreement()..init(privKey);
-  final sharedSecret = agreement.calculateAgreement(ephPub);
-  final sharedSecretBytes = _bigIntToBytes32(sharedSecret);
-
-  // HKDF.
+  final sharedPoint = ephQ * privD;
+  final sharedSecretBytes = _bigIntToBytes32(sharedPoint!.x!.toBigInteger()!);
   final aesKey = _hkdfSha256(sharedSecretBytes, 'ecies-aes256gcm');
 
-  // AES-256-GCM decrypt.
-  final iv = data.sublist(65, 77); // 12 bytes
+  final iv = data.sublist(65, 77);
   final ciphertext = data.sublist(77);
   final gcm = GCMBlockCipher(AESEngine())
     ..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
-  final plaintext = Uint8List(gcm.getOutputSize(ciphertext.length));
-  var off = 0;
-  off += gcm.processBytes(ciphertext, 0, ciphertext.length, plaintext, off);
-  gcm.doFinal(plaintext, off);
-  return plaintext;
-}
 
+  final buf = Uint8List(gcm.getOutputSize(ciphertext.length));
+  var off = 0;
+  off += gcm.processBytes(ciphertext, 0, ciphertext.length, buf, off);
+  off += gcm.doFinal(buf, off); // ← capture return value
+
+  return buf.sublist(0, off); // ← trim
+}
 // ── HKDF-SHA256 (extract + expand, OKM = 32 bytes) ───────────────────────────
 
 Uint8List _hkdfSha256(Uint8List ikm, String info) {
