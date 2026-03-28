@@ -43,9 +43,8 @@ class DmsWsJoined extends DmsWsMessage {
 }
 
 class DmsWsShareReceived extends DmsWsMessage {
-  final String sessionId;
-
   final EncryptedShare share;
+  final String sessionId;
   final int shareIndex;
   final int totalShares;
   final int threshold;
