@@ -22,12 +22,10 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
   String? _error;
 
   // All sessions loaded from storage
-  Map<String, List<EncryptedShare>>? _sessions;
+  Map<String, DmsSessionData>? _sessions;
 
   // The session the user selected (or auto-selected)
-  String? _selectedSessionId;
-  List<EncryptedShare>? _shares;
-  int? _threshold;
+  DmsSessionData? _selectedSession;
 
   String? _decryptedMnemonic;
   String? _pubKeyHex;
@@ -94,9 +92,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
       _sessions = sessions;
 
       if (sessions.length == 1) {
-        // Only one sender — skip the picker
-        final entry = sessions.entries.first;
-        _selectSession(entry.key, entry.value);
+        _selectSession(sessions.values.first);
       } else {
         setState(() => _step = _BeneficiaryStep.selectSession);
       }
@@ -109,19 +105,18 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     }
   }
 
-  void _selectSession(String sessionId, List<EncryptedShare> shares) {
+  void _selectSession(DmsSessionData session) {
     setState(() {
-      _selectedSessionId = sessionId;
-      _shares = shares;
-      _threshold = shares.length;
+      _selectedSession = session;
       _step = _BeneficiaryStep.sharesReceived;
     });
   }
 
   Future<void> _decrypt() async {
-    if (_shares == null || _privKeyHex == null) return;
+    final session = _selectedSession;
+    if (session == null || _privKeyHex == null) return;
 
-    final round = _shares!.first.drandRound;
+    final round = session.shares.first.drandRound;
 
     if (!DrandService.isRoundPast(round)) {
       final unlockTime = DrandService.timeForRound(round).toLocal();
@@ -139,9 +134,9 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
 
     try {
       final mnemonic = await DeadManSwitchService.decryptAndRecombine(
-        encryptedShares: _shares!,
+        encryptedShares: session.shares,
         beneficiaryPrivateKeyHex: _privKeyHex!,
-        threshold: _threshold!,
+        threshold: session.threshold,
       );
 
       if (!mounted) return;
@@ -178,15 +173,15 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
 
-  String _shortSession(String id) =>
-      '${id.substring(0, 8)}…${id.substring(id.length - 8)}';
+  String _shortId(String id) => id.length >= 16
+      ? '${id.substring(0, 8)}…${id.substring(id.length - 8)}'
+      : id;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('DMS — Beneficiary'),
-        // Back to session list if we're deep in a session
         leading: _step == _BeneficiaryStep.sharesReceived &&
                 (_sessions?.length ?? 0) > 1
             ? IconButton(
@@ -318,10 +313,10 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               'Select a session to decrypt.',
         ),
         const SizedBox(height: 16),
-        ...sessions.entries.map((entry) {
-          final sessionId = entry.key;
-          final shares = entry.value;
-          final round = shares.isNotEmpty ? shares.first.drandRound : null;
+        ...sessions.values.map((session) {
+          final round = session.shares.isNotEmpty
+              ? session.shares.first.drandRound
+              : null;
           final isUnlocked = round != null && DrandService.isRoundPast(round);
           final unlockTime =
               round != null ? DrandService.timeForRound(round).toLocal() : null;
@@ -332,7 +327,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => _selectSession(sessionId, shares),
+              onTap: () => _selectSession(session),
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Row(
@@ -357,7 +352,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _shortSession(sessionId),
+                            _shortId(session.sessionId),
                             style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -365,10 +360,19 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${shares.length} share${shares.length == 1 ? '' : 's'}'
+                            '${session.shares.length} share${session.shares.length == 1 ? '' : 's'}'
+                            '  •  threshold ${session.threshold}'
                             '${round != null ? '  •  drand #$round' : ''}',
                             style: const TextStyle(
                                 fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _shortId(session.pubKeyHex),
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                                fontFamily: 'monospace'),
                           ),
                           if (unlockTime != null) ...[
                             const SizedBox(height: 2),
@@ -414,7 +418,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
   // ── Shares received ───────────────────────────────────────────────────────
 
   Widget _buildSharesReceived() {
-    final shares = _shares!;
+    final session = _selectedSession!;
+    final shares = session.shares;
     final round = shares.first.drandRound;
     final unlockTime = DrandService.timeForRound(round).toLocal();
     final isUnlocked = DrandService.isRoundPast(round);
@@ -422,23 +427,38 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_selectedSessionId != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                const Icon(Icons.tag, size: 13, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  'Session: ${_shortSession(_selectedSessionId!)}',
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontFamily: 'monospace'),
-                ),
-              ],
-            ),
+        // Session metadata strip
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.withOpacity(0.15)),
           ),
+          child: Column(
+            children: [
+              _MetaRow(
+                icon: Icons.tag,
+                label: 'Session',
+                value: _shortId(session.sessionId),
+              ),
+              const SizedBox(height: 4),
+              _MetaRow(
+                icon: Icons.vpn_key_outlined,
+                label: 'Sender pubkey',
+                value: _shortId(session.pubKeyHex),
+              ),
+              const SizedBox(height: 4),
+              _MetaRow(
+                icon: Icons.shield_outlined,
+                label: 'Threshold',
+                value: '${session.threshold} of ${shares.length}',
+              ),
+            ],
+          ),
+        ),
+
         _Banner(
           color: isUnlocked ? Colors.green : Colors.orange,
           icon: isUnlocked ? Icons.lock_open : Icons.lock_outline,
@@ -876,6 +896,42 @@ class _InfoRow extends StatelessWidget {
                   fontFamily: 'monospace')),
         ],
       ),
+    );
+  }
+}
+
+// ── Meta row (compact, used in shares received header) ────────────────────────
+
+class _MetaRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _MetaRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: Colors.grey),
+        const SizedBox(width: 6),
+        Text('$label: ',
+            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'monospace'),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

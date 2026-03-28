@@ -43,13 +43,13 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
     try {
       final pubKey = await widget.coin.getPublicKey();
       if (pubKey == null) return;
-      final result = await DeadManSwitchService.fetchSharesFromRelay(
+      final session = await DeadManSwitchService.fetchSharesFromRelay(
         beneficiaryPublicKeyHex: pubKey,
       );
-      if (result == null) return;
-      await DeadManSwitchService.saveShares(result.$1, result.$2);
-      debugPrint(
-          'DMS: cached ${result.$2.length} shares for session ${result.$1}');
+      if (session == null) return;
+      await DeadManSwitchService.saveShares(session);
+      debugPrint('DMS: cached ${session.shares.length} shares '
+          'for session ${session.sessionId}');
     } catch (_) {}
   }
 
