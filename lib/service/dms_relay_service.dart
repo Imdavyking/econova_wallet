@@ -215,8 +215,11 @@ class DmsRelayService {
             totalShares: (msg['totalShares'] as num).toInt(),
             threshold: (msg['threshold'] as num).toInt(),
             share: EncryptedShare(
-              ciphertext: msg['data'] as String,
-              drandRound: (msg['drandRound'] as num).toInt(),
+              ciphertext: (msg['share']?['ciphertext'] as String?) ??
+                  (msg['data'] as String? ?? ''),
+              drandRound: (msg['share']?['drandRound'] as num?)?.toInt() ??
+                  (msg['drandRound'] as num?)?.toInt() ??
+                  0,
             ),
           ));
 
