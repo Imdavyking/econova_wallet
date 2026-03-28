@@ -31,7 +31,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
       final balance =
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
-      await DeadManSwitchService.reset();
+      // await DeadManSwitchService.recordActivity();
     } catch (_) {}
   }
 
