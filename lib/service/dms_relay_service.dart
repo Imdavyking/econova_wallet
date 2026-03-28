@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:wallet_app/utils/crypto_utils.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
@@ -138,7 +139,7 @@ class DmsRelayService {
     required int threshold,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
-    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    final sessionId = generateSessionId();
     for (var i = 0; i < shares.length; i++) {
       _send({
         'type': 'share',
@@ -162,7 +163,7 @@ class DmsRelayService {
     required int threshold,
   }) {
     if (_channel == null) throw StateError('Not connected to relay');
-    final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    final sessionId = generateSessionId();
     _send({
       'type': 'share',
       'sessionId': sessionId,

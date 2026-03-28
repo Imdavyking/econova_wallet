@@ -149,6 +149,15 @@ selectImage({
   ).show();
 }
 
+String generateSessionId([int length = 16]) {
+  final rand = Random.secure();
+  final bytes = Uint8List.fromList(
+    List.generate(length, (_) => rand.nextInt(256)),
+  );
+
+  return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}
+
 ({Uint8List priv, Uint8List pub}) generateKeyPair() {
   final domain = ECDomainParameters('secp256k1');
   final seed = Uint8List.fromList(
