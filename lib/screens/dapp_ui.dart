@@ -1,3 +1,4 @@
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
@@ -120,65 +121,72 @@ class _DappUIState extends State<DappUI> with AutomaticKeepAliveClientMixin {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dapps')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header banner
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  'assets/header_dapp.png',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header banner
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/header_dapp.png',
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Search bar
+                    _SearchBar(controller: _searchController),
+                    const SizedBox(height: 24),
+
+                    // Quick actions — hide when searching
+                    if (_query.isEmpty) ...[
+                      _SectionHeader(title: localization.favourites),
+                      const SizedBox(height: 12),
+                      _QuickActionsGrid(actions: _quickActions),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // All dApps list
+                    _SectionHeader(title: localization.all),
+                    const SizedBox(height: 12),
+                    if (_filteredDapps.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            'No dApps found for "$_query"',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredDapps.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) => _DappListTile(
+                          entry: _filteredDapps[i],
+                          onTap: () => navigateToDappBrowser(
+                            context,
+                            _filteredDapps[i].url,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Search bar
-              _SearchBar(controller: _searchController),
-              const SizedBox(height: 24),
-
-              // Quick actions — hide when searching
-              if (_query.isEmpty) ...[
-                _SectionHeader(title: localization.favourites),
-                const SizedBox(height: 12),
-                _QuickActionsGrid(actions: _quickActions),
-                const SizedBox(height: 24),
-              ],
-
-              // All dApps list
-              _SectionHeader(title: localization.all),
-              const SizedBox(height: 12),
-              if (_filteredDapps.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Center(
-                    child: Text(
-                      'No dApps found for "$_query"',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _filteredDapps.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _DappListTile(
-                    entry: _filteredDapps[i],
-                    onTap: () => navigateToDappBrowser(
-                      context,
-                      _filteredDapps[i].url,
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

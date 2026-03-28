@@ -45,7 +45,7 @@ class Dapp extends StatefulWidget {
 
 class _DappState extends State<Dapp> with TickerProviderStateMixin {
   bool _showTabSwitcher = false;
-  List<WebViewTab> _tabs = [];
+  final List<WebViewTab> _tabs = [];
   int _currentIndex = 0;
   final _chainId = pref.get(dappChainIdKey);
   late ValueNotifier<EthereumCoin> _coinNotifier;
