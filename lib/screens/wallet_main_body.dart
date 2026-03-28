@@ -86,7 +86,6 @@ class _WalletMainBodyState extends State<WalletMainBody>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(chains.first.getName()),
                     const WalletHeader(),
                     const SizedBox(height: 30),
                     const Portfolio(),
