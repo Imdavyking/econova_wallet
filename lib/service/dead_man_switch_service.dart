@@ -394,55 +394,47 @@ class DeadManSwitchService {
     }
   }
 
-  static Future<List<EncryptedShare>?> loadShares(String sessionId) async {
+  static Future<(String, List<EncryptedShare>)?> loadShares(
+      String sessionId) async {
     if (!pref.containsKey(deadSwitchSaveKey)) {
       debugPrint('No saved sessions found in storage.');
       return null;
     }
     final raw = pref.get(deadSwitchSaveKey);
-    if (raw == null) {
-      debugPrint('Saved sessions key exists but is null.');
-      return null;
-    }
+    if (raw == null) return null;
     final existing = Map<String, dynamic>.from(jsonDecode(raw));
     if (!existing.containsKey(sessionId)) {
       debugPrint('Session $sessionId not found in storage.');
       return null;
     }
-    final sharesJson = existing[sessionId] as List;
-    final shares = sharesJson
+    final shares = (existing[sessionId] as List)
         .map((e) => EncryptedShare.fromJson(e as Map<String, dynamic>))
         .toList();
-    debugPrint(
-        'Loaded session $sessionId with ${shares.length} shares from storage.');
-    return shares;
+    debugPrint('Loaded session $sessionId with ${shares.length} shares.');
+    return (sessionId, shares);
   }
 
-  // load all saved shares
-  static Future<List<EncryptedShare>?> fetchAllShares() async {
+  /// Returns all saved sessions as { sessionId → shares }.
+  /// Returns null if nothing is stored, empty map if key exists but is empty.
+  static Future<Map<String, List<EncryptedShare>>?> fetchAllShares() async {
     if (!pref.containsKey(deadSwitchSaveKey)) {
       debugPrint('No saved sessions found in storage.');
       return null;
     }
     final raw = pref.get(deadSwitchSaveKey);
-    if (raw == null) {
-      debugPrint('Saved sessions key exists but is null.');
-      return null;
-    }
+    if (raw == null) return null;
     final existing = Map<String, dynamic>.from(jsonDecode(raw));
-    List<EncryptedShare> allShares = [];
-    existing.forEach((sessionId, sharesJson) {
-      final shares = (sharesJson as List)
+    final result = <String, List<EncryptedShare>>{};
+    for (final entry in existing.entries) {
+      final shares = (entry.value as List)
           .map((e) => EncryptedShare.fromJson(e as Map<String, dynamic>))
           .toList();
-      allShares.addAll(shares);
-      debugPrint(
-          'Loaded session $sessionId with ${shares.length} shares from storage.');
-    });
-    debugPrint('Total loaded shares from all sessions: ${allShares.length}');
-    return allShares;
+      result[entry.key] = shares;
+      debugPrint('Session ${entry.key}: ${shares.length} shares');
+    }
+    debugPrint('Total sessions: ${result.length}');
+    return result;
   }
-
   // ── Fetch shares from relay (beneficiary side) ─────────────────────────────────
 
   static Future<(String, List<EncryptedShare>)?> fetchSharesFromRelay({

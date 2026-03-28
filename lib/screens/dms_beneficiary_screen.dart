@@ -9,14 +9,8 @@ import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/auth_utils.dart';
 
-// ── Beneficiary screen ────────────────────────────────────────────────────────
-/// Opened by the beneficiary on their device.
-/// Uses [EthereumCoin] to derive the private key — only ETH wallets are
-/// supported because the shares are ECIES-encrypted to a secp256k1 key.
 class DmsBeneficiaryScreen extends StatefulWidget {
-  /// Pass the EthereumCoin instance for the wallet that was set as beneficiary.
   final EthereumCoin coin;
-
   const DmsBeneficiaryScreen({super.key, required this.coin});
 
   @override
@@ -24,16 +18,18 @@ class DmsBeneficiaryScreen extends StatefulWidget {
 }
 
 class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
-  // ── State machine ─────────────────────────────────────────────────────────
   _BeneficiaryStep _step = _BeneficiaryStep.idle;
   String? _error;
 
-  // ── Fetched data ──────────────────────────────────────────────────────────
+  // All sessions loaded from storage
+  Map<String, List<EncryptedShare>>? _sessions;
+
+  // The session the user selected (or auto-selected)
+  String? _selectedSessionId;
   List<EncryptedShare>? _shares;
   int? _threshold;
-  String? _decryptedMnemonic;
 
-  // ── Derived from coin ─────────────────────────────────────────────────────
+  String? _decryptedMnemonic;
   String? _pubKeyHex;
   String? _privKeyHex;
 
@@ -42,8 +38,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     super.initState();
     _loadKeys();
   }
-
-  // ── Load keys from coin ───────────────────────────────────────────────────
 
   Future<void> _loadKeys() async {
     try {
@@ -67,8 +61,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     }
   }
 
-  // ── Fetch shares from relay ───────────────────────────────────────────────
-
   Future<void> _fetchShares() async {
     if (_pubKeyHex == null) return;
 
@@ -85,43 +77,52 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     });
 
     try {
-      final shares = await DeadManSwitchService.fetchSharesFromRelay(
-        beneficiaryPublicKeyHex: _pubKeyHex!,
-      );
+      final sessions = await DeadManSwitchService.fetchAllShares();
 
       if (!mounted) return;
 
-      if (shares == null || shares.isEmpty) {
+      if (sessions == null || sessions.isEmpty) {
         setState(() {
           _step = _BeneficiaryStep.idle;
-          _error =
-              'No shares found. The sender may not have armed the switch yet.';
+          _error = 'No shares found locally. Make sure the app has been '
+              'opened while online so shares can be received in the '
+              'background, then try again.';
         });
         return;
       }
 
-      setState(() {
-        _shares = shares;
-        _threshold = shares.length; // relay sends all shares; use all
-        _step = _BeneficiaryStep.sharesReceived;
-      });
+      _sessions = sessions;
+
+      if (sessions.length == 1) {
+        // Only one sender — skip the picker
+        final entry = sessions.entries.first;
+        _selectSession(entry.key, entry.value);
+      } else {
+        setState(() => _step = _BeneficiaryStep.selectSession);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _step = _BeneficiaryStep.idle;
-        _error = 'Fetch failed: $e';
+        _error = 'Failed to load shares: $e';
       });
     }
   }
 
-  // ── Decrypt shares ────────────────────────────────────────────────────────
+  void _selectSession(String sessionId, List<EncryptedShare> shares) {
+    setState(() {
+      _selectedSessionId = sessionId;
+      _shares = shares;
+      _threshold = shares.length;
+      _step = _BeneficiaryStep.sharesReceived;
+    });
+  }
 
   Future<void> _decrypt() async {
     if (_shares == null || _privKeyHex == null) return;
 
     final round = _shares!.first.drandRound;
 
-    // Check if drand round has passed
     if (!DrandService.isRoundPast(round)) {
       final unlockTime = DrandService.timeForRound(round).toLocal();
       _showSnack(
@@ -164,8 +165,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -179,13 +178,23 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  String _shortSession(String id) =>
+      '${id.substring(0, 8)}…${id.substring(id.length - 8)}';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('DMS — Beneficiary'),
+        // Back to session list if we're deep in a session
+        leading: _step == _BeneficiaryStep.sharesReceived &&
+                (_sessions?.length ?? 0) > 1
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () =>
+                    setState(() => _step = _BeneficiaryStep.selectSession),
+              )
+            : null,
         actions: [
           if (kDmsTestMode)
             Container(
@@ -211,11 +220,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Wallet info card ───────────────────────────────────────────
               _WalletInfoCard(coin: widget.coin, pubKeyHex: _pubKeyHex),
               const SizedBox(height: 20),
-
-              // ── Error banner ───────────────────────────────────────────────
               if (_error != null) ...[
                 _Banner(
                   color: Colors.red,
@@ -224,8 +230,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-
-              // ── Body by step ───────────────────────────────────────────────
               _buildBody(),
             ],
           ),
@@ -238,6 +242,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     return switch (_step) {
       _BeneficiaryStep.idle => _buildIdle(),
       _BeneficiaryStep.fetching => _buildFetching(),
+      _BeneficiaryStep.selectSession => _buildSelectSession(),
       _BeneficiaryStep.sharesReceived => _buildSharesReceived(),
       _BeneficiaryStep.decrypting => _buildDecrypting(),
       _BeneficiaryStep.decrypted => _buildDecrypted(),
@@ -248,7 +253,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
 
   Widget _buildIdle() {
     final isReady = _pubKeyHex != null && _privKeyHex != null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -256,8 +260,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
           color: Colors.blue,
           icon: Icons.info_outline,
           text: 'If someone has armed a Dead Man\'s Switch with your wallet '
-              'as the beneficiary, their encrypted shares are waiting for you. '
-              'Tap below to check and retrieve them.',
+              'as the beneficiary, their encrypted shares are stored locally '
+              'on this device. Tap below to load them.',
         ),
         const SizedBox(height: 24),
         if (!isReady)
@@ -267,8 +271,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _fetchShares,
-              icon: const Icon(Icons.download_outlined, size: 18),
-              label: const Text('Check for shares'),
+              icon: const Icon(Icons.folder_open_outlined, size: 18),
+              label: const Text('Load shares'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -292,11 +296,118 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Connecting to relay & fetching shares…',
+            Text('Loading shares from local storage…',
                 style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
+    );
+  }
+
+  // ── Session picker ────────────────────────────────────────────────────────
+
+  Widget _buildSelectSession() {
+    final sessions = _sessions!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Banner(
+          color: Colors.blue,
+          icon: Icons.layers_outlined,
+          text: '${sessions.length} senders found. '
+              'Select a session to decrypt.',
+        ),
+        const SizedBox(height: 16),
+        ...sessions.entries.map((entry) {
+          final sessionId = entry.key;
+          final shares = entry.value;
+          final round = shares.isNotEmpty ? shares.first.drandRound : null;
+          final isUnlocked = round != null && DrandService.isRoundPast(round);
+          final unlockTime =
+              round != null ? DrandService.timeForRound(round).toLocal() : null;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _selectSession(sessionId, shares),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: (isUnlocked ? Colors.green : Colors.orange)
+                            .withOpacity(0.15),
+                      ),
+                      child: Icon(
+                        isUnlocked ? Icons.lock_open : Icons.lock_outline,
+                        color: isUnlocked ? Colors.green : Colors.orange,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _shortSession(sessionId),
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'monospace'),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${shares.length} share${shares.length == 1 ? '' : 's'}'
+                            '${round != null ? '  •  drand #$round' : ''}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                          if (unlockTime != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              isUnlocked
+                                  ? '✓ Unlocked'
+                                  : 'Unlocks ${_formatDateTime(unlockTime)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    isUnlocked ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.grey),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _fetchShares,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Reload from storage'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -311,7 +422,23 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Status banner ──────────────────────────────────────────────────
+        if (_selectedSessionId != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.tag, size: 13, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  'Session: ${_shortSession(_selectedSessionId!)}',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
         _Banner(
           color: isUnlocked ? Colors.green : Colors.orange,
           icon: isUnlocked ? Icons.lock_open : Icons.lock_outline,
@@ -322,8 +449,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                   'Come back after the deadline to decrypt.',
         ),
         const SizedBox(height: 16),
-
-        // ── Share tiles ────────────────────────────────────────────────────
         ...shares.asMap().entries.map(
               (e) => _ShareTile(
                 index: e.key,
@@ -332,8 +457,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               ),
             ),
         const SizedBox(height: 20),
-
-        // ── Decrypt button ─────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -350,14 +473,12 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
           ),
         ),
         const SizedBox(height: 10),
-
-        // ── Re-fetch button ────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _fetchShares,
             icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Re-fetch shares'),
+            label: const Text('Reload from storage'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -402,8 +523,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               'Write it down and store it securely.',
         ),
         const SizedBox(height: 20),
-
-        // ── Word grid ──────────────────────────────────────────────────────
         Card(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -415,11 +534,9 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Seed Phrase',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    const Text('Seed Phrase',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     IconButton(
                       icon: const Icon(Icons.copy, size: 18),
                       tooltip: 'Copy all words',
@@ -442,18 +559,14 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                     mainAxisSpacing: 8,
                   ),
                   itemCount: words.length,
-                  itemBuilder: (_, i) => _WordTile(
-                    index: i + 1,
-                    word: words[i],
-                  ),
+                  itemBuilder: (_, i) =>
+                      _WordTile(index: i + 1, word: words[i]),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
-
-        // ── Warning ────────────────────────────────────────────────────────
         const _Banner(
           color: Colors.red,
           icon: Icons.warning_amber_rounded,
@@ -461,8 +574,6 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               'Anyone with these words has full access to the wallet.',
         ),
         const SizedBox(height: 20),
-
-        // ── Done button ────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
@@ -482,7 +593,14 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
 
 // ── Step enum ─────────────────────────────────────────────────────────────────
 
-enum _BeneficiaryStep { idle, fetching, sharesReceived, decrypting, decrypted }
+enum _BeneficiaryStep {
+  idle,
+  fetching,
+  selectSession,
+  sharesReceived,
+  decrypting,
+  decrypted,
+}
 
 // ── Wallet info card ──────────────────────────────────────────────────────────
 

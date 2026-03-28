@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
@@ -10,6 +11,7 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/providers/token_provider.dart';
+import 'package:wallet_app/screens/dms_beneficiary_screen.dart';
 import 'package:wallet_app/screens/need_deploy_widget.dart';
 import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_form.dart';
@@ -199,6 +201,19 @@ class _TokenState extends State<Token> {
           ),
           icon: const Icon(Icons.security, color: Colors.white),
           tooltip: 'Token Approvals',
+        ),
+
+      // Dead Man's Switch — beneficiary view, ETH wallets only
+      if (_coin is EthereumCoin)
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DmsBeneficiaryScreen(coin: _coin as EthereumCoin),
+            ),
+          ),
+          icon: const Icon(Icons.shield_outlined, color: Colors.white),
+          tooltip: 'Dead Man\'s Switch',
         ),
 
       // Debug test page — debug mode only
@@ -736,12 +751,12 @@ class _TransactionHeader extends StatelessWidget {
 class _TransactionItem extends StatelessWidget {
   final TokenTransaction tx;
   final Coin coin;
-  final bool isSent; // ✅
+  final bool isSent;
 
   const _TransactionItem({
     required this.tx,
     required this.coin,
-    required this.isSent, // ✅
+    required this.isSent,
   });
 
   @override
@@ -778,11 +793,11 @@ class _TransactionItem extends StatelessWidget {
                           children: [
                             UserBalance(
                               balance: tx.tokenAmount,
-                              symbol: isSent ? '-' : '+', // ✅
+                              symbol: isSent ? '-' : '+',
                               reversed: true,
                               textStyle: TextStyle(
                                 fontSize: 18,
-                                color: isSent ? Colors.red : Colors.green, // ✅
+                                color: isSent ? Colors.red : Colors.green,
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -798,14 +813,14 @@ class _TransactionItem extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              isSent ? 'Sent' : 'Received', // ✅
+                              isSent ? 'Sent' : 'Received',
                               style: TextStyle(
                                 color: isSent ? Colors.red : Colors.green,
                               ),
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              ellipsify(str: isSent ? tx.to : tx.from), // ✅
+                              ellipsify(str: isSent ? tx.to : tx.from),
                               overflow: TextOverflow.fade,
                               style: const TextStyle(color: Colors.grey),
                             ),
@@ -823,9 +838,8 @@ class _TransactionItem extends StatelessWidget {
     );
   }
 }
+
 // ── Debug: Approval test page ─────────────────────────────────────────────────
-// Only reachable in kDebugMode via the bug_report icon in the app bar.
-// Completely stripped in release builds.
 
 class _ApprovalTestPage extends StatefulWidget {
   final Coin coin;
@@ -893,7 +907,6 @@ class _ApprovalTestPageState extends State<_ApprovalTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Warning banner
             const _Banner(
               color: Colors.red,
               icon: Icons.warning_amber_rounded,
@@ -901,12 +914,8 @@ class _ApprovalTestPageState extends State<_ApprovalTestPage> {
                   'Use testnet only.',
             ),
             const SizedBox(height: 20),
-
-            // Coin info
             _InfoCard(coin: widget.coin),
             const SizedBox(height: 24),
-
-            // Create approval button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -927,8 +936,6 @@ class _ApprovalTestPageState extends State<_ApprovalTestPage> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // View approvals button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -945,8 +952,6 @@ class _ApprovalTestPageState extends State<_ApprovalTestPage> {
                 ),
               ),
             ),
-
-            // Result
             if (_result != null) ...[
               const SizedBox(height: 24),
               _ResultCard(

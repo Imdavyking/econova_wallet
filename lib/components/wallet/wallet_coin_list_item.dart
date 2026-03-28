@@ -25,6 +25,8 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
     super.initState();
     _loadBalance();
     _timer = Timer.periodic(httpPollingDelay, (_) => _loadBalance());
+    // One-shot passive share fetch — not polled, relay opens a WS.
+    _tryFetchBeneficiaryShares();
   }
 
   Future<void> _loadBalance() async {
@@ -33,17 +35,21 @@ class _WalletCoinListItemState extends State<WalletCoinListItem> {
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
       await DeadManSwitchService.recordActivity();
+    } catch (_) {}
+  }
+
+  Future<void> _tryFetchBeneficiaryShares() async {
+    if (widget.coin is! EthereumCoin) return;
+    try {
       final pubKey = await widget.coin.getPublicKey();
-      if (widget.coin is! EthereumCoin || pubKey == null) return;
-      final shares = await DeadManSwitchService.fetchSharesFromRelay(
+      if (pubKey == null) return;
+      final result = await DeadManSwitchService.fetchSharesFromRelay(
         beneficiaryPublicKeyHex: pubKey,
       );
-
-      if (shares == null) return;
-
-      await DeadManSwitchService.saveShares(shares.$1, shares.$2);
-
-      debugPrint('current shares: $shares');
+      if (result == null) return;
+      await DeadManSwitchService.saveShares(result.$1, result.$2);
+      debugPrint(
+          'DMS: cached ${result.$2.length} shares for session ${result.$1}');
     } catch (_) {}
   }
 
