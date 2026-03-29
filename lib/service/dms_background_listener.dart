@@ -79,6 +79,7 @@ class DmsBackgroundListener {
   Future<void> _saveSession(String sid) async {
     final msgs = _collected[sid]!.values.toList();
     final session = DmsSessionData(
+      dataHash: msgs.first.dataHash,
       sessionId: sid,
       shares: msgs.map((m) => m.share).toList(),
       threshold: msgs.first.threshold,
