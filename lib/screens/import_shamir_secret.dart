@@ -2,12 +2,16 @@
 
 import 'dart:convert';
 
+import 'package:bip32/bip32.dart' as bip32;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:pinput/pinput.dart';
 import 'package:slip39/slip39.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
@@ -66,7 +70,7 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
     _shares.value = updated;
   }
 
-  void _combine() {
+  void _combine() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     try {
       final String result;
@@ -77,6 +81,7 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       }
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(sharesList, _isBase64.value);
+        Navigator.pop(context, result);
       } else {
         final decoded = Slip39Helpers.decodeMnemonics(sharesList);
         final groups = decoded['groups'];
@@ -87,17 +92,10 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
           passphrase: _passphraseCtrl.text,
         );
 
-        final needPadding = recovered[0] == 1;
-
-        recovered = recovered.sublist(
-          1,
-          recovered.length - (needPadding ? 1 : 0),
-        );
-
-        result = utf8.decode(recovered);
+        debugPrint(recovered.toString());
       }
-      Navigator.pop(context, result);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(

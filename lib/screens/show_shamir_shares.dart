@@ -3,10 +3,12 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:slip39/slip39.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -33,6 +35,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _sharesList = ValueNotifier<List<String>>([]);
   final _isBase64 = ValueNotifier<bool>(true);
   final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.sss);
+  Map<String, Uint8List> cacheSeed = {};
 
   static const _maxShares = 8;
   static const _minShares = 2;
@@ -60,7 +63,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
 
   // ── Logic ──────────────────────────────────────────────────────────────────
 
-  void _generateShares() {
+  void _generateShares() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final minimum = int.parse(_thresholdCtrl.text.trim());
     final shares = int.parse(_sharesCtrl.text.trim());
@@ -69,45 +72,19 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
       _sharesList.value =
           SSS().create(minimum, shares, widget.data, _isBase64.value);
     } else {
-      // SLIP39 requires an even-length byte array.
-      var bytes = Uint8List.fromList(utf8.encode(widget.data));
-      final needsPad = bytes.length.isEven;
-      bytes = Uint8List.fromList([
-        needsPad ? 1 : 0,
-        ...bytes,
-        if (needsPad) 0,
-      ]);
-
-      print([minimum, shares]);
-
+      if (!cacheSeed.containsKey(widget.data)) {
+        final seeds = await compute(seedFromMnemonic, widget.data);
+        cacheSeed[widget.data] = seeds.seed;
+      }
       final slip = Slip39.from(
         [
           [minimum, shares]
         ],
-        masterSecret: bytes,
+        masterSecret: cacheSeed[widget.data]!,
         passphrase: _passphraseCtrl.text,
         threshold: 1,
       );
       _sharesList.value = slip.fromPath('r/0').mnemonics;
-      final decoded = Slip39Helpers.decodeMnemonics(_sharesList.value);
-      final groups = decoded['groups'];
-      final minimumlen = Map.from(groups[0]).keys.first;
-
-      List<int> testRecovered = Slip39.recoverSecret(
-        _sharesList.value
-            .sublist(0, minimumlen), // ✅ only threshold number needed
-        passphrase: _passphraseCtrl.text,
-      );
-
-      print('we goood');
-
-      final needPadding = testRecovered[0] == 1;
-
-      testRecovered = testRecovered.sublist(
-        1,
-        testRecovered.length - (needPadding ? 1 : 0),
-      );
-      print('needPadding $needPadding data : ${utf8.decode(testRecovered)}');
     }
   }
 
