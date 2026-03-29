@@ -23,6 +23,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
     with WidgetsBindingObserver {
   final ValueNotifier<double?> _balanceNotifier = ValueNotifier(null);
   Timer? _timer;
+  bool _heartbeatInFlight = false; // ← guard against concurrent heartbeats
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
   }
 
   Future<void> _maybeHeartbeat() async {
+    if (_heartbeatInFlight) return;
     if (DeadManSwitchService.state != DmsState.active) return;
     final remaining = DeadManSwitchService.timeRemaining;
     final cfg = DeadManSwitchService.config;
@@ -66,7 +68,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
 
     final mnemonic = WalletService.getActiveKey(walletImportType)?.data;
     if (mnemonic == null) return;
-
+    _heartbeatInFlight = true;
     // Fire and forget — non-fatal if it fails
     DeadManSwitchService.heartbeat(mnemonic: mnemonic)
         .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult);
