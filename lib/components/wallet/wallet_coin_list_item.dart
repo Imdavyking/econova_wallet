@@ -57,7 +57,9 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
 
   Future<void> _maybeHeartbeat() async {
     if (_heartbeatInFlight) return;
-    if (walletImportType != WalletType.secretPhrase) return;
+
+    if (walletImportType.index != WalletType.secretPhrase.index) return;
+
     if (DeadManSwitchService.state != DmsState.active) return;
     final remaining = DeadManSwitchService.timeRemaining;
     final cfg = DeadManSwitchService.config;
@@ -70,6 +72,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
     final mnemonic = WalletService.getActiveKey(walletImportType)?.data;
     if (mnemonic == null) return;
     _heartbeatInFlight = true;
+
     // Fire and forget — non-fatal if it fails
     DeadManSwitchService.heartbeat(mnemonic: mnemonic)
         .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult)
