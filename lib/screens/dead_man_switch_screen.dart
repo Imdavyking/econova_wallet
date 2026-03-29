@@ -184,7 +184,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
 
     return switch (_state) {
-      DmsState.inactive => FutureBuilder<String>(
+      DmsState.inactive => FutureBuilder<String?>(
           future: (() async {
             final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
             final eth = getChains<EthereumCoin>().first;

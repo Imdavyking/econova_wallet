@@ -49,7 +49,9 @@ class DmsWsShareReceived extends DmsWsMessage {
   final int totalShares;
   final int threshold;
   final String pubKeyHex;
+  final String senderAddress;
   final int milliSeconds;
+
   DmsWsShareReceived({
     required this.share,
     required this.shareIndex,
@@ -58,6 +60,7 @@ class DmsWsShareReceived extends DmsWsMessage {
     required this.sessionId,
     required this.milliSeconds,
     required this.pubKeyHex,
+    required this.senderAddress,
   });
 }
 
@@ -209,6 +212,7 @@ class DmsRelayService {
         case 'share':
           _controller.add(DmsWsShareReceived(
             pubKeyHex: msg['pubKeyHex'] as String,
+            senderAddress: msg['senderAddress'] as String,
             sessionId: msg['sessionId'] as String,
             milliSeconds: (msg['milliSeconds'] as num).toInt(),
             shareIndex: (msg['shareIndex'] as num).toInt(),

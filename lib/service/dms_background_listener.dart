@@ -84,6 +84,7 @@ class DmsBackgroundListener {
       shares: msgs.map((m) => m.share).toList(),
       threshold: msgs.first.threshold,
       pubKeyHex: msgs.first.pubKeyHex,
+      senderAddress: msgs.first.senderAddress,
       milliSeconds: msgs.first.milliSeconds,
     );
 

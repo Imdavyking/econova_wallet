@@ -36,7 +36,6 @@ class DmsConfig {
   final int threshold;
   final int totalShares;
 
-
   const DmsConfig({
     required this.beneficiaryPublicKey,
     required this.timeoutSeconds,
@@ -134,6 +133,7 @@ class DmsSessionData {
   final List<EncryptedShare> shares;
   final int threshold;
   final String pubKeyHex;
+  final String senderAddress;
   final int milliSeconds;
 
   const DmsSessionData({
@@ -142,6 +142,7 @@ class DmsSessionData {
     required this.threshold,
     required this.pubKeyHex,
     required this.milliSeconds,
+    required this.senderAddress,
   });
 
   Map<String, dynamic> toJson() => {
@@ -149,6 +150,7 @@ class DmsSessionData {
         'shares': shares.map((e) => e.toJson()).toList(),
         'threshold': threshold,
         'pubKeyHex': pubKeyHex,
+        'senderAddress': senderAddress,
         'milliSeconds': milliSeconds,
       };
 
@@ -160,6 +162,7 @@ class DmsSessionData {
         threshold: j['threshold'] as int,
         pubKeyHex: j['pubKeyHex'] as String,
         milliSeconds: j['milliSeconds'] as int,
+        senderAddress: j['senderAddress'] as String,
       );
 }
 
@@ -299,9 +302,8 @@ class DeadManSwitchService {
 
       // Auto-send shares to beneficiary via relay (non-fatal if relay is down)
       await _pushSharesToRelay(
-        pubKeyHex: cfg.beneficiaryPublicKey,
         shares: encShares,
-        threshold: cfg.threshold,
+        cfg: cfg,
       );
 
       return DmsOk(encShares);
@@ -335,9 +337,8 @@ class DeadManSwitchService {
       final shares = encryptedShares;
       if (shares != null) {
         await _pushSharesToRelay(
-          pubKeyHex: cfg.beneficiaryPublicKey,
           shares: shares,
-          threshold: cfg.threshold,
+          cfg: cfg,
         );
       }
     }
@@ -450,7 +451,6 @@ class DeadManSwitchService {
   /// Returns all saved sessions keyed by sessionId.
   /// Returns null if the storage key doesn't exist at all.
   static Future<Map<String, DmsSessionData>?> fetchAllShares() async {
-    // pref.delete(deadSwitchSaveKey);
     if (!pref.containsKey(deadSwitchSaveKey)) {
       debugPrint('No saved sessions found in storage.');
       return null;
@@ -500,6 +500,7 @@ class DeadManSwitchService {
             if (!completer.isCompleted) {
               final msgs = collected[sessionId]!.values.toList();
               completer.complete(DmsSessionData(
+                senderAddress: msgs.first.senderAddress,
                 sessionId: sessionId,
                 shares: msgs.map((m) => m.share).toList(),
                 threshold: msgs.first.threshold,
@@ -531,6 +532,7 @@ class DeadManSwitchService {
               shares: msgs.map((m) => m.share).toList(),
               threshold: msgs.first.threshold,
               pubKeyHex: msgs.first.pubKeyHex,
+              senderAddress: msgs.first.senderAddress,
               milliSeconds: msgs.first.milliSeconds,
             );
           }
@@ -549,11 +551,10 @@ class DeadManSwitchService {
   }
 
   static Future<void> _pushSharesToRelay({
-    required String pubKeyHex,
+    required DmsConfig cfg,
     required List<EncryptedShare> shares,
-    required int threshold,
   }) async {
-    final roomId = roomIdFromPubKey(pubKeyHex);
+    final roomId = roomIdFromPubKey(cfg.beneficiaryPublicKey);
     WebSocket? ws;
     try {
       // ✅ Raw WebSocket — completely independent from DmsRelayService singleton
@@ -579,8 +580,9 @@ class DeadManSwitchService {
           'sessionId': sessionId,
           'shareIndex': i,
           'totalShares': shares.length,
-          'threshold': threshold,
-          'pubKeyHex': pubKeyHex,
+          'threshold': cfg.threshold,
+          'pubKeyHex': cfg.beneficiaryPublicKey,
+          'senderAddress': cfg.senderAddress,
           'milliSeconds': DateTime.now().millisecondsSinceEpoch,
           'share': shares[i].toJson(),
         }));
