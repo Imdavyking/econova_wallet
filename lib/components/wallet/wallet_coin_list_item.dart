@@ -5,6 +5,7 @@ import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/token.dart';
+import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/dms_background_listener.dart';
 import 'package:wallet_app/service/wallet_service.dart';
@@ -57,6 +58,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
 
   Future<void> _maybeHeartbeat() async {
     if (_heartbeatInFlight) return;
+    if (walletImportType != WalletType.secretPhrase) return;
     if (DeadManSwitchService.state != DmsState.active) return;
     final remaining = DeadManSwitchService.timeRemaining;
     final cfg = DeadManSwitchService.config;
