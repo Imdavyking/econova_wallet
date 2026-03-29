@@ -71,8 +71,22 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
   }
 
   Future<void> _heartbeat() async {
-    final result = await DeadManSwitchService.heartbeat();
+    if (!WalletService.isPharseKey()) return;
+
+    final authed = await authenticate(context);
+    if (!authed) {
+      if (!context.mounted) return;
+      _showSnack('Authentication failed', isError: true);
+      return;
+    }
+
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+
+    setState(() => _loading = true);
+    final result = await DeadManSwitchService.heartbeat(mnemonic: mnemonic);
     if (!mounted) return;
+    setState(() => _loading = false);
+
     switch (result) {
       case DmsOk():
         _refresh();

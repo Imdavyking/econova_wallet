@@ -91,6 +91,18 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
 
       _sessions = sessions;
 
+      // If we already had a session open, refresh it in-place with the
+      // latest data (new drandRound after a heartbeat) instead of
+      // dropping back to the session picker.
+      if (_selectedSession != null) {
+        final refreshed = sessions.values.firstWhere(
+          (s) => s.senderAddress == _selectedSession!.senderAddress,
+          orElse: () => sessions.values.first,
+        );
+        _selectSession(refreshed);
+        return;
+      }
+
       if (sessions.length == 1) {
         _selectSession(sessions.values.first);
       } else {

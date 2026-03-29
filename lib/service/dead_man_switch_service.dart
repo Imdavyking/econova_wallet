@@ -322,7 +322,7 @@ class DeadManSwitchService {
 
   // ── Heartbeat ──────────────────────────────────────────────────────────────────
 
-  static Future<DmsResult> heartbeat() async {
+  static Future<DmsResult> heartbeat({required String mnemonic}) async {
     if (state != DmsState.active) return DmsErr('Switch is not active');
     final now = DateTime.now();
     await pref.put(_kLastActivity, now.toIso8601String());
@@ -334,17 +334,37 @@ class DeadManSwitchService {
       await pref.put(_kDrandRound, newRound);
       debugPrint('DMS heartbeat: new drand round = $newRound');
 
-      final shares = encryptedShares;
-      if (shares != null) {
-        await _pushSharesToRelay(
-          shares: shares,
-          cfg: cfg,
+      // Re-split and re-encrypt with the new round
+      try {
+        final rawShares = await compute(
+          _splitMnemonic,
+          _SplitArgs(mnemonic: mnemonic, cfg: cfg),
         );
+
+        final pubKeyBytes =
+            _hexToBytes(cfg.beneficiaryPublicKey.replaceFirst('0x', ''));
+
+        final newEncShares = await compute(
+          _encryptAllShares,
+          _EncryptArgs(
+            shares: rawShares,
+            pubKeyBytes: pubKeyBytes,
+            drandRound: newRound,
+          ),
+        );
+
+        // Persist updated shares
+        await pref.put(
+            _kShares, jsonEncode(newEncShares.map((e) => e.toJson()).toList()));
+
+        await _pushSharesToRelay(shares: newEncShares, cfg: cfg);
+      } catch (e) {
+        debugPrint('DMS heartbeat re-encrypt error: $e');
+        // Non-fatal — timer was still reset
       }
     }
     return DmsOk();
   }
-
   // ── Cancel ─────────────────────────────────────────────────────────────────────
 
   static Future<DmsResult> cancel() async {
