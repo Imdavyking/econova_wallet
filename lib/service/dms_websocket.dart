@@ -5,10 +5,12 @@ import 'dart:convert';
 
 final rooms = <String, Set<WebSocket>>{};
 
-// roomStore[roomId] = latest share batch or cancel marker
-// { 'type': 'shares', 'sessionId': ..., 'dataHash': ..., 'shares': { shareIndex: msg } }
-// { 'type': 'cancel', 'dataHash': ... }
-final roomStore = <String, Map<String, dynamic>>{};
+// roomStore[roomId][dataHash] = {
+//   'type': 'shares', 'sessionId': ..., 'dataHash': ..., 'shares': { shareIndex: msg }
+// } | {
+//   'type': 'cancel', 'dataHash': ...
+// }
+final roomStore = <String, Map<String, Map<String, dynamic>>>{};
 
 int _connectionCount = 0;
 
@@ -48,21 +50,30 @@ void handleConnection(WebSocket ws, int id) {
         ws.add(jsonEncode({'type': 'joined', 'room': room, 'peers': peers}));
         broadcast(room!, ws, {'type': 'peers', 'count': peers}, id);
 
-        // ── Replay stored state to newly joined peer ──────────────────────
+        // ── Replay all stored state to newly joined peer ──────────────────
         final stored = roomStore[room];
-        if (stored != null) {
-          if (stored['type'] == 'cancel') {
-            print('📬 [#$id] Replaying cancel to new peer in room "$room"');
-            ws.add(
-                jsonEncode({'type': 'cancel', 'dataHash': stored['dataHash']}));
-          } else if (stored['type'] == 'shares') {
-            final shares = stored['shares'] as Map<String, dynamic>;
-            print(
-                '📬 [#$id] Replaying ${shares.length} share(s) to new peer in room "$room"');
-            for (final shareMsg in shares.values) {
-              ws.add(jsonEncode(shareMsg));
+        if (stored != null && stored.isNotEmpty) {
+          print(
+              '📬 [#$id] Replaying ${stored.length} entry(ies) to new peer in room "$room"');
+          for (final entry in stored.values) {
+            if (entry['type'] == 'cancel') {
+              print(
+                  '📬 [#$id]   → cancel for dataHash=${_short(entry['dataHash'] as String?)}');
+              ws.add(jsonEncode({
+                'type': 'cancel',
+                'dataHash': entry['dataHash'],
+              }));
+            } else if (entry['type'] == 'shares') {
+              final shares = entry['shares'] as Map<String, dynamic>;
+              print(
+                  '📬 [#$id]   → ${shares.length} share(s) for dataHash=${_short(entry['dataHash'] as String?)}');
+              for (final shareMsg in shares.values) {
+                ws.add(jsonEncode(shareMsg));
+              }
             }
           }
+        } else {
+          print('📭 [#$id] No stored state for room "$room"');
         }
       } else if (type == 'ping') {
         print('🏓 [#$id] Ping → Pong');
@@ -76,9 +87,7 @@ void handleConnection(WebSocket ws, int id) {
         final drandRound =
             (msg['share'] as Map<String, dynamic>?)?['drandRound'] ??
                 msg['drandRound'];
-        final shortHash = dataHash != null && dataHash.length >= 16
-            ? '${dataHash.substring(0, 8)}…${dataHash.substring(dataHash.length - 8)}'
-            : dataHash ?? 'none';
+        final shortHash = _short(dataHash);
 
         print('📦 [#$id] Share $shareIndex/$totalShares '
             'session=$sessionId '
@@ -88,14 +97,18 @@ void handleConnection(WebSocket ws, int id) {
             '→ storing & broadcasting to room "$room"');
 
         if (room != null) {
-          // If new sessionId (heartbeat), replace old store
-          final existing = roomStore[room!];
+          final dataHashKey = dataHash ?? 'unknown';
+
+          roomStore.putIfAbsent(room!, () => {});
+
+          // If new sessionId for this dataHash (heartbeat), replace old shares
+          final existing = roomStore[room!]![dataHashKey];
           if (existing == null ||
               existing['type'] == 'cancel' ||
               existing['sessionId'] != sessionId) {
             print(
-                '🔄 [#$id] New session $sessionId — replacing old store for room "$room"');
-            roomStore[room!] = {
+                '🔄 [#$id] New session $sessionId for dataHash=$shortHash — replacing old store');
+            roomStore[room!]![dataHashKey] = {
               'type': 'shares',
               'sessionId': sessionId,
               'dataHash': dataHash,
@@ -103,27 +116,31 @@ void handleConnection(WebSocket ws, int id) {
             };
           }
 
-          // Store this individual share message by index
-          (roomStore[room!]!['shares'] as Map<String, dynamic>)['$shareIndex'] =
-              msg;
-          final collected =
-              (roomStore[room!]!['shares'] as Map<String, dynamic>).length;
+          // Store individual share message by index
+          (roomStore[room!]![dataHashKey]!['shares']
+              as Map<String, dynamic>)['$shareIndex'] = msg;
+          final collected = (roomStore[room!]![dataHashKey]!['shares']
+                  as Map<String, dynamic>)
+              .length;
           print(
-              '💾 [#$id] Stored share $shareIndex — $collected/$totalShares in store for room "$room"');
+              '💾 [#$id] Stored share $shareIndex — $collected/$totalShares for dataHash=$shortHash in room "$room"');
 
           broadcast(room!, ws, msg, id);
         }
       } else if (type == 'cancel') {
         final dataHash = msg['dataHash'] as String?;
-        final shortHash = dataHash != null && dataHash.length >= 16
-            ? '${dataHash.substring(0, 8)}…${dataHash.substring(dataHash.length - 8)}'
-            : dataHash ?? 'none';
+        final shortHash = _short(dataHash);
         print(
             '🗑️  [#$id] Cancel for dataHash=$shortHash — storing & broadcasting to room "$room"');
 
         if (room != null) {
-          // Replace whatever was stored with cancel marker
-          roomStore[room!] = {'type': 'cancel', 'dataHash': dataHash};
+          final dataHashKey = dataHash ?? 'unknown';
+          roomStore.putIfAbsent(room!, () => {});
+          // Replace this sender's shares with a cancel marker
+          roomStore[room!]![dataHashKey] = {
+            'type': 'cancel',
+            'dataHash': dataHash,
+          };
           broadcast(room!, ws, msg, id);
         }
       } else if (room != null) {
@@ -142,8 +159,9 @@ void handleConnection(WebSocket ws, int id) {
             '👋 [#$id] Disconnected from room "$room" — $remaining peer(s) remaining');
         if (remaining == 0) {
           rooms.remove(room);
-          print('🗑️  Room "$room" is now empty — removed (store kept)');
-          // NOTE: roomStore is intentionally NOT cleared here —
+          print(
+              '🗑️  Room "$room" is now empty — removed (store kept for offline replay)');
+          // NOTE: roomStore is intentionally NOT cleared —
           // beneficiary may connect later and needs the replay
         }
       } else {
@@ -168,4 +186,10 @@ void broadcast(
   for (final c in targets) {
     c.add(raw);
   }
+}
+
+String _short(String? s) {
+  if (s == null) return 'none';
+  if (s.length < 16) return s;
+  return '${s.substring(0, 8)}…${s.substring(s.length - 8)}';
 }
