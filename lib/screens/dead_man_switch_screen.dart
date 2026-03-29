@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
@@ -46,11 +47,14 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
 
     final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final eth = getChains<EthereumCoin>().first;
+    final details = await eth.importData(mnemonic);
 
     setState(() => _loading = true);
     final result = await DeadManSwitchService.activate(
       mnemonic: mnemonic,
       cfg: cfg,
+      sender: details.address,
     );
     if (!mounted) return;
     setState(() => _loading = false);

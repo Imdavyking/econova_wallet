@@ -255,6 +255,7 @@ class DeadManSwitchService {
   static Future<DmsResult> activate({
     required String mnemonic,
     required DmsConfig cfg,
+    required String sender,
   }) async {
     if (mnemonic.trim().isEmpty) return DmsErr('Mnemonic is empty');
     if (state == DmsState.active) return DmsErr('Switch is already active');
@@ -299,6 +300,7 @@ class DeadManSwitchService {
         pubKeyHex: cfg.beneficiaryPublicKey,
         shares: encShares,
         threshold: cfg.threshold,
+        sender: sender,
       );
 
       return DmsOk(encShares);
@@ -549,6 +551,7 @@ class DeadManSwitchService {
     required String pubKeyHex,
     required List<EncryptedShare> shares,
     required int threshold,
+    required String sender,
   }) async {
     final roomId = roomIdFromPubKey(pubKeyHex);
     WebSocket? ws;
@@ -573,6 +576,7 @@ class DeadManSwitchService {
       for (var i = 0; i < shares.length; i++) {
         ws.add(jsonEncode({
           'type': 'share',
+          'sender': sender,
           'sessionId': sessionId,
           'shareIndex': i,
           'totalShares': shares.length,
