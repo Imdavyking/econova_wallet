@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:pinput/pinput.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
@@ -431,13 +432,22 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
           decoration: InputDecoration(
             hintText: '02a1b2c3...  (66 hex chars)',
             prefixIcon: const Icon(Icons.vpn_key_outlined),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.content_paste_outlined, size: 18),
+              tooltip: 'Paste',
+              onPressed: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                if (data?.text == null) return;
+                _pubKeyController.setText(data!.text!.trim());
+                setState(() {});
+              },
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             errorText: _pubKeyController.text.isNotEmpty && !_pubKeyValid
                 ? 'Must be 66 hex chars starting with 02 or 03'
                 : null,
           ),
         ),
-
         // ── Derived address preview ──────────────────────────────────────────
         if (_pubKeyValid) ...[
           const SizedBox(height: 6),
