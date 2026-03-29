@@ -96,6 +96,12 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
   }
 
+  Future<void> _acknowledge() async {
+    await DeadManSwitchService.reset();
+    if (!mounted) return;
+    _refresh();
+  }
+
   Future<void> _cancel() async {
     final authed = await authenticate(context);
     if (!authed) {
@@ -233,6 +239,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
       DmsState.triggered => _DmsTriggeredView(
           encryptedShares: _encryptedShares,
           config: _config,
+          onAcknowledge: _acknowledge,
         ),
       DmsState.cancelled => _DmsCancelledView(onReset: _reset),
     };
@@ -681,7 +688,13 @@ class _DmsActiveView extends StatelessWidget {
 class _DmsTriggeredView extends StatelessWidget {
   final List<EncryptedShare>? encryptedShares;
   final DmsConfig? config;
-  const _DmsTriggeredView({this.encryptedShares, this.config});
+  final VoidCallback onAcknowledge; // ← new
+
+  const _DmsTriggeredView({
+    this.encryptedShares,
+    this.config,
+    required this.onAcknowledge,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -700,11 +713,68 @@ class _DmsTriggeredView extends StatelessWidget {
           ...encryptedShares!.asMap().entries.map(
                 (e) => _EncryptedShareTile(index: e.key, share: e.value),
               ),
+        const SizedBox(height: 24),
+
+        // ── Acknowledge & clear ───────────────────────────────────────────────
+        const _InfoBanner(
+          color: Colors.orange,
+          text: 'If you are still alive, you can dismiss this and set up '
+              'a new switch. The beneficiary\'s shares remain valid until '
+              'they decrypt them.',
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _confirmAcknowledge(context),
+            icon: const Icon(Icons.refresh, color: Colors.orange),
+            label: const Text(
+              'I\'m alive — dismiss & reset',
+              style: TextStyle(color: Colors.orange),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.orange),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
       ],
     );
   }
-}
 
+  void _confirmAcknowledge(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Dismiss triggered state?'),
+        content: const Text(
+          'This will clear the switch. The beneficiary\'s existing shares '
+          'are still valid — you should send a new cancel message by '
+          'arming and immediately cancelling a new switch.\n\n'
+          'Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Go back'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onAcknowledge();
+            },
+            child: const Text(
+              'Yes, I\'m alive',
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 // ── Cancelled view ────────────────────────────────────────────────────────────
 
 class _DmsCancelledView extends StatelessWidget {
