@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -564,7 +566,7 @@ class _DrandRoundPreview extends StatelessWidget {
 
 // ── Active view ───────────────────────────────────────────────────────────────
 
-class _DmsActiveView extends StatelessWidget {
+class _DmsActiveView extends StatefulWidget {
   final DmsConfig config;
   final List<EncryptedShare>? encryptedShares;
   final VoidCallback onHeartbeat;
@@ -580,33 +582,54 @@ class _DmsActiveView extends StatelessWidget {
   });
 
   @override
+  State<_DmsActiveView> createState() => _DmsActiveViewState();
+}
+
+class _DmsActiveViewState extends State<_DmsActiveView> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tick every second to keep countdown live
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // All reads happen fresh on every tick
     final remaining = DeadManSwitchService.timeRemaining;
     final last = DeadManSwitchService.lastActivity;
     final dl = DeadManSwitchService.deadline;
     final round = DeadManSwitchService.drandRound;
     final roomId = DeadManSwitchService.roomIdFromPubKey(
-      config.beneficiaryPublicKey,
+      widget.config.beneficiaryPublicKey,
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Relay sent banner ─────────────────────────────────────────────────
         _InfoBanner(
           color: Colors.blue,
           text: '✓ Shares automatically sent to beneficiary.\n'
               'Room ID: ${roomId.substring(0, 8)}…${roomId.substring(roomId.length - 8)}',
         ),
         const SizedBox(height: 16),
-
         _CountdownCard(remaining: remaining, deadline: dl),
         const SizedBox(height: 16),
         _InfoCard(children: [
           _InfoRow(
             icon: Icons.account_circle_outlined,
             label: 'Beneficiary',
-            value: config.beneficiaryAddress,
+            value: widget.config.beneficiaryAddress,
           ),
           _InfoRow(
             icon: Icons.schedule,
@@ -616,12 +639,12 @@ class _DmsActiveView extends StatelessWidget {
           _InfoRow(
             icon: Icons.calendar_today,
             label: 'Timeout',
-            value: config.timeoutLabel,
+            value: widget.config.timeoutLabel,
           ),
           _InfoRow(
             icon: Icons.lock_outline,
             label: 'Shares',
-            value: '${config.threshold}-of-${config.totalShares}',
+            value: '${widget.config.threshold}-of-${widget.config.totalShares}',
           ),
           if (round != null)
             _InfoRow(
@@ -631,12 +654,10 @@ class _DmsActiveView extends StatelessWidget {
             ),
         ]),
         const SizedBox(height: 20),
-
-        // ── Heartbeat ─────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: onHeartbeat,
+            onPressed: widget.onHeartbeat,
             icon: const Icon(FontAwesomeIcons.heartPulse, size: 16),
             label: const Text('I\'m alive — reset timer'),
             style: ElevatedButton.styleFrom(
@@ -649,13 +670,11 @@ class _DmsActiveView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-
-        // ── View shares ───────────────────────────────────────────────────────
-        if (onViewShares != null)
+        if (widget.onViewShares != null)
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: onViewShares,
+              onPressed: widget.onViewShares,
               icon: const Icon(Icons.visibility_outlined, size: 16),
               label: const Text('View encrypted shares'),
               style: OutlinedButton.styleFrom(
@@ -666,12 +685,10 @@ class _DmsActiveView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-
-        // ── Cancel ────────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: onCancel,
+            onPressed: widget.onCancel,
             icon: const Icon(FontAwesomeIcons.heartCircleXmark,
                 size: 16, color: Colors.red),
             label: const Text('Cancel switch',
@@ -692,7 +709,6 @@ class _DmsActiveView extends StatelessWidget {
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
 }
-
 // ── Triggered view ────────────────────────────────────────────────────────────
 
 class _DmsTriggeredView extends StatelessWidget {
