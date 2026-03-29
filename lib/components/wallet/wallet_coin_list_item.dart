@@ -67,11 +67,15 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
 
     // Only heartbeat when 50% of timeout has elapsed
     final halfTimeout = Duration(seconds: cfg.timeoutSeconds ~/ 2);
+    debugPrint(
+      'DMS heartbeat check — remaining: ${remaining.inSeconds}s, halfTimeout: ${halfTimeout.inSeconds}s',
+    );
     if (remaining > halfTimeout) return;
 
     final mnemonic = WalletService.getActiveKey(walletImportType)?.data;
     if (mnemonic == null) return;
     _heartbeatInFlight = true;
+    debugPrint('Heartbeat triggered — remaining time: ${remaining.inSeconds}s');
     // Fire and forget — non-fatal if it fails
     DeadManSwitchService.heartbeat(mnemonic: mnemonic)
         .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult)

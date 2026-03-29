@@ -578,7 +578,6 @@ class _DmsActiveView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final last = DeadManSwitchService.lastActivity;
-    final deadline = DeadManSwitchService.deadline;
     final round = DeadManSwitchService.drandRound;
     final roomId = DeadManSwitchService.roomIdFromPubKey(
       config.beneficiaryPublicKey,
@@ -596,7 +595,7 @@ class _DmsActiveView extends StatelessWidget {
         const SizedBox(height: 16),
 
         // ── Countdown — only this widget ticks ───────────────────────────────
-        _CountdownCard(deadline: deadline),
+        const _CountdownCard(),
         const SizedBox(height: 16),
 
         _InfoCard(children: [
@@ -953,8 +952,7 @@ class _EncryptedShareTile extends StatelessWidget {
 // _refresh() which pushes a new deadline down via didUpdateWidget.
 
 class _CountdownCard extends StatefulWidget {
-  final DateTime? deadline;
-  const _CountdownCard({this.deadline});
+  const _CountdownCard();
 
   @override
   State<_CountdownCard> createState() => _CountdownCardState();
@@ -962,7 +960,7 @@ class _CountdownCard extends StatefulWidget {
 
 class _CountdownCardState extends State<_CountdownCard> {
   Timer? _ticker;
-
+  final deadline = DeadManSwitchService.deadline;
   @override
   void initState() {
     super.initState();
@@ -978,8 +976,8 @@ class _CountdownCardState extends State<_CountdownCard> {
   }
 
   Duration? get _remaining {
-    if (widget.deadline == null) return null;
-    final r = widget.deadline!.difference(DateTime.now());
+    if (deadline == null) return null;
+    final r = deadline!.difference(DateTime.now());
     return r.isNegative ? Duration.zero : r;
   }
 
@@ -1014,10 +1012,10 @@ class _CountdownCardState extends State<_CountdownCard> {
                 ),
               ],
             ),
-            if (widget.deadline != null) ...[
+            if (deadline != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Triggers: ${_formatDeadline(widget.deadline!)}',
+                'Triggers: ${_formatDeadline(deadline!)}',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
