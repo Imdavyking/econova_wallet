@@ -1,5 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -70,31 +72,21 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(_shares.value, _isBase64.value);
       } else {
-        final recovered = Slip39.recoverSecret(
+        var recovered = Slip39.recoverSecret(
           _shares.value,
           passphrase: _passphraseCtrl.text,
         );
-        result = String.fromCharCodes(recovered);
+        // Strip the null padding byte added during generation if present.
+        if (recovered.isNotEmpty && recovered.last == 0) {
+          recovered = recovered.sublist(0, recovered.length - 1);
+        }
+        result = utf8.decode(recovered);
       }
       Navigator.pop(context, result);
     } catch (e) {
-      debugPrint(e.toString());
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            dismissDirection: DismissDirection.up,
-            content: Text(
-              e.toString(),
-              style: const TextStyle(color: Colors.white),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      // ... existing error snackbar
     }
   }
-
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override

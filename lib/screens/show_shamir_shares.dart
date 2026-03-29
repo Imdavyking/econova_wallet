@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
@@ -68,12 +69,16 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
       _sharesList.value =
           SSS().create(minimum, shares, widget.data, _isBase64.value);
     } else {
-      // SLIP39: one group of [minimum-of-shares] backed by a single root group.
+      // SLIP39 requires an even-length byte array.
+      var bytes = Uint8List.fromList(utf8.encode(widget.data));
+      if (bytes.length.isOdd) {
+        bytes = Uint8List.fromList([...bytes, 0]); // pad with a null byte
+      }
       final slip = Slip39.from(
         [
           [minimum, shares]
-        ], // data: the groups array
-        masterSecret: Uint8List.fromList(widget.data.codeUnits),
+        ],
+        masterSecret: bytes,
         passphrase: _passphraseCtrl.text,
         threshold: 1,
       );
