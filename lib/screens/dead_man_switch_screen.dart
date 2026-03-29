@@ -47,14 +47,14 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
 
     final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-    final eth = getChains<EthereumCoin>().first;
-    final details = await eth.importData(mnemonic);
+
+    //  details.address, // i want to add sender to config
+    //  so also in saveShares (i would remove the old sender from storage and add the new one,so an expired inheritance won't work)
 
     setState(() => _loading = true);
     final result = await DeadManSwitchService.activate(
       mnemonic: mnemonic,
       cfg: cfg,
-      sender: details.address,
     );
     if (!mounted) return;
     setState(() => _loading = false);
@@ -184,7 +184,26 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
 
     return switch (_state) {
-      DmsState.inactive => _DmsSetupForm(onActivate: _activate),
+      DmsState.inactive => FutureBuilder<String>(
+          future: (() async {
+            final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+            final eth = getChains<EthereumCoin>().first;
+            final details = await eth.importData(mnemonic);
+            return details.address; // make sure address is String? if needed
+          })(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Container();
+            }
+            if (!snapshot.hasData) {
+              return Container();
+            }
+            return _DmsSetupForm(
+              onActivate: _activate,
+              senderAddress: snapshot.data!,
+            );
+          },
+        ),
       DmsState.active => _DmsActiveView(
           config: _config!,
           encryptedShares: _encryptedShares,
@@ -312,7 +331,8 @@ class _NotSupportedCard extends StatelessWidget {
 
 class _DmsSetupForm extends StatefulWidget {
   final Future<void> Function(DmsConfig) onActivate;
-  const _DmsSetupForm({required this.onActivate});
+  final String senderAddress;
+  const _DmsSetupForm({required this.onActivate, required this.senderAddress});
 
   @override
   State<_DmsSetupForm> createState() => _DmsSetupFormState();
@@ -340,6 +360,7 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
   void _submit() {
     if (!_valid) return;
     widget.onActivate(DmsConfig(
+      senderAddress: widget.senderAddress,
       beneficiaryPublicKey: _pubKeyController.text.trim(),
       timeoutSeconds: _timeoutSeconds,
       threshold: _threshold,
@@ -406,6 +427,7 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
               Expanded(
                 child: Text(
                   'Address: ${DmsConfig(
+                    senderAddress: widget.senderAddress,
                     beneficiaryPublicKey: _pubKeyController.text.trim(),
                     timeoutSeconds: _timeoutSeconds,
                     threshold: _threshold,
@@ -423,8 +445,9 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
         const SizedBox(height: 20),
 
         // ── Timeout ──────────────────────────────────────────────────────────
-        _FormLabel(
-            kDmsTestMode ? 'Inactivity Timeout (Test)' : 'Inactivity Timeout'),
+        const _FormLabel(
+          kDmsTestMode ? 'Inactivity Timeout (Test)' : 'Inactivity Timeout',
+        ),
         const SizedBox(height: 6),
         _TimeoutPicker(
           selected: _timeoutSeconds,

@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:pointycastle/export.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -33,15 +31,18 @@ enum DmsState { inactive, active, triggered, cancelled }
 
 class DmsConfig {
   final String beneficiaryPublicKey;
+  final String senderAddress;
   final int timeoutSeconds;
   final int threshold;
   final int totalShares;
+
 
   const DmsConfig({
     required this.beneficiaryPublicKey,
     required this.timeoutSeconds,
     required this.threshold,
     required this.totalShares,
+    required this.senderAddress,
   });
 
   String get beneficiaryAddress => publicKeyToAddress(beneficiaryPublicKey);
@@ -64,6 +65,7 @@ class DmsConfig {
         'timeoutSeconds': timeoutSeconds,
         'threshold': threshold,
         'totalShares': totalShares,
+        'senderAddress': senderAddress,
       };
 
   factory DmsConfig.fromJson(Map<String, dynamic> j) => DmsConfig(
@@ -73,6 +75,7 @@ class DmsConfig {
             : (j['timeoutDays'] as int) * 86400,
         threshold: j['threshold'] as int,
         totalShares: j['totalShares'] as int,
+        senderAddress: j['senderAddress'] as String? ?? '',
       );
 }
 
@@ -255,7 +258,6 @@ class DeadManSwitchService {
   static Future<DmsResult> activate({
     required String mnemonic,
     required DmsConfig cfg,
-    required String sender,
   }) async {
     if (mnemonic.trim().isEmpty) return DmsErr('Mnemonic is empty');
     if (state == DmsState.active) return DmsErr('Switch is already active');
@@ -300,7 +302,6 @@ class DeadManSwitchService {
         pubKeyHex: cfg.beneficiaryPublicKey,
         shares: encShares,
         threshold: cfg.threshold,
-        sender: sender,
       );
 
       return DmsOk(encShares);
@@ -551,7 +552,6 @@ class DeadManSwitchService {
     required String pubKeyHex,
     required List<EncryptedShare> shares,
     required int threshold,
-    required String sender,
   }) async {
     final roomId = roomIdFromPubKey(pubKeyHex);
     WebSocket? ws;
@@ -576,7 +576,6 @@ class DeadManSwitchService {
       for (var i = 0; i < shares.length; i++) {
         ws.add(jsonEncode({
           'type': 'share',
-          'sender': sender,
           'sessionId': sessionId,
           'shareIndex': i,
           'totalShares': shares.length,
@@ -681,6 +680,7 @@ Uint8List _deriveTimelockKey(Uint8List roundBytes) {
   return out;
 }
 
+// ignore: unused_element
 Uint8List _deriveRevealKey(Uint8List drandRandomness) {
   final label = utf8.encode('dms-timelock-reveal');
   final digest = SHA256Digest();
