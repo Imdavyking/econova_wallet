@@ -5,7 +5,6 @@ import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/token.dart';
-import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/dms_background_listener.dart';
 import 'package:wallet_app/service/wallet_service.dart';
