@@ -341,7 +341,11 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => _selectSession(session),
+              onTap: () {
+                if (isUnlocked) {
+                  _selectSession(session);
+                }
+              },
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Row(
