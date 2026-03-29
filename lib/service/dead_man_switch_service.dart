@@ -400,6 +400,15 @@ class DeadManSwitchService {
       debugPrint('DMS triggered after ${cfg.timeoutLabel} of inactivity');
       return encryptedShares;
     }
+
+    // Re-push latest shares every app open while active,
+    // in case the beneficiary device missed them last time.
+    final shares = encryptedShares;
+    if (shares != null) {
+      _pushSharesToRelay(shares: shares, cfg: cfg);
+      debugPrint('DMS: re-pushed shares on app open');
+    }
+
     return null;
   }
 

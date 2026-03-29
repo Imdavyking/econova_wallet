@@ -29,6 +29,7 @@ import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/xrp_coin.dart';
 import 'package:wallet_app/coins/tron_coin.dart';
 import 'package:wallet_app/coins/filecoin_coin.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/wordlist.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../service/wallet_service.dart';
@@ -223,6 +224,7 @@ void main() async {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
+  await DeadManSwitchService.checkOnAppOpen();
   cacheSupportedCurrencies();
   logoBytes = await rootBundle.load('assets/logo.png');
   runApp(ProviderScope(
