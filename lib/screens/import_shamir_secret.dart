@@ -76,6 +76,7 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
           _shares.value,
           passphrase: _passphraseCtrl.text,
         );
+
         // Strip the null padding byte added during generation if present.
         if (recovered.isNotEmpty && recovered.last == 0) {
           recovered = recovered.sublist(0, recovered.length - 1);
@@ -84,6 +85,19 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       }
       Navigator.pop(context, result);
     } catch (e) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            dismissDirection: DismissDirection.up,
+            content: Text(
+              e.toString(),
+              style: const TextStyle(color: Colors.white),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       // ... existing error snackbar
     }
   }
