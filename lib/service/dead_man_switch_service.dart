@@ -415,23 +415,37 @@ class DeadManSwitchService {
 
   static Future<void> saveShares(DmsSessionData session) async {
     Map<String, dynamic> existing = {};
-    // session.senderAddress
-    // session.pubKeyHex
+
+    // Load existing sessions from storage
     if (pref.containsKey(deadSwitchSaveKey)) {
       final raw = pref.get(deadSwitchSaveKey);
       if (raw != null) {
         existing = Map<String, dynamic>.from(jsonDecode(raw));
       }
     }
-    if (existing.containsKey(session.sessionId)) {
-      debugPrint(
-          'Session ${session.sessionId} already exists in storage, skipping save.');
-      return;
+
+    // Remove any existing session with the same senderAddress
+    final keysToRemove = existing.entries
+        .where((e) {
+          final s = DmsSessionData.fromJson(e.value as Map<String, dynamic>);
+          return s.senderAddress == session.senderAddress;
+        })
+        .map((e) => e.key)
+        .toList();
+
+    print('Existing sessions with same senderAddress: $keysToRemove');
+
+    for (final key in keysToRemove) {
+      existing.remove(key);
+      debugPrint('Removed old session $key with same senderAddress.');
     }
 
-    debugPrint(
-        'Saving session ${session.sessionId} with ${session.shares.length} shares.');
+    // Save the new session
     existing[session.sessionId] = session.toJson();
+    debugPrint(
+        'Saved session ${session.sessionId} with ${session.shares.length} shares.');
+
+    // Persist
     await pref.put(deadSwitchSaveKey, jsonEncode(existing));
   }
 
