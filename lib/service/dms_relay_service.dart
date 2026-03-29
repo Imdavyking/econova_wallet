@@ -213,7 +213,7 @@ class DmsRelayService {
 
         case 'share':
           _controller.add(DmsWsShareReceived(
-            dataHash: msg['dataHash'] as String,
+            dataHash: msg['dataHash'] as String? ?? '',
             pubKeyHex: msg['pubKeyHex'] as String,
             senderAddress: msg['senderAddress'] as String,
             sessionId: msg['sessionId'] as String,
