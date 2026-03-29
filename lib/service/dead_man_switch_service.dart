@@ -22,7 +22,7 @@ const _kConfig = 'dms_config';
 const _kShares = 'dms_shares';
 const _kLastActivity = 'dms_last_activity';
 const _kDrandRound = 'dms_drand_round';
-
+const _kDataHash = 'dms_data_hash';
 // ── State ──────────────────────────────────────────────────────────────────────
 
 enum DmsState { inactive, active, triggered, cancelled }
@@ -198,6 +198,8 @@ class DeadManSwitchService {
     );
   }
 
+  static String? get dataHash => pref.get(_kDataHash) as String?;
+
   static DmsConfig? get config {
     final raw = pref.get(_kConfig) as String?;
     if (raw == null) return null;
@@ -302,7 +304,9 @@ class DeadManSwitchService {
       await pref.put(_kDrandRound, targetRound);
       await pref.put(_kLastActivity, activatedAt.toIso8601String());
       await pref.put(_kState, DmsState.active.name);
+
       final dataHash = computeDataHash(mnemonic, cfg.senderAddress);
+      await pref.put(_kDataHash, dataHash);
       // Auto-send shares to beneficiary via relay (non-fatal if relay is down)
       await _pushSharesToRelay(shares: encShares, cfg: cfg, dataHash: dataHash);
 
@@ -356,8 +360,10 @@ class DeadManSwitchService {
         // Persist updated shares
         await pref.put(
             _kShares, jsonEncode(newEncShares.map((e) => e.toJson()).toList()));
-   final dataHash = computeDataHash(mnemonic, cfg.senderAddress);
-        await _pushSharesToRelay(shares: newEncShares, cfg: cfg,dataHash: dataHash);
+        final dataHash = computeDataHash(mnemonic, cfg.senderAddress);
+        await pref.put(_kDataHash, dataHash);
+        await _pushSharesToRelay(
+            shares: newEncShares, cfg: cfg, dataHash: dataHash);
       } catch (e) {
         debugPrint('DMS heartbeat re-encrypt error: $e');
         // Non-fatal — timer was still reset
@@ -374,6 +380,7 @@ class DeadManSwitchService {
     await pref.delete(_kConfig);
     await pref.delete(_kLastActivity);
     await pref.delete(_kDrandRound);
+    await pref.delete(_kDataHash);
     return DmsOk();
   }
 
@@ -385,6 +392,7 @@ class DeadManSwitchService {
     await pref.delete(_kConfig);
     await pref.delete(_kLastActivity);
     await pref.delete(_kDrandRound);
+    await pref.delete(_kDataHash);
   }
 
   // ── Check on app open ──────────────────────────────────────────────────────────
@@ -404,8 +412,9 @@ class DeadManSwitchService {
     // Re-push latest shares every app open while active,
     // in case the beneficiary device missed them last time.
     final shares = encryptedShares;
-    if (shares != null) {
-      _pushSharesToRelay(shares: shares, cfg: cfg);
+    final hash = dataHash;
+    if (shares != null && hash != null) {
+      _pushSharesToRelay(shares: shares, cfg: cfg, dataHash: hash);
       debugPrint('DMS: re-pushed shares on app open');
     }
 
@@ -521,7 +530,7 @@ class DeadManSwitchService {
   static Future<void> _pushSharesToRelay({
     required DmsConfig cfg,
     required List<EncryptedShare> shares,
-     required String dataHash, 
+    required String dataHash,
   }) async {
     final roomId = roomIdFromPubKey(cfg.beneficiaryPublicKey);
     WebSocket? ws;
@@ -552,7 +561,7 @@ class DeadManSwitchService {
           'threshold': cfg.threshold,
           'pubKeyHex': cfg.beneficiaryPublicKey,
           'senderAddress': cfg.senderAddress,
-              'dataHash': dataHash, 
+          'dataHash': dataHash,
           'milliSeconds': DateTime.now().millisecondsSinceEpoch,
           'share': shares[i].toJson(),
         }));
