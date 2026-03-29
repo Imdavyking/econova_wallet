@@ -447,6 +447,7 @@ class DeadManSwitchService {
   /// Returns all saved sessions keyed by sessionId.
   /// Returns null if the storage key doesn't exist at all.
   static Future<Map<String, DmsSessionData>?> fetchAllShares() async {
+    // pref.delete(deadSwitchSaveKey);
     if (!pref.containsKey(deadSwitchSaveKey)) {
       debugPrint('No saved sessions found in storage.');
       return null;

@@ -1,5 +1,5 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
@@ -131,6 +131,7 @@ void main() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
     networkAvailable = await NetworkGuard().checkNow();
+    await dotenv.load();
   });
 
   tearDown(() async {
