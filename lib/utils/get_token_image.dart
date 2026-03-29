@@ -14,22 +14,24 @@ class GetTokenImage extends StatelessWidget {
   ImageProvider _resolveImage() {
     final image = currCoin.getImage();
 
-    try {
-      return AssetImage(image);
-    } catch (_) {}
+    // 1️⃣ Absolute path → FileImage
+    if (image.startsWith('/')) {
+      final file = File(image);
+      if (file.existsSync()) return FileImage(file);
+      return const AssetImage(
+        'assets/ai_icon.jpg',
+      ); // file missing — fallback immediately
+    }
 
-    // 2️⃣ Try FileImage
-    try {
-      return FileImage(File(image));
-    } catch (_) {}
+    // 2️⃣ Any URL (http, https, or protocol-relative)
+    if (Uri.tryParse(image)?.host.isNotEmpty == true) {
+      return NetworkImage(
+        image.startsWith('//') ? 'https:$image' : image,
+      );
+    }
 
-    // 3️⃣ Try NetworkImage
-    try {
-      return NetworkImage(image);
-    } catch (_) {}
-
-    // 4️⃣ Fallback to default asset
-    return const AssetImage('assets/ai_icon.jpg');
+    // 3️⃣ Asset path
+    return AssetImage(image);
   }
 
   @override
