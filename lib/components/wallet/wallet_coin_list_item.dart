@@ -71,7 +71,8 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
     _heartbeatInFlight = true;
     // Fire and forget — non-fatal if it fails
     DeadManSwitchService.heartbeat(mnemonic: mnemonic)
-        .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult);
+        .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult)
+        .whenComplete(() => _heartbeatInFlight = false);
   }
 
   // Reconnect when app comes back to foreground
