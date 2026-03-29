@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -51,9 +50,6 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
 
     final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
 
-    //  details.address, // i want to add sender to config
-    //  so also in saveShares (i would remove the old sender from storage and add the new one,so an expired inheritance won't work)
-
     setState(() => _loading = true);
     final result = await DeadManSwitchService.activate(
       mnemonic: mnemonic,
@@ -92,7 +88,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
 
     switch (result) {
       case DmsOk():
-        _refresh();
+        _refresh(); // ← pushes new deadline down to _CountdownCard
         _showSnack('Heartbeat recorded — timer reset & shares re-sent');
       case DmsErr(:final message):
         _showSnack(message, isError: true);
@@ -212,15 +208,11 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
             final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
             final eth = getChains<EthereumCoin>().first;
             final details = await eth.importData(mnemonic);
-            return details.address; // make sure address is String? if needed
+            return details.address;
           })(),
           builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Container();
-            }
-            if (!snapshot.hasData) {
-              return Container();
-            }
+            if (snapshot.hasError) return const SizedBox.shrink();
+            if (!snapshot.hasData) return const SizedBox.shrink();
             return _DmsSetupForm(
               onActivate: _activate,
               senderAddress: snapshot.data!,
@@ -450,6 +442,7 @@ class _DmsSetupFormState extends State<_DmsSetupForm> {
                 : null,
           ),
         ),
+
         // ── Derived address preview ──────────────────────────────────────────
         if (_pubKeyValid) ...[
           const SizedBox(height: 6),
@@ -565,8 +558,9 @@ class _DrandRoundPreview extends StatelessWidget {
 }
 
 // ── Active view ───────────────────────────────────────────────────────────────
+// Stays StatelessWidget — only _CountdownCard ticks internally.
 
-class _DmsActiveView extends StatefulWidget {
+class _DmsActiveView extends StatelessWidget {
   final DmsConfig config;
   final List<EncryptedShare>? encryptedShares;
   final VoidCallback onHeartbeat;
@@ -582,54 +576,34 @@ class _DmsActiveView extends StatefulWidget {
   });
 
   @override
-  State<_DmsActiveView> createState() => _DmsActiveViewState();
-}
-
-class _DmsActiveViewState extends State<_DmsActiveView> {
-  Timer? _ticker;
-
-  @override
-  void initState() {
-    super.initState();
-    // Tick every second to keep countdown live
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // All reads happen fresh on every tick
-    final remaining = DeadManSwitchService.timeRemaining;
     final last = DeadManSwitchService.lastActivity;
-    final dl = DeadManSwitchService.deadline;
+    final deadline = DeadManSwitchService.deadline;
     final round = DeadManSwitchService.drandRound;
     final roomId = DeadManSwitchService.roomIdFromPubKey(
-      widget.config.beneficiaryPublicKey,
+      config.beneficiaryPublicKey,
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Relay sent banner ─────────────────────────────────────────────────
         _InfoBanner(
           color: Colors.blue,
           text: '✓ Shares automatically sent to beneficiary.\n'
               'Room ID: ${roomId.substring(0, 8)}…${roomId.substring(roomId.length - 8)}',
         ),
         const SizedBox(height: 16),
-        _CountdownCard(remaining: remaining, deadline: dl),
+
+        // ── Countdown — only this widget ticks ───────────────────────────────
+        _CountdownCard(deadline: deadline),
         const SizedBox(height: 16),
+
         _InfoCard(children: [
           _InfoRow(
             icon: Icons.account_circle_outlined,
             label: 'Beneficiary',
-            value: widget.config.beneficiaryAddress,
+            value: config.beneficiaryAddress,
           ),
           _InfoRow(
             icon: Icons.schedule,
@@ -639,12 +613,12 @@ class _DmsActiveViewState extends State<_DmsActiveView> {
           _InfoRow(
             icon: Icons.calendar_today,
             label: 'Timeout',
-            value: widget.config.timeoutLabel,
+            value: config.timeoutLabel,
           ),
           _InfoRow(
             icon: Icons.lock_outline,
             label: 'Shares',
-            value: '${widget.config.threshold}-of-${widget.config.totalShares}',
+            value: '${config.threshold}-of-${config.totalShares}',
           ),
           if (round != null)
             _InfoRow(
@@ -654,10 +628,12 @@ class _DmsActiveViewState extends State<_DmsActiveView> {
             ),
         ]),
         const SizedBox(height: 20),
+
+        // ── Heartbeat ─────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: widget.onHeartbeat,
+            onPressed: onHeartbeat,
             icon: const Icon(FontAwesomeIcons.heartPulse, size: 16),
             label: const Text('I\'m alive — reset timer'),
             style: ElevatedButton.styleFrom(
@@ -670,11 +646,13 @@ class _DmsActiveViewState extends State<_DmsActiveView> {
           ),
         ),
         const SizedBox(height: 10),
-        if (widget.onViewShares != null)
+
+        // ── View shares ───────────────────────────────────────────────────────
+        if (onViewShares != null)
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: widget.onViewShares,
+              onPressed: onViewShares,
               icon: const Icon(Icons.visibility_outlined, size: 16),
               label: const Text('View encrypted shares'),
               style: OutlinedButton.styleFrom(
@@ -685,10 +663,12 @@ class _DmsActiveViewState extends State<_DmsActiveView> {
             ),
           ),
         const SizedBox(height: 10),
+
+        // ── Cancel ────────────────────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: widget.onCancel,
+            onPressed: onCancel,
             icon: const Icon(FontAwesomeIcons.heartCircleXmark,
                 size: 16, color: Colors.red),
             label: const Text('Cancel switch',
@@ -709,12 +689,13 @@ class _DmsActiveViewState extends State<_DmsActiveView> {
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
 }
+
 // ── Triggered view ────────────────────────────────────────────────────────────
 
 class _DmsTriggeredView extends StatelessWidget {
   final List<EncryptedShare>? encryptedShares;
   final DmsConfig? config;
-  final VoidCallback onAcknowledge; // ← new
+  final VoidCallback onAcknowledge;
 
   const _DmsTriggeredView({
     this.encryptedShares,
@@ -801,6 +782,7 @@ class _DmsTriggeredView extends StatelessWidget {
     );
   }
 }
+
 // ── Cancelled view ────────────────────────────────────────────────────────────
 
 class _DmsCancelledView extends StatelessWidget {
@@ -856,8 +838,8 @@ class _SharesDialog extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              'Each share is AES-locked until the drand deadline and '
-              'ECIES-encrypted to the beneficiary\'s public key. '
+              'Each share is ECIES-encrypted to the beneficiary\'s public key '
+              'and time-locked via drand. '
               'Safe to store or transmit. Distribute to $threshold+ trusted parties.',
               style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
@@ -965,15 +947,51 @@ class _EncryptedShareTile extends StatelessWidget {
 }
 
 // ── Countdown card ────────────────────────────────────────────────────────────
+// StatefulWidget with its own 1-second ticker.
+// Only this widget re-renders every second — nothing else does.
+// Receives deadline from parent; when heartbeat fires, parent calls
+// _refresh() which pushes a new deadline down via didUpdateWidget.
 
-class _CountdownCard extends StatelessWidget {
-  final Duration? remaining;
+class _CountdownCard extends StatefulWidget {
   final DateTime? deadline;
-  const _CountdownCard({this.remaining, this.deadline});
+  const _CountdownCard({this.deadline});
+
+  @override
+  State<_CountdownCard> createState() => _CountdownCardState();
+}
+
+class _CountdownCardState extends State<_CountdownCard> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Duration? get _remaining {
+    if (widget.deadline == null) return null;
+    final r = widget.deadline!.difference(DateTime.now());
+    return r.isNegative ? Duration.zero : r;
+  }
+
+  bool _isUrgent(Duration? remaining) {
+    if (remaining == null) return false;
+    return remaining.inSeconds < 3 * 86400 || remaining.inMinutes < 1;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = _isUrgent ? Colors.red : Colors.green;
+    final remaining = _remaining;
+    final color = _isUrgent(remaining) ? Colors.red : Colors.green;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -990,16 +1008,16 @@ class _CountdownCard extends StatelessWidget {
                 Icon(FontAwesomeIcons.hourglassHalf, color: color, size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  remaining == null ? '—' : _formatRemaining(remaining!),
+                  remaining == null ? '—' : _formatRemaining(remaining),
                   style: TextStyle(
                       fontSize: 22, fontWeight: FontWeight.bold, color: color),
                 ),
               ],
             ),
-            if (deadline != null) ...[
+            if (widget.deadline != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Triggers: ${_formatDeadline(deadline!)}',
+                'Triggers: ${_formatDeadline(widget.deadline!)}',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
@@ -1007,11 +1025,6 @@ class _CountdownCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  bool get _isUrgent {
-    if (remaining == null) return false;
-    return remaining!.inSeconds < 3 * 86400 || remaining!.inMinutes < 1;
   }
 
   String _formatRemaining(Duration d) {
