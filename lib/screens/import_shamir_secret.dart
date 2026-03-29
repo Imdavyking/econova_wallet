@@ -13,6 +13,7 @@ import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
+import 'package:wallet_app/utils/slip39.dart';
 
 // Shared enum – move to a common file if both screens are in the same package.
 
@@ -72,15 +73,24 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(_shares.value, _isBase64.value);
       } else {
-        var recovered = Slip39.recoverSecret(
-          _shares.value,
+        final decoded = Slip39Helpers.decodeMnemonics(_shares.value);
+        final groups = decoded['groups'];
+        final minimumlen = Map.from(groups[0]).keys.first;
+
+        List<int> recovered = Slip39.recoverSecret(
+          _shares.value.sublist(0, minimumlen),
           passphrase: _passphraseCtrl.text,
         );
 
-        // Strip the null padding byte added during generation if present.
-        if (recovered.isNotEmpty && recovered.last == 0) {
-          recovered = recovered.sublist(0, recovered.length - 1);
-        }
+        final needPadding = recovered[0] == 1;
+
+        recovered = recovered.sublist(
+          1,
+          recovered.length - (needPadding ? 1 : 0),
+        );
+
+        print(recovered);
+
         result = utf8.decode(recovered);
       }
       Navigator.pop(context, result);

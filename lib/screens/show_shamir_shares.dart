@@ -10,6 +10,7 @@ import 'package:slip39/slip39.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/slip39.dart';
 
 // Shared enum – move to a common file if both screens are in the same package.
 enum ShamirScheme { sss, slip39 }
@@ -77,6 +78,8 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
         if (needsPad) 0,
       ]);
 
+      print([minimum, shares]);
+
       final slip = Slip39.from(
         [
           [minimum, shares]
@@ -86,18 +89,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
         threshold: 1,
       );
       _sharesList.value = slip.fromPath('r/0').mnemonics;
-      List<int> testRecovered = Slip39.recoverSecret(
-        _sharesList.value.sublist(0, minimum), // ✅ only threshold number needed
-        passphrase: _passphraseCtrl.text,
-      );
-
-      final needPadding = testRecovered[0] == 1;
-
-      testRecovered = testRecovered.sublist(
-        1,
-        testRecovered.length - (needPadding ? 1 : 0),
-      );
-      print('needPadding $needPadding data : ${utf8.decode(testRecovered)}');
     }
   }
 
