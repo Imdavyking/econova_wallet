@@ -135,6 +135,7 @@ class DmsSessionData {
   final String pubKeyHex;
   final String senderAddress;
   final int milliSeconds;
+  final String dataHash; // ← new
 
   const DmsSessionData({
     required this.sessionId,
@@ -143,6 +144,7 @@ class DmsSessionData {
     required this.pubKeyHex,
     required this.milliSeconds,
     required this.senderAddress,
+    required this.dataHash, // ← new
   });
 
   Map<String, dynamic> toJson() => {
@@ -152,6 +154,7 @@ class DmsSessionData {
         'pubKeyHex': pubKeyHex,
         'senderAddress': senderAddress,
         'milliSeconds': milliSeconds,
+        'dataHash': dataHash, // ← new
       };
 
   factory DmsSessionData.fromJson(Map<String, dynamic> j) => DmsSessionData(
@@ -163,9 +166,9 @@ class DmsSessionData {
         pubKeyHex: j['pubKeyHex'] as String,
         milliSeconds: j['milliSeconds'] as int,
         senderAddress: j['senderAddress'] as String,
+        dataHash: j['dataHash'] as String? ?? '', // ← new
       );
 }
-
 // ── Result types ───────────────────────────────────────────────────────────────
 
 sealed class DmsResult {}
@@ -299,12 +302,9 @@ class DeadManSwitchService {
       await pref.put(_kDrandRound, targetRound);
       await pref.put(_kLastActivity, activatedAt.toIso8601String());
       await pref.put(_kState, DmsState.active.name);
-
+      final dataHash = computeDataHash(mnemonic, cfg.senderAddress);
       // Auto-send shares to beneficiary via relay (non-fatal if relay is down)
-      await _pushSharesToRelay(
-        shares: encShares,
-        cfg: cfg,
-      );
+      await _pushSharesToRelay(shares: encShares, cfg: cfg, dataHash: dataHash);
 
       return DmsOk(encShares);
     } catch (e, st) {
@@ -356,8 +356,8 @@ class DeadManSwitchService {
         // Persist updated shares
         await pref.put(
             _kShares, jsonEncode(newEncShares.map((e) => e.toJson()).toList()));
-
-        await _pushSharesToRelay(shares: newEncShares, cfg: cfg);
+   final dataHash = computeDataHash(mnemonic, cfg.senderAddress);
+        await _pushSharesToRelay(shares: newEncShares, cfg: cfg,dataHash: dataHash);
       } catch (e) {
         debugPrint('DMS heartbeat re-encrypt error: $e');
         // Non-fatal — timer was still reset
@@ -457,7 +457,8 @@ class DeadManSwitchService {
     final keysToRemove = existing.entries
         .where((e) {
           final s = DmsSessionData.fromJson(e.value as Map<String, dynamic>);
-          return s.senderAddress == session.senderAddress;
+          // dataHash => hmac(seedphrase + senderAddress) to prevent collisions between different senders with same address? or just compare senderAddress directly? for simplicity, let's compare senderAddress directly for now, but we can add dataHash in the future if needed
+          return s.dataHash == session.dataHash;
         })
         .map((e) => e.key)
         .toList();
@@ -520,6 +521,7 @@ class DeadManSwitchService {
   static Future<void> _pushSharesToRelay({
     required DmsConfig cfg,
     required List<EncryptedShare> shares,
+     required String dataHash, 
   }) async {
     final roomId = roomIdFromPubKey(cfg.beneficiaryPublicKey);
     WebSocket? ws;
@@ -550,6 +552,7 @@ class DeadManSwitchService {
           'threshold': cfg.threshold,
           'pubKeyHex': cfg.beneficiaryPublicKey,
           'senderAddress': cfg.senderAddress,
+              'dataHash': dataHash, 
           'milliSeconds': DateTime.now().millisecondsSinceEpoch,
           'share': shares[i].toJson(),
         }));
@@ -759,4 +762,19 @@ BigInt _bytesToBigInt(Uint8List bytes) =>
 Uint8List _bigIntToBytes32(BigInt n) {
   final hex = n.toRadixString(16).padLeft(64, '0');
   return _hexToBytes(hex);
+}
+
+Uint8List _hmacSha256(Uint8List key, Uint8List data) {
+  final hmac = HMac(SHA256Digest(), 64)..init(KeyParameter(key));
+  hmac.update(data, 0, data.length);
+  final out = Uint8List(32);
+  hmac.doFinal(out, 0);
+  return out;
+}
+
+String computeDataHash(String mnemonic, String senderAddress) {
+  final key = utf8.encode(senderAddress);
+  final data = utf8.encode(mnemonic);
+  final hash = _hmacSha256(Uint8List.fromList(key), Uint8List.fromList(data));
+  return hash.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
