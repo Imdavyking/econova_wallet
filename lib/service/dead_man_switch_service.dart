@@ -317,13 +317,6 @@ class DeadManSwitchService {
     }
   }
 
-  // ── Record activity ────────────────────────────────────────────────────────────
-
-  static Future<void> recordActivity() async {
-    if (state != DmsState.active) return;
-    await pref.put(_kLastActivity, DateTime.now().toIso8601String());
-  }
-
   // ── Heartbeat ──────────────────────────────────────────────────────────────────
 
   static Future<DmsResult> heartbeat({required String mnemonic}) async {

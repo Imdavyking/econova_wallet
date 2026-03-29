@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/token.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/dms_background_listener.dart';
+import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/get_blockchain_widget.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
@@ -48,8 +50,26 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
       final balance =
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
-      await DeadManSwitchService.recordActivity();
+      await _maybeHeartbeat();
     } catch (_) {}
+  }
+
+  Future<void> _maybeHeartbeat() async {
+    if (DeadManSwitchService.state != DmsState.active) return;
+    final remaining = DeadManSwitchService.timeRemaining;
+    final cfg = DeadManSwitchService.config;
+    if (remaining == null || cfg == null) return;
+
+    // Only heartbeat when 50% of timeout has elapsed
+    final halfTimeout = Duration(seconds: cfg.timeoutSeconds ~/ 2);
+    if (remaining > halfTimeout) return;
+
+    final mnemonic = WalletService.getActiveKey(walletImportType)?.data;
+    if (mnemonic == null) return;
+
+    // Fire and forget — non-fatal if it fails
+    DeadManSwitchService.heartbeat(mnemonic: mnemonic)
+        .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult);
   }
 
   // Reconnect when app comes back to foreground
