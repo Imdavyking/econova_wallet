@@ -89,6 +89,25 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
         threshold: 1,
       );
       _sharesList.value = slip.fromPath('r/0').mnemonics;
+      final decoded = Slip39Helpers.decodeMnemonics(_sharesList.value);
+      final groups = decoded['groups'];
+      final minimumlen = Map.from(groups[0]).keys.first;
+
+      List<int> testRecovered = Slip39.recoverSecret(
+        _sharesList.value
+            .sublist(0, minimumlen), // ✅ only threshold number needed
+        passphrase: _passphraseCtrl.text,
+      );
+
+      print('we goood');
+
+      final needPadding = testRecovered[0] == 1;
+
+      testRecovered = testRecovered.sublist(
+        1,
+        testRecovered.length - (needPadding ? 1 : 0),
+      );
+      print('needPadding $needPadding data : ${utf8.decode(testRecovered)}');
     }
   }
 

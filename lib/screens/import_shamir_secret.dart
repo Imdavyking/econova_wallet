@@ -70,15 +70,16 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     try {
       final String result;
+      final sharesList = _shares.value.map((e) => e.trim()).toList();
       if (_scheme.value == ShamirScheme.sss) {
-        result = SSS().combine(_shares.value, _isBase64.value);
+        result = SSS().combine(sharesList, _isBase64.value);
       } else {
-        final decoded = Slip39Helpers.decodeMnemonics(_shares.value);
+        final decoded = Slip39Helpers.decodeMnemonics(sharesList);
         final groups = decoded['groups'];
         final minimumlen = Map.from(groups[0]).keys.first;
 
         List<int> recovered = Slip39.recoverSecret(
-          _shares.value.sublist(0, minimumlen),
+          sharesList.sublist(0, minimumlen),
           passphrase: _passphraseCtrl.text,
         );
 
