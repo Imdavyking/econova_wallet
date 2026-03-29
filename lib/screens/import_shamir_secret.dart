@@ -71,6 +71,10 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
     try {
       final String result;
       final sharesList = _shares.value.map((e) => e.trim()).toList();
+      final setList = Set.from(sharesList);
+      if (setList.length != sharesList.length) {
+        throw Exception('A secret was duplicated');
+      }
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(sharesList, _isBase64.value);
       } else {
@@ -89,8 +93,6 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
           1,
           recovered.length - (needPadding ? 1 : 0),
         );
-
-        print(recovered);
 
         result = utf8.decode(recovered);
       }
