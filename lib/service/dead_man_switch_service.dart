@@ -415,6 +415,8 @@ class DeadManSwitchService {
 
   static Future<void> saveShares(DmsSessionData session) async {
     Map<String, dynamic> existing = {};
+    // session.senderAddress
+    // session.pubKeyHex
     if (pref.containsKey(deadSwitchSaveKey)) {
       final raw = pref.get(deadSwitchSaveKey);
       if (raw != null) {
@@ -426,6 +428,7 @@ class DeadManSwitchService {
           'Session ${session.sessionId} already exists in storage, skipping save.');
       return;
     }
+
     debugPrint(
         'Saving session ${session.sessionId} with ${session.shares.length} shares.');
     existing[session.sessionId] = session.toJson();
@@ -469,85 +472,6 @@ class DeadManSwitchService {
     }
     debugPrint('Total sessions: ${result.length}');
     return result;
-  }
-
-  static Future<DmsSessionData?> fetchSharesFromRelay({
-    required String beneficiaryPublicKeyHex,
-    Duration timeout = const Duration(seconds: 15),
-  }) async {
-    final roomId = roomIdFromPubKey(beneficiaryPublicKeyHex);
-
-    try {
-      await DmsRelayService.connect(roomId: roomId, role: 'receiver');
-
-      final completer = Completer<DmsSessionData>();
-
-      // sessionId → (shareIndex → message)
-      final collected = <String, Map<int, DmsWsShareReceived>>{};
-
-      final sub = DmsRelayService.messages.listen((msg) {
-        debugPrint('new msg:$msg');
-        if (msg is DmsWsShareReceived) {
-          final sessionId = msg.sessionId;
-          collected.putIfAbsent(sessionId, () => {});
-          collected[sessionId]![msg.shareIndex] = msg;
-
-          // debugPrint(
-          //   'DMS relay [$sessionId]: ${collected[sessionId]!.length}/${msg.totalShares}',
-          // );
-
-          if (collected[sessionId]!.length >= msg.totalShares) {
-            if (!completer.isCompleted) {
-              final msgs = collected[sessionId]!.values.toList();
-              completer.complete(DmsSessionData(
-                senderAddress: msgs.first.senderAddress,
-                sessionId: sessionId,
-                shares: msgs.map((m) => m.share).toList(),
-                threshold: msgs.first.threshold,
-                pubKeyHex: msgs.first.pubKeyHex,
-                milliSeconds: msgs.first.milliSeconds,
-              ));
-            }
-          }
-        } else if (msg is DmsWsError) {
-          if (!completer.isCompleted) {
-            completer.completeError(Exception(msg.message));
-          }
-        }
-      });
-
-      DmsSessionData? result;
-
-      try {
-        result = await completer.future.timeout(timeout);
-      } on TimeoutException {
-        debugPrint('DMS relay: fetch timed out after ${timeout.inSeconds}s');
-        // Fallback: return first partial session if anything arrived
-        if (collected.isNotEmpty) {
-          final first = collected.entries.first;
-          final msgs = first.value.values.toList();
-          if (msgs.isNotEmpty) {
-            result = DmsSessionData(
-              sessionId: first.key,
-              shares: msgs.map((m) => m.share).toList(),
-              threshold: msgs.first.threshold,
-              pubKeyHex: msgs.first.pubKeyHex,
-              senderAddress: msgs.first.senderAddress,
-              milliSeconds: msgs.first.milliSeconds,
-            );
-          }
-        }
-      } finally {
-        await sub.cancel();
-        await DmsRelayService.disconnect();
-      }
-
-      return result;
-    } catch (e) {
-      debugPrint('DMS fetchSharesFromRelay error: $e');
-      await DmsRelayService.disconnect();
-      return null;
-    }
   }
 
   static Future<void> _pushSharesToRelay({

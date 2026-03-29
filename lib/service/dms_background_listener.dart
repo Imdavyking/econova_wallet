@@ -62,7 +62,6 @@ class DmsBackgroundListener {
   }
 
   void _onMessage(dynamic msg) {
-    print(msg);
     if (msg is! DmsWsShareReceived) return;
 
     final sid = msg.sessionId;
