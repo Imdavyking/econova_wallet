@@ -386,7 +386,7 @@ Future<Map> calculateEVMHrpKey(EVMHrpArgs config) async {
   return {
     'address': _ethAddrToHrp(account.address, config.hrp),
     'privateKey': privatekeyStr,
-    'hex_address': account,
+    'hex_address': account.address,
   };
 }
 

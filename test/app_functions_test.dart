@@ -895,6 +895,7 @@ void main() async {
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
       supportedChains = getChains();
+      debugPrint(supportedChains.map((c) => c.getName()).join(', '));
       debugPrint(
         '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
       );
