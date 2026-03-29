@@ -117,7 +117,6 @@ class AlgorandCoin extends Coin {
       calculateAlgorandKey,
       AlgorandDeriveArgs(
         seedRoot: seedPhraseRoot,
-        mnemonic: mnemonic,
       ),
     );
 
@@ -170,7 +169,6 @@ class AlgorandCoin extends Coin {
       _deriveAlgorandAccount,
       AlgorandDeriveArgs(
         seedRoot: seedPhraseRoot,
-        mnemonic: data,
       ),
     );
 
@@ -278,11 +276,9 @@ algo_rand.Algorand getAlgorandClient(AlgorandTypes type) {
 
 class AlgorandDeriveArgs {
   final SeedPhraseRoot seedRoot;
-  final String mnemonic;
 
   const AlgorandDeriveArgs({
     required this.seedRoot,
-    required this.mnemonic,
   });
 }
 

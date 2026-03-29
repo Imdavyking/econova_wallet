@@ -9,7 +9,9 @@ import 'package:aptos/constants.dart';
 import 'package:aptos/faucet_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/service/wallet_service.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:wallet_app/fetchers/aptos_trx_fetcher.dart';
 import '../interface/coin.dart';
@@ -121,7 +123,7 @@ class AptosCoin extends Coin {
 
   @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'aptosCoinDetail${walletImportType.name}';
+    final saveKey = 'aptosCoinDetailv!${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -134,7 +136,7 @@ class AptosCoin extends Coin {
     final keys = await compute(
       calculateAptosKey,
       AptosArgs(
-        mnemonic: mnemonic,
+        seedRoot: seedPhraseRoot,
       ),
     );
     mnemonicMap[mnemonic] = keys;
@@ -306,18 +308,31 @@ List<AptosCoin> getAptosBlockchain() {
 }
 
 class AptosArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const AptosArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
 Future calculateAptosKey(AptosArgs config) async {
-  final account = AptosAccount.generateAccount(
-    config.mnemonic,
-  );
+  String path = "m/44'/637'/0'/0'/0'";
+  if (!isValidPath(path)) {
+    throw ArgumentError("Invalid derivation path");
+  }
 
+  final keys = getMasterKeyFromSeed(HEX.encode(config.seedRoot.seed));
+  final segments = path
+      .split("/")
+      .sublist(1)
+      .map(replaceDerive)
+      .map((el) => int.parse(el, radix: 10));
+
+  Keys parentKeys = keys;
+  for (int i in segments) {
+    parentKeys = ckdPriv(parentKeys, i + HARDENED_OFFSET);
+  }
+  final account = AptosAccount(parentKeys.key);
   return {
     'privateKey': HEX.encode(account.signingKey.privateKey.bytes),
     'address': account.address,
