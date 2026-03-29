@@ -375,15 +375,46 @@ class DeadManSwitchService {
 
   static Future<DmsResult> cancel() async {
     if (state != DmsState.active) return DmsErr('Switch is not active');
+
+    final cfg = config;
+    final hash = dataHash;
+
     await pref.put(_kState, DmsState.cancelled.name);
     await pref.delete(_kShares);
     await pref.delete(_kConfig);
     await pref.delete(_kLastActivity);
     await pref.delete(_kDrandRound);
     await pref.delete(_kDataHash);
+
+    // Notify beneficiary to delete their copy
+    if (cfg != null && hash != null) {
+      await _pushCancelToRelay(cfg: cfg, dataHash: hash);
+    }
+
     return DmsOk();
   }
 
+  static Future<void> deleteSessionByDataHash(String dataHash) async {
+    if (!pref.containsKey(deadSwitchSaveKey)) return;
+    final raw = pref.get(deadSwitchSaveKey);
+    if (raw == null) return;
+
+    final existing = Map<String, dynamic>.from(jsonDecode(raw));
+    final keysToRemove = existing.entries
+        .where((e) {
+          final s = DmsSessionData.fromJson(e.value as Map<String, dynamic>);
+          return s.dataHash == dataHash;
+        })
+        .map((e) => e.key)
+        .toList();
+
+    for (final key in keysToRemove) {
+      existing.remove(key);
+      debugPrint('DMS: deleted session $key (cancelled by sender)');
+    }
+
+    await pref.put(deadSwitchSaveKey, jsonEncode(existing));
+  }
   // ── Reset ──────────────────────────────────────────────────────────────────────
 
   static Future<void> reset() async {
@@ -525,6 +556,39 @@ class DeadManSwitchService {
     }
     debugPrint('Total sessions: ${result.length}');
     return result;
+  }
+
+  static Future<void> _pushCancelToRelay({
+    required DmsConfig cfg,
+    required String dataHash,
+  }) async {
+    final roomId = roomIdFromPubKey(cfg.beneficiaryPublicKey);
+    WebSocket? ws;
+    try {
+      ws = await WebSocket.connect(wsDefaultRelayUrl)
+          .timeout(const Duration(seconds: 10));
+
+      ws.add(jsonEncode({'type': 'join', 'room': roomId, 'role': 'sender'}));
+
+      await ws.firstWhere((raw) {
+        final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+        return msg['type'] == 'joined';
+      }).timeout(const Duration(seconds: 5));
+
+      ws.add(jsonEncode({
+        'type': 'cancel',
+        'dataHash': dataHash,
+      }));
+
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await ws.close();
+      debugPrint('DMS sender: cancel sent to room $roomId');
+    } catch (e) {
+      debugPrint('DMS sender: cancel push failed (non-fatal): $e');
+      try {
+        await ws?.close();
+      } catch (_) {}
+    }
   }
 
   static Future<void> _pushSharesToRelay({

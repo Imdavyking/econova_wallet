@@ -61,7 +61,17 @@ class DmsBackgroundListener {
     }
   }
 
+  Future<void> _handleCancel(String dataHash) async {
+    await DeadManSwitchService.deleteSessionByDataHash(dataHash);
+    debugPrint(
+        'DMS listener: 🗑️ cancelled session with dataHash=$dataHash deleted');
+  }
+
   void _onMessage(dynamic msg) {
+    if (msg is DmsWsCancelReceived) {
+      _handleCancel(msg.dataHash);
+      return;
+    }
     if (msg is! DmsWsShareReceived) return;
 
     final sid = msg.sessionId;

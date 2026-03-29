@@ -42,6 +42,11 @@ class DmsWsJoined extends DmsWsMessage {
   DmsWsJoined(this.roomId, this.peers);
 }
 
+class DmsWsCancelReceived extends DmsWsMessage {
+  final String dataHash;
+  DmsWsCancelReceived({required this.dataHash});
+}
+
 class DmsWsShareReceived extends DmsWsMessage {
   final EncryptedShare share;
   final String sessionId;
@@ -207,10 +212,15 @@ class DmsRelayService {
             msg['room'] as String,
             (msg['peers'] as num).toInt(),
           ));
-
+          break;
+        case 'cancel':
+          _controller.add(DmsWsCancelReceived(
+            dataHash: msg['dataHash'] as String? ?? '',
+          ));
+          break;
         case 'peers':
           _controller.add(DmsWsPeerCount((msg['count'] as num).toInt()));
-
+          break;
         case 'share':
           _controller.add(DmsWsShareReceived(
             dataHash: msg['dataHash'] as String? ?? '',
@@ -229,10 +239,10 @@ class DmsRelayService {
                   0,
             ),
           ));
-
+          break;
         case 'error':
           _controller.add(DmsWsError(msg['message'] as String? ?? 'Unknown'));
-
+          break;
         case 'pong':
           break; // keepalive, ignore
 
