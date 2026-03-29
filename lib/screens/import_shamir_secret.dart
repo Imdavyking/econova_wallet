@@ -10,11 +10,11 @@ import 'package:pinput/pinput.dart';
 import 'package:slip39/slip39.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
+import 'package:wallet_app/screens/show_shamir_shares.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
 
 // Shared enum – move to a common file if both screens are in the same package.
-enum ShamirScheme { sss, slip39 }
 
 class ImportShamirSecret extends StatefulWidget {
   const ImportShamirSecret({super.key});
@@ -291,6 +291,8 @@ class _ShareTextFieldState extends State<_ShareTextField> {
     return TextFormField(
       controller: _controller,
       onChanged: widget.onChanged,
+      maxLines: 4, // ✅ allows it to grow up to 4 lines
+      minLines: 3, // ✅ always shows at least 3 lines tall
       validator: (v) =>
           (v == null || v.trim().isEmpty) ? 'Please enter a share' : null,
       decoration: InputDecoration(
@@ -299,15 +301,22 @@ class _ShareTextFieldState extends State<_ShareTextField> {
         border: _border,
         focusedBorder: _border,
         enabledBorder: _border,
-        suffixIcon: Row(
+        // ✅ Move action icons to the bottom-right so they don't fight the taller field
+        suffixIcon: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: _scanQr,
-              tooltip: 'Scan QR',
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: _scanQr,
+                  tooltip: 'Scan QR',
+                ),
+                _PasteButton(label: loc.paste, onTap: _paste),
+              ],
             ),
-            _PasteButton(label: loc.paste, onTap: _paste),
           ],
         ),
       ),
