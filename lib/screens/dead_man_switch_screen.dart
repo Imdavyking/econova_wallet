@@ -960,12 +960,17 @@ class _CountdownCard extends StatefulWidget {
 
 class _CountdownCardState extends State<_CountdownCard> {
   Timer? _ticker;
-  final deadline = DeadManSwitchService.deadline;
+  DateTime? deadline = DeadManSwitchService.deadline;
   @override
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          deadline = DeadManSwitchService.deadline;
+          debugPrint('Countdown tick: deadline is now $deadline');
+        });
+      }
     });
   }
 
