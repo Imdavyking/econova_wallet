@@ -50,6 +50,7 @@ class DmsWsShareReceived extends DmsWsMessage {
   final int threshold;
   final String pubKeyHex;
   final String senderAddress;
+  final String dataHash;
   final int milliSeconds;
 
   DmsWsShareReceived({
@@ -61,6 +62,7 @@ class DmsWsShareReceived extends DmsWsMessage {
     required this.milliSeconds,
     required this.pubKeyHex,
     required this.senderAddress,
+    required this.dataHash,
   });
 }
 
@@ -211,6 +213,7 @@ class DmsRelayService {
 
         case 'share':
           _controller.add(DmsWsShareReceived(
+            dataHash: msg['dataHash'] as String,
             pubKeyHex: msg['pubKeyHex'] as String,
             senderAddress: msg['senderAddress'] as String,
             sessionId: msg['sessionId'] as String,
