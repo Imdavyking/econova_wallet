@@ -70,9 +70,13 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     } else {
       // SLIP39 requires an even-length byte array.
       var bytes = Uint8List.fromList(utf8.encode(widget.data));
-      if (bytes.length.isOdd) {
-        bytes = Uint8List.fromList([...bytes, 0]); // pad with a null byte
-      }
+      final needsPad = bytes.length.isEven;
+      bytes = Uint8List.fromList([
+        needsPad ? 1 : 0,
+        ...bytes,
+        if (needsPad) 0,
+      ]);
+
       final slip = Slip39.from(
         [
           [minimum, shares]
@@ -82,6 +86,18 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
         threshold: 1,
       );
       _sharesList.value = slip.fromPath('r/0').mnemonics;
+      List<int> testRecovered = Slip39.recoverSecret(
+        _sharesList.value.sublist(0, minimum), // ✅ only threshold number needed
+        passphrase: _passphraseCtrl.text,
+      );
+
+      final needPadding = testRecovered[0] == 1;
+
+      testRecovered = testRecovered.sublist(
+        1,
+        testRecovered.length - (needPadding ? 1 : 0),
+      );
+      print('needPadding $needPadding data : ${utf8.decode(testRecovered)}');
     }
   }
 
