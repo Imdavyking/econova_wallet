@@ -1,6 +1,5 @@
 // ignore_for_file: library_private_types_in_public_api
 
-import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -12,7 +11,6 @@ import 'package:wallet_app/model/seed_phrase_root.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/slip39.dart';
 
 // Shared enum – move to a common file if both screens are in the same package.
 enum ShamirScheme { sss, slip39 }

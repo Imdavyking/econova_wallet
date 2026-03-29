@@ -54,6 +54,52 @@ class Wallet extends Equatable {
     return compressedKey;
   }
 
+  factory Wallet.deriveSeed(
+    Uint8List seed,
+    NetworkInfo networkInfo, {
+    String derivationPath = derivationPath,
+  }) {
+    final root = Bip32.fromSeed(seed);
+
+    // Get the node from the derivation path
+    final derivedNode = root.derivePath(derivationPath);
+
+    // Get the curve data
+    final secp256k1 = ECCurve_secp256k1();
+    final point = secp256k1.G;
+
+    // Compute the curve point associated to the private key
+    final bigInt = BigInt.parse(HEX.encode(derivedNode.privateKey!), radix: 16);
+    final curvePoint = point * bigInt;
+
+    Uint8List publicKeyBytes;
+    Uint8List address;
+
+    if (isEthSecp256(derivationPath)) {
+      publicKeyBytes = curvePoint!.getEncoded(false);
+      final keccakAddress = KeccakDigest(256)
+          .process(publicKeyBytes.sublist(1, publicKeyBytes.length));
+      address = keccakAddress.sublist(
+          keccakAddress.length - 20, keccakAddress.length);
+    } else {
+      publicKeyBytes = curvePoint!.getEncoded();
+      final sha256Digest = SHA256Digest().process(publicKeyBytes);
+      address = RIPEMD160Digest().process(sha256Digest);
+    }
+
+    if (publicKeyBytes.length == 65) {
+      publicKeyBytes = compressPublicKey(publicKeyBytes);
+    }
+
+    // Return the key bytes
+    return Wallet(
+      address: address,
+      publicKey: publicKeyBytes,
+      privateKey: derivedNode.privateKey!,
+      networkInfo: networkInfo,
+    );
+  }
+
   /// Derives the private key from the given [mnemonic] using the specified
   /// [networkInfo].
   factory Wallet.derive(

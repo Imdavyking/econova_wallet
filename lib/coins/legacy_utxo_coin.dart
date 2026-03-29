@@ -421,6 +421,9 @@ class LegacyUtxoCoin extends Coin {
     return bitbox.Address.toLegacyAddress('bitcoincash:$displayAddress');
   }
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ── Address derivation ────────────────────────────────────────────────────────
 
   @override

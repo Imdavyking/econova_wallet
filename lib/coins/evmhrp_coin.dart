@@ -170,6 +170,9 @@ class EVMHrpCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<double> getUserBalance({required String address}) async {
     final ethClient = Web3Client(rpc, http.Client());
 

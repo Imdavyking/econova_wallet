@@ -74,6 +74,9 @@ class AptosCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+  
+  @override
   TransactionFetcher? get transactionFetcher => AptosTransactionFetcher(
         rpcUrl: rpc,
         isTestnet: rpc.contains('devnet') || rpc.contains('testnet'),

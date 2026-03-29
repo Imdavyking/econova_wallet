@@ -316,6 +316,9 @@ class FuseCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'ethereumDetails4337$coinType${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};

@@ -77,6 +77,9 @@ class ICPCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'ICPDetails${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};

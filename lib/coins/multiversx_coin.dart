@@ -1,9 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -173,7 +176,7 @@ class MultiversxCoin extends Coin {
     }
 
     final args = MultiversXDeriveArgs(
-      mnemonic: mnemonic,
+      seedRoot: seedPhraseRoot,
     );
 
     final keys = await compute(calculateMultiversXKey, args);
@@ -369,21 +372,25 @@ String egldPrivateKeyToAddress(String privateKey) {
 }
 
 class MultiversXDeriveArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const MultiversXDeriveArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
 Future calculateMultiversXKey(MultiversXDeriveArgs config) async {
-  multiversx.Wallet wallet = await multiversx.Wallet.fromSeed(config.mnemonic);
-
-  multiversx.UserSigner signer = wallet.signer as multiversx.UserSigner;
+  const bip44DerivationPrefix = "m/44'/508'/0'/0'";
+  int addressIndex = 0;
+  final data = await ED25519_HD_KEY.derivePath(
+      "$bip44DerivationPrefix/$addressIndex'", config.seedRoot.seed);
+  final privateKey = multiversx.UserSecretKey(data.key);
+  final publicKey = privateKey.generatePublicKey();
+  final address = publicKey.toAddress();
 
   return {
-    'address': wallet.account.address.bech32,
-    'privateKey': HEX.encode(signer.secretKey.bytes),
+    'address': address.bech32,
+    'privateKey': HEX.encode(privateKey.bytes),
   };
 }
 

@@ -604,6 +604,9 @@ class EthereumCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'ethereumDetailsV4$coinType${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:aptos/aptos.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
@@ -193,8 +194,11 @@ class CosmosCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'cosmosDetails$bech32Hrp${walletImportType.name}';
+    final saveKey = 'cosmosDetailsV2$bech32Hrp${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
@@ -206,9 +210,9 @@ class CosmosCoin extends Coin {
     final networkInfo = getNetworkInfo();
 
     final args = CosmosDeriveArgs(
-      mnemonic: mnemonic,
       networkInfo: networkInfo,
       path: path,
+      seedRoot: seedPhraseRoot,
     );
 
     final keys = await compute(calculateCosmosKey, args);
@@ -859,17 +863,17 @@ List<CosmosCoin> getCosmosBlockChains() {
 class CosmosDeriveArgs {
   final NetworkInfo networkInfo;
   final String path;
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
   const CosmosDeriveArgs({
     required this.networkInfo,
     required this.path,
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
 Map calculateCosmosKey(CosmosDeriveArgs config) {
-  final wallet = cosmos.Wallet.derive(
-    config.mnemonic.split(' '),
+  final wallet = cosmos.Wallet.deriveSeed(
+    config.seedRoot.seed,
     config.networkInfo,
     derivationPath: config.path,
   );

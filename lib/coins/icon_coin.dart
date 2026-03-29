@@ -89,6 +89,9 @@ class IconCoin extends Coin {
       };
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'iconCoinDetailsV423456${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};

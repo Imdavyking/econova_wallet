@@ -12,7 +12,6 @@ import 'package:wallet_app/fetchers/algorand_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
-import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 
@@ -126,6 +125,9 @@ class AlgorandCoin extends Coin {
     return AccountData.fromJson(Map<String, dynamic>.from(keys));
   }
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ── Balance ─────────────────────────────────────────────────────────────────
 
   @override
@@ -162,8 +164,6 @@ class AlgorandCoin extends Coin {
     String to, {
     String? memo,
   }) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-
     // Re-derive the full Account object (with signing capability) from seed.
     final account = await compute(
       _deriveAlgorandAccount,

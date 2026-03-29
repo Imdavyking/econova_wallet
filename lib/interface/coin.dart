@@ -106,7 +106,9 @@ abstract class Coin {
   bool get supportsX402 => false;
   bool get supportKeystore => false;
   bool get supportPrivateKey => false;
+  bool get supportBip39Seed => false;
   bool get isRpcWorking => true;
+
   Future<bool> needDeploy() async => false;
   Future deployAccount() async {}
   Future<Map> getTransactions() async {
@@ -182,6 +184,7 @@ abstract class Coin {
     final details = await importData(data);
     return details.address;
   }
+
   Future<String?> getPublicKey() async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
