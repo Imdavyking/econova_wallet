@@ -72,7 +72,6 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
     final mnemonic = WalletService.getActiveKey(walletImportType)?.data;
     if (mnemonic == null) return;
     _heartbeatInFlight = true;
-
     // Fire and forget — non-fatal if it fails
     DeadManSwitchService.heartbeat(mnemonic: mnemonic)
         .catchError((_) => DmsErr('Silent heartbeat failed') as DmsResult)
