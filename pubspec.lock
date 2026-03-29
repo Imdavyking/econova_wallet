@@ -2286,6 +2286,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.99"
+  slip39:
+    dependency: "direct main"
+    description:
+      name: slip39
+      sha256: d84592b23ce4858182650c5db006fda045a3ad1ca6e7e00973f5103afd1a98ef
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   smart_auth:
     dependency: transitive
     description:
