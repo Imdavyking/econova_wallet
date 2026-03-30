@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:bip39/bip39.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
 import 'package:wallet_app/education/eip4337.edu.dart';
@@ -48,6 +49,23 @@ class _SettingsState extends State<Settings>
   bool _isValidUrl(String url) {
     url = url.trim();
     return url.isNotEmpty && Uri.tryParse(url) != null;
+  }
+
+  Future<bool> checkDeadSwitch() async {
+    if (DeadManSwitchService.state != DmsState.active) {
+      return false;
+    }
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final validPhrase = await compute(
+      validateMnemonic,
+      mnemonic,
+    );
+    final ethCoin = getChains<EthereumCoin>().first;
+    final response = await ethCoin.importData(mnemonic);
+
+    final config = DeadManSwitchService.config;
+
+    return validPhrase && config?.senderAddress == response.address;
   }
 
   // ── Testnet toggle ──────────────────────────────────────────────────────────
@@ -220,16 +238,7 @@ class _SettingsState extends State<Settings>
                                 ),
                               if (WalletService.isBip39PhraseOrSeedHexKey())
                                 FutureBuilder<bool>(
-                                  future: () async {
-                                    final mnemonic = WalletService.getActiveKey(
-                                            walletImportType)!
-                                        .data;
-                                    final validPhrase = await compute(
-                                      validateMnemonic,
-                                      mnemonic,
-                                    );
-                                    return validPhrase;
-                                  }(),
+                                  future: checkDeadSwitch(),
                                   builder: (context, data) {
                                     if (data.hasError) return Container();
                                     if (!data.hasData) return Container();
