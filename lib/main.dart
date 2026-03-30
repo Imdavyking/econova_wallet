@@ -208,7 +208,7 @@ void main() async {
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
   currencyJsonSearch = await rootBundle.loadString('json/currencies.json');
   await WebNotificationPermissionDb.loadSavedPermissions();
-  if (WalletService.isPharseKey()) {
+  if (WalletService.isBip39PhraseOrSeedHexKey()) {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }

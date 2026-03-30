@@ -331,15 +331,16 @@ class SegwitCoin extends Coin {
   // ─── Address ──────────────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey =
         'segwitCoinV1_${cfg.symbol}_${cfg.hrp}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(mnemonic)) {
-        return AccountData.fromJson(cache[mnemonic]);
+      if (cache.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -352,7 +353,7 @@ class SegwitCoin extends Coin {
       ),
     );
 
-    cache[mnemonic] = result;
+    cache[bip39PhraseOrSeedHex] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
   }
@@ -647,14 +648,15 @@ class TaprootBtcCoin extends Coin {
   // ─── Address ────────────────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = 'nativeBtcP2TRv42$isTestnet${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(mnemonic)) {
-        return AccountData.fromJson(cache[mnemonic]);
+      if (cache.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -667,7 +669,7 @@ class TaprootBtcCoin extends Coin {
       ),
     );
 
-    cache[mnemonic] = result;
+    cache[bip39PhraseOrSeedHex] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
   }

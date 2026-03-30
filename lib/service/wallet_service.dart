@@ -29,7 +29,7 @@ abstract class WalletParams {
     if (identical(this, other)) return true;
     if (other is! WalletParams) return false;
 
-    if (other is SeedPhraseParams) {
+    if (other is BIP39PhraseOrSeedHEXParams) {
       return data == other.data && name == other.name;
     }
 
@@ -70,8 +70,8 @@ class PrivateKeyParams extends WalletParams {
   }
 }
 
-class SeedPhraseParams extends WalletParams {
-  SeedPhraseParams({required super.data, required super.name})
+class BIP39PhraseOrSeedHEXParams extends WalletParams {
+  BIP39PhraseOrSeedHEXParams({required super.data, required super.name})
       : super(
           defaultCoin: null,
           coinName: null,
@@ -85,8 +85,8 @@ class SeedPhraseParams extends WalletParams {
     };
   }
 
-  factory SeedPhraseParams.fromJson(Map<String, dynamic> json) {
-    return SeedPhraseParams(
+  factory BIP39PhraseOrSeedHEXParams.fromJson(Map<String, dynamic> json) {
+    return BIP39PhraseOrSeedHEXParams(
       data: json['phrase'],
       name: json['name'],
     );
@@ -123,7 +123,7 @@ class ViewKeyParams extends WalletParams {
 class WalletService {
   static String _getCurrentKeyPref(WalletType type) {
     switch (type) {
-      case WalletType.secretPhrase:
+      case WalletType.bip39PhraseOrSeedHex:
         return _currentMnemonicKey;
       case WalletType.privateKey:
         return _currentPrivateKey;
@@ -134,7 +134,7 @@ class WalletService {
 
   static String _getListKeyPref(WalletType type) {
     switch (type) {
-      case WalletType.secretPhrase:
+      case WalletType.bip39PhraseOrSeedHex:
         return _mnemonicListKey;
       case WalletType.privateKey:
         return _privateListKey;
@@ -147,8 +147,8 @@ class WalletService {
     final data = pref.get(_getCurrentKeyPref(type));
     if (data == null) return null;
     switch (type) {
-      case WalletType.secretPhrase:
-        return SeedPhraseParams.fromJson(json.decode(data));
+      case WalletType.bip39PhraseOrSeedHex:
+        return BIP39PhraseOrSeedHEXParams.fromJson(json.decode(data));
       case WalletType.privateKey:
         return PrivateKeyParams.fromJson(json.decode(data));
       case WalletType.viewKey:
@@ -177,8 +177,8 @@ class WalletService {
   ) async {
     bool isValidType = false;
     switch (type) {
-      case WalletType.secretPhrase:
-        isValidType = currentKey is SeedPhraseParams;
+      case WalletType.bip39PhraseOrSeedHex:
+        isValidType = currentKey is BIP39PhraseOrSeedHEXParams;
         break;
       case WalletType.privateKey:
         isValidType = currentKey is PrivateKeyParams;
@@ -209,8 +209,10 @@ class WalletService {
     List<dynamic> jsonData = json.decode(jsonList);
 
     switch (type) {
-      case WalletType.secretPhrase:
-        return jsonData.map((item) => SeedPhraseParams.fromJson(item)).toList();
+      case WalletType.bip39PhraseOrSeedHex:
+        return jsonData
+            .map((item) => BIP39PhraseOrSeedHEXParams.fromJson(item))
+            .toList();
       case WalletType.privateKey:
         return jsonData.map((item) => PrivateKeyParams.fromJson(item)).toList();
       case WalletType.viewKey:
@@ -231,8 +233,8 @@ class WalletService {
     walletImportType = type;
   }
 
-  static bool isPharseKey() {
-    return walletImportType == WalletType.secretPhrase;
+  static bool isBip39PhraseOrSeedHexKey() {
+    return walletImportType == WalletType.bip39PhraseOrSeedHex;
   }
 
   static bool isPrivateKey() {

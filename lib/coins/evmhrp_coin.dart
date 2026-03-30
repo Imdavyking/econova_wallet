@@ -144,14 +144,15 @@ class EVMHrpCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = 'evmHrpCoinDetails${walletImportType.name}$hrp';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
+      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -162,7 +163,7 @@ class EVMHrpCoin extends Coin {
     );
     final keys = await compute(calculateEVMHrpKey, args);
 
-    mnemonicMap[mnemonic] = keys;
+    mnemonicMap[bip39PhraseOrSeedHex] = keys;
 
     await pref.put(saveKey, jsonEncode(mnemonicMap));
 

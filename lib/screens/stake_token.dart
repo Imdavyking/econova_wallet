@@ -180,7 +180,7 @@ class _StakeTokenState extends State<StakeToken> {
 
     if (memo.isEmpty) memo = null;
 
-    if (WalletService.isPharseKey()) {
+    if (WalletService.isBip39PhraseOrSeedHexKey()) {
       await reInstianteSeedRoot();
     }
 

@@ -23,7 +23,7 @@ import '../service/wallet_service.dart';
 import 'app_config.dart';
 
 Future<void> reInstianteSeedRoot() async {
-  final params = WalletService.getActiveKey(WalletType.secretPhrase);
+  final params = WalletService.getActiveKey(WalletType.bip39PhraseOrSeedHex);
   if (params == null) return;
   seedPhraseRoot = await compute(seedFromMnemonic, params.data);
 }

@@ -39,7 +39,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
   }
 
   Future<void> _activate(DmsConfig cfg) async {
-    if (!WalletService.isPharseKey()) return;
+    if (!WalletService.isBip39PhraseOrSeedHexKey()) return;
 
     final authed = await authenticate(context);
     if (!authed) {
@@ -70,7 +70,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
   }
 
   Future<void> _heartbeat() async {
-    if (!WalletService.isPharseKey()) return;
+    if (!WalletService.isBip39PhraseOrSeedHexKey()) return;
 
     final authed = await authenticate(context);
     if (!authed) {
@@ -174,7 +174,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
             children: [
               _DmsStatusCard(state: _state),
               const SizedBox(height: 20),
-              if (!WalletService.isPharseKey())
+              if (!WalletService.isBip39PhraseOrSeedHexKey())
                 const _NotSupportedCard()
               else
                 _buildBody(),

@@ -39,14 +39,16 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
 
   Future<void> _loadKeys() async {
     try {
-      if (!WalletService.isPharseKey() && !WalletService.isPrivateKey()) {
+      if (!WalletService.isBip39PhraseOrSeedHexKey() &&
+          !WalletService.isPrivateKey()) {
         setState(() => _error = 'Unsupported wallet type');
         return;
       }
       final data = WalletService.getActiveKey(walletImportType)!.data;
       final AccountData accountData;
-      if (WalletService.isPharseKey()) {
-        accountData = await widget.coin.fromMnemonic(mnemonic: data);
+      if (WalletService.isBip39PhraseOrSeedHexKey()) {
+        accountData =
+            await widget.coin.fromBip39PhraseOrSeed(bip39PhraseOrSeedHex: data);
       } else {
         accountData = await widget.coin.fromPrivateKey(data);
       }

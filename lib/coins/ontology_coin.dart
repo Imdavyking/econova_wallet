@@ -135,14 +135,15 @@ class OntologyCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = 'ontCoinDetail_V5${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};
 
     if (pref.containsKey(saveKey)) {
       cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(mnemonic)) {
-        return AccountData.fromJson(cache[mnemonic]);
+      if (cache.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
       }
     }
     final result = await compute(
@@ -150,7 +151,7 @@ class OntologyCoin extends Coin {
       OntDeriveArgs(seedRoot: seedPhraseRoot, path: _ontDerivationPath),
     );
 
-    cache[mnemonic] = result;
+    cache[bip39PhraseOrSeedHex] = result;
     await pref.put(saveKey, jsonEncode(cache));
     return AccountData.fromJson(result);
   }

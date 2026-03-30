@@ -46,7 +46,7 @@ class _IdenticonState extends State<Identicon> {
     return ValueListenableBuilder<Box<dynamic>>(
       valueListenable: pref.listenable(keys: [useBlockiesKey]),
       builder: (context, box, _) {
-        if (walletImportType != WalletType.secretPhrase) blockie;
+        if (walletImportType != WalletType.bip39PhraseOrSeedHex) blockie;
         return box.get(useBlockiesKey, defaultValue: true) ? blockie : jazzicon;
       },
     );

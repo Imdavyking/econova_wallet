@@ -42,11 +42,11 @@ class AllWallets extends StatefulWidget {
 class _AllWalletsState extends State<AllWallets> {
   final _walletNameController = TextEditingController();
 
-  late List<SeedPhraseParams> _mnemonics;
+  late List<BIP39PhraseOrSeedHEXParams> _mnemonics;
   late List<PrivateKeyParams> _privateKeyWallets;
   late List<ViewKeyParams> _viewOnlyWallets;
 
-  SeedPhraseParams? _currentPhrase;
+  BIP39PhraseOrSeedHEXParams? _currentPhrase;
   PrivateKeyParams? _currentPrivate;
   ViewKeyParams? _currentView;
 
@@ -57,14 +57,14 @@ class _AllWalletsState extends State<AllWallets> {
   }
 
   void _loadWallets() {
-    _mnemonics = WalletService.getActiveKeys(WalletType.secretPhrase)
-        as List<SeedPhraseParams>;
+    _mnemonics = WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex)
+        as List<BIP39PhraseOrSeedHEXParams>;
     _privateKeyWallets = WalletService.getActiveKeys(WalletType.privateKey)
         as List<PrivateKeyParams>;
     _viewOnlyWallets =
         WalletService.getActiveKeys(WalletType.viewKey) as List<ViewKeyParams>;
-    _currentPhrase = WalletService.getActiveKey(WalletType.secretPhrase)
-        as SeedPhraseParams?;
+    _currentPhrase = WalletService.getActiveKey(WalletType.bip39PhraseOrSeedHex)
+        as BIP39PhraseOrSeedHEXParams?;
     _currentPrivate =
         WalletService.getActiveKey(WalletType.privateKey) as PrivateKeyParams?;
     _currentView =
@@ -82,10 +82,10 @@ class _AllWalletsState extends State<AllWallets> {
   List<_WalletSection> get _sections => [
         _WalletSection(
           title: 'Seed Phrase Wallets',
-          type: WalletType.secretPhrase,
+          type: WalletType.bip39PhraseOrSeedHex,
           wallets: _mnemonics,
           activeWallet: _currentPhrase,
-          isActiveType: WalletService.isPharseKey,
+          isActiveType: WalletService.isBip39PhraseOrSeedHexKey,
         ),
         _WalletSection(
           title: 'Private Key Wallets',
@@ -110,9 +110,9 @@ class _AllWalletsState extends State<AllWallets> {
     await WalletService.setActiveKey(type, params);
     await pref.put(currentUserWalletNameKey, params.name);
 
-    if (type == WalletType.secretPhrase) {
-      seedPhraseRoot =
-          await compute(seedFromMnemonic, (params as SeedPhraseParams).data);
+    if (type == WalletType.bip39PhraseOrSeedHex) {
+      seedPhraseRoot = await compute(
+          seedFromMnemonic, (params as BIP39PhraseOrSeedHEXParams).data);
     }
 
     if (!mounted || !context.mounted) return;
@@ -188,8 +188,8 @@ class _AllWalletsState extends State<AllWallets> {
                 await WalletService.editName(type, wallet, newName);
 
                 _mnemonics =
-                    WalletService.getActiveKeys(WalletType.secretPhrase)
-                        as List<SeedPhraseParams>;
+                    WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex)
+                        as List<BIP39PhraseOrSeedHEXParams>;
 
                 if (!context.mounted || !mounted) return;
                 Navigator.pop(context, true);
@@ -252,7 +252,7 @@ class _AllWalletsState extends State<AllWallets> {
 
   List<WalletParams> _listForType(WalletType type) {
     switch (type) {
-      case WalletType.secretPhrase:
+      case WalletType.bip39PhraseOrSeedHex:
         return _mnemonics;
       case WalletType.viewKey:
         return _viewOnlyWallets;
@@ -263,8 +263,9 @@ class _AllWalletsState extends State<AllWallets> {
 
   bool _isActive(WalletType type, WalletParams wallet) {
     switch (type) {
-      case WalletType.secretPhrase:
-        return _currentPhrase == wallet && WalletService.isPharseKey();
+      case WalletType.bip39PhraseOrSeedHex:
+        return _currentPhrase == wallet &&
+            WalletService.isBip39PhraseOrSeedHexKey();
       case WalletType.privateKey:
         return _currentPrivate == wallet && WalletService.isPrivateKey();
       case WalletType.viewKey:

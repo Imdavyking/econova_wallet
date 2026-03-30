@@ -24,7 +24,8 @@ class WalletImportService {
   WalletImportService._();
 
   static String getNextWalletName() {
-    final count = WalletService.getActiveKeys(WalletType.secretPhrase).length;
+    final count =
+        WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex).length;
     return 'Wallet ${count + 1}';
   }
 
@@ -50,16 +51,18 @@ class WalletImportService {
       }
 
       // 2. Duplicate check
-      final existing = WalletService.getActiveKeys(WalletType.secretPhrase);
-      final phraseData =
-          SeedPhraseParams(data: mnemonicOrBip39SeedHex, name: walletName);
+      final existing =
+          WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex);
+      final phraseData = BIP39PhraseOrSeedHEXParams(
+          data: mnemonicOrBip39SeedHex, name: walletName);
       if (existing
           .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
         return WalletImportResult.fail(WalletImportError.duplicate);
       }
 
       seedPhraseRoot = await compute(seedFromMnemonic, phraseData.data);
-      await WalletService.setActiveKey(WalletType.secretPhrase, phraseData);
+      await WalletService.setActiveKey(
+          WalletType.bip39PhraseOrSeedHex, phraseData);
       await importAllKeys(phraseData.data);
     } catch (e, st) {
       debugPrint('WalletImportService error: $e\n$st');

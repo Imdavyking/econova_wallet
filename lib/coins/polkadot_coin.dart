@@ -91,14 +91,15 @@ class PolkadotCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = 'polkadotDetailss${walletImportType.name}$ss58Prefix';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
+      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -108,7 +109,7 @@ class PolkadotCoin extends Coin {
       ss58Prefix: ss58Prefix,
     );
     final keys = await compute(calculatePolkadotKey, args);
-    mnemonicMap[mnemonic] = keys;
+    mnemonicMap[bip39PhraseOrSeedHex] = keys;
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);
   }

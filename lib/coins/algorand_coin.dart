@@ -99,15 +99,16 @@ class AlgorandCoin extends Coin {
   // ── Key derivation ──────────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final cacheKey = 'algorandDetails${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(cacheKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
+      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
         return AccountData.fromJson(
-          Map<String, dynamic>.from(mnemonicMap[mnemonic]),
+          Map<String, dynamic>.from(mnemonicMap[bip39PhraseOrSeedHex]),
         );
       }
     }
@@ -119,7 +120,7 @@ class AlgorandCoin extends Coin {
       ),
     );
 
-    mnemonicMap[mnemonic] = keys;
+    mnemonicMap[bip39PhraseOrSeedHex] = keys;
     await pref.put(cacheKey, jsonEncode(mnemonicMap));
 
     return AccountData.fromJson(Map<String, dynamic>.from(keys));

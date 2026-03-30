@@ -21,7 +21,7 @@ class WalletAssetsHeader extends StatelessWidget {
             localization.assets,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          if (WalletService.isPharseKey())
+          if (WalletService.isBip39PhraseOrSeedHexKey())
             GestureDetector(
               onTap: () => Navigator.push(
                 context,

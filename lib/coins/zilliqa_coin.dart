@@ -129,13 +129,14 @@ class ZilliqaCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = 'ZilliqaCoinDetail${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
+      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -146,7 +147,7 @@ class ZilliqaCoin extends Coin {
 
     final keys = await compute(calculateZilliqaKey, args);
 
-    mnemonicMap[mnemonic] = keys;
+    mnemonicMap[bip39PhraseOrSeedHex] = keys;
 
     await pref.put(saveKey, jsonEncode(mnemonicMap));
 

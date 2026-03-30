@@ -94,7 +94,7 @@ class _SendFormState extends State<SendForm> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
-    if (WalletService.isPharseKey()) await reInstianteSeedRoot();
+    if (WalletService.isBip39PhraseOrSeedHexKey()) await reInstianteSeedRoot();
     setState(() => _isLoading = false);
 
     if (!mounted) return;

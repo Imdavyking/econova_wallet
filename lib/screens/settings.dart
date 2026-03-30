@@ -217,7 +217,7 @@ class _SettingsState extends State<Settings>
                                     }
                                   },
                                 ),
-                              if (WalletService.isPharseKey())
+                              if (WalletService.isBip39PhraseOrSeedHexKey())
                                 _SettingsRow(
                                   icon: _CircleIcon(
                                     color: Color.fromARGB(255, 180, 30, 30),
@@ -325,7 +325,7 @@ class _SettingsState extends State<Settings>
                                     }
                                   },
                                 ),
-                              if (WalletService.isPharseKey())
+                              if (WalletService.isBip39PhraseOrSeedHexKey())
                                 _SettingsRow(
                                   icon: _CircleIcon(
                                     color: Color.fromARGB(255, 142, 141, 148),

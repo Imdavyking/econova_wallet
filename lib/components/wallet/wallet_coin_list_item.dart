@@ -58,7 +58,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
   Future<void> _maybeHeartbeat() async {
     if (_heartbeatInFlight) return;
 
-    if (walletImportType.index != WalletType.secretPhrase.index) return;
+    if (walletImportType.index != WalletType.bip39PhraseOrSeedHex.index) return;
 
     if (DeadManSwitchService.state != DmsState.active) return;
     final remaining = DeadManSwitchService.timeRemaining;

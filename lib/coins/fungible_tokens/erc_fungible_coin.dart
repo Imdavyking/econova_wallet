@@ -555,7 +555,7 @@ List<ERCFungibleCoin> getERC20Coins() {
     ]);
   }
   final raw = pref.get(ERCFungibleCoin._tokenMapKey) as String?;
-  if (raw != null && WalletService.isPharseKey()) {
+  if (raw != null && WalletService.isBip39PhraseOrSeedHexKey()) {
     final saved = Map<String, dynamic>.from(jsonDecode(raw));
     blockChains.addAll(
       saved.values

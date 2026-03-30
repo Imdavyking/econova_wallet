@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 
 enum WalletType {
-  secretPhrase,
+  bip39PhraseOrSeedHex,
   privateKey,
   viewKey,
 }
@@ -217,8 +217,8 @@ abstract class Coin {
   }
 
   Future<AccountData> importData(String data) async {
-    if (WalletService.isPharseKey()) {
-      return fromMnemonic(mnemonic: data);
+    if (WalletService.isBip39PhraseOrSeedHexKey()) {
+      return fromBip39PhraseOrSeed(bip39PhraseOrSeedHex: data);
     } else if (WalletService.isViewKey()) {
       return Future.value(
         AccountData(
@@ -231,7 +231,8 @@ abstract class Coin {
     throw Exception('invalid data type');
   }
 
-  Future<AccountData> fromMnemonic({required String mnemonic});
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex});
 
   Future<AccountData> fromPrivateKey(String privateKey) async {
     throw UnimplementedError('private key derivation not implemented');

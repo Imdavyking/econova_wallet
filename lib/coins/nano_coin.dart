@@ -110,14 +110,15 @@ class NanoBaseCoin extends Coin {
   // ── Address derivation ────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final saveKey = '${cachePrefix}DetailsV1${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
+      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -128,7 +129,7 @@ class NanoBaseCoin extends Coin {
     );
     final keys = await compute(calculateNanoKey, args);
 
-    mnemonicMap[mnemonic] = keys;
+    mnemonicMap[bip39PhraseOrSeedHex] = keys;
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);
   }

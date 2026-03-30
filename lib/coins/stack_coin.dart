@@ -278,15 +278,16 @@ class StacksCoin extends Coin {
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex}) async {
     final cacheKey =
         'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet';
     Map<String, dynamic> cached = {};
 
     if (pref.containsKey(cacheKey)) {
       cached = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (cached.containsKey(mnemonic)) {
-        return AccountData.fromJson(cached[mnemonic]);
+      if (cached.containsKey(bip39PhraseOrSeedHex)) {
+        return AccountData.fromJson(cached[bip39PhraseOrSeedHex]);
       }
     }
 
@@ -297,7 +298,7 @@ class StacksCoin extends Coin {
     );
 
     final keys = await compute(calculateStacksKey, args);
-    cached[mnemonic] = keys;
+    cached[bip39PhraseOrSeedHex] = keys;
     await pref.put(cacheKey, jsonEncode(cached));
 
     return AccountData.fromJson(keys);
