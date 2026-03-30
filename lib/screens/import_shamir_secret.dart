@@ -1,19 +1,13 @@
 // ignore_for_file: library_private_types_in_public_api
 
-import 'dart:convert';
 
-import 'package:bip32/bip32.dart' as bip32;
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:hex/hex.dart';
 import 'package:pinput/pinput.dart';
 import 'package:slip39/slip39.dart';
-import 'package:wallet_app/coins/ethereum_coin.dart';
-import 'package:wallet_app/model/seed_phrase_root.dart';
-
 import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
 import 'package:wallet_app/utils/app_config.dart';
