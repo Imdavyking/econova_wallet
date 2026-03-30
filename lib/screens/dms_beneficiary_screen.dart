@@ -470,7 +470,7 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               const SizedBox(height: 4),
               _MetaRow(
                 icon: Icons.vpn_key_outlined,
-                label: 'Sender address',
+                label: 'Wallet address',
                 value: _shortId(session.senderAddress),
               ),
               const SizedBox(height: 4),
