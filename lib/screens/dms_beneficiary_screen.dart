@@ -659,9 +659,6 @@ class _WalletInfoCard extends StatelessWidget {
     final roomId = pubKeyHex != null
         ? DeadManSwitchService.roomIdFromPubKey(pubKeyHex!)
         : null;
-    final shortRoom = roomId != null
-        ? '${roomId.substring(0, 8)}…${roomId.substring(roomId.length - 8)}'
-        : '…';
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -895,7 +892,7 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  late AppLocalizations _l;
+  late final AppLocalizations _l;
   _InfoRow({
     required this.icon,
     required this.label,

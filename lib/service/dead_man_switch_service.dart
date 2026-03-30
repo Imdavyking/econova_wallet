@@ -498,7 +498,6 @@ class DeadManSwitchService {
     final keysToRemove = existing.entries
         .where((e) {
           final s = DmsSessionData.fromJson(e.value as Map<String, dynamic>);
-          // dataHash => hmac(seedphrase + senderAddress) to prevent collisions between different senders with same address? or just compare senderAddress directly? for simplicity, let's compare senderAddress directly for now, but we can add dataHash in the future if needed
           return s.dataHash == session.dataHash;
         })
         .map((e) => e.key)
