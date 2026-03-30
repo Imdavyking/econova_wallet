@@ -212,16 +212,9 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
     }
 
     return switch (_state) {
-      DmsState.inactive => FutureBuilder<String?>(
-          future: getEthAddress(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) return const SizedBox.shrink();
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            return _DmsSetupForm(
-              onActivate: _activate,
-              senderAddress: snapshot.data!,
-            );
-          },
+      DmsState.inactive => _DmsSetupForm(
+          onActivate: _activate,
+          senderAddress: ethAddress,
         ),
       DmsState.active => _DmsActiveView(
           ethAddress: ethAddress,
