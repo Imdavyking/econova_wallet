@@ -23,12 +23,21 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
   DmsState _state = DmsState.inactive;
   DmsConfig? _config;
   List<EncryptedShare>? _encryptedShares;
+  String ethAddress = '';
   bool _loading = false;
+
+  Future<String> getEthAddress() async {
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final eth = getChains<EthereumCoin>().first;
+    final details = await eth.importData(mnemonic);
+    ethAddress = details.address;
+    return details.address;
+  }
 
   @override
   void initState() {
     super.initState();
-    _refresh();
+    getEthAddress().catchError((_) => '').whenComplete(() => _refresh());
   }
 
   void _refresh() {
@@ -205,12 +214,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
 
     return switch (_state) {
       DmsState.inactive => FutureBuilder<String?>(
-          future: (() async {
-            final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-            final eth = getChains<EthereumCoin>().first;
-            final details = await eth.importData(mnemonic);
-            return details.address;
-          })(),
+          future: getEthAddress(),
           builder: (context, snapshot) {
             if (snapshot.hasError) return const SizedBox.shrink();
             if (!snapshot.hasData) return const SizedBox.shrink();
@@ -221,6 +225,7 @@ class _DeadManSwitchScreenState extends State<DeadManSwitchScreen> {
           },
         ),
       DmsState.active => _DmsActiveView(
+          ethAddress: ethAddress,
           config: _config!,
           encryptedShares: _encryptedShares,
           onHeartbeat: _heartbeat,
@@ -563,6 +568,7 @@ class _DrandRoundPreview extends StatelessWidget {
 
 class _DmsActiveView extends StatelessWidget {
   final DmsConfig config;
+  final String ethAddress;
   final List<EncryptedShare>? encryptedShares;
   final VoidCallback onHeartbeat;
   final VoidCallback onCancel;
@@ -573,6 +579,7 @@ class _DmsActiveView extends StatelessWidget {
     required this.encryptedShares,
     required this.onHeartbeat,
     required this.onCancel,
+    required this.ethAddress,
     this.onViewShares,
   });
 
@@ -604,6 +611,11 @@ class _DmsActiveView extends StatelessWidget {
             icon: Icons.account_circle_outlined,
             label: 'Wallet Address',
             value: ellipsify(str: config.senderAddress),
+          ),
+          _InfoRow(
+            icon: Icons.account_circle_outlined,
+            label: 'Current Selected?',
+            value: (ethAddress == config.senderAddress).toString(),
           ),
           _InfoRow(
             icon: Icons.account_circle_outlined,
