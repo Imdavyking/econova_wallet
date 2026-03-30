@@ -29,7 +29,7 @@ import 'package:hive_test/hive_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wallet_app/utils/slip39.dart';
+import 'package:wallet_app/utils/slip39.dart' as slip39utils;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -966,9 +966,8 @@ void main() async {
 
     expect(set.length, 1);
 
-    final decoded = Slip39Helpers.decodeMnemonics(sharesList);
-    final groups = decoded['groups'];
-    int minimumlen = Map.from(groups[0]).keys.first;
+    final decoded = slip39utils.decodeMnemonics(sharesList);
+    final minimumlen = decoded.groups.first.memberThreshold;
 
     expect(sharesList.length, greaterThan(minimumlen));
 

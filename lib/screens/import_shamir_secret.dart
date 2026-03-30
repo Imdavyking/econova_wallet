@@ -11,7 +11,7 @@ import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/screens/show_shamir_shares.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
-import 'package:wallet_app/utils/slip39.dart';
+import 'package:wallet_app/utils/slip39.dart' as slip39utils;
 
 // Shared enum – move to a common file if both screens are in the same package.
 
@@ -76,9 +76,8 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(sharesList, _isBase64.value);
       } else {
-        final decoded = Slip39Helpers.decodeMnemonics(sharesList);
-        final groups = decoded['groups'];
-        int minimumlen = Map.from(groups[0]).keys.first;
+        final decoded = slip39utils.decodeMnemonics(sharesList);
+        final minimumlen = decoded.groups.first.memberThreshold;
 
         if (sharesList.length < minimumlen) {
           throw Exception('at least $minimumlen shares needed');
