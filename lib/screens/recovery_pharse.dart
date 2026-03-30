@@ -30,6 +30,8 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
   bool _obscured = false;
   bool _securityOverlayVisible = false;
 
+  bool validSeedPhrase = true;
+
   late AppLocalizations _loc;
   final _screenshotCallback = ScreenshotCallback();
 
@@ -46,6 +48,7 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
         message: _loc.youCantScreenshot,
       ),
     );
+    validSeedPhrase = validateMnemonic(widget.data);
   }
 
   @override
@@ -133,7 +136,7 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                       style: const TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 20),
-                    if (validateMnemonic(widget.data))
+                    if (validSeedPhrase)
                       _MnemonicGrid(words: widget.data.split(' '))
                     else
                       // Word grid
@@ -162,7 +165,7 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                         label: _loc.exportAsShamirShares,
                         onPressed: _goToShamirShares,
                       )
-                    else
+                    else if (validSeedPhrase)
                       _ActionButton(
                         label: _loc.continue_,
                         onPressed: _goToConfirmMnemonic,

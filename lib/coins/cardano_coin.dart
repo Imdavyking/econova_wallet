@@ -3,11 +3,13 @@
 import 'dart:convert';
 import 'dart:math';
 // ignore: depend_on_referenced_packages
+import 'package:bip39/bip39.dart';
 import 'package:cardano_dart_types/cardano_dart_types.dart' hide Coin;
 import 'package:cardano_flutter_sdk/cardano_flutter_sdk.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
+import 'package:pinenacl/ed25519.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:wallet_app/fetchers/cardano_trx_fetcher.dart';
 import '../extensions/big_int_ext.dart';
@@ -28,17 +30,26 @@ const _blockfrostPreprod = 'https://cardano-preprod.blockfrost.io/api/v0';
 // ── Isolate args ──────────────────────────────────────────────────────────────
 
 class CardanoDeriveArgs {
-  final String mnemonic;
+  final String seedPhraseOrSeed;
   final bool isTestnet;
-  const CardanoDeriveArgs({required this.mnemonic, required this.isTestnet});
+  const CardanoDeriveArgs(
+      {required this.seedPhraseOrSeed, required this.isTestnet});
 }
 
 Future<Map<String, dynamic>> calculateCardanoKey(CardanoDeriveArgs args) async {
   final network = args.isTestnet ? NetworkId.testnet : NetworkId.mainnet;
-  final wallet = await WalletFactory.fromMnemonic(
-    network,
-    args.mnemonic.split(' '),
-  );
+  CardanoWallet? wallet;
+  if (validateMnemonic(args.seedPhraseOrSeed)) {
+    wallet = await WalletFactory.fromMnemonic(
+      network,
+      args.seedPhraseOrSeed.split(' '),
+    );
+  } else {
+    wallet = await WalletFactory.fromSeed(
+      network,
+      ByteList(HEX.decode(args.seedPhraseOrSeed)),
+    );
+  }
 
   final addrKit = await wallet.getPaymentAddressKit(addressIndex: 0);
   return {
@@ -185,7 +196,7 @@ class CardanoCoin extends Coin {
 
     final keys = await compute(
       calculateCardanoKey,
-      CardanoDeriveArgs(mnemonic: mnemonic, isTestnet: isTestnet),
+      CardanoDeriveArgs(seedPhraseOrSeed: mnemonic, isTestnet: isTestnet),
     );
 
     cached[mnemonic] = keys;
