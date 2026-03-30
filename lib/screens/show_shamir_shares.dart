@@ -1,12 +1,12 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:bip39/bip39.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:slip39/slip39.dart';
-import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 
@@ -14,7 +14,7 @@ import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/utils/app_config.dart';
 
 // Shared enum – move to a common file if both screens are in the same package.
-enum ShamirScheme { sss, slip39 }
+enum ShamirScheme { slip39, sss }
 
 class ShowShamirShares extends StatefulWidget {
   final String data;
@@ -33,11 +33,19 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _passphraseCtrl = TextEditingController();
   final _sharesList = ValueNotifier<List<String>>([]);
   final _isBase64 = ValueNotifier<bool>(true);
-  final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.sss);
+  final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.slip39);
   Map<String, Uint8List> cacheSeed = {};
   Iterable<Column> bip39supported = [];
   static const _maxShares = 8;
   static const _minShares = 2;
+  bool validSeedPhrase = false;
+
+  Future<void> _checkValidSeed() async {
+    validSeedPhrase = await compute(validateMnemonic, widget.data);
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -62,6 +70,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
       }
       return null;
     }).nonNulls;
+    _checkValidSeed();
   }
 
   @override
@@ -141,8 +150,9 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
               builder: (_, scheme, __) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Scheme selector
-                  _SchemeToggle(notifier: _scheme),
+                  if (validSeedPhrase)
+                    // Scheme selector
+                    _SchemeToggle(notifier: _scheme),
                   const SizedBox(height: 20),
 
                   // Threshold input
