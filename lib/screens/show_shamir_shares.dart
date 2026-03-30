@@ -1,12 +1,13 @@
 // ignore_for_file: library_private_types_in_public_api
 
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:slip39/slip39.dart';
+import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 
 import 'package:wallet_app/ntcdcrypto.dart';
@@ -34,7 +35,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _isBase64 = ValueNotifier<bool>(true);
   final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.sss);
   Map<String, Uint8List> cacheSeed = {};
-
+  Iterable<Text> bip39supported = [];
   static const _maxShares = 8;
   static const _minShares = 2;
 
@@ -46,6 +47,14 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     // Clear generated shares whenever the scheme changes so stale results
     // from the previous scheme are never shown.
     _scheme.addListener(() => _sharesList.value = []);
+    bip39supported = getChains().map((e) {
+      if (!e.supportBip39Seed && e.tokenAddress() == null) {
+        return Text(
+          '${e.getName()} (${e.getSymbol()}) do not support BIP39 seed, you may not be able to recover your address',
+        );
+      }
+      return null;
+    }).nonNulls;
   }
 
   @override
@@ -154,6 +163,11 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
                   // SLIP39-only: optional passphrase
                   if (scheme == ShamirScheme.slip39) ...[
                     _PassphraseField(controller: _passphraseCtrl),
+                    const SizedBox(height: 20),
+                  ],
+
+                  if (scheme == ShamirScheme.slip39) ...[
+                    ...bip39supported,
                     const SizedBox(height: 20),
                   ],
 
