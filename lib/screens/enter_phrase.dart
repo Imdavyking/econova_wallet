@@ -43,6 +43,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   late AppLocalizations _loc;
   late StreamSubscription<dynamic> _eventSub;
   final _screenshotCallback = ScreenshotCallback();
+  String info = 'Seed phrase/BIP39 seed hex';
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_loc.entermnemonic),
+        title: Text(info),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
@@ -221,7 +222,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                     // Mnemonic input
                     MnemonicTextField(
                       controller: _mnemonicController,
-                      hintText: _loc.entermnemonic,
+                      hintText: info,
                       obscure: _obscureMnemonic,
                       onSuggestionsChanged: (s) => _suggestions.value = s,
                     ),
