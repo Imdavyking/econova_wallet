@@ -137,6 +137,7 @@ void main() async {
     pref = await Hive.openBox(secureStorageKey);
     networkAvailable = await NetworkGuard().checkNow();
     await dotenv.load();
+    supportedChains = getChains();
   });
 
   tearDown(() async {
@@ -960,6 +961,9 @@ void main() async {
     );
 
     final sharesList = slip.fromPath('r/0').mnemonics;
+    debugPrint(password);
+    debugPrint(sharesList.toString());
+
     final set = sharesList
         .map((share) => share.split(' ').sublist(0, 3).toString())
         .toSet();

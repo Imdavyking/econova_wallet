@@ -166,6 +166,162 @@ The first mobile wallet where the AI funds itself. Features:
 
 ---
 
+## 🔐 Seed Security — Shamir Secret Sharing & SLIP39
+
+EcoNova is the only mobile wallet with dual-scheme secret splitting built
+natively into the UI. Users can back up their seed phrase by splitting it
+into shares — no single share reveals anything about the original secret.
+
+### 🔀 SSS (Shamir's Secret Sharing)
+
+The original SSS scheme, implemented natively in Dart:
+
+- Split any seed phrase or hex seed into **N shares** with a **K-of-N
+  threshold** — any K shares reconstruct the secret, fewer than K reveal
+  nothing.
+- Base64 or hex output encoding — configurable per split.
+- QR scan and clipboard paste on each share field for fast input.
+- Duplicate share detection before recovery is attempted.
+- Reconstruction validates the digest of the shared secret — corrupted or
+  wrong shares are caught before any result is returned.
+
+### 🔑 SLIP39 (SatoshiLabs Improvement Proposal 39)
+
+The standardised, mnemonic-word share format used by Trezor and compatible
+hardware wallets — now available on mobile:
+
+- Shares are **BIP39-style human-readable word lists** (1024-word SLIP39
+  dictionary), making them safe to write down or speak aloud.
+- Optional **passphrase** adds an additional encryption layer — the same
+  shares with a different passphrase produce a completely different secret.
+- Shares from the same split share an **identifier prefix** (first 2–3
+  words) so you can instantly confirm two shares belong together.
+- Cross-compatible — shares generated in EcoNova can be recovered in any
+  SLIP39-compliant wallet (Trezor Suite, Ian Coleman's tool, etc.) and vice
+  versa.
+- Even-length byte enforcement with explicit padding flag — round-trips
+  correctly regardless of seed length.
+
+Both schemes are available from the same screen via a **segmented toggle**.
+Switching schemes clears all fields so stale shares from the previous scheme
+are never mixed in.
+
+```
+Export screen:  threshold / shares count → generate → copy each share
+Import screen:  paste / scan shares → optional passphrase → reconstruct
+```
+
+---
+
+## 💀 Dead Man's Switch
+
+A cryptographic dead man's switch that protects your seed phrase and
+automatically delivers it to a trusted beneficiary if you become
+unreachable — time-locked so it cannot be decrypted before your deadline.
+
+### How it works
+
+1. **Arm** — You set a timeout (7 days to 1 year), enter your
+   beneficiary's compressed secp256k1 public key, and choose a
+   K-of-N share configuration.
+2. **Split** — The seed is split into N shares via SSS. Each share is
+   individually encrypted in two layers:
+   - **AES-256-GCM** under a key derived from the target `drand` round
+     number — the share is computationally locked until that round is
+     published.
+   - **ECIES (secp256k1)** to the beneficiary's public key — only their
+     private key can decrypt it after the drand round is reached.
+3. **Relay** — Encrypted shares are pushed to the beneficiary automatically
+   over a WebSocket relay. The beneficiary's app stores them locally;
+   nothing sensitive is ever on the server.
+4. **Heartbeat** — Each time you open the app and reset the timer, shares
+   are re-encrypted to a new drand round and re-sent. Old shares become
+   permanently unrecoverable.
+5. **Trigger** — If the deadline passes without a heartbeat, the switch
+   enters the **triggered** state. The `drand` beacon for the target round
+   is now public, but only the beneficiary's private key can decrypt the
+   ECIES outer layer — so only they can reconstruct the seed.
+6. **Cancel** — Cancelling sends a signed cancel message to the relay so
+   the beneficiary's app can discard the shares.
+
+### Security properties
+
+| Property          | Implementation                                                      |
+| ----------------- | ------------------------------------------------------------------- |
+| Time-lock         | `drand` verifiable randomness — deterministic, public, tamper-proof |
+| Confidentiality   | ECIES secp256k1 + AES-256-GCM double encryption                     |
+| Forward secrecy   | Every heartbeat rotates the drand round and re-encrypts             |
+| Integrity         | HMAC-SHA256 `dataHash` binds shares to sender address + mnemonic    |
+| Share threshold   | SSS K-of-N — beneficiary needs K shares to reconstruct              |
+| Replay protection | Cancel message includes `dataHash`; relay deletes matching sessions |
+
+### Cryptographic stack (pure Dart, no native bindings)
+
+```dart
+// Timelock key derived from drand round number
+Uint8List _deriveTimelockKey(Uint8List roundBytes) {
+  // SHA-256("dms-timelock" || roundBytes)
+}
+
+// Share encryption pipeline
+final aesCipher  = aesGcmEncrypt(timelockKey, sharePlaintext);
+final eciesCipher = eciesEncrypt(beneficiaryPubKey, aesCipher);
+```
+
+---
+
+## 🔒 Native Cryptography — Pure Dart
+
+All cryptographic primitives used by EcoNova's security features are
+implemented from scratch in pure Dart with no native bindings or
+platform channels. This means the same code runs identically on Android,
+iOS, macOS, and in tests.
+
+| Primitive                   | Usage                                           |
+| --------------------------- | ----------------------------------------------- |
+| **ECIES secp256k1**         | Dead man's switch share encryption / decryption |
+| **AES-256-GCM**             | Symmetric encryption with authenticated data    |
+| **HMAC-SHA256**             | Data integrity hashes and HKDF key derivation   |
+| **HKDF-SHA256**             | ECIES shared-secret → AES key expansion         |
+| **SSS (GF-256)**            | Shamir secret splitting and recovery            |
+| **SLIP39**                  | BIP39-style mnemonic share encoding / decoding  |
+| **RS1024 checksum**         | SLIP39 mnemonic integrity validation            |
+| **Feistel cipher (PBKDF2)** | SLIP39 master secret encryption / decryption    |
+
+Every primitive has a corresponding round-trip test in the test suite —
+wrong keys, tampered ciphertext, and truncated shares all throw before
+any result reaches the UI.
+
+---
+
+## 🗝️ Wallet Import Formats
+
+EcoNova accepts three import formats, all normalised to the same internal
+`SeedPhraseRoot` representation at import time:
+
+| Format             | Example                  | Notes                                                  |
+| ------------------ | ------------------------ | ------------------------------------------------------ |
+| **BIP39 mnemonic** | `abandon ability able …` | 12 or 24 words; validated via `bip39.validateMnemonic` |
+| **BIP32 seed hex** | `7e9f86e818b5b8…`        | 64-byte raw seed, `0x` prefix optional                 |
+| **EIP-3 keystore** | `{"version":3, …}`       | PBKDF2 or scrypt; decrypts to private key              |
+
+BIP39 mnemonics are converted to a 64-byte seed via PBKDF2-HMAC-SHA512
+(standard BIP39 derivation). Hex seeds are decoded directly. Both produce
+the same `BIP32.fromSeed` root, so address derivation is identical
+regardless of which format the user imported.
+
+```dart
+Future<SeedPhraseRoot> seedFromMnemonic(String phraseOrBipSeedHex) async {
+  final isValid = await compute(bip39.validateMnemonic, phraseOrBipSeedHex);
+  final seed = isValid
+      ? bip39.mnemonicToSeed(phraseOrBipSeedHex)          // BIP39 → 64 bytes
+      : HEX.decode(strip0x(phraseOrBipSeedHex));          // raw hex seed
+  return SeedPhraseRoot(seed, bip32.BIP32.fromSeed(seed));
+}
+```
+
+---
+
 ## 🤖 AI-First Design
 
 EcoNova's core is a conversational AI agent that understands your intent
@@ -197,39 +353,46 @@ No more copying long addresses or checking explorers.
 
 ## 🎯 Judging Criteria Alignment
 
-| Criterion                    | How EcoNova delivers                                                       |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| **Innovation**               | AI that pays itself via x402 · sBTC on mobile · savings goals via Clarity  |
-| **Technical Implementation** | Native Dart signing stack, zero stacks.js, RFC 6979, SHA-512/256, c32check |
-| **Stacks Alignment**         | Clarity 2 contract · sBTC · USDCx · BNS · full Leather + Xverse compat     |
-| **User Experience**          | Conversational interface · voice · saved contacts · progress bars          |
-| **Impact Potential**         | Only mobile Stacks wallet with this feature set · 30+ chains unified       |
+| Criterion                    | How EcoNova delivers                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Innovation**               | AI that pays itself via x402 · sBTC on mobile · savings goals via Clarity · dead man's switch        |
+| **Technical Implementation** | Native Dart signing stack, zero stacks.js, RFC 6979, SHA-512/256, c32check, pure-Dart ECIES + SLIP39 |
+| **Stacks Alignment**         | Clarity 2 contract · sBTC · USDCx · BNS · full Leather + Xverse compat                               |
+| **User Experience**          | Conversational interface · voice · saved contacts · progress bars                                    |
+| **Impact Potential**         | Only mobile Stacks wallet with this feature set · 30+ chains unified                                 |
 
 ---
 
 ## 🚀 Full Feature List
 
-| Feature                                                        | Status |
-| -------------------------------------------------------------- | ------ |
-| STX send / receive                                             | ✅     |
-| sBTC send / receive                                            | ✅     |
-| USDCx send / receive                                           | ✅     |
-| USDCx savings goals (Clarity 2) — create, save, view, withdraw | ✅     |
-| BNS (.btc) name resolution                                     | ✅     |
-| x402 autonomous payments (STX / sBTC / USDCx)                  | ✅     |
-| Native BTC SegWit send / receive (P2WPKH, BIP143)              | ✅     |
-| Native BTC Taproot receive — Ordinals / Runes (P2TR, BIP341)   | ✅     |
-| dApp browser — Leather / Xverse API                            | ✅     |
-| dApp browser — EVM (MetaMask-compat)                           | ✅     |
-| dApp browser — Solana / Starknet / NEAR / MultiversX           | ✅     |
-| SIP-018 structured message signing                             | ✅     |
-| Contract call + deploy from browser                            | ✅     |
-| Transaction history                                            | ✅     |
-| Voice recognition                                              | ✅     |
-| Saved contacts                                                 | ✅     |
-| Portfolio overview                                             | ✅     |
-| AI natural language agent                                      | ✅     |
-| Multi-chain (ETH, SOL, Base, TON, and 25+ more)                | ✅     |
+| Feature                                                             | Status |
+| ------------------------------------------------------------------- | ------ |
+| STX send / receive                                                  | ✅     |
+| sBTC send / receive                                                 | ✅     |
+| USDCx send / receive                                                | ✅     |
+| USDCx savings goals (Clarity 2) — create, save, view, withdraw      | ✅     |
+| BNS (.btc) name resolution                                          | ✅     |
+| x402 autonomous payments (STX / sBTC / USDCx)                       | ✅     |
+| Native BTC SegWit send / receive (P2WPKH, BIP143)                   | ✅     |
+| Native BTC Taproot receive — Ordinals / Runes (P2TR, BIP341)        | ✅     |
+| dApp browser — Leather / Xverse API                                 | ✅     |
+| dApp browser — EVM (MetaMask-compat)                                | ✅     |
+| dApp browser — Solana / Starknet / NEAR / MultiversX                | ✅     |
+| SIP-018 structured message signing                                  | ✅     |
+| Contract call + deploy from browser                                 | ✅     |
+| Transaction history                                                 | ✅     |
+| Voice recognition                                                   | ✅     |
+| Saved contacts                                                      | ✅     |
+| Portfolio overview                                                  | ✅     |
+| AI natural language agent                                           | ✅     |
+| Multi-chain (ETH, SOL, Base, TON, and 25+ more)                     | ✅     |
+| Shamir Secret Sharing (SSS) — split & recover seed phrase           | ✅     |
+| SLIP39 — BIP39-style mnemonic shares, passphrase, Trezor-compatible | ✅     |
+| Dead man's switch — drand time-lock + ECIES + relay auto-delivery   | ✅     |
+| ECIES secp256k1 encryption / decryption (pure Dart)                 | ✅     |
+| AES-256-GCM encryption / decryption (pure Dart)                     | ✅     |
+| EIP-3 keystore import (PBKDF2 / scrypt)                             | ✅     |
+| BIP39 mnemonic + raw BIP32 hex seed import                          | ✅     |
 
 ---
 
@@ -274,6 +437,20 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
   distinct from bech32 (BIP173) used for witness v0 (SegWit)
 - **Leather-compatible `getAddresses`** — P2WPKH + P2TR + STX returned with
   correct public keys, tweaked keys, and derivation paths matching Leather exactly
+- **SSS in GF(256)** — Shamir secret splitting with RS1024 digest validation;
+  threshold shares reconstruct, sub-threshold shares reveal nothing
+- **SLIP39** — full implementation of SatoshiLabs' mnemonic share standard:
+  RS1024 checksum, Feistel cipher, PBKDF2 passphrase stretching, 1024-word
+  dictionary — cross-compatible with Trezor Suite and hardware wallets
+- **ECIES secp256k1** — ephemeral key agreement + HKDF-SHA256 + AES-256-GCM;
+  every encryption produces a different ciphertext even for the same plaintext
+- **Dead man's switch** — drand verifiable randomness for time-locking,
+  double-encrypted shares (AES-GCM + ECIES), WebSocket relay with
+  HMAC-bound session integrity, heartbeat-based forward secrecy
+- **EIP-3 keystore import** — PBKDF2-HMAC-SHA256 key derivation, AES-128-CTR
+  decryption, MAC verification — fully compatible with MetaMask exports
+- **Flexible seed import** — BIP39 mnemonic → `mnemonicToSeed` (PBKDF2),
+  raw BIP32 hex → direct decode; both normalised to the same `SeedPhraseRoot`
 
 ---
 
@@ -376,14 +553,15 @@ bw get notes "econova .env" > .env
 
 ## 📈 Market Opportunity
 
-| Segment                    | Opportunity                                          |
-| -------------------------- | ---------------------------------------------------- |
-| Crypto wallets             | \$48B market by 2030                                 |
-| Stacks ecosystem           | Only mobile wallet with full Leather + Xverse compat |
-| sBTC                       | First mobile wallet with native sBTC support         |
-| Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing  |
-| AI-powered interfaces      | Early-stage, high-demand UX differentiator           |
-| Multi-chain fragmentation  | 30+ chains, one interface                            |
+| Segment                    | Opportunity                                                       |
+| -------------------------- | ----------------------------------------------------------------- |
+| Crypto wallets             | \$48B market by 2030                                              |
+| Stacks ecosystem           | Only mobile wallet with full Leather + Xverse compat              |
+| sBTC                       | First mobile wallet with native sBTC support                      |
+| Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing               |
+| AI-powered interfaces      | Early-stage, high-demand UX differentiator                        |
+| Multi-chain fragmentation  | 30+ chains, one interface                                         |
+| Seed security              | Only mobile wallet with SSS + SLIP39 + dead man's switch built-in |
 
 ---
 
