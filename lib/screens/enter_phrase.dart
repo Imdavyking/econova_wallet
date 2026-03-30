@@ -227,6 +227,15 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                       onSuggestionsChanged: (s) => _suggestions.value = s,
                     ),
                     const SizedBox(height: 20),
+                    ValueListenableBuilder<List<String>>(
+                      valueListenable: _suggestions,
+                      builder: (_, suggestions, __) => MnemonicSuggestionsRow(
+                        suggestions: suggestions,
+                        controller: _mnemonicController,
+                        onSelected: () => _suggestions.value = [],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
                     // Shamir secret import
                     _OutlineButton(
@@ -244,14 +253,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                     const SizedBox(height: 20),
 
                     // Autocomplete suggestions
-                    ValueListenableBuilder<List<String>>(
-                      valueListenable: _suggestions,
-                      builder: (_, suggestions, __) => MnemonicSuggestionsRow(
-                        suggestions: suggestions,
-                        controller: _mnemonicController,
-                        onSelected: () => _suggestions.value = [],
-                      ),
-                    ),
                   ],
                 ),
               ),
