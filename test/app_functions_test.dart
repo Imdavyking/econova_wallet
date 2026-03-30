@@ -3,7 +3,6 @@
 import 'package:bip39/bip39.dart';
 import 'package:cryptography/helpers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
