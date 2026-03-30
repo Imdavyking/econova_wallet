@@ -13,7 +13,6 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share/share.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-
 import '../interface/coin.dart';
 import '../interface/ft_explorer.dart';
 import 'launch_url.dart';

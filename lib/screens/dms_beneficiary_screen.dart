@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/auth_utils.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 class DmsBeneficiaryScreen extends StatefulWidget {
   final EthereumCoin coin;
@@ -710,13 +713,12 @@ class _WalletInfoCard extends StatelessWidget {
               _InfoRow(
                 icon: Icons.vpn_key_outlined,
                 label: 'Public Key',
-                value:
-                    '${pubKeyHex!.substring(0, 8)}…${pubKeyHex!.substring(pubKeyHex!.length - 6)}',
+                value: pubKeyHex!,
               ),
               _InfoRow(
                 icon: Icons.meeting_room_outlined,
                 label: 'Room ID',
-                value: shortRoom,
+                value: roomId!,
               ),
             ],
           ],
@@ -892,15 +894,27 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-
-  const _InfoRow({
+  late AppLocalizations _l;
+  _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
   });
 
+  void _copyValue() async {
+    await Clipboard.setData(ClipboardData(text: value));
+    final context = NavigationService.navigatorKey.currentContext!;
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_l.copiedToClipboard),
+        duration: const Duration(seconds: 2),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    _l = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -909,11 +923,24 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
           const Spacer(),
-          Text(value,
+          Text(ellipsify(str: value),
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   fontFamily: 'monospace')),
+          const SizedBox(
+            width: 5,
+          ),
+          // Icons.copy, size: 14, color: Colors.grey
+          IconButton(
+            onPressed: () {
+              _copyValue();
+            },
+            icon: const Icon(
+              Icons.copy,
+              size: 20,
+            ),
+          )
         ],
       ),
     );
