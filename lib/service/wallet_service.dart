@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';

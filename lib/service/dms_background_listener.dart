@@ -1,5 +1,4 @@
 // dms_background_listener.dart
-
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/utils/crypto_utils.dart';
 import 'package:web_socket_channel/io.dart';

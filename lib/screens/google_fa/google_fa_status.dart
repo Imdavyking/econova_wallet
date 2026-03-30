@@ -30,7 +30,7 @@ class _GoogleFAStatusState extends State<GoogleFAStatus> {
     localizations = AppLocalizations.of(context)!;
     return Transform.scale(
       scale: 0.9,
-      child: CupertinoSwitch(
+      child: Switch(
         value: faEnabled,
         activeColor: appBackgroundblue,
         onChanged: (bool enable) async {
