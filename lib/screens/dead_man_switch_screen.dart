@@ -9,7 +9,6 @@ import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/auth_utils.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
 class DeadManSwitchScreen extends StatefulWidget {
