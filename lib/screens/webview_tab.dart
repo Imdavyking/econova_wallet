@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
@@ -12,7 +11,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 import 'package:wallet_app/api/notification_api.dart';
 import 'package:pinput/pinput.dart';
-
 import '../main.dart';
 import '../service/wallet_connect_service.dart';
 import '../utils/app_config.dart';

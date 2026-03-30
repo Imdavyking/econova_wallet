@@ -1,13 +1,11 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/components/mnemonic_text_field.dart';
