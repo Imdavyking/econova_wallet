@@ -1,3 +1,4 @@
+import 'package:convert/convert.dart';
 import 'package:laksadart/laksadart.dart';
 
 // ignore_for_file: non_constant_identifier_names
@@ -5,10 +6,11 @@ import 'package:laksadart/laksadart.dart';
 import 'dart:convert';
 // ignore: implementation_imports
 import 'package:laksadart/src/data/network/network_info.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -124,6 +126,9 @@ class ZilliqaCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'ZilliqaCoinDetail${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
@@ -135,7 +140,7 @@ class ZilliqaCoin extends Coin {
     }
 
     final args = ZilliqaArgs(
-      mnemonic: mnemonic,
+      seedRoot: seedPhraseRoot,
       network: network,
     );
 
@@ -306,22 +311,30 @@ List<ZilliqaCoin> getZilliqaBlockChains() {
 }
 
 class ZilliqaArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
   final NetworkInfo network;
 
   const ZilliqaArgs({
-    required this.mnemonic,
+    required this.seedRoot,
     required this.network,
   });
 }
 
 Future calculateZilliqaKey(ZilliqaArgs config) async {
-  final zilliqa = Zilliqa(network: config.network);
+  const index = 0;
 
-  final account = zilliqa.wallet.importAccountFromMnemonic(config.mnemonic, 0);
+  const rootString = "m/44'/313'/0'/0/$index";
+  final childKey = config.seedRoot.root.derivePath(rootString);
+
+  String bytesToHex(List<int> bytes, {bool include0x = false}) {
+    return (include0x ? "0x" : "") + hex.encode(bytes);
+  }
+
+  String prvKeys = bytesToHex(childKey.privateKey!);
+  final account = Account(prvKeys);
 
   return {
-    'address': account!.address!.bech32,
+    'address': account.address!.bech32,
     'privateKey': account.privateKey!,
     'publicKey': account.publicKey!,
   };

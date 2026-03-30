@@ -325,6 +325,9 @@ class SegwitCoin extends Coin {
 
   SegwitCoin(this.cfg);
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ─── Address ──────────────────────────────────────────────────────────────
 
   @override
@@ -635,6 +638,9 @@ class TaprootBtcCoin extends Coin {
   String get _api => isTestnet ? _mempoolTest : _mempoolMain;
   String get _derivPath => isTestnet ? "m/86'/1'/0'/0/0" : "m/86'/0'/0'/0/0";
   String get _hrp => isTestnet ? 'tb' : 'bc';
+
+  @override
+  bool get supportBip39Seed => true;
 
   // ─── Address ────────────────────────────────────────────────────────────────
 

@@ -135,6 +135,9 @@ class MultiversxCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   bool get supportPrivateKey => true;
 
   @override

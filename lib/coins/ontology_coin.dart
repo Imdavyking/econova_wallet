@@ -132,6 +132,9 @@ class OntologyCoin extends Coin {
       neoOntRpcRaw(rpcUrl, method, params);
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'ontCoinDetail_V5${isTestnet_}_${walletImportType.name}';
     Map<String, dynamic> cache = {};

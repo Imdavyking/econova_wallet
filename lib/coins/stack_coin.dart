@@ -272,6 +272,9 @@ class StacksCoin extends Coin {
   @override
   List<Coin> get networkTokens => getSIP010Coins();
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
   @override

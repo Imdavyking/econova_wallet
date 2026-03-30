@@ -119,6 +119,9 @@ class XRPCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'xrpDeriveArgs${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};

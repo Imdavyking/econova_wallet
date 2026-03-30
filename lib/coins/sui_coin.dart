@@ -2,7 +2,10 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -122,6 +125,9 @@ class SuiCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'suiCoinDetail${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
@@ -132,7 +138,9 @@ class SuiCoin extends Coin {
       }
     }
 
-    final args = SuiArgs(mnemonic: mnemonic);
+    final args = SuiArgs(
+      seedRoot: seedPhraseRoot,
+    );
 
     final keys = await compute(calculateSuiKey, args);
 
@@ -331,18 +339,30 @@ List<SuiCoin> getSuiBlockChains() {
 }
 
 class SuiArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const SuiArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
 Future calculateSuiKey(SuiArgs config) async {
-  final account = SuiAccount.fromMnemonics(
-    config.mnemonic,
-    SignatureScheme.Ed25519,
+  const defaultEd25519DerivationPath = "m/44'/784'/0'/0'/0'";
+
+  final data = await ED25519_HD_KEY.derivePath(
+    defaultEd25519DerivationPath,
+    config.seedRoot.seed,
   );
+
+  final key = data.key;
+  final pubkey = await ED25519_HD_KEY.getPublicKey(key, false);
+
+  final fullPrivateKey = Uint8List(64);
+  fullPrivateKey.setAll(0, key);
+  fullPrivateKey.setAll(32, pubkey);
+
+  final account =
+      SuiAccount(Ed25519Keypair(Uint8List.fromList(fullPrivateKey)));
 
   return {
     'address': account.getAddress(),

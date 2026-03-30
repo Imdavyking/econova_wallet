@@ -2,6 +2,9 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+
 import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -112,6 +115,9 @@ class StellarCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'stellarDetail${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
@@ -123,7 +129,9 @@ class StellarCoin extends Coin {
       }
     }
 
-    final args = StellarArgs(mnemonic: mnemonic);
+    final args = StellarArgs(
+      seedRoot: seedPhraseRoot,
+    );
     final keys = await compute(calculateStellarKey, args);
 
     mnemonicMap[mnemonic] = keys;
@@ -347,15 +355,15 @@ List<StellarCoin> getStellarBlockChains() {
 }
 
 class StellarArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const StellarArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
 Future<Map> calculateStellarKey(StellarArgs config) async {
-  final wallet = await stellar.Wallet.from(config.mnemonic);
+  final wallet = await stellar.Wallet.fromBip39Seed(config.seedRoot.seed);
   final userWalletAddress = await wallet.getKeyPair(index: 0);
   return {
     'address': userWalletAddress.accountId,

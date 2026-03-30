@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import '../extensions/uint256_starknet.dart';
 import 'package:wallet_app/utils/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
@@ -415,6 +417,9 @@ class StarknetCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'CairoStarknetUserAcc${walletImportType.name}$api';
     Map<String, dynamic> mnemonicMap = {};
@@ -427,8 +432,8 @@ class StarknetCoin extends Coin {
     }
 
     final args = StarknetDeriveArgs(
-      mnemonic: mnemonic,
       classHash: classHash,
+      seedRoot: seedPhraseRoot,
     );
 
     final keys = await compute(calculateStarknetKey, args);
@@ -1898,17 +1903,23 @@ List<StarknetCoin> getStarknetBlockchains() {
 }
 
 class StarknetDeriveArgs {
-  final String mnemonic;
   final String classHash;
+  final SeedPhraseRoot seedRoot;
 
   const StarknetDeriveArgs({
-    required this.mnemonic,
     required this.classHash,
+    required this.seedRoot,
   });
 }
 
 Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
-  final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
+  String pathPrefix = "m/44'/9004'/0'/0";
+  int index = 0;
+  final nodeFromSeed = config.seedRoot.root;
+  final child = nodeFromSeed.derivePath('$pathPrefix/$index');
+  Uint8List key = child.privateKey!;
+  key = grindKey(key);
+  final privateKey = Felt(bytesToUnsignedInt(key));
   final signer = StarkAccountSigner(
     signer: StarkSigner(privateKey: privateKey),
   );

@@ -120,6 +120,9 @@ class TezosCoin extends Coin {
         'image': image,
       };
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ── Key derivation ──────────────────────────────────────────────────────────
 
   @override
@@ -362,7 +365,7 @@ Future<Map<String, dynamic>> _deriveTezosKeys(TezosArgs args) async {
   final derived = await ED25519_HD_KEY.derivePath(
     "m/44'/1729'/0'/0'",
     args.seedRoot.seed,
-);
+  );
 
   final privateKeyBytes = Uint8List.fromList(derived.key);
 

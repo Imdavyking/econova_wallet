@@ -88,6 +88,9 @@ class PolkadotCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     final saveKey = 'polkadotDetailss${walletImportType.name}$ss58Prefix';
     Map<String, dynamic> mnemonicMap = {};

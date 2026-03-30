@@ -149,6 +149,9 @@ class TronCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   Future<AccountData> fromMnemonic({required String mnemonic}) async {
     String saveKey = 'tronDetails${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
@@ -484,9 +487,7 @@ class TronCoin extends Coin {
         spenderAddress: spender,
         spenderName: _resolveSpenderName(spender),
         allowance: allowance,
-        contractDecimals: tx['token_info']?['decimals'] as int? ??
-            6, 
-
+        contractDecimals: tx['token_info']?['decimals'] as int? ?? 6,
         lastUpdated: blockTimestamp != null
             ? DateTime.fromMillisecondsSinceEpoch(blockTimestamp)
             : null,

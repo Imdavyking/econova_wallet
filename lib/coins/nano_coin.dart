@@ -104,6 +104,9 @@ class NanoBaseCoin extends Coin {
         'cachePrefix': cachePrefix,
       };
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ── Address derivation ────────────────────────────────────────────────────
 
   @override

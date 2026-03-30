@@ -105,12 +105,10 @@ String _buildWavesAddress(Uint8List pubKey, int chainId) {
 
 class WavesDeriveArgs {
   final SeedPhraseRoot seedRoot;
-  final String mnemonic;
   final int chainId;
   const WavesDeriveArgs({
     required this.seedRoot,
     required this.chainId,
-    required this.mnemonic,
   });
 }
 
@@ -275,6 +273,9 @@ class WavesCoin extends Coin {
 
   int get _chainId => chainId;
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
   @override
@@ -293,7 +294,6 @@ class WavesCoin extends Coin {
       WavesDeriveArgs(
         seedRoot: seedPhraseRoot,
         chainId: chainId,
-        mnemonic: mnemonic,
       ),
     );
 
