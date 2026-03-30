@@ -52,20 +52,10 @@ class _SettingsState extends State<Settings>
   }
 
   Future<bool> checkDeadSwitch() async {
-    if (DeadManSwitchService.state != DmsState.active) {
-      return false;
-    }
     final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-    final validPhrase = await compute(
-      validateMnemonic,
-      mnemonic,
-    );
-    final ethCoin = getChains<EthereumCoin>().first;
-    final response = await ethCoin.importData(mnemonic);
+    final validPhrase = await compute(validateMnemonic, mnemonic);
 
-    final config = DeadManSwitchService.config;
-
-    return validPhrase && config?.senderAddress == response.address;
+    return validPhrase;
   }
 
   // ── Testnet toggle ──────────────────────────────────────────────────────────
@@ -695,23 +685,40 @@ class _SocialIcon extends StatelessWidget {
 class _DmsStatusBadge extends StatelessWidget {
   const _DmsStatusBadge();
 
+  Future<bool> _checkCurrentUser() async {
+    final ethCoin = getChains<EthereumCoin>().first;
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await ethCoin.importData(mnemonic);
+    final config = DeadManSwitchService.config;
+    return config?.senderAddress == response.address;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = DeadManSwitchService.state;
-    final (color, label) = switch (state) {
+    var (color, label) = switch (state) {
       DmsState.active => (Colors.green, 'Armed'),
       DmsState.triggered => (Colors.red, 'Triggered'),
       DmsState.cancelled => (Colors.orange, 'Off'),
       DmsState.inactive => (Colors.grey, 'Off'),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 11, color: color)),
-    );
+    return FutureBuilder<bool>(
+        future: _checkCurrentUser(),
+        builder: (context, data) {
+          if (data.hasError) return Container();
+          if (!data.hasData) return Container();
+          if (data.hasData && data.data == false) {
+            (color, label) = (Colors.grey, 'Off');
+          }
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withOpacity(0.4)),
+            ),
+            child: Text(label, style: TextStyle(fontSize: 11, color: color)),
+          );
+        });
   }
 }

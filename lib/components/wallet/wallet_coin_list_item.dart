@@ -51,7 +51,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
       final balance =
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
-      await _maybeHeartbeat();
+      // await _maybeHeartbeat();
     } catch (_) {}
   }
 
