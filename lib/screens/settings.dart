@@ -700,16 +700,8 @@ class _DmsStatusBadge extends StatelessWidget {
         future: _checkCurrentUser(),
         builder: (context, data) {
           var (color, label) = (Colors.grey, 'Off');
-          if (data.hasError) {
-            (color, label) = (Colors.grey, 'Off');
-          }
-          if (!data.hasData) {
-            (color, label) = (Colors.grey, 'Off');
-          }
-          if (data.hasData && data.data == false) {
-            (color, label) = (Colors.grey, 'Off');
-          }
-          if (data.hasData && data.data == true) {
+
+          if (!data.hasError && data.hasData && data.data == true) {
             (color, label) = switch (state) {
               DmsState.active => (Colors.green, 'Armed'),
               DmsState.triggered => (Colors.red, 'Triggered'),
