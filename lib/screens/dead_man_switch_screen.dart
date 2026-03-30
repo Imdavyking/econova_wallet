@@ -10,6 +10,7 @@ import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/auth_utils.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 class DeadManSwitchScreen extends StatefulWidget {
   const DeadManSwitchScreen({super.key});
@@ -602,12 +603,12 @@ class _DmsActiveView extends StatelessWidget {
           _InfoRow(
             icon: Icons.account_circle_outlined,
             label: 'Wallet Address',
-            value: config.senderAddress,
+            value: ellipsify(str: config.senderAddress),
           ),
           _InfoRow(
             icon: Icons.account_circle_outlined,
             label: 'Beneficiary',
-            value: config.beneficiaryAddress,
+            value: ellipsify(str: config.beneficiaryAddress),
           ),
           _InfoRow(
             icon: Icons.schedule,
@@ -1116,12 +1117,11 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           const Spacer(),
-          Flexible(
-            child: Text(value,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
           ),
         ],
       ),
