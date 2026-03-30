@@ -1,6 +1,9 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:bip39/bip39.dart';
+import 'package:cryptography/helpers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
@@ -26,6 +29,7 @@ import 'package:hive_test/hive_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wallet_app/utils/slip39.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -940,6 +944,32 @@ void main() async {
   test('check if bip39 seeds 2 generates the correct crypto address', () async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(bip39SeedHex2, mnemonic2Addresses);
+  });
+  test('slip39 seed can convert', () async {
+    final seeds = await compute(seedFromMnemonic, bip39SeedHex2);
+    final [minimum, shares] = [3, 8];
+    final password = HEX.encode(randomBytes(20));
+    final slip = Slip39.from(
+      [
+        [minimum, shares]
+      ],
+      masterSecret: seeds.seed,
+      passphrase: password,
+      threshold: 1,
+    );
+    final sharesList = slip.fromPath('r/0').mnemonics;
+    final decoded = Slip39Helpers.decodeMnemonics(sharesList);
+    final groups = decoded['groups'];
+    int minimumlen = Map.from(groups[0]).keys.first;
+
+    expect(sharesList.length, greaterThan(minimumlen));
+
+    List<int> recovered = Slip39.recoverSecret(
+      sharesList.sublist(0, minimumlen),
+      passphrase: password,
+    );
+    final result = HEX.encode(recovered);
+    expect(result, bip39SeedHex2);
   });
 
   test('user pin length and pin trials is secured and correct.', () async {

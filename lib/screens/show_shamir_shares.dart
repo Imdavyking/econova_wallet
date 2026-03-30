@@ -104,7 +104,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
           [minimum, shares]
         ],
         masterSecret: cacheSeed[widget.data]!,
-        passphrase: _passphraseCtrl.text,
+        passphrase: _passphraseCtrl.text.trim(),
         threshold: 1,
       );
       _sharesList.value = slip.fromPath('r/0').mnemonics;

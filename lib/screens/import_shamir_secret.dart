@@ -86,7 +86,7 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
 
         List<int> recovered = Slip39.recoverSecret(
           sharesList.sublist(0, minimumlen),
-          passphrase: _passphraseCtrl.text,
+          passphrase: _passphraseCtrl.text.trim(),
         );
         result = HEX.encode(recovered);
       }
