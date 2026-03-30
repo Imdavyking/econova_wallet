@@ -696,27 +696,28 @@ class _DmsStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-        future: _checkCurrentUser(),
-        builder: (context, data) {
-          var (color, label) = (Colors.grey, 'Off');
-          if (!data.hasError && data.hasData && data.data == true) {
-            (color, label) = switch (DeadManSwitchService.state) {
-              DmsState.active => (Colors.green, 'Armed'),
-              DmsState.triggered => (Colors.red, 'Triggered'),
-              DmsState.cancelled => (Colors.orange, 'Off'),
-              DmsState.inactive => (Colors.grey, 'Off'),
-            };
-          }
+      future: _checkCurrentUser(),
+      builder: (context, data) {
+        var (color, label) = (Colors.grey, 'Off');
+        if (!data.hasError && data.hasData && data.data == true) {
+          (color, label) = switch (DeadManSwitchService.state) {
+            DmsState.active => (Colors.green, 'Armed'),
+            DmsState.triggered => (Colors.red, 'Triggered'),
+            DmsState.cancelled => (Colors.orange, 'Off'),
+            DmsState.inactive => (Colors.grey, 'Off'),
+          };
+        }
 
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withOpacity(0.4)),
-            ),
-            child: Text(label, style: TextStyle(fontSize: 11, color: color)),
-          );
-        });
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.4)),
+          ),
+          child: Text(label, style: TextStyle(fontSize: 11, color: color)),
+        );
+      },
+    );
   }
 }
