@@ -13,7 +13,6 @@ import 'package:hex/hex.dart';
 import 'package:pinput/pinput.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:wallet_app/utils/snip12/num.dart';
 import 'package:web3dart/crypto.dart';
 import '../components/loader.dart';
 import '../interface/keystore.dart';
