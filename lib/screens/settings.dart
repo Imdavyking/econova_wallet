@@ -408,10 +408,13 @@ class _SettingsState extends State<Settings>
                                   icon: FontAwesomeIcons.networkWired,
                                 ),
                                 label: isTestNet ? 'Testnet' : 'Mainnet',
-                                trailing: Switch(
-                                  value: isTestNet,
-                                  activeColor: appBackgroundblue,
-                                  onChanged: _onTestNetToggle,
+                                trailing: Transform.scale(
+                                  scale: 0.9,
+                                  child: Switch(
+                                    value: isTestNet,
+                                    activeColor: appBackgroundblue,
+                                    onChanged: _onTestNetToggle,
+                                  ),
                                 ),
                               );
                             },
