@@ -1,6 +1,5 @@
 // ignore_for_file: library_private_types_in_public_api
 
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -79,7 +78,11 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       } else {
         final decoded = Slip39Helpers.decodeMnemonics(sharesList);
         final groups = decoded['groups'];
-        final minimumlen = Map.from(groups[0]).keys.first;
+        int minimumlen = Map.from(groups[0]).keys.first;
+
+        if (sharesList.length < minimumlen) {
+          throw Exception('$minimumlen shares needed');
+        }
 
         List<int> recovered = Slip39.recoverSecret(
           sharesList.sublist(0, minimumlen),
