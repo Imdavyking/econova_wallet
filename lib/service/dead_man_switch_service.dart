@@ -325,7 +325,14 @@ class DeadManSwitchService {
     await pref.put(_kLastActivity, now.toIso8601String());
 
     final cfg = config;
+
     if (cfg != null) {
+      final ethCoin = getChains<EthereumCoin>().first;
+      final response = await ethCoin.importData(mnemonic);
+      if (response.address != cfg.senderAddress) {
+        throw Exception('not current user');
+      }
+
       final newDeadline = now.add(Duration(seconds: cfg.timeoutSeconds));
       final newRound = DrandService.roundForTime(newDeadline);
       await pref.put(_kDrandRound, newRound);
