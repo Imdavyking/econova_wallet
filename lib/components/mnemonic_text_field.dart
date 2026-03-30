@@ -23,7 +23,7 @@ class MnemonicTextField extends StatelessWidget {
 
   void _onChanged(String val) {
     if (obscure) return;
-    final words = val.split(' ');
+    final words = val.toLowerCase().split(' ');
     final last = words.last.trim();
     if (last.isEmpty) {
       onSuggestionsChanged([]);
