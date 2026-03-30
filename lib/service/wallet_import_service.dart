@@ -5,6 +5,7 @@ import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:web3dart/crypto.dart';
 
 enum WalletImportError { invalidMnemonic, duplicate, unknown }
 
@@ -34,6 +35,7 @@ class WalletImportService {
     required String mnemonicOrBip39SeedHex,
     required String walletName,
   }) async {
+    mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
     // 1. BIP-39 validation (off main thread)
     final isValid =
         await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
