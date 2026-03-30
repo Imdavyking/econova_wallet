@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/seed_phrase_root.dart';
-import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import '../extensions/big_int_ext.dart';
@@ -150,10 +149,8 @@ class ICPCoin extends Coin {
     String to, {
     String? memo,
   }) async {
-    final data = WalletService.getActiveKey(walletImportType)!.data;
-
-    ICPSigner signer = ICPSigner.fromPhrase(
-      data,
+    ICPSigner signer = ICPSigner.fromSeed(
+      seedPhraseRoot.seed,
       curveType: CurveType.secp256k1,
     );
     final agent = await AgentFactory.createAgent(

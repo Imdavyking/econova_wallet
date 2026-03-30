@@ -335,10 +335,19 @@ class CardanoCoin extends Coin {
     );
 
     // Sign using cardano_flutter_sdk — must use fromMnemonic for correct Icarus derivation
-    final wallet = await WalletFactory.fromMnemonic(
-      _network,
-      data.split(' '),
-    );
+    CardanoWallet? wallet;
+
+    if (validateMnemonic(data)) {
+      wallet = await WalletFactory.fromMnemonic(
+        _network,
+        data.split(' '),
+      );
+    } else {
+      wallet = await WalletFactory.fromSeed(
+        _network,
+        ByteList(HEX.decode(data)),
+      );
+    }
 
     final parsedTx = CardanoTransaction.deserializeFromHex(unsignedTxHex);
     final witnessSet = await wallet.signTransaction(

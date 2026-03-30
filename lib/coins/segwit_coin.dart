@@ -474,8 +474,10 @@ class SegwitCoin extends Coin {
     for (final utxo in utxos) {
       selected.add(utxo);
       totalIn += utxo['value'] as int;
-      if (totalIn >= satoshiToSend + _estimateFee(selected.length, 2, feeRate))
+      if (totalIn >=
+          satoshiToSend + _estimateFee(selected.length, 2, feeRate)) {
         break;
+      }
     }
 
     final fee = _estimateFee(selected.length, 2, feeRate);
