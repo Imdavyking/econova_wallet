@@ -37,10 +37,13 @@ class WalletImportService {
     required String walletName,
   }) async {
     try {
-      mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
       // 1. BIP-39 validation (off main thread)
       final isValid =
           await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
+
+      if (!isValid) {
+        mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
+      }
 
       Uint8List seed = Uint8List.fromList([]);
       if (!isValid) {
