@@ -172,7 +172,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
                     _PassphraseField(controller: _passphraseCtrl),
                     const SizedBox(height: 20),
                     ...bip39supported,
-                    const SizedBox(height: 20),
+                    if (bip39supported.isNotEmpty) const SizedBox(height: 20),
                   ],
 
                   // Generate button
