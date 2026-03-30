@@ -978,7 +978,7 @@ void main() async {
       passphrase: password,
     );
     final result = HEX.encode(recovered);
-    debugPrint(result);
+
     expect(result, bip39SeedHex2);
   });
 
