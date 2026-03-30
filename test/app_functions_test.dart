@@ -3,6 +3,7 @@
 import 'package:bip39/bip39.dart';
 import 'package:cryptography/helpers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -949,6 +950,7 @@ void main() async {
     final seeds = await compute(seedFromMnemonic, bip39SeedHex2);
     final [minimum, shares] = [3, 8];
     final password = HEX.encode(randomBytes(20));
+    debugPrint(password);
     final slip = Slip39.from(
       [
         [minimum, shares]
@@ -957,7 +959,14 @@ void main() async {
       passphrase: password,
       threshold: 1,
     );
+
     final sharesList = slip.fromPath('r/0').mnemonics;
+    final set = sharesList.map((share) {
+      return share.split(' ').sublist(0, 3).toString();
+    }).toSet();
+
+    expect(set.length, 1);
+
     final decoded = Slip39Helpers.decodeMnemonics(sharesList);
     final groups = decoded['groups'];
     int minimumlen = Map.from(groups[0]).keys.first;
@@ -969,6 +978,7 @@ void main() async {
       passphrase: password,
     );
     final result = HEX.encode(recovered);
+    debugPrint(result);
     expect(result, bip39SeedHex2);
   });
 
