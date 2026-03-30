@@ -321,8 +321,6 @@ class DeadManSwitchService {
 
   static Future<DmsResult> heartbeat({required String mnemonic}) async {
     if (state != DmsState.active) return DmsErr('Switch is not active');
-    final now = DateTime.now();
-    await pref.put(_kLastActivity, now.toIso8601String());
 
     final cfg = config;
 
@@ -334,6 +332,8 @@ class DeadManSwitchService {
         return DmsErr('not active user');
       }
 
+      final now = DateTime.now();
+      await pref.put(_kLastActivity, now.toIso8601String());
       final newDeadline = now.add(Duration(seconds: cfg.timeoutSeconds));
       final newRound = DrandService.roundForTime(newDeadline);
       await pref.put(_kDrandRound, newRound);
