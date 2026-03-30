@@ -139,7 +139,8 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(loc.exportAsShamirShares)),
+      appBar: AppBar(
+          title: Text(validSeedPhrase ? loc.exportAsShamirShares : "SLIP39")),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(25),
@@ -172,7 +173,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
                   const SizedBox(height: 20),
 
                   // SSS-only: Base64 / Hex toggle
-                  if (scheme == ShamirScheme.sss) ...[
+                  if (scheme == ShamirScheme.sss && validSeedPhrase) ...[
                     _Base64Toggle(notifier: _isBase64, label: loc.isBase64),
                     const SizedBox(height: 20),
                   ],
