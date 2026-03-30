@@ -900,6 +900,10 @@ void main() async {
         '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
       );
       for (final coin in supportedChains) {
+        if (!coin.supportBip39Seed) {
+          debugPrint(
+              '  [${testNet ? "T" : "M"}] ${coin.getName()} do not support bip39 seed');
+        }
         if (coin.getDefault() != coin.getSymbol()) continue;
         final key = coinKey(coin);
         final want = expected[key];

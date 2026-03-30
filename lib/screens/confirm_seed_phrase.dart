@@ -135,7 +135,7 @@ class _ConfirmMnemonicState extends State<ConfirmMnemonic> {
     final walletList = WalletImportService.getNextWalletName();
 
     final result = await WalletImportService.importFromMnemonic(
-      mnemonics: mnemonics,
+      mnemonicOrBip39SeedHex: mnemonics,
       walletName: walletList,
     );
 

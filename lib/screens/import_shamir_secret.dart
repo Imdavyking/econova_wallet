@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:hex/hex.dart';
 import 'package:pinput/pinput.dart';
 import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -81,7 +82,6 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
       }
       if (_scheme.value == ShamirScheme.sss) {
         result = SSS().combine(sharesList, _isBase64.value);
-        Navigator.pop(context, result);
       } else {
         final decoded = Slip39Helpers.decodeMnemonics(sharesList);
         final groups = decoded['groups'];
@@ -91,9 +91,9 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
           sharesList.sublist(0, minimumlen),
           passphrase: _passphraseCtrl.text,
         );
-
-        debugPrint(recovered.toString());
+        result = HEX.encode(recovered);
       }
+      Navigator.pop(context, result);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

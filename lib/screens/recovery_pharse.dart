@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:bip39/bip39.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
@@ -132,9 +133,11 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                       style: const TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 20),
-
-                    // Word grid
-                    _MnemonicGrid(words: widget.data.split(' ')),
+                    if (validateMnemonic(widget.data))
+                      _MnemonicGrid(words: widget.data.split(' '))
+                    else
+                      // Word grid
+                      Text(widget.data),
                     const SizedBox(height: 15),
 
                     // Copy button (setup flow only)

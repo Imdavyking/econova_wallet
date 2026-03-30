@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:hex/hex.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/service/wallet_service.dart';
@@ -30,18 +31,25 @@ class WalletImportService {
   ///
   /// Returns [WalletImportResult.ok()] on success or a typed error.
   static Future<WalletImportResult> importFromMnemonic({
-    required String mnemonics,
+    required String mnemonicOrBip39SeedHex,
     required String walletName,
   }) async {
     // 1. BIP-39 validation (off main thread)
-    final isValid = await compute(bip39.validateMnemonic, mnemonics);
+    final isValid =
+        await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
+
+    Uint8List seed = Uint8List.fromList([]);
     if (!isValid) {
-      return WalletImportResult.fail(WalletImportError.invalidMnemonic);
+      seed = HEX.decode(mnemonicOrBip39SeedHex) as Uint8List;
+      if (seed.isEmpty) {
+        return WalletImportResult.fail(WalletImportError.invalidMnemonic);
+      }
     }
 
     // 2. Duplicate check
     final existing = WalletService.getActiveKeys(WalletType.secretPhrase);
-    final phraseData = SeedPhraseParams(data: mnemonics, name: walletName);
+    final phraseData =
+        SeedPhraseParams(data: mnemonicOrBip39SeedHex, name: walletName);
     if (existing.any((p) => p == phraseData)) {
       return WalletImportResult.fail(WalletImportError.duplicate);
     }

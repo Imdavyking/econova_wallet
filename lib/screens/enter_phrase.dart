@@ -149,7 +149,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     setState(() => _isLoading = true);
 
     final result = await WalletImportService.importFromMnemonic(
-      mnemonics: mnemonics,
+      mnemonicOrBip39SeedHex: mnemonics,
       walletName: walletName,
     );
 

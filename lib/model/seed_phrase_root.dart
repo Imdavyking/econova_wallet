@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:bip32/bip32.dart' as bip32;
+import 'package:flutter/foundation.dart';
+import 'package:hex/hex.dart';
 
 class SeedPhraseRoot {
   late Uint8List seed;
@@ -9,8 +11,14 @@ class SeedPhraseRoot {
   SeedPhraseRoot(this.seed, this.root);
 }
 
-SeedPhraseRoot seedFromMnemonic(seedPhrase) {
-  Uint8List seed = bip39.mnemonicToSeed(seedPhrase);
+Future<SeedPhraseRoot> seedFromMnemonic(String phraseOrBipSeedHex) async {
+  final isValid = await compute(bip39.validateMnemonic, phraseOrBipSeedHex);
+  Uint8List seed = Uint8List.fromList([]);
+  if (isValid) {
+    seed = bip39.mnemonicToSeed(phraseOrBipSeedHex);
+  } else {
+    seed = HEX.decode(phraseOrBipSeedHex) as Uint8List;
+  }
   bip32.BIP32 root = bip32.BIP32.fromSeed(seed);
 
   return SeedPhraseRoot(seed, root);
