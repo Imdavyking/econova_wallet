@@ -329,8 +329,9 @@ class DeadManSwitchService {
     if (cfg != null) {
       final ethCoin = getChains<EthereumCoin>().first;
       final response = await ethCoin.importData(mnemonic);
+
       if (response.address != cfg.senderAddress) {
-        throw Exception('not current user');
+        return DmsErr('not active user');
       }
 
       final newDeadline = now.add(Duration(seconds: cfg.timeoutSeconds));
