@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:bip39/bip39.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
 import 'package:wallet_app/education/eip4337.edu.dart';
@@ -218,21 +219,38 @@ class _SettingsState extends State<Settings>
                                   },
                                 ),
                               if (WalletService.isBip39PhraseOrSeedHexKey())
-                                _SettingsRow(
-                                  icon: _CircleIcon(
-                                    color: Color.fromARGB(255, 180, 30, 30),
-                                    icon: FontAwesomeIcons.heartPulse,
-                                    iconSize: 14,
-                                  ),
-                                  label: 'Dead Man\'s Switch',
-                                  trailing: _DmsStatusBadge(),
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const DeadManSwitchScreen(),
-                                    ),
-                                  ),
+                                FutureBuilder<bool>(
+                                  future: () async {
+                                    final mnemonic = WalletService.getActiveKey(
+                                            walletImportType)!
+                                        .data;
+                                    final validPhrase = await compute(
+                                      validateMnemonic,
+                                      mnemonic,
+                                    );
+                                    return validPhrase;
+                                  }(),
+                                  builder: (context, data) {
+                                    if (data.hasError) return Container();
+                                    if (!data.hasData) return Container();
+                                    if (data.data == false) return Container();
+                                    return _SettingsRow(
+                                      icon: _CircleIcon(
+                                        color: Color.fromARGB(255, 180, 30, 30),
+                                        icon: FontAwesomeIcons.heartPulse,
+                                        iconSize: 14,
+                                      ),
+                                      label: 'Dead Man\'s Switch',
+                                      trailing: _DmsStatusBadge(),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const DeadManSwitchScreen(),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               _SettingsRow(
                                 icon: _CircleIcon(
