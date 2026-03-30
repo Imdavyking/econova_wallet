@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:bip39/bip39.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
@@ -30,7 +31,7 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
   bool _obscured = false;
   bool _securityOverlayVisible = false;
 
-  bool validSeedPhrase = true;
+  bool validSeedPhrase = false;
 
   late AppLocalizations _loc;
   final _screenshotCallback = ScreenshotCallback();
@@ -48,7 +49,14 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
         message: _loc.youCantScreenshot,
       ),
     );
-    validSeedPhrase = validateMnemonic(widget.data);
+    _checkValidSeed();
+  }
+
+  Future<void> _checkValidSeed() async {
+    validSeedPhrase = await compute(validateMnemonic, widget.data);
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override

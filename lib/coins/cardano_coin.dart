@@ -39,7 +39,7 @@ class CardanoDeriveArgs {
 Future<Map<String, dynamic>> calculateCardanoKey(CardanoDeriveArgs args) async {
   final network = args.isTestnet ? NetworkId.testnet : NetworkId.mainnet;
   CardanoWallet? wallet;
-  if (validateMnemonic(args.seedPhraseOrSeed)) {
+  if (await compute(validateMnemonic, args.seedPhraseOrSeed)) {
     wallet = await WalletFactory.fromMnemonic(
       network,
       args.seedPhraseOrSeed.split(' '),
@@ -337,7 +337,7 @@ class CardanoCoin extends Coin {
     // Sign using cardano_flutter_sdk — must use fromMnemonic for correct Icarus derivation
     CardanoWallet? wallet;
 
-    if (validateMnemonic(data)) {
+    if (await compute(validateMnemonic, data)) {
       wallet = await WalletFactory.fromMnemonic(
         _network,
         data.split(' '),
