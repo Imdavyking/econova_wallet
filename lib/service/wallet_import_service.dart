@@ -35,30 +35,29 @@ class WalletImportService {
     required String mnemonicOrBip39SeedHex,
     required String walletName,
   }) async {
-    mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
-    // 1. BIP-39 validation (off main thread)
-    final isValid =
-        await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
-
-    Uint8List seed = Uint8List.fromList([]);
-    if (!isValid) {
-      seed = HEX.decode(mnemonicOrBip39SeedHex) as Uint8List;
-      if (seed.isEmpty) {
-        return WalletImportResult.fail(WalletImportError.invalidMnemonic);
-      }
-    }
-
-    // 2. Duplicate check
-    final existing = WalletService.getActiveKeys(WalletType.secretPhrase);
-    final phraseData =
-        SeedPhraseParams(data: mnemonicOrBip39SeedHex, name: walletName);
-    if (existing
-        .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
-      return WalletImportResult.fail(WalletImportError.duplicate);
-    }
-
-    // 3. Derive seed (off main thread), set active key, import all chains
     try {
+      mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
+      // 1. BIP-39 validation (off main thread)
+      final isValid =
+          await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
+
+      Uint8List seed = Uint8List.fromList([]);
+      if (!isValid) {
+        seed = HEX.decode(mnemonicOrBip39SeedHex) as Uint8List;
+        if (seed.isEmpty) {
+          return WalletImportResult.fail(WalletImportError.invalidMnemonic);
+        }
+      }
+
+      // 2. Duplicate check
+      final existing = WalletService.getActiveKeys(WalletType.secretPhrase);
+      final phraseData =
+          SeedPhraseParams(data: mnemonicOrBip39SeedHex, name: walletName);
+      if (existing
+          .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
+        return WalletImportResult.fail(WalletImportError.duplicate);
+      }
+
       seedPhraseRoot = await compute(seedFromMnemonic, phraseData.data);
       await WalletService.setActiveKey(WalletType.secretPhrase, phraseData);
       await importAllKeys(phraseData.data);
