@@ -950,7 +950,7 @@ void main() async {
     final seeds = await compute(seedFromMnemonic, bip39SeedHex2);
     final [minimum, shares] = [3, 8];
     final password = HEX.encode(randomBytes(20));
-    debugPrint(password);
+
     final slip = Slip39.from(
       [
         [minimum, shares]
