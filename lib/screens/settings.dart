@@ -696,20 +696,28 @@ class _DmsStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = DeadManSwitchService.state;
-    var (color, label) = switch (state) {
-      DmsState.active => (Colors.green, 'Armed'),
-      DmsState.triggered => (Colors.red, 'Triggered'),
-      DmsState.cancelled => (Colors.orange, 'Off'),
-      DmsState.inactive => (Colors.grey, 'Off'),
-    };
     return FutureBuilder<bool>(
         future: _checkCurrentUser(),
         builder: (context, data) {
-          if (data.hasError) return Container();
-          if (!data.hasData) return Container();
+          var (color, label) = (Colors.grey, 'Off');
+          if (data.hasError) {
+            (color, label) = (Colors.grey, 'Off');
+          }
+          if (!data.hasData) {
+            (color, label) = (Colors.grey, 'Off');
+          }
           if (data.hasData && data.data == false) {
             (color, label) = (Colors.grey, 'Off');
           }
+          if (data.hasData && data.data == true) {
+            (color, label) = switch (state) {
+              DmsState.active => (Colors.green, 'Armed'),
+              DmsState.triggered => (Colors.red, 'Triggered'),
+              DmsState.cancelled => (Colors.orange, 'Off'),
+              DmsState.inactive => (Colors.grey, 'Off'),
+            };
+          }
+
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
