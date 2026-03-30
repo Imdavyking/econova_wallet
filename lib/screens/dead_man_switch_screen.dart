@@ -601,6 +601,11 @@ class _DmsActiveView extends StatelessWidget {
         _InfoCard(children: [
           _InfoRow(
             icon: Icons.account_circle_outlined,
+            label: 'Wallet Address',
+            value: config.senderAddress,
+          ),
+          _InfoRow(
+            icon: Icons.account_circle_outlined,
             label: 'Beneficiary',
             value: config.beneficiaryAddress,
           ),
@@ -712,7 +717,7 @@ class _DmsTriggeredView extends StatelessWidget {
           text: 'Deadline exceeded. The drand randomness for round '
               '#${DeadManSwitchService.drandRound ?? "?"} is now public. '
               'Any ${config?.threshold ?? "?"}/${config?.totalShares ?? "?"} '
-              'shares + beneficiary private key can reconstruct the seed phrase.',
+              'shares + beneficiary private key can reconstruct the seed phrase for ${config?.senderAddress}.',
         ),
         const SizedBox(height: 16),
         if (encryptedShares != null)
