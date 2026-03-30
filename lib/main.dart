@@ -204,7 +204,6 @@ void main() async {
     encryptionCipher: HiveAesCipher(encryptionKey),
   );
   walletImportType = WalletService.getType();
-
   trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
   leatherWalletProvider = await rootBundle.loadString('js/leather.stx.min.js');
   nightly = await rootBundle.loadString('js/nightly.min.js');
