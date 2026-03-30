@@ -8,7 +8,6 @@ import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/drand_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/main.dart';
-import 'package:wallet_app/utils/auth_utils.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 
@@ -471,8 +470,8 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
               const SizedBox(height: 4),
               _MetaRow(
                 icon: Icons.vpn_key_outlined,
-                label: 'Sender pubkey',
-                value: _shortId(session.pubKeyHex),
+                label: 'Sender address',
+                value: _shortId(session.senderAddress),
               ),
               const SizedBox(height: 4),
               _MetaRow(
