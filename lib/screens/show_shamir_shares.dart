@@ -35,7 +35,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _isBase64 = ValueNotifier<bool>(true);
   final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.sss);
   Map<String, Uint8List> cacheSeed = {};
-  Iterable<Text> bip39supported = [];
+  Iterable<Column> bip39supported = [];
   static const _maxShares = 8;
   static const _minShares = 2;
 
@@ -49,8 +49,15 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     _scheme.addListener(() => _sharesList.value = []);
     bip39supported = getChains().map((e) {
       if (!e.supportBip39Seed && e.tokenAddress() == null) {
-        return Text(
-          '${e.getName()} (${e.getSymbol()}) do not support BIP39 seed, you may not be able to recover your address',
+        return Column(
+          children: [
+            Text(
+              '${e.getName()} (${e.getSymbol()}) do not support BIP39 seed, you may not be able to recover your address',
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+          ],
         );
       }
       return null;
@@ -164,9 +171,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
                   if (scheme == ShamirScheme.slip39) ...[
                     _PassphraseField(controller: _passphraseCtrl),
                     const SizedBox(height: 20),
-                  ],
-
-                  if (scheme == ShamirScheme.slip39) ...[
                     ...bip39supported,
                     const SizedBox(height: 20),
                   ],
