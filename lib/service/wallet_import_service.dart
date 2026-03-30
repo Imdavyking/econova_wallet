@@ -50,7 +50,8 @@ class WalletImportService {
     final existing = WalletService.getActiveKeys(WalletType.secretPhrase);
     final phraseData =
         SeedPhraseParams(data: mnemonicOrBip39SeedHex, name: walletName);
-    if (existing.any((p) => p == phraseData)) {
+    if (existing
+        .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
       return WalletImportResult.fail(WalletImportError.duplicate);
     }
 
