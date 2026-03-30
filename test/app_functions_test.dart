@@ -946,7 +946,7 @@ void main() async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(bip39SeedHex2, mnemonic2Addresses);
   });
-  test('slip39 seed can convert', () async {
+  test('bip39 seed can convert to slip39 and vice versa', () async {
     final seeds = await compute(seedFromMnemonic, bip39SeedHex2);
     final [minimum, shares] = [3, 8];
     final password = HEX.encode(randomBytes(20));
