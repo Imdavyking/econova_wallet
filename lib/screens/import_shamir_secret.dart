@@ -81,7 +81,7 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
         int minimumlen = Map.from(groups[0]).keys.first;
 
         if (sharesList.length < minimumlen) {
-          throw Exception('$minimumlen shares needed');
+          throw Exception('at least $minimumlen shares needed');
         }
 
         List<int> recovered = Slip39.recoverSecret(
