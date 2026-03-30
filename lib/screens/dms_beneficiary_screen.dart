@@ -80,7 +80,9 @@ class _DmsBeneficiaryScreenState extends State<DmsBeneficiaryScreen> {
     });
 
     try {
+      _pubKeyHex;
       final sessions = await DeadManSwitchService.fetchAllShares();
+      sessions?.removeWhere((sessionId, data) => data.pubKeyHex != _pubKeyHex);
 
       if (!mounted) return;
 

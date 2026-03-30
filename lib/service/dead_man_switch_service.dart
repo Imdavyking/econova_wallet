@@ -496,7 +496,7 @@ class DeadManSwitchService {
         .map((e) => e.key)
         .toList();
 
-    print('Existing sessions with same senderAddress: $keysToRemove');
+    debugPrint('Existing sessions with same senderAddress: $keysToRemove');
 
     for (final key in keysToRemove) {
       existing.remove(key);
