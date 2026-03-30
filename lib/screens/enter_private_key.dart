@@ -13,6 +13,7 @@ import 'package:hex/hex.dart';
 import 'package:pinput/pinput.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/snip12/num.dart';
 import 'package:web3dart/crypto.dart';
 import '../components/loader.dart';
 import '../interface/keystore.dart';
@@ -449,7 +450,7 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
                                   Uint8List privKeyBytes;
 
-                                  if (isHEXStripox(privateKey)) {
+                                  if (isHEXstrip0x(privateKey)) {
                                     privKeyBytes =
                                         HEX.decode(privateKey) as Uint8List;
                                   } else {
@@ -478,17 +479,20 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
                                 for (final privKey in privKeyList) {
                                   if (privKey == privatKey) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: Colors.red,
-                                        content: Text(
-                                          localization.walletAlreadyImported,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                            localization.walletAlreadyImported,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
                                     setState(() {
                                       isLoading = false;
                                     });
@@ -508,13 +512,16 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                                   cryptoWallName,
                                 );
 
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (ctx) => const Wallet(),
-                                  ),
-                                  (r) => false,
-                                );
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (ctx) => const Wallet(),
+                                    ),
+                                    (r) => false,
+                                  );
+                                }
+
                                 setState(() {
                                   isLoading = false;
                                 });
@@ -523,16 +530,18 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                                   print(e);
                                   print(sk);
                                 }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      e.toString(),
-                                      style:
-                                          const TextStyle(color: Colors.white),
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: Colors.red,
+                                      content: Text(
+                                        e.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
 
                                 setState(() {
                                   isLoading = false;
