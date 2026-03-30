@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
+import 'package:bip39/bip39.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
@@ -888,10 +889,13 @@ void main() async {
 // ─── helper ──────────────────────────────────────────────────────────────────
 
   Future<void> runAddressTest(
-    String mnemonic,
+    String bip39PhraseOrSeedHex,
     Map<String, String> expected,
   ) async {
-    seedPhraseRoot = await compute(seedFromMnemonic, mnemonic);
+    seedPhraseRoot = await compute(seedFromMnemonic, bip39PhraseOrSeedHex);
+    final validSeedPhrase =
+        await compute(validateMnemonic, bip39PhraseOrSeedHex);
+    debugPrint(HEX.encode(seedPhraseRoot.seed));
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
       supportedChains = getChains();
@@ -900,15 +904,17 @@ void main() async {
         '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
       );
       for (final coin in supportedChains) {
-        if (!coin.supportBip39Seed) {
+        if (!coin.supportBip39Seed && !validSeedPhrase) {
           debugPrint(
               '  [${testNet ? "T" : "M"}] ${coin.getName()} do not support bip39 seed');
+          continue;
         }
+
         if (coin.getDefault() != coin.getSymbol()) continue;
         final key = coinKey(coin);
         final want = expected[key];
         if (want == null) continue; // not in map → skip (e.g. Waves Local)
-        final got = await coin.importData(mnemonic);
+        final got = await coin.importData(bip39PhraseOrSeedHex);
         debugPrint(
             '  [${testNet ? "T" : "M"}] ${coin.getName()} → ${got.address}');
         expect(got.address, want, reason: '${coin.getName()} address mismatch');
@@ -922,11 +928,20 @@ void main() async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(testMnemonic1, mnemonic1Addresses);
   });
+  test('check if bip39 seeds generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(bip39SeedHex1, mnemonic1Addresses);
+  });
 
   test('check if seed phrase 2 generates the correct crypto address', () async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(testMnemonic2, mnemonic2Addresses);
   });
+  test('check if bip39 seeds 2 generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(bip39SeedHex2, mnemonic2Addresses);
+  });
+
   test('user pin length and pin trials is secured and correct.', () async {
     expect(pinLength, greaterThanOrEqualTo(4));
     expect(userPinTrials, greaterThanOrEqualTo(1));
