@@ -625,6 +625,7 @@ class EthereumCoin extends Coin {
     );
 
     final keys = await compute(calculateEthereumKey, args);
+
     mnemonicMap[bip39PhraseOrSeedHex] = keys;
     await pref.put(saveKey, jsonEncode(mnemonicMap));
     return AccountData.fromJson(keys);

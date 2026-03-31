@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert' hide Encoding;
 import 'dart:io';
 import 'dart:math';
@@ -13,6 +14,7 @@ import 'package:path/path.dart';
 import 'package:sui/utils/sha.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -22,6 +24,30 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import 'app_config.dart';
 
+// ── Semaphore ──────────────────────────────────────────────────────────────
+class _Semaphore {
+  final int max;
+  int _active = 0;
+  final _queue = <Completer<void>>[];
+
+  _Semaphore(this.max);
+
+  Future<T> run<T>(Future<T> Function() task) async {
+    if (_active >= max) {
+      final waiter = Completer<void>();
+      _queue.add(waiter);
+      await waiter.future;
+    }
+    _active++;
+    try {
+      return await task();
+    } finally {
+      _active--;
+      if (_queue.isNotEmpty) _queue.removeAt(0).complete();
+    }
+  }
+}
+
 Future<void> reInstianteSeedRoot() async {
   final params = WalletService.getActiveKey(WalletType.bip39PhraseOrSeedHex);
   if (params == null) return;
@@ -29,27 +55,57 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
+  final evmChains = supportedChains.whereType<EthereumCoin>().toList();
+  final nonEvmChains =
+      supportedChains.where((c) => c is! EthereumCoin).toList();
+
+  // ── 1. EVM: sequential, deduplicated by coinType ─────────────────────────
+  final Set<int> derivedCoinTypes = {};
+
+  for (final coin in evmChains) {
+    EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
+
+    if (derivedCoinTypes.contains(coin.coinType)) continue; // already derived
+
+    try {
+      await coin.importData(mnemonic); // warms the pref cache
+      derivedCoinTypes.add(coin.coinType);
+    } catch (e) {
+      debugPrint('Failed to import ${coin.getName()}: $e');
+    }
+  }
+
+  // ── 2. Non-EVM: parallel with semaphore ──────────────────────────────────
+  const maxConcurrent = 10;
+  final semaphore = _Semaphore(maxConcurrent);
+
   final results = await Future.wait(
-    supportedChains.map((blockchain) async {
-      EventBusService.instance
-          .fire(SeedPharseInitializationEvent(coin: blockchain));
-      try {
-        return await blockchain.importData(mnemonic);
-      } catch (e) {
-        debugPrint('Failed to import ${blockchain.getName()}: $e');
-        return null; // Don't let one failure kill the rest
-      }
+    nonEvmChains.map((coin) async {
+      EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
+      return semaphore.run(() async {
+        try {
+          return await coin.importData(mnemonic);
+        } catch (e) {
+          debugPrint('Failed to import ${coin.getName()}: $e');
+          return null;
+        }
+      });
     }),
-    eagerError: false, // continue remaining futures if one throws
+    eagerError: false,
   );
 
-  final failed = supportedChains
-      .where((c) => results[supportedChains.indexOf(c)] == null)
-      .toList();
+  // ── 3. Report failures ───────────────────────────────────────────────────
+  final failedNonEvm = nonEvmChains.indexed
+      .where((e) => results[e.$1] == null)
+      .map((e) => e.$2.getName());
 
+  final failedEvm = evmChains
+      .where((c) => !derivedCoinTypes.contains(c.coinType))
+      .map((c) => c.getName());
+
+  final failed = [...failedEvm, ...failedNonEvm];
   if (failed.isNotEmpty) {
-    debugPrint(
-        'Import failed for: ${failed.map((c) => c.getName()).join(', ')}');
+    debugPrint('Import failed for: ${failed.join(', ')}');
   }
 }
 
