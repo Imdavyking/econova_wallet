@@ -129,11 +129,12 @@ class PolkadotCoin extends Coin {
       }
     }
     final keys = await compute(
-        calculatePolkadotKey,
-        PolkadotArgs(
-          seedRoot: seedPhraseRoot,
-          path: path,
-        ));
+      calculatePolkadotKey,
+      PolkadotArgs(
+        seedRoot: seedPhraseRoot,
+        path: path,
+      ),
+    );
 
     mnemonicMap[bip39PhraseOrSeedHex] =
         keys; // {privateKey, publicKey} — no address
