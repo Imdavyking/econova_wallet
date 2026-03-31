@@ -168,16 +168,17 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
                     const SizedBox(height: 40),
 
                     // Action buttons
-                    if (widget.viewOnly)
+
+                    if (validSeedPhrase)
+                      _ActionButton(
+                        label: _loc.continue_,
+                        onPressed: _goToConfirmMnemonic,
+                      )
+                    else if (widget.viewOnly)
                       _ActionButton(
                         label: _loc.exportAsShamirShares,
                         onPressed: _goToShamirShares,
                       )
-                    else if (validSeedPhrase)
-                      _ActionButton(
-                        label: _loc.continue_,
-                        onPressed: _goToConfirmMnemonic,
-                      ),
                   ],
                 ),
               ),
