@@ -241,7 +241,6 @@ abstract class Coin {
     final entry = decodedCache[cacheKey] ??= {};
     entry[bip39PhraseOrSeedHex] = keys;
     _dirtyKeys.add(cacheKey);
-    // await pref.put(cacheKey, jsonEncode(entry));
 
     return toAccount(keys);
   }
