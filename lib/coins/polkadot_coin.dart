@@ -94,7 +94,8 @@ class PolkadotCoin extends Coin {
   String encodePolkadotAddress(Uint8List publicKey, int ss58Prefix) {
     // For multi-byte ss58 prefixes this would need the canary encoding,
     // but all current chains use single-byte prefixes (0-63).
-    final prefix = [ss58Prefix, ...publicKey];
+    List<int> prefix = [ss58Prefix, ...publicKey.sublist(1)]; // ← skips byte 0
+
     return base58.encode(
       Uint8List.fromList([
         ...prefix,
