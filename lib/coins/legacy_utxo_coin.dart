@@ -428,32 +428,21 @@ class LegacyUtxoCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey =
-        'legacyUtxoV7_${symbol}_${isTestnet ? 'test' : 'main'}_${walletImportType.name}';
-    Map<String, dynamic> cache = {};
-
-    if (pref.containsKey(saveKey)) {
-      cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final result = await compute(
-      _deriveKey,
-      _DeriveArgs(
-        seedRoot: seedPhraseRoot,
-        derivationPath: derivationPath,
-        network: _cfg.network,
-        symbol: symbol,
-      ),
-    );
-
-    cache[bip39PhraseOrSeedHex] = result;
-    await pref.put(saveKey, jsonEncode(cache));
-    return AccountData.fromJson(result);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'legacyUtxoV7_${symbol}_${isTestnet ? 'test' : 'main'}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          _deriveKey,
+          _DeriveArgs(
+            seedRoot: seedPhraseRoot,
+            derivationPath: derivationPath,
+            network: _cfg.network,
+            symbol: symbol,
+          ),
+        ),
+      );
 
   // ── Explorer URLs ─────────────────────────────────────────────────────────────
 

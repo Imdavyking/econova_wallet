@@ -80,28 +80,17 @@ class ICPCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'ICPDetails${walletImportType.name}$api';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = ICPDeriveArgs(
-      seedRoot: seedPhraseRoot,
-    );
-
-    final keys = await compute(calculateICPKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'ICPDetails${walletImportType.name}$api',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateICPKey,
+          ICPDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -288,7 +277,7 @@ class ICPDeriveArgs {
   });
 }
 
-Future<Map> calculateICPKey(ICPDeriveArgs config) async {
+Future<Map<String, dynamic>> calculateICPKey(ICPDeriveArgs config) async {
   ICPSigner signer = ICPSigner.fromSeed(
     config.seedRoot.seed,
     curveType: CurveType.secp256k1,

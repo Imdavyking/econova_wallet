@@ -8,7 +8,6 @@ import '../utils/blake2bhash.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:flutter/foundation.dart';
 // ignore_for_file: constant_identifier_names
-
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
@@ -149,30 +148,18 @@ class FilecoinCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'fileCoinDetail$prefix${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = FilecoinDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      addressPrefix: prefix,
-    );
-
-    final keys = await compute(calculateFileCoinKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'fileCoinDetail$prefix${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateFileCoinKey,
+          FilecoinDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            addressPrefix: prefix,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -560,7 +547,9 @@ class _FilecoinDerive {
   }
 }
 
-Map calculateFileCoinKey(FilecoinDeriveArgs config) {
+Future<Map<String, dynamic>> calculateFileCoinKey(
+  FilecoinDeriveArgs config,
+) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final node = seedRoot_.root.derivePath("m/44'/461'/0'/0");
   final rs0 = node.derive(0);

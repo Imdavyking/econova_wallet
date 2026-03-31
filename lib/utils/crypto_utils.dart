@@ -26,28 +26,28 @@ import '../service/wallet_service.dart';
 import 'app_config.dart';
 
 // ── Semaphore ──────────────────────────────────────────────────────────────
-class _Semaphore {
-  final int max;
-  int _active = 0;
-  final _queue = <Completer<void>>[];
+// class _Semaphore {
+//   final int max;
+//   int _active = 0;
+//   final _queue = <Completer<void>>[];
 
-  _Semaphore(this.max);
+//   _Semaphore(this.max);
 
-  Future<T> run<T>(Future<T> Function() task) async {
-    if (_active >= max) {
-      final waiter = Completer<void>();
-      _queue.add(waiter);
-      await waiter.future;
-    }
-    _active++;
-    try {
-      return await task();
-    } finally {
-      _active--;
-      if (_queue.isNotEmpty) _queue.removeAt(0).complete();
-    }
-  }
-}
+//   Future<T> run<T>(Future<T> Function() task) async {
+//     if (_active >= max) {
+//       final waiter = Completer<void>();
+//       _queue.add(waiter);
+//       await waiter.future;
+//     }
+//     _active++;
+//     try {
+//       return await task();
+//     } finally {
+//       _active--;
+//       if (_queue.isNotEmpty) _queue.removeAt(0).complete();
+//     }
+//   }
+// }
 
 Future<void> reInstianteSeedRoot() async {
   final params = WalletService.getActiveKey(WalletType.bip39PhraseOrSeedHex);
@@ -56,60 +56,46 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
-  final evmChains = supportedChains.whereType<EthereumCoin>().toList();
-
-  // dedup non-evm: skip tokens, skip cosmos coins with same path
+  // ── dedup ────────────────────────────────────────────────────────────────
   final seenCosmosPaths = <String>{};
   final seenPolkadotPaths = <String>{};
-  final nonEvmChains = supportedChains.where((c) {
-    if (c is EthereumCoin) return false;
+  final seenEvmCoinTypes = <int>{};
+
+  final chains = supportedChains.where((c) {
     if (c.tokenAddress() != null) return false;
-    if (c is CosmosCoin) return seenCosmosPaths.add(c.path); // one per path
-    if (c is PolkadotCoin) return seenPolkadotPaths.add(c.path); // ← NEW
+    if (c is EthereumCoin) return seenEvmCoinTypes.add(c.coinType);
+    if (c is CosmosCoin) return seenCosmosPaths.add(c.path);
+    if (c is PolkadotCoin) return seenPolkadotPaths.add(c.path);
     return true;
   }).toList();
 
-  // ── 1. EVM: sequential, dedup by coinType ────────────────────────────────
-  final derivedCoinTypes = <int>{};
+  // ── batch: 10 at a time, wait for each batch to fully finish ─────────────
+  const batchSize = 10;
+  final failed = <String>[];
 
-  for (final coin in evmChains) {
-    if (derivedCoinTypes.contains(coin.coinType)) continue;
-    try {
-      await coin.importData(mnemonic);
-      derivedCoinTypes.add(coin.coinType); // ← was commented out, now fixed
-    } catch (e) {
-      debugPrint('Failed to import ${coin.getName()}: $e');
-    }
-  }
+  for (var i = 0; i < chains.length; i += batchSize) {
+    final batch = chains.skip(i).take(batchSize).toList();
 
-  // ── 2. Non-EVM: parallel with semaphore ──────────────────────────────────
-  const maxConcurrent = 10;
-  final semaphore = _Semaphore(maxConcurrent);
-
-  final results = await Future.wait(
-    nonEvmChains.map((coin) async {
-      return semaphore.run(() async {
+    final results = await Future.wait(
+      batch.map((coin) async {
         try {
           return await coin.importData(mnemonic);
         } catch (e) {
           debugPrint('Failed to import ${coin.getName()}: $e');
           return null;
         }
-      });
-    }),
-    eagerError: false,
-  );
+      }),
+      eagerError: false,
+    );
 
-  // ── 3. Report failures ───────────────────────────────────────────────────
-  final failedNonEvm = nonEvmChains.indexed
-      .where((e) => results[e.$1] == null)
-      .map((e) => e.$2.getName());
+    // collect failures for this batch
+    batch.indexed
+        .where((e) => results[e.$1] == null)
+        .forEach((e) => failed.add(e.$2.getName()));
 
-  final failedEvm = evmChains
-      .where((c) => !derivedCoinTypes.contains(c.coinType))
-      .map((c) => c.getName());
+    // batch isolates are all dead here before next 10 spawn
+  }
 
-  final failed = [...failedEvm, ...failedNonEvm];
   if (failed.isNotEmpty) {
     debugPrint('Import failed for: ${failed.join(', ')}');
   }

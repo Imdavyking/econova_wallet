@@ -145,30 +145,19 @@ class EVMHrpCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'evmHrpCoinDetails${walletImportType.name}$hrp';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = EVMHrpArgs(
-      seedRoot: seedPhraseRoot,
-      hrp: hrp,
-      coinType: coinType,
-    );
-    final keys = await compute(calculateEVMHrpKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'evmHrpCoinDetails${walletImportType.name}$hrp',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateEVMHrpKey,
+          EVMHrpArgs(
+            seedRoot: seedPhraseRoot,
+            hrp: hrp,
+            coinType: coinType,
+          ),
+        ),
+      );
 
   @override
   bool get supportBip39Seed => true;
@@ -379,7 +368,7 @@ class EVMHrpArgs {
   });
 }
 
-Future<Map> calculateEVMHrpKey(EVMHrpArgs config) async {
+Future<Map<String, dynamic>> calculateEVMHrpKey(EVMHrpArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final path = "m/44'/${config.coinType}'/0'/0/0";
   final node = seedRoot_.root.derivePath(path);

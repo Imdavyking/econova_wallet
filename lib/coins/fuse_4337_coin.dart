@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/save_goal/create_goal.dart';
 import 'package:wallet_app/screens/stake_token.dart';
@@ -10,11 +11,9 @@ import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/material.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:hex/hex.dart';
 import 'package:fuse_wallet_sdk/fuse_wallet_sdk.dart' hide Client;
 import '../interface/coin.dart';
 import '../main.dart';
-import '../model/seed_phrase_root.dart';
 import '../utils/alt_ens.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
@@ -318,30 +317,18 @@ class FuseCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'ethereumDetails4337$coinType${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = EthereumDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      coinType: coinType,
-    );
-
-    final keys = await compute(calculateEthereumKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'ethereumDetails4337$coinType${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateEthereumKey,
+          EthereumDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            coinType: coinType,
+          ),
+        ),
+      );
 
   @override
   Future<String> addressExplorer() async {
@@ -598,30 +585,6 @@ Future<double> getEtherTransactionFee(
   }
 
   return gasPrice.getInWei.toDouble() * gasUnit.toDouble();
-}
-
-class EthereumDeriveArgs {
-  final SeedPhraseRoot seedRoot;
-  final int coinType;
-
-  const EthereumDeriveArgs({
-    required this.seedRoot,
-    required this.coinType,
-  });
-}
-
-Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
-  SeedPhraseRoot seedRoot_ = config.seedRoot;
-  final path = "m/44'/${config.coinType}'/0'/0/0";
-  final node = seedRoot_.root.derivePath(path);
-  final privateKey = HEX.encode(node.privateKey!);
-  final privatekeyStr = "0x$privateKey";
-  final address = await etherPrivateKeyToAddress(privatekeyStr);
-
-  return {
-    'address': address,
-    'privateKey': privatekeyStr,
-  };
 }
 
 Future<String> etherPrivateKeyToAddress(String privateKey) async {
