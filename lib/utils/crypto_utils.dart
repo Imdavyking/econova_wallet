@@ -18,7 +18,6 @@ import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
-import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'dart:convert';
 import 'package:pointycastle/export.dart';

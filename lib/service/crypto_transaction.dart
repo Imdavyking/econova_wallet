@@ -9,7 +9,6 @@
  */
 
 import 'package:event_bus/event_bus.dart';
-import 'package:wallet_app/interface/coin.dart';
 
 abstract class EventBusService {
   static final instance = EventBus();
