@@ -395,33 +395,13 @@ class FuseCoin extends Coin {
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    final dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 3),
-        baseUrl: Uri.https(Variables.BASE_URL, '/api').toString(),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        queryParameters: {
-          'apiKey': _publicApiKey,
-        },
-      ),
+    final fuseSdk = await getSdk();
+    final amount = await fuseSdk.getBalance(
+      EthereumAddress.fromHex(contractAddress),
+      EthereumAddress.fromHex(address),
     );
-
-    final response = await dio.get(
-      '/v0/balances/assets/$address',
-    );
-
-    final userTokens = BalanceResponse.fromJson(Map.from(response.data));
-
-    for (TokenDetails action in userTokens.result) {
-      if (action.address.toLowerCase() == contractAddress.toLowerCase()) {
-        final base = BigInt.from(10);
-
-        return action.amount / base.pow(decimals());
-      }
-    }
-    return 0;
+    final base = BigInt.from(10);
+    return amount / base.pow(decimals());
   }
 
   @override
