@@ -16,6 +16,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -60,10 +61,12 @@ Future<void> importAllKeys(String mnemonic) async {
 
   // dedup non-evm: skip tokens, skip cosmos coins with same path
   final seenCosmosPaths = <String>{};
+  final seenPolkadotPaths = <String>{};
   final nonEvmChains = supportedChains.where((c) {
     if (c is EthereumCoin) return false;
     if (c.tokenAddress() != null) return false;
     if (c is CosmosCoin) return seenCosmosPaths.add(c.path); // one per path
+    if (c is PolkadotCoin) return seenPolkadotPaths.add(c.path); // ← NEW
     return true;
   }).toList();
 
