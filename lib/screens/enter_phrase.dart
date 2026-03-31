@@ -224,7 +224,12 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                       ),
                     ),
                     const SizedBox(height: 20),
-
+                    _ConfirmButton(
+                      isLoading: _isLoading,
+                      label: _loc.confirm,
+                      onPressed: _isLoading ? null : _onConfirm,
+                    ),
+                    const SizedBox(height: 20),
                     // Shamir secret import
                     _OutlineButton(
                       label: _loc.importShamirSecret,
@@ -233,12 +238,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                     const SizedBox(height: 20),
 
                     // Confirm
-                    _ConfirmButton(
-                      isLoading: _isLoading,
-                      label: _loc.confirm,
-                      onPressed: _isLoading ? null : _onConfirm,
-                    ),
-                    const SizedBox(height: 20),
 
                     // Autocomplete suggestions
                   ],
