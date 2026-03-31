@@ -7,8 +7,10 @@ import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/stack_tx_utils.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:flutter/material.dart';
+import 'package:web3dart/crypto.dart';
 import '../main.dart';
 
 enum WalletType {
@@ -197,32 +199,31 @@ abstract class Coin {
     required Future<Map<String, dynamic>> Function() derive,
     Map<String, dynamic> Function(Map<String, dynamic> keys)? postProcess,
   }) async {
+    // Hash the (potentially long) mnemonic/seed so map keys are always 64 chars
+    final seedKey = sha256Bytes(utf8.encode(bip39PhraseOrSeedHex)).toString();
+
     AccountData toAccount(Map<String, dynamic> keys) {
       final result = Map<String, dynamic>.from(keys);
       return AccountData.fromJson(postProcess?.call(result) ?? result);
     }
 
-    // ── 1. memory cache hit ────────────────────────────────────────────────
     final memEntry = decodedCache[cacheKey];
     if (memEntry != null) {
-      final hit = memEntry[bip39PhraseOrSeedHex];
+      final hit = memEntry[seedKey]; // ← seedKey not raw mnemonic
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 2. hive cache hit → warm memory cache ─────────────────────────────
     if (pref.containsKey(cacheKey)) {
       final decoded = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
       decodedCache[cacheKey] = decoded;
-      final hit = decoded[bip39PhraseOrSeedHex];
+      final hit = decoded[seedKey];
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 3. cold path: derive keys ──────────────────────────────────────────
     final keys = await derive();
 
-    // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
     final entry = decodedCache[cacheKey] ??= {};
-    entry[bip39PhraseOrSeedHex] = keys;
+    entry[seedKey] = keys; // ← seedKey
     await pref.put(cacheKey, jsonEncode(entry));
 
     return toAccount(keys);
