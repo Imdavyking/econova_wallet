@@ -55,9 +55,13 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
+  final seen = <String>{};
   final evmChains = supportedChains.whereType<EthereumCoin>().toList();
-  final nonEvmChains =
-      supportedChains.where((c) => c is! EthereumCoin).toList();
+  final nonEvmChains = supportedChains.where((c) {
+    if (c is EthereumCoin) return false;
+    if (c.tokenAddress() != null) return false; // skip tokens
+    return seen.add('${c.runtimeType}_${c.getDefault()}'); // skip duplicates
+  }).toList();
 
   // ── 1. EVM: sequential, deduplicated by coinType ─────────────────────────
   final Set<int> derivedCoinTypes = {};
@@ -69,7 +73,7 @@ Future<void> importAllKeys(String mnemonic) async {
 
     try {
       await coin.importData(mnemonic); // warms the pref cache
-      derivedCoinTypes.add(coin.coinType);
+      // derivedCoinTypes.add(coin.coinType);
     } catch (e) {
       debugPrint('Failed to import ${coin.getName()}: $e');
     }
