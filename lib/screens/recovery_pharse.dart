@@ -169,16 +169,16 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
 
                     // Action buttons
 
-                    if (validSeedPhrase)
-                      _ActionButton(
-                        label: _loc.continue_,
-                        onPressed: _goToConfirmMnemonic,
-                      )
-                    else if (widget.viewOnly)
+                    if (widget.viewOnly)
                       _ActionButton(
                         label: _loc.exportAsShamirShares,
                         onPressed: _goToShamirShares,
                       )
+                    else if (validSeedPhrase)
+                      _ActionButton(
+                        label: _loc.continue_,
+                        onPressed: _goToConfirmMnemonic,
+                      ),
                   ],
                 ),
               ),
