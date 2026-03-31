@@ -1,22 +1,11 @@
 # 🌿 EcoNova Wallet
 
-**EcoNova** is an AI-powered mobile wallet built for the **Stacks** ecosystem.
+**EcoNova** is an AI-powered multi-chain mobile wallet.
 Instead of navigating complex crypto interfaces, you just talk to it —
 EcoNova handles the fragmentation of multi-chain crypto through a single
 natural language interface.
 
-> Built for the **Stacks Buidl Battle 2026**.
-
----
-
-## 🏆 Bounty Alignment
-
-EcoNova is a direct submission for all three Buidl Battle bounties:
-
-| Bounty                       | How EcoNova qualifies                                                                                                                                                                                           |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🥇 **Best Use of USDCx**     | Native USDCx send/receive + Clarity 2 savings goals vault — users create named saving plans, deposit USDCx incrementally, and track progress. All built without stacks.js.                                      |
-| 🥇 **Best x402 Integration** | The AI pays for paywalled APIs autonomously using STX, sBTC, or USDCx via x402. Multi-version (v0/v1/v2), separate signing paths for STX and SIP-010 tokens. The first mobile wallet where the AI funds itself. |
+> Bitcoin security. Stacks programmability. One conversation.
 
 ---
 
@@ -44,6 +33,37 @@ and it happens. No chain-switching. No ABI reading. No address copying.
 
 ---
 
+## 🤖 AI-First Design
+
+EcoNova's core is a conversational AI agent that understands your intent
+and executes on-chain actions autonomously:
+
+- _"Send 10 STX to alice.btc"_
+- _"Send $10 worth of STX to Mum"_ ← fetches live price, calculates equivalent, uses saved contact
+- _"Send $10 USDCx to Wisdom"_ ← using saved contacts
+- _"Save 5 USDCx to my holiday fund"_
+- _"Show my savings goals"_
+- _"How much have I saved for my holiday fund?"_
+- _"Withdraw all from my holiday fund"_
+- _"What's my sBTC balance?"_
+- _"Send 0.0001 BTC to tb1q..."_ ← native SegWit BTC transfer
+- _"Pay for this API"_ ← autonomous x402 payment using your funds
+- _"Swap $20 STX to USDCx"_ ← opens Alex Lab DEX in the dApp browser seamlessly
+
+**No addresses. No gas confusion. No chain switching. No coding required.**
+
+### 🎙️ Voice Recognition
+
+Use your voice for hands-free commands on mobile.
+_"Send 0.1 STX to alice.btc"_ or _"Send 20 dollars worth of STX to Mom"_ works instantly.
+
+### 👥 Saved Contacts
+
+Save trusted people with nicknames once — then just say their name.
+No more copying long addresses or checking explorers.
+
+---
+
 ## 🟠 Stacks — First Citizen
 
 Everything in EcoNova is built Stacks-first. The entire Stacks signing stack
@@ -57,20 +77,20 @@ Send and receive STX natively. Full two-phase signing (pre-sign hash pattern
 matching `@stacks/transactions` exactly), memo support, and automatic nonce
 and fee fetching from the Hiro API.
 
-### 🟡 sBTC _(Most Innovative Use of sBTC bounty)_
+### 🟡 sBTC
 
 Hold and transfer sBTC — Bitcoin on Stacks. The AI understands
 Bitcoin-denominated instructions and maps them to sBTC operations.
 EcoNova is one of the first mobile wallets with native sBTC support —
 no browser extension, no desktop required.
 
-### 💵 USDCx _(Best Use of USDCx bounty)_
+### 💵 USDCx
 
 Send and receive USDCx (USDC bridged to Stacks). Spend in dollars,
 settle on Bitcoin security. Full SIP-010 `transfer` contract call built
 natively — no stacks.js.
 
-### 🏦 USDCx Savings Goals _(Best Use of USDCx bounty)_
+### 🏦 USDCx Savings Goals
 
 A native savings vault powered by a Clarity 2 smart contract deployed on
 Stacks. Users create named goals with a target amount, deposit USDCx
@@ -81,7 +101,6 @@ incrementally, and withdraw at any time — no lockups, no penalties.
 - Goal names persisted locally per user address + contract version
 - Last `txId` and raw signed bytes stored per goal for auditability
 - Shared contract — deployed once, all users scoped by `tx-sender`
-- Ask the AI: _"Save 10 USDCx to my holiday fund"_, _"Show my savings goals"_, _"Withdraw 5 USDCx from my holiday fund"_
 
 ```clarity
 ;; Users can withdraw anytime — no lockup
@@ -98,7 +117,9 @@ incrementally, and withdraw at any time — no lockups, no penalties.
 Send to `.btc` names instead of raw addresses. _"Send 5 STX to bob.btc"_
 resolves through the Hiro BNS API automatically.
 
-### ₿ Native Bitcoin — Send, Receive, and Identity
+---
+
+## ₿ Native Bitcoin
 
 EcoNova derives both BTC address types from the same seed, matching
 Leather and Xverse exactly — and both are fully functional:
@@ -119,7 +140,9 @@ Leather and Xverse exactly — and both are fully functional:
 - Taproot address is Ordinals/Runes-compatible — users can receive
   inscriptions directly to their EcoNova wallet
 
-### 🔗 dApp Browser — Full Leather + Xverse + Multi-Chain
+---
+
+## 🔗 dApp Browser — Full Leather + Xverse + Multi-Chain
 
 EcoNova's WebView injects provider bridges for all major ecosystems
 simultaneously — open any dApp and it just works:
@@ -150,7 +173,9 @@ so `decodeToken()` works on the dApp side immediately.
 SIP-018 structured message display — Clarity hex decoded to human-readable
 tuples in the confirmation UI.
 
-### ⚡ x402 Autonomous Payments _(Best x402 Integration bounty)_
+---
+
+## ⚡ x402 Autonomous Payments
 
 EcoNova supports the x402 HTTP payment protocol using STX, sBTC, and USDCx.
 When the AI needs to access a paywalled API, it pays autonomously —
@@ -173,23 +198,13 @@ mnemonic-word share format used by Trezor and compatible hardware wallets.
 Users can back up their seed phrase by splitting it into shares — no single
 share reveals anything about the original secret.
 
-### 🔑 SLIP39 (SatoshiLabs Improvement Proposal 39)
-
-- Shares are **BIP39-style human-readable word lists** (1024-word SLIP39
-  dictionary), making them safe to write down or speak aloud.
-- **K-of-N threshold** — any K shares reconstruct the secret; fewer than K
-  reveal nothing.
-- Optional **passphrase** adds an additional encryption layer — the same
-  shares with a different passphrase produce a completely different secret.
-- Shares from the same split share an **identifier prefix** (first 2–3
-  words) so you can instantly confirm two shares belong together.
-- Cross-compatible — shares generated in EcoNova can be recovered in any
-  SLIP39-compliant wallet (Trezor Suite, Ian Coleman's tool, etc.) and vice
-  versa.
-- Even-length byte enforcement with explicit padding flag — round-trips
-  correctly regardless of seed length.
-- QR scan and clipboard paste on each share field for fast input.
-- Duplicate share detection before recovery is attempted.
+- Shares are **BIP39-style human-readable word lists** (1024-word SLIP39 dictionary)
+- **K-of-N threshold** — any K shares reconstruct the secret; fewer than K reveal nothing
+- Optional **passphrase** adds an additional encryption layer
+- Shares from the same split share an **identifier prefix** for easy matching
+- Cross-compatible with Trezor Suite, Ian Coleman's tool, and any SLIP39-compliant wallet
+- QR scan and clipboard paste on each share field for fast input
+- Duplicate share detection before recovery is attempted
 
 ```
 Export screen:  threshold / shares count → generate → copy each share
@@ -206,26 +221,22 @@ unreachable — time-locked so it cannot be decrypted before your deadline.
 
 ### How it works
 
-1. **Arm** — You set a timeout (7 days to 1 year), enter your
-   beneficiary's compressed secp256k1 public key, and choose a
-   K-of-N share configuration.
+1. **Arm** — Set a timeout (7 days to 1 year), enter your beneficiary's
+   compressed secp256k1 public key, and choose a K-of-N share configuration.
 2. **Split** — The seed is split into N shares via SSS. Each share is
    individually encrypted in two layers:
    - **AES-256-GCM** under a key derived from the target `drand` round
-     number — the share is computationally locked until that round is
-     published.
+     number — computationally locked until that round is published.
    - **ECIES (secp256k1)** to the beneficiary's public key — only their
      private key can decrypt it after the drand round is reached.
 3. **Relay** — Encrypted shares are pushed to the beneficiary automatically
-   over a WebSocket relay. The beneficiary's app stores them locally;
-   nothing sensitive is ever on the server.
+   over a WebSocket relay. Nothing sensitive is ever on the server.
 4. **Heartbeat** — Each time you open the app and reset the timer, shares
    are re-encrypted to a new drand round and re-sent. Old shares become
    permanently unrecoverable.
 5. **Trigger** — If the deadline passes without a heartbeat, the switch
-   enters the **triggered** state. The `drand` beacon for the target round
-   is now public, but only the beneficiary's private key can decrypt the
-   ECIES outer layer — so only they can reconstruct the seed.
+   enters the triggered state. Only the beneficiary's private key can
+   decrypt the ECIES outer layer to reconstruct the seed.
 6. **Cancel** — Cancelling sends a signed cancel message to the relay so
    the beneficiary's app can discard the shares.
 
@@ -240,27 +251,13 @@ unreachable — time-locked so it cannot be decrypted before your deadline.
 | Share threshold   | SSS K-of-N — beneficiary needs K shares to reconstruct              |
 | Replay protection | Cancel message includes `dataHash`; relay deletes matching sessions |
 
-### Cryptographic stack (pure Dart, no native bindings)
-
-```dart
-// Timelock key derived from drand round number
-Uint8List _deriveTimelockKey(Uint8List roundBytes) {
-  // SHA-256("dms-timelock" || roundBytes)
-}
-
-// Share encryption pipeline
-final aesCipher  = aesGcmEncrypt(timelockKey, sharePlaintext);
-final eciesCipher = eciesEncrypt(beneficiaryPubKey, aesCipher);
-```
-
 ---
 
 ## 🔒 Native Cryptography — Pure Dart
 
-All cryptographic primitives used by EcoNova's security features are
-implemented from scratch in pure Dart with no native bindings or
-platform channels. This means the same code runs identically on Android,
-iOS, macOS, and in tests.
+All cryptographic primitives are implemented from scratch in pure Dart with
+no native bindings or platform channels. The same code runs identically on
+Android, iOS, macOS, and in tests.
 
 | Primitive                   | Usage                                           |
 | --------------------------- | ----------------------------------------------- |
@@ -273,9 +270,8 @@ iOS, macOS, and in tests.
 | **RS1024 checksum**         | SLIP39 mnemonic integrity validation            |
 | **Feistel cipher (PBKDF2)** | SLIP39 master secret encryption / decryption    |
 
-Every primitive has a corresponding round-trip test in the test suite —
-wrong keys, tampered ciphertext, and truncated shares all throw before
-any result reaches the UI.
+Every primitive has a corresponding round-trip test — wrong keys, tampered
+ciphertext, and truncated shares all throw before any result reaches the UI.
 
 ---
 
@@ -290,11 +286,6 @@ EcoNova accepts three import formats, all normalised to the same internal
 | **BIP32 seed hex** | `7e9f86e818b5b8…`        | 64-byte raw seed, `0x` prefix optional                 |
 | **EIP-3 keystore** | `{"version":3, …}`       | PBKDF2 or scrypt; decrypts to private key              |
 
-BIP39 mnemonics are converted to a 64-byte seed via PBKDF2-HMAC-SHA512
-(standard BIP39 derivation). Hex seeds are decoded directly. Both produce
-the same `BIP32.fromSeed` root, so address derivation is identical
-regardless of which format the user imported.
-
 ```dart
 Future<SeedPhraseRoot> seedFromMnemonic(String phraseOrBipSeedHex) async {
   final isValid = await compute(bip39.validateMnemonic, phraseOrBipSeedHex);
@@ -307,44 +298,20 @@ Future<SeedPhraseRoot> seedFromMnemonic(String phraseOrBipSeedHex) async {
 
 ---
 
-## 🤖 AI-First Design
+## 🌐 Multi-Chain Support
 
-EcoNova's core is a conversational AI agent that understands your intent
-and executes on-chain actions autonomously:
+Stacks is the focus — but EcoNova also supports:
 
-- "Send 10 STX to alice.btc"
-- "Send $10 worth of STX to Mum" ← fetches live price, calculates equivalent, uses saved contact
-- "Send $10 USDCx to Wisdom" ← using saved contacts
-- "Save 5 USDCx to my holiday fund"
-- "Show my savings goals"
-- "How much have I saved for my holiday fund?"
-- "Withdraw all from my holiday fund"
-- "What's my sBTC balance?"
-- "Send 0.0001 BTC to tb1q..." ← native SegWit BTC transfer
-- "Pay for this API" ← autonomous x402 payment using your funds
-- "Swap $20 STX to USDCx" ← asks permission to open Alex Lab DEX in the dApp browser for seamless completion
+**Bitcoin** — Native P2WPKH SegWit send/receive and P2TR Taproot receive,
+both derived from the same seed as Leather and Xverse.
 
-**No addresses. No gas confusion. No chain switching. No coding required.**
+**EVM** — Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base
+and ~15 more EVM networks.
 
-**🎙️ Voice Recognition**
-Use your voice for hands-free commands on mobile.
-_"Send 0.1 STX to alice.btc"_ or _"Send 20 dollars worth of STX to Mom"_ works instantly.
+**Other L1s** — Solana, NEAR, TON, TRON, MultiversX, Cosmos IBC chains,
+Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 
-**👥 Saved Contacts**
-Save trusted people with nicknames once — then just say their name.
-No more copying long addresses or checking explorers.
-
----
-
-## 🎯 Judging Criteria Alignment
-
-| Criterion                    | How EcoNova delivers                                                                                 |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Innovation**               | AI that pays itself via x402 · sBTC on mobile · savings goals via Clarity · dead man's switch        |
-| **Technical Implementation** | Native Dart signing stack, zero stacks.js, RFC 6979, SHA-512/256, c32check, pure-Dart ECIES + SLIP39 |
-| **Stacks Alignment**         | Clarity 2 contract · sBTC · USDCx · BNS · full Leather + Xverse compat                               |
-| **User Experience**          | Conversational interface · voice · saved contacts · progress bars                                    |
-| **Impact Potential**         | Only mobile Stacks wallet with this feature set · 30+ chains unified                                 |
+> All chains. One wallet. No MetaMask switching.
 
 ---
 
@@ -380,23 +347,6 @@ No more copying long addresses or checking explorers.
 
 ---
 
-## 🌐 Multi-Chain Support
-
-Stacks is the focus — but EcoNova also supports:
-
-**Bitcoin** — Native P2WPKH SegWit send/receive and P2TR Taproot receive,
-both derived from the same seed as Leather and Xverse.
-
-**EVM** — Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base
-and ~15 more EVM networks.
-
-**Other L1s** — Solana, NEAR, TON, TRON, MultiversX, Cosmos IBC chains,
-Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
-
-> All chains. One wallet. No MetaMask switching.
-
----
-
 ## 🛠 Technical Highlights
 
 - **Native Stacks signing** — RFC 6979, SHA-512/256, secp256k1 recovery,
@@ -415,24 +365,19 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
   in pure Dart — UTXO selection, sighash preimage, DER signature encoding,
   witness construction — no bitcoin library used for signing
 - **BIP341 tapTweak** — secp256k1 point arithmetic in pure Dart for correct
-  Taproot address derivation — `taggedHash("TapTweak", internalKey)` applied
-  before bech32m encoding
+  Taproot address derivation
 - **bech32m (BIP350)** — self-contained encoder for witness v1 (Taproot),
   distinct from bech32 (BIP173) used for witness v0 (SegWit)
 - **Leather-compatible `getAddresses`** — P2WPKH + P2TR + STX returned with
   correct public keys, tweaked keys, and derivation paths matching Leather exactly
-- **SLIP39** — full implementation of SatoshiLabs' mnemonic share standard:
-  RS1024 checksum, Feistel cipher, PBKDF2 passphrase stretching, 1024-word
-  dictionary — cross-compatible with Trezor Suite and hardware wallets
-- **ECIES secp256k1** — ephemeral key agreement + HKDF-SHA256 + AES-256-GCM;
-  every encryption produces a different ciphertext even for the same plaintext
-- **Dead man's switch** — drand verifiable randomness for time-locking,
-  double-encrypted shares (AES-GCM + ECIES), WebSocket relay with
-  HMAC-bound session integrity, heartbeat-based forward secrecy
-- **EIP-3 keystore import** — PBKDF2-HMAC-SHA256 key derivation, AES-128-CTR
-  decryption, MAC verification — fully compatible with MetaMask exports
-- **Flexible seed import** — BIP39 mnemonic → `mnemonicToSeed` (PBKDF2),
-  raw BIP32 hex → direct decode; both normalised to the same `SeedPhraseRoot`
+- **SLIP39** — full implementation: RS1024 checksum, Feistel cipher, PBKDF2
+  passphrase stretching, 1024-word dictionary — cross-compatible with Trezor Suite
+- **ECIES secp256k1** — ephemeral key agreement + HKDF-SHA256 + AES-256-GCM
+- **Dead man's switch** — drand verifiable randomness, double-encrypted shares,
+  WebSocket relay with HMAC-bound session integrity, heartbeat-based forward secrecy
+- **EIP-3 keystore import** — PBKDF2-HMAC-SHA256, AES-128-CTR, MAC verification
+- **Flexible seed import** — BIP39 mnemonic or raw BIP32 hex, both normalised
+  to the same `SeedPhraseRoot`
 
 ---
 
@@ -476,13 +421,12 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
 API keys are stored encrypted in Bitwarden. Never commit `.env` to version control.
 
 ```bash
-# Ensure .env is gitignored
 echo ".env" >> .gitignore
 ```
 
 ### Setup (one-time)
 
-Install the Bitwarden CLI and add an unlock alias to your shell config (`~/.zshrc` or `~/.bashrc`):
+Install the Bitwarden CLI and add an unlock alias to your shell config:
 
 ```bash
 npm install -g @bitwarden/cli
@@ -495,8 +439,6 @@ bwu() {
 
 ### Upload
 
-Run this after creating or updating your `.env`:
-
 ```bash
 bwu  # unlock vault
 
@@ -508,23 +450,7 @@ bw encode < filled.json | bw create item
 rm item.json filled.json
 ```
 
-To update an existing entry instead of creating a new one:
-
-```bash
-echo "item.json" >> .gitignore
-echo "filled.json" >> .gitignore
-ID=$(bw get item "econova .env" | jq -r '.id')
-bw get template item > item.json
-jq --arg notes "$(cat .env)" \
-  '.type = 2 | .name = "econova .env" | .notes = $notes | .secureNote = {"type": 0}' \
-  item.json > filled.json
-bw encode < filled.json | bw edit item "$ID"
-rm item.json filled.json
-```
-
 ### Retrieve
-
-Run this on a fresh machine after cloning:
 
 ```bash
 bwu  # unlock vault
@@ -535,15 +461,15 @@ bw get notes "econova .env" > .env
 
 ## 📈 Market Opportunity
 
-| Segment                    | Opportunity                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| Crypto wallets             | \$48B market by 2030                                              |
-| Stacks ecosystem           | Only mobile wallet with full Leather + Xverse compat              |
-| sBTC                       | First mobile wallet with native sBTC support                      |
-| Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing               |
-| AI-powered interfaces      | Early-stage, high-demand UX differentiator                        |
-| Multi-chain fragmentation  | 30+ chains, one interface                                         |
-| Seed security              | Only mobile wallet with SLIP39 + dead man's switch built-in       |
+| Segment                    | Opportunity                                                 |
+| -------------------------- | ----------------------------------------------------------- |
+| Crypto wallets             | \$48B market by 2030                                        |
+| Stacks ecosystem           | Only mobile wallet with full Leather + Xverse compat        |
+| sBTC                       | First mobile wallet with native sBTC support                |
+| Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing         |
+| AI-powered interfaces      | Early-stage, high-demand UX differentiator                  |
+| Multi-chain fragmentation  | 30+ chains, one interface                                   |
+| Seed security              | Only mobile wallet with SLIP39 + dead man's switch built-in |
 
 ---
 
