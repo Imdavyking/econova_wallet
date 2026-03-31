@@ -1851,7 +1851,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -1874,7 +1874,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',

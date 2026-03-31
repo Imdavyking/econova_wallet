@@ -53,6 +53,7 @@ set supportedChains(List<Coin> value) =>
 String get covalApiKey => dotenv.env['COVAL_API_KEY'] ?? '';
 String get alchemyEthMainnetApiKey => dotenv.env['ALCHEMY_ETH_MAINNET'] ?? '';
 String get alchemyEthGoerliApiKey => dotenv.env['ALCHEMY_ETH_GOERLI'] ?? '';
+String get alchemyStarknetApiKey => dotenv.env['ALCHEMY_STRK_KEY'] ?? '';
 String get alchemyArbitriumApiKey => dotenv.env['ALCHEMY_ARBITRUM'] ?? '';
 String get alchemyMumbaiApiKey => dotenv.env['ALCHEMY_MUMBAI'] ?? '';
 String get alchemyPolygonApiKey => dotenv.env['ALCHEMY_POLYGON'] ?? '';

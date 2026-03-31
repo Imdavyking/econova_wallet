@@ -62,7 +62,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
         blockExplorer:
             'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
         api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         tokenContractAddress: StarknetMainAddress.ethAddress,
@@ -86,7 +86,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
             '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
         blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
         api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         tokenContractAddress: StarknetMainAddress.ethAddress,
@@ -111,7 +111,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
             '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
         blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
         api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         classHash:
             '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
         tokenContractAddress: StarknetMainAddress.usdcAddress,
