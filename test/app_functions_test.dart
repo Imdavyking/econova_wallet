@@ -900,7 +900,6 @@ void main() async {
     seedPhraseRoot = await compute(seedFromMnemonic, bip39PhraseOrSeedHex);
     final validSeedPhrase =
         await compute(validateMnemonic, bip39PhraseOrSeedHex);
-    debugPrint(HEX.encode(seedPhraseRoot.seed));
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
       supportedChains = getChains();
