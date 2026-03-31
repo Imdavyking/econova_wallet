@@ -92,7 +92,7 @@ class StarknetNFTCoin extends StarknetCoin {
   }
 
   @override
-  String get badgeImage => starkNetCoins.first.image;
+  String get badgeImage => getChains<StarknetCoin>().first.image;
 
   @override
   Future<({String txHash, String? txRaw})?> transferToken(

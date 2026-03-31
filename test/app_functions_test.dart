@@ -1,7 +1,16 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
+import 'package:bip39/bip39.dart';
+import 'package:cryptography/helpers.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:slip39/slip39.dart';
+import 'package:wallet_app/coins/cosmos_coin.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
-import 'package:wallet_app/utils/all_coins.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
+import 'package:wallet_app/utils/coingecko_ids.dart';
 import 'dart:convert';
 import 'package:wallet_app/eip/eip681.dart';
 import 'package:wallet_app/interface/coin.dart';
@@ -12,6 +21,7 @@ import 'package:wallet_app/utils/alt_ens.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/coin_pay.dart';
 import 'package:wallet_app/utils/ethereum_blockies.dart';
+import 'package:wallet_app/utils/network_guard.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:hex/hex.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -19,19 +29,331 @@ import 'package:hive_test/hive_test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wallet_app/utils/slip39.dart' as slip39utils;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  bool networkAvailable = true;
+  const mnemonic1Addresses = {
+    'Cardano':
+        'addr1qy4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8kswl6kh2',
+    'Cardano (Preprod)':
+        'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
+    'ALGO': 'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q',
+    'APT': '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
+    'ATOM': 'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7',
+    'BCH': 'qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf',
+    'BNB': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'Bitcoin (SegWit)': 'bc1q4qw42stdzjqs59xvlrlxr8526e3nunw7mp73te',
+    'Bitcoin (Legacy)': '1Ei9UmLQv4o4UJTy5r5mnGFeC9auM3W5P1',
+    'Bitcoin (SegWit Test4)': 'tb1qquv9lg5g2r4jkr0ahun0ddfg5xntxjelvmc7t8',
+    'Bitcoin (Legacy Test4)': 'muE6mpRPj6EKFQwaoR49cBTy49Bc9x7oq2',
+    'CELO': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'CRO_tcro': 'tcro12xhr9keewx46secesqlctta37jvrkntvu0muaq',
+    'CRO_cro': 'cro12xhr9keewx46secesqlctta37jvrkntvj6jca3',
+    'CRO_evm': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'DASH': 'XoXdZSiN9MWpmVLDFS65GfLHuERoHeuFCj',
+    'EGLD': 'erd1v38vje2t7rvccq2utxcamernpvchnshr6r8x4q9l2f0ekd3tqj2qcl7fs7',
+    'ETH': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'EVMOS': 'evmos17w0adeg64ky0daxwd2ugyuneellmjgnxpu2u3g',
+    'Filecoin': 'f1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
+    'Filecoin(Testnet)': 't1qid3qslm4jax2jpohkdwomtidgd3x7xa7qvahea',
+    'FUSE': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'ICX': 'hx136a013895887b56b99d0b1ed27cd1922906646c',
+    'INJ': 'inj17w0adeg64ky0daxwd2ugyuneellmjgnxf5vkec',
+    'IOTX': 'io1yfpkvk8attt5vxc364jqj3emxvrvhjf8pcuyd8',
+    'NEAR': '82b08c7cedd90d57506d15f600a268adfb5b4122fd9380b2f7714f7291d86133',
+    'ONE': 'one12t2plmp43a2pqyl8wp5sgwktslnqt2dzd557mp',
+    'ONT': 'AebqgJQDoJk5NLzv8kuiAZitPSk782igMx',
+    'OSMO': 'osmo15yk64u7zc9g9k2yr2wmzeva5qgwxps6ywful0v',
+    'PAS': '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
+    'POL': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    'SOL': 'BtELVjZSaWhMat94P9HyasX3Gvpv6C7WHXJGqWdZbwSQ',
+    'STRK':
+        '0x058ac366fa8dc98e25a85c7343bcca64324c2e7e65c017785c363d1066ce072a',
+    'Stacks': 'SP3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNCM7KHP3',
+    'Stacks(Test)': 'ST3N7D4F8TDBNPAN7W6CJ5RGF5DAW5MGHNEGTCR6R',
+    'SUI': '0xc88ef07b9b8b2fc3b7daad9478f4e1337f01792e2eab9c3794494e610636026e',
+    'TON': 'UQAtUn6khf4MxnAB4aQNcDlUPNOsLtU8IOVZbIabFzw9Ketu',
+    'TRX': 'TWer2Ygk5TEheHp3TPuYeqxmB6SsGZmaL6',
+    'Waves': '3PEYmwpByFsLTkm7BtkcWgdNaLDwEDPEen8',
+    'Waves (Testnet)': '3N2XxzVJ78KwqJTgvpVcZEFZDSiAQ2kAWeT',
+    'WND': '5EEFdPstuRzrHReGVFFSqwtvKXHzj7ZBsaEwBXT4Y73x2iSU',
+    'XION': 'xion15yk64u7zc9g9k2yr2wmzeva5qgwxps6yym4d04',
+    'XNO': 'nano_3hn8hsuie854jhtzcg5xunap7jsg7qxtwpihijp5n5tmqznoqpxc98zkojri',
+    'XLM': 'GCRN5PMAG5FM5QLCH7BUZPRQ7UIW37LBZLF2BIDEOSG4ZQ6HYRC45ALA',
+    'XRP': 'rnrbiYDUYTJS4JVdSV5FtyCj4HFuRjfLKM',
+    'XTZ': 'tz1UiMU2fCPen52tf6F8wp1aLpRTEvuct1kW',
+    'Zcash (Test)': 'tmLoFfsS1hx5qnazZX6QTn9UoosxTPCYRwz',
+    'Zcash': 't1UxWM2wcKHaLeLo7rN6ivUp4CtsdqSwQh8',
+    'ZIL': 'zil1d4c4vntch9jpn3fj9d4ugpuap8cmdj7alnrxvv',
+  };
 
-  enableTestNet = false;
+  const mnemonic2Addresses = {
+    'ZIL': 'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
+    'ONT': 'Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc',
+    'STRK':
+        '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
+    'ICP': 'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
+    'ONE': 'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
+    'EGLD': 'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
+    'ICX': 'hx1621355ce9e82899c5f5e1cfee3b99426f139e35',
+    'XNO': 'nano_33irdhma4h59muwm9zeqhqg6km9j684agbhzyr3o5ggzqgmknk4z1kqm6j7q',
+    'Bitcoin': 'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
+    'Bitcoin (Legacy)': '1Q9sh5HmBGVvysWfU8UAyFSMk7k2bzMnYW',
+    'Bitcoin (SegWit Test4)': 'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
+    'Bitcoin (Legacy Test4)': 'n4fpz8NjzHwBkyzHBhSYoAegc7LjWZ175E',
+    'Stacks': 'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
+    'Stacks(Test)': 'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
+    'ETH': '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
+    'TON': 'UQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtA58',
+    'SUI': '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+    'APT': '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
+    'XTZ': 'tz1dSW1iQguZHMEZoAgNTU6VBRcNnyfb5BA7',
+    'ETC': '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
+    'BCH': 'qr4rwp766lf2xysphv8wz2qglphuzx5y7gku3hqruj',
+    'LTC': 'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7',
+    'DASH': 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti',
+    'TRX': 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM',
+    'SOL': '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
+    'XLM': 'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT',
+    'ALGO': 'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U',
+    'ATOM': 'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne',
+    'Zcash (Test)': 'tmLDBDEPStxyzcC9Fv8bDNHZmw9n2LWFB7w',
+    'Zcash': 't1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU',
+    'Cardano':
+        'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
+    'Cardano (Preprod)':
+        'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
+    'XRP': 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL',
+    'Filecoin': 'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+    'Filecoin(Testnet)': 't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
+    'DOT': '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
+    'WND': '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
+  };
+
   setUp(() async {
     await setUpTestHive();
     pref = await Hive.openBox(secureStorageKey);
-    supportedChains = await fetchSupportedChains();
+    networkAvailable = await NetworkGuard().checkNow();
+    await dotenv.load();
+    supportedChains = getChains();
   });
 
   tearDown(() async {
     await tearDownTestHive();
+  });
+
+  group('ECIES (secp256k1)', () {
+    Uint8List privKey = Uint8List.fromList([]);
+    Uint8List pubKey = Uint8List.fromList([]);
+
+    setUp(() {
+      final pair = generateKeyPair();
+      privKey = pair.priv;
+      pubKey = pair.pub;
+    });
+
+    test('encrypt then decrypt returns original plaintext', () {
+      final plaintext = Uint8List.fromList(utf8.encode('hello ecies'));
+
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+
+      expect(utf8.decode(result), equals('hello ecies'));
+    });
+    test('encrypt then decrypt returns original plaintext', () {
+      final knownPrivKey = HEX.decode(
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
+          as Uint8List;
+      final knownPubKey = HEX.decode(
+              '038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75')
+          as Uint8List;
+      const knowAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+      final plaintext = Uint8List.fromList(utf8.encode('hello ecies'));
+
+      final cipher = eciesEncrypt(knownPubKey, plaintext);
+      final result = eciesDecrypt(knownPrivKey, cipher);
+
+      expect(utf8.decode(result), equals('hello ecies'));
+      expect(publicKeyToAddress(HEX.encode(knownPubKey)), knowAddress);
+    });
+
+    test(
+        'encrypting same plaintext twice gives different ciphertext (ephemeral key)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('same input'));
+
+      final cipher1 = eciesEncrypt(pubKey, plaintext);
+      final cipher2 = eciesEncrypt(pubKey, plaintext);
+
+      expect(cipher1, isNot(equals(cipher2)));
+
+      // Both still decrypt correctly
+      expect(eciesDecrypt(privKey, cipher1), equals(plaintext));
+      expect(eciesDecrypt(privKey, cipher2), equals(plaintext));
+    });
+
+    test('ciphertext has correct minimum length (65 ephPub + 12 IV + 16 tag)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('x'));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+
+      // 65 (uncompressed ephPubKey) + 12 (IV) + 16 (GCM tag) + 1 (plaintext)
+      expect(cipher.length, greaterThanOrEqualTo(65 + 12 + 16 + 1));
+    });
+
+    test('wrong private key throws or produces garbage that fails GCM tag', () {
+      final plaintext = Uint8List.fromList(utf8.encode('secret'));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+
+      final wrongPair = generateKeyPair();
+      expect(
+        () => eciesDecrypt(wrongPair.priv, cipher),
+        throwsA(anything),
+      );
+    });
+
+    test('tampered ephemeral public key throws', () {
+      final plaintext = Uint8List.fromList(utf8.encode('tamper test'));
+      final cipher = Uint8List.fromList(eciesEncrypt(pubKey, plaintext));
+
+      // Corrupt a byte inside the ephemeral public key (first 65 bytes)
+      cipher[10] ^= 0xFF;
+
+      expect(() => eciesDecrypt(privKey, cipher), throwsA(anything));
+    });
+
+    test('tampered ciphertext body throws (GCM auth tag)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('tamper body'));
+      final cipher = Uint8List.fromList(eciesEncrypt(pubKey, plaintext));
+
+      // Corrupt a byte well past the ephPubKey (65) + IV (12) header
+      cipher[90] ^= 0xFF;
+
+      expect(() => eciesDecrypt(privKey, cipher), throwsA(anything));
+    });
+
+    test('empty plaintext round-trips', () {
+      final cipher = eciesEncrypt(pubKey, Uint8List(0));
+      final result = eciesDecrypt(privKey, cipher);
+      expect(result, isEmpty);
+    });
+
+    test('large plaintext round-trips', () {
+      final plaintext =
+          Uint8List.fromList(List.generate(10000, (i) => i % 256));
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+      expect(result, equals(plaintext));
+    });
+
+    test('mnemonic phrase round-trips', () {
+      const mnemonic =
+          'abandon ability able about above absent absorb abstract absurd abuse access accident';
+      final plaintext = Uint8List.fromList(utf8.encode(mnemonic));
+
+      final cipher = eciesEncrypt(pubKey, plaintext);
+      final result = eciesDecrypt(privKey, cipher);
+
+      expect(utf8.decode(result), equals(mnemonic));
+    });
+
+    test('different recipient key pairs cannot decrypt each other\'s messages',
+        () {
+      final pair2 = generateKeyPair();
+
+      final plaintext = Uint8List.fromList(utf8.encode('for alice only'));
+      final cipher = eciesEncrypt(pubKey, plaintext); // encrypted for pair 1
+
+      // pair 2 private key must not decrypt it
+      expect(() => eciesDecrypt(pair2.priv, cipher), throwsA(anything));
+    });
+  });
+
+  group('AES-GCM', () {
+    // Fixed 32-byte key for all tests
+    final key = Uint8List.fromList(List.generate(32, (i) => i));
+
+    test('encrypt then decrypt returns original plaintext', () {
+      final plaintext = Uint8List.fromList(utf8.encode('hello world'));
+
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+
+      expect(utf8.decode(result), equals('hello world'));
+    });
+
+    test(
+        'encrypting same plaintext twice gives different ciphertext (random IV)',
+        () {
+      final plaintext = Uint8List.fromList(utf8.encode('same input'));
+
+      final cipher1 = aesGcmEncrypt(key, plaintext);
+      final cipher2 = aesGcmEncrypt(key, plaintext);
+
+      // Ciphertexts must differ because IV is random
+      expect(cipher1, isNot(equals(cipher2)));
+
+      // But both must decrypt to the same thing
+      expect(aesGcmDecrypt(key, cipher1), equals(plaintext));
+      expect(aesGcmDecrypt(key, cipher2), equals(plaintext));
+    });
+
+    test('ciphertext is longer than plaintext (IV + tag overhead)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('test'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      // 12 bytes IV + 16 bytes GCM tag = exactly 28 bytes overhead
+      expect(cipher.length, equals(plaintext.length + 28));
+    });
+
+    test('decrypt with wrong key throws', () {
+      final plaintext = Uint8List.fromList(utf8.encode('secret'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      final wrongKey = Uint8List.fromList(List.generate(32, (i) => 255 - i));
+
+      expect(() => aesGcmDecrypt(wrongKey, cipher), throwsA(anything));
+    });
+
+    test('tampered ciphertext throws (GCM auth tag fails)', () {
+      final plaintext = Uint8List.fromList(utf8.encode('do not tamper'));
+      final cipher = aesGcmEncrypt(key, plaintext);
+
+      // Flip one byte in the ciphertext body (after the 12-byte IV)
+      final tampered = Uint8List.fromList(cipher);
+      tampered[20] ^= 0xFF;
+
+      expect(() => aesGcmDecrypt(key, tampered), throwsA(anything));
+    });
+
+    test('empty plaintext round-trips', () {
+      final plaintext = Uint8List(0);
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+      expect(result, isEmpty);
+    });
+
+    test('large plaintext round-trips', () {
+      final plaintext = Uint8List.fromList(
+        List.generate(10000, (i) => i % 256),
+      );
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+      expect(result, equals(plaintext));
+    });
+
+    test('mnemonic phrase round-trips', () {
+      const mnemonic =
+          'abandon ability able about above absent absorb abstract absurd abuse access accident';
+      final plaintext = Uint8List.fromList(utf8.encode(mnemonic));
+
+      final cipher = aesGcmEncrypt(key, plaintext);
+      final result = aesGcmDecrypt(key, cipher);
+
+      expect(utf8.decode(result), equals(mnemonic));
+    });
   });
 
   final blockInstance = EthereumBlockies();
@@ -68,7 +390,6 @@ void main() async {
 
     expect(result3, BigInt.parse('-250000892384000000000000'));
   });
-  test('can generate transactionSignLotus cid', () {});
 
   test('can generate filecoin cid', () {
     expect(
@@ -112,12 +433,12 @@ void main() async {
       'bagaaierafwnjryt63d5n7l2c76blfv7jddxgfeuhl4bvcdzuniggxo2eqngq',
     );
   });
+
   test('can convert from cid v0 to cid v1', () {
     expect(
       fromV0ToV1('QmW5xcH8ydwYtnS8FsMYxZfjpsN6p4YTVv7n5YbvoooZy4'),
       'bafybeidtdic3panzxksm5vva52ru222wlasitwpuio2vxszuhfgizrhlim',
     );
-
     expect(
       fromV0ToV1('QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n'),
       'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku',
@@ -127,6 +448,7 @@ void main() async {
       'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
     );
   });
+
   test('can decode known abis', () {
     expect(solidityFunctionSig('withdraw(uint256)'), '0x2e1a7d4d');
     expect(solidityFunctionSig('ownerOf(uint256)'), '0x6352211e');
@@ -136,13 +458,25 @@ void main() async {
     expect(solidityFunctionSig('solversk()'), '0xffb5eff0');
   });
 
+  test(
+    'ellipsify works',
+    () {
+      expect(
+        ellipsify(
+            str:
+                '0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2'),
+        '0x0₁₀₅873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
+      );
+    },
+  );
+
   test('get ethereum address blockie image data and colors', () {
     blockInstance.seedrand(address.toLowerCase());
     HSL color = blockInstance.createColor();
     HSL bgColor = blockInstance.createColor();
     HSL spotColor = blockInstance.createColor();
     List imageData = blockInstance.createImageData();
-    expect(sha3(json.encode(blockInstance.randseed)),
+    expect(solidityKeccak256(json.encode(blockInstance.randseed)),
         '89b8a19e375159267d7d16447f53766cbd210d6b0328779cc897a03a9922b914');
     expect(
         color.toString(), 'H: 25.0 S: 62.20454423791009 L: 50.21168109970711');
@@ -150,16 +484,16 @@ void main() async {
         'H: 108.0 S: 57.542195253792315 L: 43.62102017906542');
     expect(spotColor.toString(),
         'H: 31.0 S: 48.8115822751129 L: 50.77201500570961');
-    expect(sha3(json.encode(imageData)),
+    expect(solidityKeccak256(json.encode(imageData)),
         'd935e1c2fa18d0a7b7f92604e3ea282ab4572124852411306d70e302fb5447a4');
 
-    /// Account two
+    // Account two
     blockInstanceTwo.seedrand(addressTwo.toLowerCase());
     HSL colorTwo = blockInstanceTwo.createColor();
     HSL bgColorTwo = blockInstanceTwo.createColor();
     HSL spotColorTwo = blockInstanceTwo.createColor();
     List imageDataTwo = blockInstanceTwo.createImageData();
-    expect(sha3(json.encode(blockInstanceTwo.randseed)),
+    expect(solidityKeccak256(json.encode(blockInstanceTwo.randseed)),
         '491a7d9b769c9e62f67019b5ea33b5b100e8a38e55b1efc0680ac4edaaa18f79');
     expect(colorTwo.toString(),
         'H: 240.0 S: 77.89883877052871 L: 42.880431070402466');
@@ -167,7 +501,7 @@ void main() async {
         'H: 302.0 S: 52.13426684594446 L: 15.5695927401863');
     expect(spotColorTwo.toString(),
         'H: 252.0 S: 74.00470713805626 L: 64.89102061134344');
-    expect(sha3(json.encode(imageDataTwo)),
+    expect(solidityKeccak256(json.encode(imageDataTwo)),
         '0da3e2aa1ee73f4caae2c09cd4febd40ebdf3a0128b2e6c4686ec93055f221d7');
   });
 
@@ -188,6 +522,7 @@ void main() async {
     expect(parsedUrl.recipient, address);
     expect(parsedUrl.coinScheme, scheme);
   });
+
   test('eip681 conversion', () {
     expect(
         EIP681.build(
@@ -203,7 +538,7 @@ void main() async {
         eip681String);
 
     expect(
-      sha3(json.encode(EIP681.parse(eip681String))),
+      solidityKeccak256(json.encode(EIP681.parse(eip681String))),
       '5a9e3c6f895795edc845d1bcc17a8e23fe4e176b887f9fb86e952e8a0a3e2908',
     );
   });
@@ -221,46 +556,54 @@ void main() async {
   });
 
   test('ens resolves correctly to address and content hash', () async {
-    Map ensToAddressMap = await ensToAddr(
-      domainName: ensAddress,
-    );
+    // Use checkNow() for a real-time socket check — avoids stream timing issues
+    // and works on macOS where connectivity_plus.checkConnectivity() is not implemented.
+    if (!networkAvailable) {
+      debugPrint("Cannot run ENS test: network offline");
+      return;
+    }
+    enableTestNet = false;
 
-    Map ensToContentHash = await ensToContentHashAndIPFS(
-      cryptoDomainName: ensAddress,
-    );
-    if (ensToAddressMap['success']) {
-      expect(
-        ensToAddressMap['msg'],
-        startsWith('0x'),
-      );
+    final ensToAddressMap = await ensToAddr(domainName: ensAddress);
+    final ensToContentHash =
+        await ensToContentHashAndIPFS(cryptoDomainName: ensAddress);
+
+    if (ensToAddressMap.isOk) {
+      expect(ensToAddressMap.value.address, startsWith('0x'));
     } else {
-      throw Exception(ensToAddressMap['msg']);
+      throw Exception(ensToAddressMap.error);
     }
 
-    if (ensToContentHash['success']) {
-      expect(
-        ensToContentHash['msg'],
-        startsWith('https://ipfs.io/ipfs/'),
-      );
+    if (ensToContentHash.isOk) {
+      expect(ensToContentHash.value.url, startsWith('https://ipfs.io/ipfs/'));
     } else {
-      throw Exception(ensToContentHash['msg']);
+      throw Exception(ensToContentHash.error);
     }
   });
 
   test('unstoppable domain resolves correctly to address', () async {
-    const domainAddress = unstoppableAddress;
-    Map domainResult = await udResolver(
-      domainName: domainAddress,
+    if (!networkAvailable) {
+      debugPrint("Cannot run UD domain test: network offline");
+      return;
+    }
+    enableTestNet = false;
+
+    final domainResult = await udResolver(
+      domainName: unstoppableAddress,
       currency: 'BTC',
     );
-    if (domainResult['success']) {
-      expect(domainResult['msg'], 'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
+    debugPrint(domainResult.valueOrNull?.address ?? domainResult.error);
+
+    if (domainResult.isOk) {
+      expect(domainResult.value.address,
+          'bc1q359khn0phg58xgezyqsuuaha28zkwx047c0c3y');
     } else {
-      throw Exception(domainResult['msg']);
+      throw Exception(domainResult.error);
     }
   });
+
   test('test solidity sha3(keccak256) returns correct data', () {
-    expect(sha3('hello world'),
+    expect(solidityKeccak256('hello world'),
         '47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad');
   });
 
@@ -278,7 +621,7 @@ void main() async {
           );
           break;
         case 'BTC':
-          if (blockchainInfo.getName() == 'Bitcoin') {
+          if (blockchainInfo.getName() == 'Bitcoin (SegWit)') {
             blockchainInfo
                 .validateAddress('bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf');
             expect(
@@ -287,7 +630,6 @@ void main() async {
             );
           }
           break;
-
         case 'ETH':
           blockchainInfo
               .validateAddress('0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF');
@@ -375,7 +717,14 @@ void main() async {
           );
           break;
         case 'ZEC':
-          blockchainInfo.validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
+          if (blockchainInfo.getName() == 'Zcash') {
+            blockchainInfo
+                .validateAddress('t1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
+          } else if (blockchainInfo.getName() == 'Zcash (Test)') {
+            blockchainInfo
+                .validateAddress('tmYyum6WRz3KGE6gaSG499MmMRLsZEhX6PA');
+          }
+
           expect(
             () => blockchainInfo.validateAddress(invalidAddress),
             throwsA(isA<Exception>()),
@@ -473,6 +822,7 @@ void main() async {
       }
     }
   });
+
   test('check if keystore generate right address', () async {
     final keystore = {
       "address": "498b5c1c91911f379ca84f0896671bcee2186d48",
@@ -507,193 +857,128 @@ void main() async {
       keyStoreRes,
     );
   });
-  test('check if seed phrase generates the correct crypto address', () async {
-    // WARNING: These accounts, and their private keys, are publicly known.
-    // Any funds sent to them on Mainnet or any other live network WILL BE LOST.
-    walletImportType = WalletType.secretPhrase;
-    seedPhraseRoot = await compute(seedFromMnemonic, testMnemonic);
 
-    for (int i = 0; i < supportedChains.length; i++) {
-      Coin blockchainInfo = supportedChains[i];
-      AccountData cryptoKeys = await blockchainInfo.importData(testMnemonic);
-      switch (blockchainInfo.getDefault()) {
-        case 'ZIL':
-          expect(
-            cryptoKeys.address,
-            'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
-          );
-          break;
-        case 'STRK':
-          expect(
-            cryptoKeys.address,
-            '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
-          );
-          break;
-        case 'ICP':
-          expect(
-            cryptoKeys.address,
-            'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',
-          );
-          break;
-        case 'ONE':
-          expect(
-            cryptoKeys.address,
-            'one1q9rg4tpssfmgnx35g3sc6rlzlp7ht5pqr8jl05',
-          );
-          break;
-        case 'EGLD':
-          expect(
-            cryptoKeys.address,
-            'erd1245p8vky0clc0cw89h2l6rvcvadg73ffv4glhwh9gwqatlek3erqlle5ac',
-          );
-          break;
-        case 'BTC':
-          if (blockchainInfo.getName() == 'Bitcoin') {
-            expect(
-              cryptoKeys.address,
-              'bc1qzd9a563p9hfd93e3e2k3986m3ve0nmy4dtruaf',
-            );
-          } else if (blockchainInfo.getName() == 'Bitcoin (SegWit Test4)') {
-            expect(
-              cryptoKeys.address,
-              'tb1q5gnusd9438drgj524l5khuu8d3k5lrnhkv6pc3',
-            );
-          }
-          break;
-        case 'STX':
-          if (blockchainInfo.getName() == 'Stacks') {
-            expect(
-              cryptoKeys.address,
-              'SP2NA77FDECF5422YVK1FPDAAW4MGK24W9DECA8XT',
-            );
-          } else if (blockchainInfo.getName() == 'Stacks(Test)') {
-            expect(
-              cryptoKeys.address,
-              'ST2NA77FDECF5422YVK1FPDAAW4MGK24W9EQ42CWR',
-            );
-          }
-          break;
-        case 'ETH':
-          expect(
-            cryptoKeys.address,
-            '0x4AA3f03885Ad09df3d0CD08CD1Fe9cC52Fc43dBF',
-          );
+  // ─── shared address expectations ────────────────────────────────────────────
 
-          break;
+// { coinName ?? coinDefault : expectedAddress }
+// coinName is used when the same symbol has multiple variants (BTC, ADA, etc.)
 
-        case 'TON':
-          expect(
-            cryptoKeys.address,
-            'EQA_OzVBYqQdpbZsVQxQFUisWPgl1vryBA7ZTsYp7JKhtFO5',
-          );
+// ─── lookup key: name takes priority over symbol ─────────────────────────────
 
-          break;
-        case 'SUI':
-          expect(
-            cryptoKeys.address,
-            '0x873e40399c80eec9d2acccd938570b06d146c4dd1241318ff4c2874e3c8631a2',
-          );
-          break;
-        case 'APT':
-          expect(
-            cryptoKeys.address,
-            '0x61d17985e8c78040eea72513cacf3c3f35ba59fad27528c308f6683cf6534a5f',
-          );
-          break;
-        case 'ETC':
-          expect(
-            cryptoKeys.address,
-            '0x5C4b9839FDD8D5156549bE3eD5a00c933AaA3544',
-          );
+  String coinKey(Coin c) {
+    // CRO has three variants with same name — disambiguate by bech32Hrp
+    if (c is CosmosCoin && c.getDefault() == 'CRO') return 'CRO_${c.bech32Hrp}';
+    if (c is EthereumCoin && c.getDefault() == 'CRO') return 'CRO_evm';
+    // For multi-variant coins prefer the name, else fall back to symbol
+    const nameKeyed = {
+      'Cardano',
+      'Cardano (Preprod)',
+      'Bitcoin',
+      'Bitcoin (SegWit)',
+      'Bitcoin (Legacy)',
+      'Bitcoin (SegWit Test4)',
+      'Bitcoin (Legacy Test4)',
+      'Stacks',
+      'Stacks(Test)',
+      'Filecoin',
+      'Filecoin(Testnet)',
+      'Waves',
+      'Waves (Testnet)',
+      'Zcash',
+      'Zcash (Test)',
+    };
+    final name = c.getName();
+    return nameKeyed.contains(name) ? name : c.getDefault();
+  }
 
-          break;
-        case 'BCH':
-          expect(
-              cryptoKeys.address, 'qr4rwp766lf2xysphv8wz2qglphuzx5y7gku3hqruj');
-          break;
-        case 'LTC':
-          expect(cryptoKeys.address,
-              'ltc1qsru3fe2ttd3zgjfhn3r5eqz6tpe5cfzqszg8s7');
+// ─── helper ──────────────────────────────────────────────────────────────────
 
-          break;
-        case 'DASH':
-          expect(cryptoKeys.address, 'Xy1VVEXaiJstcmA9Jr1k38rcr3sGn3kQti');
+  Future<void> runAddressTest(
+    String bip39PhraseOrSeedHex,
+    Map<String, String> expected,
+  ) async {
+    seedPhraseRoot = await compute(seedFromMnemonic, bip39PhraseOrSeedHex);
+    final validSeedPhrase =
+        await compute(validateMnemonic, bip39PhraseOrSeedHex);
+    for (final testNet in [true, false]) {
+      enableTestNet = testNet;
+      supportedChains = getChains();
+      debugPrint(supportedChains.map((c) => c.getName()).join(', '));
+      debugPrint(
+        '=== ${testNet ? "TESTNET" : "MAINNET"} — ${supportedChains.length} chains ===',
+      );
+      for (final coin in supportedChains) {
+        if (!coin.supportBip39Seed && !validSeedPhrase) {
+          debugPrint(
+              '  [${testNet ? "T" : "M"}] ${coin.getName()} do not support bip39 seed');
+          continue;
+        }
 
-          break;
-        case 'TRX':
-          expect(cryptoKeys.address, 'TSwpGWaJtfZfyE8kd1NYD1xYgTQUSGLsSM');
-
-          break;
-        case 'SOL':
-          expect(
-            cryptoKeys.address,
-            '5rxJLW9p2NQPMRjKM1P3B7CQ7v2RASpz45T7QP39bX5W',
-          );
-
-          break;
-        case 'XLM':
-          expect(cryptoKeys.address,
-              'GA5MO26YHJK7VMDCTODG7DYO5YATNMRYQVTXNMNKKRFYXZOINJYQEXYT');
-
-          break;
-        case 'ALGO':
-          expect(cryptoKeys.address,
-              'GYFNCWZJM3NKKXXFIHNDGNL2BLKBMPKA5UZBUWZUQKUIGYWCG5L2SBPB2U');
-
-          break;
-        case 'ATOM':
-          expect(cryptoKeys.address,
-              'cosmos1f36h4udjp9yxaewrrgyrv75phtemqsagep85ne');
-
-          break;
-        case 'ZEC':
-          expect(cryptoKeys.address, 't1UNRtPu3WJUVTwwpFQHUWcu2LAhCrwDWuU');
-          break;
-
-        case 'ADA':
-          if (blockchainInfo.getName() == 'Cardano') {
-            expect(
-              cryptoKeys.address,
-              'addr1q9r4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsq34lpxc',
-            );
-          } else if (blockchainInfo.getName() == 'Cardano(Prepod)') {
-            expect(
-              cryptoKeys.address,
-              'addr_test1qpr4l5l6xzsvum2g5s7u99wt630p8qd9xpepf73reyyrmxpqde5sugs7jg27gp04fcq7a9z90gz3ac8mq7p7k5vwedsqjrzp28',
-            );
-          }
-
-          break;
-        case 'XRP':
-          expect(cryptoKeys.address, 'rQfZM9WRQJmTJeGroRC9pSyEC3jYeXKfuL');
-
-          break;
-        case 'FIL':
-          if (blockchainInfo.getName() == 'Filecoin') {
-            expect(cryptoKeys.address,
-                'f16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa');
-          } else if (blockchainInfo.getName() == 'Filecoin(Testnet)') {
-            expect(
-              cryptoKeys.address,
-              't16kbqwbyroghqd76fm5j4uiat5vasumclk7nezpa',
-            );
-          }
-
-          break;
-        case 'DOT':
-          expect(
-            cryptoKeys.address,
-            '15jjuhBx4AdCCKN99Tr2cVAbqjNKosFQYuRZRUiDoCQEab7g',
-          );
-        case 'WND':
-          expect(
-            cryptoKeys.address,
-            '5GoSmMvtCPMiknMdBpo2ULLSz7Ng7ZhGUQh5GBisF7NiQEMY',
-          );
-
-        default:
+        if (coin.getDefault() != coin.getSymbol()) continue;
+        final key = coinKey(coin);
+        final want = expected[key];
+        if (want == null) continue; // not in map → skip (e.g. Waves Local)
+        final got = await coin.importData(bip39PhraseOrSeedHex);
+        debugPrint(
+            '  [${testNet ? "T" : "M"}] ${coin.getName()} → ${got.address}');
+        expect(got.address, want, reason: '${coin.getName()} address mismatch');
       }
     }
+  }
+
+// ─── tests ───────────────────────────────────────────────────────────────────
+
+  test('check if seed phrase generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(testMnemonic1, mnemonic1Addresses);
+  });
+  test('check if bip39 seeds generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(bip39SeedHex1, mnemonic1Addresses);
+  });
+
+  test('check if seed phrase 2 generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(testMnemonic2, mnemonic2Addresses);
+  });
+  test('check if bip39 seeds 2 generates the correct crypto address', () async {
+    walletImportType = WalletType.bip39PhraseOrSeedHex;
+    await runAddressTest(bip39SeedHex2, mnemonic2Addresses);
+  });
+  test('bip39 seed can convert to slip39 and vice versa', () async {
+    final seeds = await compute(seedFromMnemonic, bip39SeedHex2);
+    final [minimum, shares] = [3, 8];
+    final password = HEX.encode(randomBytes(20));
+
+    final slip = Slip39.from(
+      [
+        [minimum, shares]
+      ],
+      masterSecret: seeds.seed,
+      passphrase: password,
+      threshold: 1,
+    );
+
+    final sharesList = slip.fromPath('r/0').mnemonics;
+
+    final set = sharesList
+        .map((share) => share.split(' ').sublist(0, 2).toString())
+        .toSet();
+
+    expect(set.length, 1);
+
+    final decoded = slip39utils.decodeMnemonics(sharesList);
+    final minimumlen = decoded.groups.first.memberThreshold;
+
+    expect(sharesList.length, greaterThan(minimumlen));
+
+    List<int> recovered = Slip39.recoverSecret(
+      sharesList.sublist(0, minimumlen),
+      passphrase: password,
+    );
+    final result = HEX.encode(recovered);
+
+    expect(result, bip39SeedHex2);
   });
 
   test('user pin length and pin trials is secured and correct.', () async {
@@ -710,6 +995,12 @@ void main() async {
   });
 
   test('can import token from blockchain', () async {
+    if (!networkAvailable) {
+      debugPrint("Cannot run import token test: network offline");
+      return;
+    }
+    enableTestNet = false;
+
     final chainCoin = evmFromChainId(56)!;
     final coin = ERCFungibleCoin(
       geckoID: '',

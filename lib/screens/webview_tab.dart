@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
@@ -26,7 +25,7 @@ import '../handlers/solana_handler.dart';
 import '../handlers/stacks_handler.dart';
 import '../handlers/starknet_handler.dart';
 
-// ─── Public widget ────────────────────────────────────────────────────────────
+// ── Public widget ─────────────────────────────────────────────────────────────
 
 class WebViewTab extends StatefulWidget {
   final String? url;
@@ -36,26 +35,9 @@ class WebViewTab extends StatefulWidget {
   final String? data;
   final String webNotifier;
 
-  final Function() onStateUpdated;
+  final VoidCallback onStateUpdated;
   final Function(CreateWindowAction) onCreateTabRequested;
-  final Function() onCloseTabRequested;
-
-  // ── Accessors forwarded to state ──────────────────────────────────────────
-
-  String? get currentUrl =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.url;
-  bool? get isSecure =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.isSecure;
-  InAppWebViewController? get controller =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.controller;
-  TextEditingController? get browserController =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.browserController;
-  Uint8List? get screenshot =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.screenshot;
-  String? get title =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.title;
-  Favicon? get favicon =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.favicon;
+  final VoidCallback onCloseTabRequested;
 
   const WebViewTab({
     GlobalKey? key,
@@ -73,36 +55,40 @@ class WebViewTab extends StatefulWidget {
   @override
   State<WebViewTab> createState() => _WebViewTabState();
 
-  Future<void> updateScreenshot() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)
-          ?.updateScreenshot();
-  Future<void> pause() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.pause();
-  Future<void> resume() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.resume();
-  Future<bool> canGoBack() async =>
-      await ((key as GlobalKey).currentState as _WebViewTabState?)
-          ?.canGoBack() ??
-      false;
-  Future<void> goBack() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.goBack();
-  Future<bool> canGoForward() async =>
-      await ((key as GlobalKey).currentState as _WebViewTabState?)
-          ?.canGoForward() ??
-      false;
-  Future<void> goForward() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.goForward();
-  Future<void> readloadWeb3_() async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)?.reloadWeb3_();
+  // ── Safe state accessor ───────────────────────────────────────────────────
+
+  _WebViewTabState? get _state =>
+      (key as GlobalKey?)?.currentState as _WebViewTabState?;
+
+  // ── Public accessors ──────────────────────────────────────────────────────
+
+  String? get currentUrl => _state?.url;
+  bool? get isSecure => _state?.isSecure;
+  InAppWebViewController? get controller => _state?.controller;
+  TextEditingController? get browserController => _state?.browserController;
+  Uint8List? get screenshot => _state?.screenshot;
+  String? get title => _state?.title;
+  Favicon? get favicon => _state?.favicon;
+
+  // ── Public methods ────────────────────────────────────────────────────────
+
+  Future<void> updateScreenshot() async => _state?.updateScreenshot();
+  Future<void> pause() async => _state?.pause();
+  Future<void> resume() async => _state?.resume();
+  Future<bool> canGoBack() async => await _state?.canGoBack() ?? false;
+  Future<void> goBack() async => _state?.goBack();
+  Future<bool> canGoForward() async => await _state?.canGoForward() ?? false;
+  Future<void> goForward() async => _state?.goForward();
+  Future<void> readloadWeb3_() async => _state?.reloadWeb3_();
   Future<void> switchWeb3(int chainId, String rpc) async =>
-      ((key as GlobalKey).currentState as _WebViewTabState?)
-          ?.switchWeb3_(chainId, rpc);
+      _state?.switchWeb3_(chainId, rpc);
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 
 class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   // ── Public accessors used by WebViewTab getters ───────────────────────────
+
   InAppWebViewController? controller;
   final browserController = TextEditingController();
   Uint8List? screenshot;
@@ -112,6 +98,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   Favicon? favicon;
 
   // ── Private state ─────────────────────────────────────────────────────────
+
   final ValueNotifier<double> _progress = ValueNotifier(0);
   String _initJs = '';
   final _jsonNotification =
@@ -141,6 +128,8 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  // _cryptoHandler handles both EthereumHandler and SolanaHandler internally.
+
   late final EthereumHandler _ethHandler;
   late final SolanaHandler _solHandler;
   late final CryptoHandler _cryptoHandler;
@@ -182,7 +171,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       ),
     ];
 
-    // Initialise handlers (controller set later in onWebViewCreated)
     _ethHandler = EthereumHandler(
       context: context,
       onSwitchChain: (chainId, rpc) => setupWebViewWalletBridge(chainId, rpc),
@@ -199,6 +187,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     _stacksHandler = StacksHandler(context: context);
 
     WidgetsBinding.instance.addObserver(this);
+
     IsolateNameServer.registerPortWithName(
         _port.sendPort, 'downloader_send_port');
     _port.listen((dynamic data) {
@@ -206,9 +195,10 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       final status = data[1] as DownloadTaskStatus;
       final progress = data[2] as int;
       if (kDebugMode) print('Download $id: $progress%');
-      if (status == DownloadTaskStatus.complete) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Download $id completed!')));
+      if (status == DownloadTaskStatus.complete && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download $id completed!')),
+        );
       }
     });
 
@@ -221,6 +211,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     url = widget.url ?? '';
   }
 
+  @override
+  void didUpdateWidget(WebViewTab old) {
+    super.didUpdateWidget(old);
+    // Refresh initJs if the parent provides updated init script
+    if (old.init != widget.init) _initJs = widget.init;
+  }
+
   @pragma('vm:entry-point')
   static void _downloadCallback(String id, int status, int progress) {
     IsolateNameServer.lookupPortByName('downloader_send_port')
@@ -230,10 +227,13 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   @override
   void dispose() {
     controller = null;
+    _progress.dispose();
+    _port.close();
     WidgetsBinding.instance.removeObserver(this);
     IsolateNameServer.removePortNameMapping('downloader_send_port');
     _httpAuthUsername.dispose();
     _httpAuthPassword.dispose();
+    browserController.dispose();
     super.dispose();
   }
 
@@ -249,7 +249,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     }
   }
 
-  // ── WebView callbacks ─────────────────────────────────────────────────────
+  // ── WebView creation ──────────────────────────────────────────────────────
 
   Future<void> _onWebViewCreated(InAppWebViewController ctrl) async {
     controller = ctrl;
@@ -258,7 +258,6 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
     _webNotificationController = WebNotificationController(ctrl);
 
-    // Register notification handlers
     ctrl.addJavaScriptHandler(
       handlerName: 'Notification.requestPermission',
       callback: (_) async =>
@@ -274,10 +273,9 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       callback: (args) => _onCloseNotification(args[0] as int),
     );
 
-    // Attach all blockchain handlers and keep context fresh
-    for (final h in _allHandlers) {
-      h.context = context;
-      h.attach(ctrl);
+    for (final handler in _allHandlers) {
+      handler.context = context;
+      handler.attach(ctrl);
     }
   }
 
@@ -285,107 +283,114 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // Keep handler contexts fresh on rebuilds
-    for (final h in _allHandlers) {
-      h.context = context;
+    // Keep handler contexts fresh on every rebuild
+    for (final handler in _allHandlers) {
+      handler.context = context;
     }
 
-    return Column(children: [
-      Expanded(
-        child: Stack(children: [
-          Container(color: Colors.white),
-          InAppWebView(
-            findInteractionController: _findInteraction,
-            pullToRefreshController: _pullToRefreshController,
-            initialUrlRequest:
-                URLRequest(url: WebUri(widget.data ?? walletURL)),
-            initialSettings: _settings,
-            initialUserScripts: UnmodifiableListView([
-              UserScript(
-                source: widget.provider + _initJs,
-                injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              Container(color: Colors.white),
+              InAppWebView(
+                findInteractionController: _findInteraction,
+                pullToRefreshController: _pullToRefreshController,
+                initialUrlRequest:
+                    URLRequest(url: WebUri(widget.data ?? walletURL)),
+                initialSettings: _settings,
+                initialUserScripts: UnmodifiableListView([
+                  UserScript(
+                    source: widget.provider + _initJs,
+                    injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                  ),
+                  ..._webNotification,
+                ]),
+                onWebViewCreated: _onWebViewCreated,
+                onPermissionRequest: _onPermissionRequest,
+                onUpdateVisitedHistory: (_, newUrl, __) {
+                  if (newUrl != null) {
+                    url = newUrl.toString();
+                    browserController.setText(url);
+                    widget.onStateUpdated();
+                  }
+                },
+                onDownloadStartRequest: (_, req) =>
+                    _tryDownloadFile('${req.url}', req.suggestedFilename),
+                shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+                onLoadResourceWithCustomScheme: _onCustomScheme,
+                onLoadStart: _onLoadStart,
+                onTitleChanged: (_, t) {
+                  title = t ?? '';
+                  widget.onStateUpdated();
+                },
+                onProgressChanged: (_, progress) {
+                  if (mounted) {
+                    _progress.value = progress / 100;
+                    if (progress == 100) {
+                      _pullToRefreshController.endRefreshing();
+                    }
+                  }
+                },
+                onLoadStop: _onLoadStop,
+                onConsoleMessage: (_, msg) {
+                  if (kDebugMode &&
+                      !msg.toString().contains('externalDetectWallets')) {
+                    debugPrint(msg.toString());
+                  }
+                },
+                onReceivedHttpAuthRequest: _onHttpAuth,
               ),
-              ..._webNotification,
-            ]),
-            onWebViewCreated: _onWebViewCreated,
-            onPermissionRequest: _onPermissionRequest,
-            onUpdateVisitedHistory: (_, newUrl, __) {
-              if (newUrl != null) {
-                url = newUrl.toString();
-                browserController.setText(url);
-                widget.onStateUpdated();
-              }
-            },
-            onDownloadStartRequest: (_, req) =>
-                _tryDownloadFile('${req.url}', req.suggestedFilename),
-            shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-            onLoadResourceWithCustomScheme: _onCustomScheme,
-            onLoadStart: _onLoadStart,
-            onTitleChanged: (_, t) {
-              title = t ?? '';
-              widget.onStateUpdated();
-            },
-            onProgressChanged: (_, progress) {
-              if (mounted) {
-                _progress.value = progress / 100;
-                if (progress == 100) _pullToRefreshController.endRefreshing();
-              }
-            },
-            onLoadStop: _onLoadStop,
-            onConsoleMessage: (_, msg) {
-              if (kDebugMode &&
-                  !msg.toString().contains('externalDetectWallets')) {
-                print(msg);
-              }
-            },
-            onReceivedHttpAuthRequest: _onHttpAuth,
+              // Progress indicator
+              ValueListenableBuilder<double>(
+                valueListenable: _progress,
+                builder: (_, value, __) => value < 1.0
+                    ? LinearProgressIndicator(value: value)
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
-          ValueListenableBuilder(
-            valueListenable: _progress,
-            builder: (_, value, __) => _progress.value < 1.0
-                ? LinearProgressIndicator(value: _progress.value)
-                : const SizedBox.shrink(),
-          ),
-        ]),
-      ),
-    ]);
+        ),
+      ],
+    );
   }
 
-  // ── InAppWebView event handlers ───────────────────────────────────────────
+  // ── Permission handler ────────────────────────────────────────────────────
 
   Future<PermissionResponse> _onPermissionRequest(
       InAppWebViewController _, PermissionRequest request) async {
-    final resources = <PermissionResourceType>[];
-    if (request.resources.contains(PermissionResourceType.CAMERA)) {
-      if (!(await Permission.camera.request()).isDenied) {
-        resources.add(PermissionResourceType.CAMERA);
-      }
-    }
-    if (request.resources.contains(PermissionResourceType.MICROPHONE)) {
-      if (!(await Permission.microphone.request()).isDenied) {
-        resources.add(PermissionResourceType.MICROPHONE);
-      }
-    }
-    if (request.resources
-        .contains(PermissionResourceType.CAMERA_AND_MICROPHONE)) {
-      if (!(await Permission.camera.request()).isDenied &&
-          !(await Permission.microphone.request()).isDenied) {
-        resources.add(PermissionResourceType.CAMERA_AND_MICROPHONE);
+    final granted = <PermissionResourceType>[];
+
+    Future<bool> ask(Permission p) async => !(await p.request()).isDenied;
+
+    for (final resource in request.resources) {
+      if (resource == PermissionResourceType.CAMERA) {
+        if (await ask(Permission.camera)) granted.add(resource);
+      } else if (resource == PermissionResourceType.MICROPHONE) {
+        if (await ask(Permission.microphone)) granted.add(resource);
+      } else if (resource == PermissionResourceType.CAMERA_AND_MICROPHONE) {
+        if (await ask(Permission.camera) && await ask(Permission.microphone)) {
+          granted.add(resource);
+        }
       }
     }
     return PermissionResponse(
-      resources: resources,
-      action: resources.isEmpty
+      resources: granted,
+      action: granted.isEmpty
           ? PermissionResponseAction.DENY
           : PermissionResponseAction.GRANT,
     );
   }
+
+  // ── URL loading policy ────────────────────────────────────────────────────
 
   Future<NavigationActionPolicy> _shouldOverrideUrlLoading(
       InAppWebViewController _, NavigationAction action) async {
     final uri = action.request.url!;
     final uriStr = uri.toString();
 
+    // WalletConnect deep links
     if (uriStr.contains('wc?uri=')) {
       await WCService.qrScanHandler(
           Uri.decodeFull(Uri.parse(uriStr).queryParameters['uri']!));
@@ -396,15 +401,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       return NavigationActionPolicy.CANCEL;
     }
 
-    const allowed = [
-      'http',
-      'https',
-      'file',
-      'chrome',
-      'data',
-      'javascript',
-      'about'
-    ];
+    // iOS download
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       if ((action.shouldPerformDownload ?? false) &&
           action.request.url != null) {
@@ -412,12 +409,23 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
         return NavigationActionPolicy.DOWNLOAD;
       }
     }
-    if (!allowed.contains(uri.scheme)) {
+
+    const allowedSchemes = {
+      'http',
+      'https',
+      'file',
+      'chrome',
+      'data',
+      'javascript',
+      'about'
+    };
+    if (!allowedSchemes.contains(uri.scheme)) {
       try {
         if (await canLaunchUrl(uri)) await launchUrl(uri);
       } catch (_) {}
       return NavigationActionPolicy.CANCEL;
     }
+
     return NavigationActionPolicy.ALLOW;
   }
 
@@ -430,16 +438,21 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return null;
   }
 
+  // ── Page lifecycle callbacks ──────────────────────────────────────────────
+
   Future<void> _onLoadStart(InAppWebViewController ctrl, Uri? u) async {
     browserController.setText(u.toString());
     final docTitle = await ctrl.getTitle();
 
+    // Build history — guard length before truncating
     List history = [
       {'url': u.toString(), 'title': docTitle}
     ];
     final saved = pref.get(historyKey);
     if (saved != null) history.addAll(jsonDecode(saved as String) as List);
-    history.length = maximumBrowserHistoryToSave;
+    if (history.length > maximumBrowserHistoryToSave) {
+      history = history.sublist(0, maximumBrowserHistoryToSave);
+    }
 
     favicon = null;
     title = '';
@@ -452,21 +465,23 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   Future<void> _onLoadStop(InAppWebViewController ctrl, Uri? u) async {
     await updateScreenshot();
     _pullToRefreshController.endRefreshing();
+
     if (u != null) {
       final cert = await ctrl.getCertificate();
       url = u.toString();
       isSecure = cert != null || urlIsSecure(u);
     }
+
+    // Pick highest-resolution favicon
     try {
       final favicons = await controller?.getFavicons();
       if (favicons != null && favicons.isNotEmpty) {
-        for (final f in favicons) {
-          if (favicon == null || (f.width ?? 0) > (favicon?.width ?? 0)) {
-            favicon = f;
-          }
-        }
+        favicon = favicons.reduce(
+          (a, b) => (b.width ?? 0) > (a.width ?? 0) ? b : a,
+        );
       }
     } catch (_) {}
+
     if (mounted) widget.onStateUpdated();
   }
 
@@ -477,20 +492,23 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Login'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(challenge.protectionSpace.host),
-          TextField(
-            decoration: const InputDecoration(labelText: 'Username'),
-            controller: _httpAuthUsername,
-          ),
-          TextField(
-            decoration: const InputDecoration(labelText: 'Password'),
-            controller: _httpAuthPassword,
-            obscureText: true,
-          ),
-        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(challenge.protectionSpace.host),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Username'),
+              controller: _httpAuthUsername,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Password'),
+              controller: _httpAuthPassword,
+              obscureText: true,
+            ),
+          ],
+        ),
         actions: [
-          ElevatedButton(
+          TextButton(
             child: const Text('Cancel'),
             onPressed: () {
               action = HttpAuthResponseAction.CANCEL;
@@ -498,7 +516,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
             },
           ),
           ElevatedButton(
-            child: const Text('Ok'),
+            child: const Text('OK'),
             onPressed: () {
               action = HttpAuthResponseAction.PROCEED;
               Navigator.pop(context);
@@ -518,25 +536,25 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   // ── Notification helpers ──────────────────────────────────────────────────
 
   Future<WebNotificationPermission> _onNotificationRequestPermission() async {
-    final u = await controller!.getUrl();
+    final u = await controller?.getUrl();
     if (u != null) {
       final saved = WebNotificationPermissionDb.getPermission(u.host);
       if (saved != null) return saved;
     }
-    if (!context.mounted || !mounted) return WebNotificationPermission.DEFAULT;
+    if (!mounted) return WebNotificationPermission.DEFAULT;
 
     final permission = await showDialog<WebNotificationPermission>(
           context: context,
           builder: (_) => AlertDialog(
             title: Text('${u?.host} wants to show notifications'),
             actions: [
-              ElevatedButton(
+              TextButton(
                 child: const Text('Deny'),
                 onPressed: () =>
                     Navigator.pop(context, WebNotificationPermission.DENIED),
               ),
               ElevatedButton(
-                child: const Text('Grant'),
+                child: const Text('Allow'),
                 onPressed: () =>
                     Navigator.pop(context, WebNotificationPermission.GRANTED),
               ),
@@ -551,15 +569,17 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     return permission;
   }
 
-  void _onShowNotification(WebNotification notification) async {
+  Future<void> _onShowNotification(WebNotification notification) async {
     _webNotificationController?.notifications[notification.id] = notification;
+
     Uri? iconUrl = notification.icon.trim().isNotEmpty
         ? Uri.tryParse(notification.icon)
         : null;
     if (iconUrl != null && !iconUrl.hasScheme) {
-      iconUrl =
-          Uri.tryParse('${await controller?.getUrl()}${iconUrl.toString()}');
+      final base = await controller?.getUrl();
+      iconUrl = Uri.tryParse('$base${iconUrl.toString()}');
     }
+
     await NotificationApi.showNotification(
       id: notification.id,
       title: notification.title,
@@ -568,30 +588,29 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       onclick: (_) async => notification.dispatchClick(),
       onclose: () async => notification.close(),
     );
+
     final vibrate = notification.vibrate;
-    if ((await Vibration.hasVibrator()) && vibrate.isNotEmpty) {
-      if (vibrate.length.isOdd) vibrate.add(0);
+    if (vibrate.isNotEmpty && (await Vibration.hasVibrator())) {
+      final pattern = List<int>.from(vibrate);
+      if (pattern.length.isOdd) pattern.add(0);
       final intensities = [
-        for (int i = 0; i < vibrate.length; i++)
-          (i.isEven && vibrate[i] > 0) ? 255 : 0
+        for (int i = 0; i < pattern.length; i++)
+          (i.isEven && pattern[i] > 0) ? 255 : 0
       ];
-      await Vibration.vibrate(pattern: vibrate, intensities: intensities);
+      await Vibration.vibrate(pattern: pattern, intensities: intensities);
     }
   }
 
-  void _onCloseNotification(int id) async {
-    final n = _webNotificationController?.notifications[id];
+  Future<void> _onCloseNotification(int id) async {
     await NotificationApi.closeNotification(id: id);
-    if (n != null) {
-      _webNotificationController?.notifications.remove(id);
-    }
+    _webNotificationController?.notifications.remove(id);
   }
 
-  // ── User agent / ad-blocking ──────────────────────────────────────────────
+  // ── User agent ────────────────────────────────────────────────────────────
 
   Future<void> _changeUserAgent() async {
     final def = await InAppWebViewController.getDefaultUserAgent();
-    String? ua;
+    final String? ua;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         ua = def.replaceFirst('; wv)', ')');
@@ -602,13 +621,18 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       default:
         ua = null;
     }
-    await controller?.setSettings(
-        settings: InAppWebViewSettings(userAgent: ua));
+    if (ua != null) {
+      await controller?.setSettings(
+        settings: InAppWebViewSettings(userAgent: ua),
+      );
+    }
   }
+
+  // ── Ad blocking ───────────────────────────────────────────────────────────
 
   Future<void> _blockAds(bool block) async {
     if (!block) return;
-    const filters = [
+    const urlFilters = [
       '.*.doubleclick.net/.*',
       '.*.ads.pubmatic.com/.*',
       '.*.googlesyndication.com/.*',
@@ -623,7 +647,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       '.*.teads.tv/.*',
       '.*.outbrain.com/.*',
     ];
-    for (final f in filters) {
+    for (final f in urlFilters) {
       _contentBlockers.add(ContentBlocker(
         trigger: ContentBlockerTrigger(urlFilter: f),
         action: ContentBlockerAction(type: ContentBlockerActionType.BLOCK),
@@ -637,13 +661,16 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
       ),
     ));
     await controller?.setSettings(
-        settings: InAppWebViewSettings(contentBlockers: _contentBlockers));
+      settings: InAppWebViewSettings(contentBlockers: _contentBlockers),
+    );
   }
 
-  // ── Navigation helpers ────────────────────────────────────────────────────
+  // ── Navigation ────────────────────────────────────────────────────────────
 
   Future<void> updateScreenshot() async {
-    screenshot = await controller!
+    final ctrl = controller;
+    if (ctrl == null) return;
+    screenshot = await ctrl
         .takeScreenshot(
           screenshotConfiguration: ScreenshotConfiguration(
             compressFormat: CompressFormat.JPEG,
@@ -672,12 +699,14 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   Future<bool> canGoBack() async => await controller?.canGoBack() ?? false;
+
   Future<void> goBack() async {
     if (await canGoBack()) await controller?.goBack();
   }
 
   Future<bool> canGoForward() async =>
       await controller?.canGoForward() ?? false;
+
   Future<void> goForward() async {
     if (await canGoForward()) await controller?.goForward();
   }
@@ -688,16 +717,20 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
   }
 
   Future<void> reloadWeb3_() async {
-    await controller!.removeAllUserScripts();
-    await controller!.addUserScripts(userScripts: [
+    final ctrl = controller;
+    if (ctrl == null) return;
+    await ctrl.removeAllUserScripts();
+    await ctrl.addUserScripts(userScripts: [
       UserScript(
         source: widget.provider + _initJs,
         injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
       ),
       ..._webNotification,
     ]);
-    await controller!.reload();
+    await ctrl.reload();
   }
+
+  // ── Download ──────────────────────────────────────────────────────────────
 
   void _tryDownloadFile(String fileUrl, [String? filename]) {
     final snack = ScaffoldMessenger.of(context);
@@ -705,7 +738,7 @@ class _WebViewTabState extends State<WebViewTab> with WidgetsBindingObserver {
     snack.showSnackBar(SnackBar(
       content: Text('Allow download $fileUrl?'),
       action: SnackBarAction(
-        label: 'Ok',
+        label: 'OK',
         onPressed: () => downloadFile(fileUrl, filename),
       ),
     ));

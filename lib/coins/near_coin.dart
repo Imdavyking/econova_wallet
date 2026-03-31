@@ -153,29 +153,21 @@ class NearCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'nearDetails${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = NearDeriveArgs(
-      seedRoot: seedPhraseRoot,
-    );
-
-    final keys = await compute(calculateNearKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'nearDetails${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateNearKey,
+          NearDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   Future<Uint8List> signMessage(Uint8List message) async {
     final account = await getAccount();
@@ -558,7 +550,7 @@ class _NearDerive {
   }
 }
 
-Future calculateNearKey(NearDeriveArgs config) async {
+Future<Map<String, dynamic>> calculateNearKey(NearDeriveArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   KeyData masterKey =
       await ED25519_HD_KEY.derivePath("m/44'/397'/0'", seedRoot_.seed);

@@ -2,9 +2,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
-import 'package:wallet_app/coins/utxo_coin.dart';
+import 'package:wallet_app/coins/cardano_coin.dart';
+import 'package:wallet_app/coins/legacy_utxo_coin.dart';
+import 'package:wallet_app/coins/nano_coin.dart';
+import 'package:wallet_app/coins/tezos_coin.dart';
+import 'package:wallet_app/coins/algorand_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
@@ -12,14 +17,19 @@ import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
-import 'package:wallet_app/coins/btc_coin.dart';
+import 'package:wallet_app/coins/segwit_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
+import 'package:wallet_app/coins/icp_coin.dart';
+import 'package:wallet_app/coins/icon_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
+import 'package:wallet_app/coins/wave_coin.dart';
+import 'package:wallet_app/coins/ontology_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/xrp_coin.dart';
 import 'package:wallet_app/coins/tron_coin.dart';
 import 'package:wallet_app/coins/filecoin_coin.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/wordlist.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../service/wallet_service.dart';
@@ -40,10 +50,10 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:page_transition/page_transition.dart';
-import 'coins/fungible_tokens/esdt_coin.dart';
+import 'coins/fungible_tokens/esdt_ft_coin.dart';
 import 'coins/fungible_tokens/ton_fungible_coins.dart';
-import 'coins/harmony_coin.dart';
-import 'coins/iotex_coin.dart';
+import 'coins/fungible_tokens/tron_fungible_coin.dart';
+import 'coins/evmhrp_coin.dart';
 import 'coins/multiversx_coin.dart';
 import 'coins/fungible_tokens/near_fungible_coin.dart';
 import 'coins/ronin_coin.dart';
@@ -60,95 +70,92 @@ import '../coins/solana_coin.dart';
 import '../coins/stellar_coin.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-List<Coin> supportedChains = [];
 late String currencyJson;
 late String currencyJsonSearch;
 late String trustWalletProvider;
 late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
-List<EthereumCoin> evmChains = [
-  ...getEVMBlockchains(),
-];
-
-List<NearCoin> nearChains = [
-  ...getNearBlockChains(),
-];
-List<SolanaCoin> solanaChains = [
-  ...getSolanaBlockChains(),
-];
-List<MultiversxCoin> multiversXchains = [
-  ...getEGLBBlockchains(),
-];
-
-List<TronCoin> tronChains = [
-  ...getTronBlockchains(),
-];
-List<TonCoin> tonChains = [
-  ...getTonBlockChains(),
-];
-
-List<ERCFungibleCoin> erc20Coins = [
-  ...getERC20Coins(),
-];
-
-List<StarknetCoin> starkNetCoins = [
-  ...getStarknetBlockchains(),
-];
-List<StacksCoin> stackCoins = [
-  ...getStacksBlockchains(),
-];
-
-Future<List<Coin>> fetchSupportedChains() async {
-  List<Coin> blockchains = [
+List<T> getChains<T extends Coin>() {
+  List<Coin> all = [
+    ...getNanoBlockChains(),
+    ...getWavesBlockChains(),
+    ...getOntologyBlockChains(),
     ...getESDTCoins(),
-    ...getUtxoCoins(),
+    ...getIconBlockChains(),
     ...getPolkadotFungibleCoins(),
     ...getTonFungibleCoins(),
-    ...tonChains,
-    ...evmChains,
-    ...nearChains,
-    ...tronChains,
-    ...solanaChains,
-    ...multiversXchains,
+    ...getCardanoBlockChains(),
+    ...getTonBlockChains(),
+    ...getEVMBlockchains(),
+    ...getNearBlockChains(),
+    ...getTronBlockchains(),
+    ...getSolanaBlockChains(),
+    ...getEGLDBlockchains(),
     ...getCosmosFungibleCoins(),
     ...getNearFungibles(),
+    ...getICPBlockchains(),
     ...getFUSEBlockchains(),
     ...getZilliqaBlockChains(),
-    ...getHarmonyBlockChains(),
-    ...getIOTEXBlockChains(),
+    ...getEVMHrpBlockchains(),
     ...getStellarBlockChains(),
     ...getSuiBlockChains(),
     ...getRoninBlockchains(),
+    ...getTezosBlockchains(),
+    ...getAlgorandBlockchains(),
     ...getFUSEFTBlockchains(),
+    ...getLegacyUtxoCoins(),
     ...getSplTokens(),
-    ...erc20Coins,
+    ...getERC20Coins(),
     ...getCosmosBlockChains(),
     ...getFilecoinBlockChains(),
-    ...starkNetCoins,
+    ...getStarknetBlockchains(),
     ...getXRPBlockChains(),
     ...getPolkadoBlockChains(),
     ...getAptosBlockchain(),
     ...getStarknetFungibleCoins(),
-  ]..sort((a, b) => a.getSymbol().compareTo(b.getSymbol()));
-
-  blockchains.insertAll(0, [
-    ...stackCoins,
+    ...getTronFungibleCoins(),
+    ...getStacksBlockchains(),
     ...getSIP010Coins(),
-    ...getNativeBtcCoins(),
-  ]);
+    ...getSegwitCoins(),
+  ];
 
-  return blockchains;
+  return (T == Coin ? all : all.whereType<T>().toList()) as List<T>;
+}
+
+Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
+  final coins = getChains<T>();
+  final cryptoPrice = await getCryptoPrice(useCache: true);
+
+  final balances = await Future.wait(
+    coins.map((coin) async {
+      final balance = await coin.getBalance(true);
+      final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
+      return MapEntry(coin, balance * price);
+    }),
+    eagerError: false,
+  );
+
+  balances.sort((a, b) => b.value.compareTo(a.value));
+
+  return balances.map((e) => e.key).toList();
 }
 
 late Box pref;
+final Map<String, Map<String, dynamic>> decodedCache = {};
 final mnemonicSuggester = Trie();
 late WalletType walletImportType;
+late ByteData logoBytes;
 
 // DO NOT USE (public)
-const testMnemonic =
+const testMnemonic2 =
     'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
-
+const testMnemonic1 =
+    'test test test test test test test test test test test junk'; // do not use it in production
+const bip39SeedHex1 =
+    '9dfc3c64c2f8bede1533b6a79f8570e5943e0b8fd1cf77107adf7b72cef42185d564a3aee24cab43f80e3c4538087d70fc824eabbad596a23c97b6ee8322ccc0';
+const bip39SeedHex2 =
+    '7e9f86e818b5b872612d4efe76b8c4232cede988846533e10d883e661217d2766ec04e05e3a4585eceacbf7e6f29a5bf7481f03c94e54a553602ac8d003889f2';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FlutterDownloader.initialize();
@@ -160,6 +167,7 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();
@@ -197,7 +205,6 @@ void main() async {
     encryptionCipher: HiveAesCipher(encryptionKey),
   );
   walletImportType = WalletService.getType();
-
   trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
   leatherWalletProvider = await rootBundle.loadString('js/leather.stx.min.js');
   nightly = await rootBundle.loadString('js/nightly.min.js');
@@ -205,17 +212,25 @@ void main() async {
   currencyJson = await rootBundle.loadString('json/currency_symbol.json');
   currencyJsonSearch = await rootBundle.loadString('json/currencies.json');
   await WebNotificationPermissionDb.loadSavedPermissions();
-  if (WalletService.isPharseKey()) {
+  if (WalletService.isBip39PhraseOrSeedHexKey()) {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
   }
-  supportedChains = await fetchSupportedChains();
+  supportedChains = await getChainsSortedByBalance();
+  testNetNotifier.addListener(() async {
+    debugPrint('enableTestNet = $enableTestNet — reloading chains');
+    supportedChains = await getChainsSortedByBalance();
+  });
+
   for (int i = 0; i < wordList.length; i++) {
     mnemonicSuggester.insert(wordList[i]);
   }
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
   }
+  await DeadManSwitchService.checkOnAppOpen();
+  cacheSupportedCurrencies();
+  logoBytes = await rootBundle.load('assets/logo.png');
   runApp(ProviderScope(
     child: MyApp(
       userDarkMode: pref.get(darkModekey, defaultValue: true),
@@ -224,6 +239,17 @@ void main() async {
       ),
     ),
   ));
+}
+
+// Call this once at app startup or first launch
+Future<void> cacheSupportedCurrencies() async {
+  if (pref.get(supportedCurrencyKey) != null) return; // already cached
+
+  final supported = jsonDecode(
+    (await http.get(Uri.parse(coinGeckoSupportedCurrencies))).body,
+  ) as List;
+
+  await pref.put(supportedCurrencyKey, supported.join(','));
 }
 
 int uint8ListToNumber(Uint8List bytes, {Endian endian = Endian.little}) {
@@ -333,6 +359,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: AnimatedSplashScreen.withScreenFunction(
         curve: Curves.linear,
         splashIconSize: 100,
+        duration: 1000,
         backgroundColor: Theme.of(context).colorScheme.surface,
         disableNavigation: true,
         splash: 'assets/logo.png',

@@ -2,13 +2,15 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:alan/wallet/bech32_encoder.dart';
 import 'package:aptos/aptos.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
 import 'package:alan/x/export.dart';
-import 'package:bech32/bech32.dart';
+import 'package:bech32/bech32.dart' hide Bech32Encoder;
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:alan/alan.dart' as cosmos;
@@ -193,32 +195,24 @@ class CosmosCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'cosmosDetails$bech32Hrp${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-    final networkInfo = getNetworkInfo();
-
-    final args = CosmosDeriveArgs(
-      mnemonic: mnemonic,
-      networkInfo: networkInfo,
-      path: path,
-    );
-
-    final keys = await compute(calculateCosmosKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'cosmosDetailsV2${path.replaceAll("/", "_")}${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(calculateCosmosKey,
+            CosmosDeriveArgs(path: path, seedRoot: seedPhraseRoot)),
+        postProcess: (cached) {
+          final rawAddress = HEX.decode(cached['hex_address']);
+          cached['address'] =
+              Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress));
+          return cached;
+        },
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -770,26 +764,6 @@ List<CosmosCoin> getCosmosBlockChains() {
     ]);
   } else {
     blockChains.addAll([
-      // CosmosCoin(
-      //   blockExplorer:
-      //       'https://www.mintscan.io/cosmos/tx/$blockExplorerPlaceholder',
-      //   symbol: 'ATOM',
-      //   name: 'Cosmos',
-      //   default_: 'ATOM',
-      //   image: 'assets/cosmos.png',
-      //   bech32Hrp: 'cosmos',
-      //   lcdUrl: 'https://stargate.cosmos.network',
-      //   grpcUrl: 'https://stargate.cosmos.network',
-      //   path: "m/44'/118'/0'/0/0",
-      //   coinDecimals: 6,
-      //   chainId: "cosmoshub-4",
-      //   denom: 'uatom',
-      //   geckoID: 'cosmos',
-      //   payScheme: 'cosmos',
-      //   rampID: 'COSMOS_ATOM',
-      //   pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
-      //   grpcPort: 9090,
-      // ),
       CosmosCoin(
         blockExplorer:
             'https://www.mintscan.io/osmosis/tx/$blockExplorerPlaceholder',
@@ -877,32 +851,23 @@ List<CosmosCoin> getCosmosBlockChains() {
 }
 
 class CosmosDeriveArgs {
-  final NetworkInfo networkInfo;
   final String path;
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
   const CosmosDeriveArgs({
-    required this.networkInfo,
     required this.path,
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
-Map calculateCosmosKey(CosmosDeriveArgs config) {
-  final wallet = cosmos.Wallet.derive(
-    config.mnemonic.split(' '),
-    config.networkInfo,
+Future<Map<String, dynamic>> calculateCosmosKey(CosmosDeriveArgs config) async {
+  final keys = cosmos.Wallet.deriveRaw(
+    config.seedRoot.seed,
     derivationPath: config.path,
   );
 
   return {
-    'address': wallet.bech32Address,
-    'privateKey': HEX.encode(wallet.privateKey),
-    'publicKey': HEX.encode(wallet.publicKey),
-    'hex_address': HEX.encode(wallet.address),
+    'privateKey': HEX.encode(keys.privateKey),
+    'publicKey': HEX.encode(keys.publicKey),
+    'hex_address': HEX.encode(keys.rawAddress),
   };
 }
-
-
-
-// peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
-// usdt injective

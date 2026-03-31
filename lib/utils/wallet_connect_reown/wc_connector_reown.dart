@@ -52,12 +52,12 @@ class WCConnectorReown {
         projectId: walletConnectKey,
         logLevel: LogLevel.nothing,
       ),
-      metadata: const PairingMetadata(
+      metadata:  PairingMetadata(
         name: walletName,
         url: walletURL,
         description: walletAbbr,
         icons: [walletIconURL],
-        redirect: Redirect(
+        redirect: const Redirect(
           native: 'econova://',
           universal: 'https://econova.app.links',
           linkMode: true,

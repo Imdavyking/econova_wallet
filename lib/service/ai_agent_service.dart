@@ -4,17 +4,17 @@ import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/service/ai_tools.dart";
-import "package:wallet_app/utils/all_coins.dart";
+import "package:wallet_app/utils/coingecko_ids.dart";
 import "package:wallet_app/utils/app_config.dart";
 import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
+// ignore: depend_on_referenced_packages
 import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
 import "../utils/ai_agent_utils.dart";
 import "../utils/either.dart";
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 typedef DashChatMessage = dash_chat.ChatMessage;
 typedef DashChatMedia = dash_chat.ChatMedia;
@@ -111,7 +111,12 @@ class AIAgentService {
         making transactions, checking balances,
         and querying smart contracts — all through simple, conversational commands.
         For sending, always use memo if available.
-
+        ── TOOL CALLING RULES — STRICT ──────────────────────────────────────
+        NEVER call multiple tools in the same response.
+        Always call ONE tool at a time, wait for the result, then call the next.
+        Even if the user asks for multiple balances, call QRY_getBalance once,
+        get the result, then call it again for the next token.
+        This is a hard rule — parallel tool calls are not allowed.
         ── CURRENT NETWORK ──────────────────────────────────────────────────────
         Active network: $currentCoin
         Native token address: $tokenAddress
@@ -158,7 +163,7 @@ class AIAgentService {
   // ── LLM ─────────────────────────────────────────────────────────────────────
 
   final llm = ChatOpenAI(
-    apiKey: dotenv.env['OPENROUTER_API_KEY'],
+    apiKey: openRouterApiKey,
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultOptions: const ChatOpenAIOptions(
       temperature: 0,

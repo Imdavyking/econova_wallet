@@ -1,58 +1,62 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:convert/convert.dart';
 import 'package:sha3/sha3.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:web3dart/web3dart.dart' as web3;
 import '../coins/ethereum_coin.dart';
 import 'abis.dart';
 
-Future<Map> udResolver({
+// ─── contract config ──────────────────────────────────────────────────────────
+
+const _udContracts = {
+  '0x049aba7510f45BA5b64ea9E658E342F904DB358D': 'Ethereum',
+  '0x1BDc0fD4fbABeed3E611fd6195fCd5d41dcEF393': 'Ethereum',
+  '0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f': 'Polygon Matic',
+};
+
+Future<Result<UDResult>> udResolver({
   required String domainName,
-  String? currency,
+  String currency = 'ETH',
 }) async {
   try {
-    domainName = domainName.toLowerCase().trim();
-    final udResolvers = {
-      "0x049aba7510f45BA5b64ea9E658E342F904DB358D": "Ethereum",
-      "0x1BDc0fD4fbABeed3E611fd6195fCd5d41dcEF393": "Ethereum",
-      "0xa9a6A3626993D487d2Dbda3173cf58cA1a9D9e9f": "Polygon Matic",
-    };
-    // TODO: make this run all at once
-    for (String contractAddr in udResolvers.keys) {
-      final web3.EthereumAddress proxyReader =
-          web3.EthereumAddress.fromHex(contractAddr);
+    final hash = BigInt.parse(nameHash(domainName.toLowerCase().trim()));
+    final key = 'crypto.$currency.address';
+    final evms = getEVMBlockchains();
 
-      web3.DeployedContract contract = web3.DeployedContract(
-        web3.ContractAbi.fromJson(json.encode(unstoppableDomainAbi), ''),
-        proxyReader,
-      );
-      EthereumCoin evmDetails = getEVMBlockchains().firstWhere(
-        (e) => e.name == udResolvers[contractAddr],
-      );
+    final results = await Future.wait(
+      _udContracts.entries.map((e) async {
+        final evmDetails = evms.firstWhere(
+          (c) => c.name == e.value,
+          orElse: () => evms.firstWhere((c) => c.name == 'Ethereum'),
+        );
+        final contract = web3.DeployedContract(
+          web3.ContractAbi.fromJson(json.encode(unstoppableDomainAbi), ''),
+          web3.EthereumAddress.fromHex(e.key),
+        );
+        final client = web3.Web3Client(evmDetails.rpc, Client());
+        try {
+          final res = await client.call(
+            contract: contract,
+            function: contract.function('get'),
+            params: [key, hash],
+          );
+          return res.first as String;
+        } catch (_) {
+          return '';
+        }
+      }),
+    );
 
-      final rpcUrl = evmDetails.rpc;
+    final address = results.firstWhere((r) => r.isNotEmpty, orElse: () => '');
+    if (address.isNotEmpty) return Ok(UDResult(address: address));
 
-      final params = [
-        "crypto.${currency ?? 'ETH'}.address",
-        BigInt.parse(nameHash(domainName))
-      ];
-
-      final client = web3.Web3Client(rpcUrl, Client());
-      String udCryptoAddress = (await client.call(
-        contract: contract,
-        function: contract.function('get'),
-        params: params,
-      ))
-          .first;
-
-      if (udCryptoAddress.isNotEmpty) {
-        return {'success': true, 'msg': udCryptoAddress};
-      }
-    }
-    return {'success': false, 'msg': 'Error resolving unstoppable domain ens'};
+    return const Err('Domain not found');
   } catch (e) {
-    return {'success': false, 'msg': 'Error resolving unstoppable domain ens'};
+    debugPrint('udResolver: $e');
+    return Err(e.toString());
   }
 }
 
@@ -71,13 +75,14 @@ String nameHash(String? inputName) {
       } else {
         final normalisedLabel = labels[i];
 
-        labelSha = sha3(normalisedLabel);
+        labelSha = solidityKeccak256(normalisedLabel);
       }
-      node = sha3(String.fromCharCodes(hex.decode('$node$labelSha')));
+      node =
+          solidityKeccak256(String.fromCharCodes(hex.decode('$node$labelSha')));
     }
   }
 
-  return '0x' + node;
+  return '0x$node';
 }
 
 bool _isEncodedLabelhash(hash) {
@@ -96,7 +101,7 @@ String _decodeLabelhash(String hash) {
   return hash.slice(1, -1);
 }
 
-String sha3(String string) {
+String solidityKeccak256(String string) {
   const keccakPadding = [1, 256, 65536, 16777216];
   final hash =
       SHA3(256, keccakPadding, 256).update(string.runes.toList()).digest();

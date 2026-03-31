@@ -74,25 +74,19 @@ class TonCoin extends Coin {
   String? getStakeDappUrl() => 'https://tonstakers.com';
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'tonCoinDetails${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = TonArgs(seedRoot: seedPhraseRoot);
-    final keys = await compute(calculateTonKey, args);
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'tonCoinDetailsV7${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateTonKey,
+          TonArgs(seedRoot: seedPhraseRoot),
+        ),
+      );
 
   @override
   bool get supportPrivateKey => true;
@@ -129,12 +123,12 @@ class TonCoin extends Coin {
   Future<double> getUserBalance({required String address}) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final details = await importData(data);
-    var wallet = ton.WalletContractV4R2.create(
+    final wallet = WalletV4.create(
+      chain: TonChain.fromWorkchain(0),
       publicKey: HEX.decode(details.publicKey!) as Uint8List,
+      bounceableAddress: false,
     );
-
-    var openedContract = getClient().open(wallet);
-    var balance = await openedContract.getBalance();
+    final balance = await wallet.getBalance(getRpc());
     return balance / BigInt.from(10).pow(decimals());
   }
 
@@ -248,7 +242,7 @@ class TonCoin extends Coin {
     final ownerWallet = WalletV4.create(
       chain: TonChain.fromWorkchain(0),
       publicKey: decodedPublicKey,
-      bounceableAddress: true,
+      bounceableAddress: false,
     );
 
     final privateKey = TonPrivateKey.fromBytes(decodedPrivateKey);
@@ -317,8 +311,10 @@ class _TonDerive {
       publicKey = publicKey.sublist(1);
     }
 
-    var wallet = ton.WalletContractV4R2.create(
+    final wallet = WalletV4.create(
+      chain: TonChain.fromWorkchain(0),
       publicKey: Uint8List.fromList(publicKey),
+      bounceableAddress: false,
     );
 
     return AccountData(
@@ -329,7 +325,7 @@ class _TonDerive {
   }
 }
 
-calculateTonKey(TonArgs config) async {
+Future<Map<String, dynamic>> calculateTonKey(TonArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
 
   final derivedKey =

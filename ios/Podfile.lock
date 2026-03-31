@@ -1,4 +1,6 @@
 PODS:
+  - agent_dart (0.0.1):
+    - Flutter
   - connectivity_plus (0.0.1):
     - Flutter
   - device_info_plus (0.0.1):
@@ -32,6 +34,8 @@ PODS:
     - FlutterMacOS
   - permission_handler_apple (9.1.1):
     - Flutter
+  - printing (1.0.0):
+    - Flutter
   - qr_code_scanner (0.2.0):
     - Flutter
     - MTBBarcodeScanner
@@ -45,6 +49,8 @@ PODS:
   - screenshot_callback (0.0.1):
     - Flutter
   - share (0.0.1):
+    - Flutter
+  - share_plus (0.0.1):
     - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
@@ -68,6 +74,7 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - agent_dart (from `.symlinks/plugins/agent_dart/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
@@ -80,12 +87,14 @@ DEPENDENCIES:
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - printing (from `.symlinks/plugins/printing/ios`)
   - qr_code_scanner (from `.symlinks/plugins/qr_code_scanner/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
   - safe_device (from `.symlinks/plugins/safe_device/ios`)
   - scan (from `.symlinks/plugins/scan/ios`)
   - screenshot_callback (from `.symlinks/plugins/screenshot_callback/ios`)
   - share (from `.symlinks/plugins/share/ios`)
+  - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - smart_auth (from `.symlinks/plugins/smart_auth/ios`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
@@ -102,6 +111,8 @@ SPEC REPOS:
     - Try
 
 EXTERNAL SOURCES:
+  agent_dart:
+    :path: ".symlinks/plugins/agent_dart/ios"
   connectivity_plus:
     :path: ".symlinks/plugins/connectivity_plus/ios"
   device_info_plus:
@@ -126,6 +137,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
+  printing:
+    :path: ".symlinks/plugins/printing/ios"
   qr_code_scanner:
     :path: ".symlinks/plugins/qr_code_scanner/ios"
   rive_common:
@@ -138,6 +151,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/screenshot_callback/ios"
   share:
     :path: ".symlinks/plugins/share/ios"
+  share_plus:
+    :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   smart_auth:
@@ -154,6 +169,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/video_player_avfoundation/darwin"
 
 SPEC CHECKSUMS:
+  agent_dart: 8f3c96d983b37b8c06c1df2b36f98951da4c5a8c
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   DTTJailbreakDetection: 5e356c5badc17995f65a83ed9483f787a0057b71
@@ -169,12 +185,14 @@ SPEC CHECKSUMS:
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 3787117e48f80715ff04a3830ca039283d6a4f29
+  printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   qr_code_scanner: d77f94ecc9abf96d9b9b8fc04ef13f611e5a147a
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
   safe_device: 205ad04de30f4512ca889418d4783e1b6fdf8cfe
   scan: 28e4f67b9b0d63ccd5c649acc3d6aaf94c0a7a81
   screenshot_callback: 85707df1b45a59407f7de87de2408c2f5312a473
   share: a34936589f3090d59481bcdc5c30cc9dd47c75f6
+  share_plus: de6030e33b4e106470e09322d87cf2a4258d2d1d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   smart_auth: 33668081c5f646af84f10492a067d25fdcd16951
   speech_to_text: 9dc43a5df3cbc2813f8c7cc9bd0fbf94268ed7ac

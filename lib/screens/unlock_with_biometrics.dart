@@ -26,7 +26,7 @@ class _UnlockWithBiometricsState extends State<UnlockWithBiometrics> {
     localization = AppLocalizations.of(context)!;
     return Transform.scale(
       scale: 0.9,
-      child: CupertinoSwitch(
+      child: Switch(
         value: allowedBiometrics,
         activeColor: appBackgroundblue,
         onChanged: (bool value) async {

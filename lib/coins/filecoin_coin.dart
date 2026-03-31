@@ -8,7 +8,6 @@ import '../utils/blake2bhash.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:flutter/foundation.dart';
 // ignore_for_file: constant_identifier_names
-
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
@@ -145,30 +144,22 @@ class FilecoinCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'fileCoinDetail$prefix${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = FilecoinDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      addressPrefix: prefix,
-    );
-
-    final keys = await compute(calculateFileCoinKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'fileCoinDetail$prefix${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateFileCoinKey,
+          FilecoinDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            addressPrefix: prefix,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -556,7 +547,9 @@ class _FilecoinDerive {
   }
 }
 
-Map calculateFileCoinKey(FilecoinDeriveArgs config) {
+Future<Map<String, dynamic>> calculateFileCoinKey(
+  FilecoinDeriveArgs config,
+) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final node = seedRoot_.root.derivePath("m/44'/461'/0'/0");
   final rs0 = node.derive(0);
@@ -615,12 +608,13 @@ String transactionSignLotus(Map msg, String privateKeyHex) {
     method ?? 0,
     base64.decode(params ?? '')
   ];
-  cbor.init();
-  final output = cbor.OutputStandard();
-  final encoder = cbor.Encoder(output);
-  output.clear();
-  encoder.writeArray(messageToEncode);
-  final unsignedMessage = output.getDataAsList();
+  final unsignedMessage = cbor.cbor.encode(cbor.CborList(
+    messageToEncode.map((e) {
+      if (e is int) return cbor.CborSmallInt(e);
+      if (e is List<int>) return cbor.CborBytes(Uint8List.fromList(e));
+      return const cbor.CborSmallInt(0);
+    }).toList(),
+  ));
   Uint8List privateKey = HEX.decode(privateKeyHex) as Uint8List;
 
   final messageDigest = getDigest(Uint8List.fromList(unsignedMessage));

@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:polkadart_scale_codec/polkadart_scale_codec.dart';

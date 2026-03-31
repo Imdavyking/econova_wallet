@@ -2,9 +2,13 @@
 
 import 'dart:convert';
 
+import 'package:bip39/bip39.dart';
+import 'package:wallet_app/coins/ethereum_coin.dart';
+import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
 import 'package:wallet_app/education/eip4337.edu.dart';
 import 'package:wallet_app/screens/contact.dart';
+import 'package:wallet_app/screens/dead_man_switch_screen.dart';
 import 'package:wallet_app/screens/language.dart';
 import 'package:wallet_app/screens/saved_urls.dart';
 import 'package:wallet_app/screens/security.dart';
@@ -16,7 +20,9 @@ import 'package:wallet_app/screens/support.dart';
 import 'package:wallet_app/screens/unlock_with_biometrics.dart';
 import 'package:wallet_app/screens/all_wallets.dart';
 import 'package:wallet_app/screens/wallet_connect.dart';
+import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -38,1078 +44,545 @@ class Settings extends StatefulWidget {
 
 class _SettingsState extends State<Settings>
     with AutomaticKeepAliveClientMixin {
-  final darkModeKey = 'useDark';
   late AppLocalizations localization;
+
+  // ── Cached futures — computed once per lifecycle ──────────────────────────
+  late final Future<bool> _deadSwitchFuture;
+  late final Future<bool> _dmsUserFuture;
+  late final Future<PackageInfo> _packageInfoFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _deadSwitchFuture = _checkDeadSwitch();
+    _dmsUserFuture = _checkDmsUser();
+    _packageInfoFuture = PackageInfo.fromPlatform();
+  }
+
+  Future<bool> _checkDeadSwitch() async {
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    return compute(validateMnemonic, mnemonic);
+  }
+
+  Future<bool> _checkDmsUser() async {
+    final ethCoin = getChains<EthereumCoin>().first;
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await ethCoin.importData(mnemonic);
+    final config = DeadManSwitchService.config;
+    return config?.senderAddress == response.address;
+  }
+
   bool _isValidUrl(String url) {
     url = url.trim();
     return url.isNotEmpty && Uri.tryParse(url) != null;
   }
 
+  // ── Testnet toggle ────────────────────────────────────────────────────────
+  void _onTestNetToggle(bool value) {
+    enableTestNet = value;
+    debugPrint('enableTestNet changed → $enableTestNet');
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            enableTestNet ? 'Switched to Testnet' : 'Switched to Mainnet',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     super.build(context);
     localization = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(localization.settings),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    localization.account,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: UserDetailsPlaceHolder(
-                      size: .5,
-                      textSize: 18,
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    localization.wallet,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const SetCurrency(),
-                              ),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Image(
-                                        image: AssetImage(
-                                            'assets/currency_new.png'),
-                                        width: 25),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.currency,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+      body: Column(
+        children: [
+          const TestnetBanner(),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    children: [
+                      // ── Account ───────────────────────────────────────────
+                      _SectionHeader(label: localization.account),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        const SizedBox(
-                          height: 20,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: UserDetailsPlaceHolder(size: .5, textSize: 18),
                         ),
-                        InkWell(
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => ChangeIdenticon(),
-                              ),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color:
-                                            Color.fromARGB(255, 142, 141, 148),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.icons,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.accountIdenticon,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Wallet ────────────────────────────────────────────
+                      _SectionHeader(label: localization.wallet),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        SizedBox(
-                          height: 35,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Container(
-                                    width: 26,
-                                    height: 26,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(13),
-                                      color: Color.fromARGB(255, 176, 116, 13),
-                                    ),
-                                    child: Icon(
-                                      FontAwesomeIcons.key,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-                                  Text(
-                                    localization.google2FA,
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                ],
+                              _SettingsRow(
+                                icon: Image(
+                                  image: AssetImage('assets/currency_new.png'),
+                                  width: 25,
+                                ),
+                                label: localization.currency,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const SetCurrency()),
+                                ),
                               ),
-                              GoogleFAStatus(),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 142, 141, 148),
+                                  icon: FontAwesomeIcons.icons,
+                                ),
+                                label: localization.accountIdenticon,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => ChangeIdenticon()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 176, 116, 13),
+                                  icon: FontAwesomeIcons.key,
+                                ),
+                                label: localization.google2FA,
+                                trailing: GoogleFAStatus(),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 95, 82),
+                                  icon: Icons.language,
+                                  iconSize: 22,
+                                ),
+                                label: localization.language,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const Language()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 95, 82),
+                                  icon: FontAwesomeIcons.book,
+                                  iconSize: 22,
+                                ),
+                                label: localization.education,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const EIP4337Education()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 50, 117, 186),
+                                  icon: FontAwesomeIcons.user,
+                                ),
+                                label: localization.contact,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => Contact()),
+                                ),
+                              ),
+                              if (!WalletService.isViewKey())
+                                _SettingsRow(
+                                  icon: Image(
+                                    image: AssetImage(
+                                        'assets/wallet_connect_new.png'),
+                                    width: 25,
+                                  ),
+                                  label: 'Wallet Connect',
+                                  onTap: () async {
+                                    try {
+                                      WcConnectorV2.signClient;
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const WalletConnect()),
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                        ..hideCurrentSnackBar()
+                                        ..showSnackBar(SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                            localization.errorTryAgain,
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                        ));
+                                    }
+                                  },
+                                ),
+                              if (WalletService.isBip39PhraseOrSeedHexKey())
+                                FutureBuilder<bool>(
+                                  future: _deadSwitchFuture, // ← cached
+                                  builder: (context, data) {
+                                    if (!data.hasData || data.data == false) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return _SettingsRow(
+                                      icon: _CircleIcon(
+                                        color: Color.fromARGB(255, 180, 30, 30),
+                                        icon: FontAwesomeIcons.heartPulse,
+                                        iconSize: 14,
+                                      ),
+                                      label: 'Dead Man\'s Switch',
+                                      trailing: _DmsStatusBadge(
+                                        future: _dmsUserFuture, // ← cached
+                                      ),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const DeadManSwitchScreen(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 50, 185, 55),
+                                  icon: FontAwesomeIcons.wallet,
+                                ),
+                                label: localization.allWallets,
+                                onTap: () async => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => AllWallets()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 233, 68, 123),
+                                  icon: FontAwesomeIcons.fileImport,
+                                ),
+                                label: localization.importWallet,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const MainScreen()),
+                                ),
+                              ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(168, 255, 123, 233),
+                                  icon: FontAwesomeIcons.headset,
+                                ),
+                                label: localization.support,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const Support()),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(
-                          height: 20,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Security ──────────────────────────────────────────
+                      _SectionHeader(label: localization.security),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        InkWell(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (ctx) {
-                                return const Language();
-                              }),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color: Color.fromARGB(255, 255, 95, 82),
-                                      ),
-                                      child: Icon(
-                                        Icons.language,
-                                        size: 22,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.language,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 238, 20, 139),
+                                  icon: FontAwesomeIcons.fingerprint,
                                 ),
-                              ],
-                            ),
+                                label: localization.useBiometrics,
+                                trailing: UnlockWithBiometrics(),
+                              ),
+                              if (WalletService.isPrivateKey())
+                                _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: Color.fromARGB(255, 142, 141, 148),
+                                    icon: FontAwesomeIcons.key,
+                                  ),
+                                  label: localization.showPrivateKey,
+                                  onTap: () async {
+                                    final data = WalletService.getActiveKey(
+                                      walletImportType,
+                                    )!
+                                        .data;
+                                    if (await authenticate(context)) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .hideCurrentSnackBar();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ShowPrivateKey(data: data),
+                                        ),
+                                      );
+                                    } else {
+                                      if (!context.mounted) return;
+                                      _showAuthFailed();
+                                    }
+                                  },
+                                ),
+                              if (WalletService.isBip39PhraseOrSeedHexKey())
+                                _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: Color.fromARGB(255, 142, 141, 148),
+                                    icon: FontAwesomeIcons.key,
+                                  ),
+                                  label: localization.showmnemonic,
+                                  onTap: () async {
+                                    final data = WalletService.getActiveKey(
+                                      walletImportType,
+                                    )!
+                                        .data;
+                                    if (await authenticate(context)) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .hideCurrentSnackBar();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => RecoveryPhrase(
+                                            data: data,
+                                            viewOnly: true,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      if (!context.mounted) return;
+                                      _showAuthFailed();
+                                    }
+                                  },
+                                ),
+                              _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: Color.fromARGB(255, 255, 61, 46),
+                                  icon: FontAwesomeIcons.lock,
+                                ),
+                                label: localization.changePin,
+                                onTap: () async {
+                                  if (await authenticate(context,
+                                      useLocalAuth: false)) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context)
+                                        .hideCurrentSnackBar();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const Security(isChangingPin: true),
+                                      ),
+                                    );
+                                  } else {
+                                    if (!context.mounted) return;
+                                    _showAuthFailed();
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(
-                          height: 20,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Network ───────────────────────────────────────────
+                      _SectionHeader(label: 'Network'),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
                         ),
-                        InkWell(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (ctx) {
-                                return const EIP4337Education();
-                              }),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color: Color.fromARGB(255, 255, 95, 82),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.book,
-                                        size: 22,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.education,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: testNetNotifier,
+                            builder: (_, isTestNet, __) {
+                              debugPrint('enableTestNet = $enableTestNet');
+                              return _SettingsRow(
+                                icon: _CircleIcon(
+                                  color: isTestNet
+                                      ? Color.fromARGB(255, 255, 149, 0)
+                                      : Color.fromARGB(255, 50, 185, 55),
+                                  icon: FontAwesomeIcons.networkWired,
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (ctx) {
-                                return Contact();
-                              }),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color:
-                                            Color.fromARGB(255, 50, 117, 186),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.user,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.contact,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
+                                label: isTestNet ? 'Testnet' : 'Mainnet',
+                                trailing: Transform.scale(
+                                  scale: 0.9,
+                                  child: Switch(
+                                    value: isTestNet,
+                                    activeColor: appBackgroundblue,
+                                    onChanged: _onTestNetToggle,
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        if (!WalletService.isViewKey()) ...[
-                          InkWell(
-                            onTap: () async {
-                              try {
-                                WcConnectorV2.signClient;
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (ctx) {
-                                    return const WalletConnect();
-                                  }),
-                                );
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context)
-                                      .hideCurrentSnackBar();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: Colors.red,
-                                      content: Text(
-                                        localization.errorTryAgain,
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
+                              );
                             },
-                            child: Container(
-                              color: Colors.transparent,
-                              height: 35,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Image(
-                                          image: AssetImage(
-                                              'assets/wallet_connect_new.png'),
-                                          width: 25),
-                                      SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        'Wallet Connect',
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 20,
-                          ),
-                        ],
-                        InkWell(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => AllWallets(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            color: Colors.transparent,
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color: Color.fromARGB(255, 50, 185, 55),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.wallet,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.allWallets,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
                           ),
                         ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const MainScreen(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            color: Colors.transparent,
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color:
-                                            Color.fromARGB(255, 233, 68, 123),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.fileImport,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.importWallet,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const Support(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            color: Colors.transparent,
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color:
-                                            Color.fromARGB(168, 255, 123, 233),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.headset,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.support,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    localization.security,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 35,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(13),
-                                        color:
-                                            Color.fromARGB(255, 238, 20, 139),
-                                      ),
-                                      child: Icon(
-                                        FontAwesomeIcons.fingerprint,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      localization.useBiometrics,
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                  ],
-                                ),
-                                UnlockWithBiometrics(),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 20,
-                          ),
-                          if (WalletService.isPrivateKey()) ...[
-                            InkWell(
-                              onTap: () async {
-                                final data = WalletService.getActiveKey(
-                                  walletImportType,
-                                )!
-                                    .data;
+                      ),
+                      const SizedBox(height: 10),
 
-                                if (await authenticate(context)) {
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context)
-                                      .hideCurrentSnackBar();
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (ctx) => ShowPrivateKey(
-                                        data: data,
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: Colors.red,
-                                      content: Text(
-                                        localization.authFailed,
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: SizedBox(
-                                height: 35,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          width: 26,
-                                          height: 26,
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(13),
-                                            color: Color.fromARGB(
-                                                255, 142, 141, 148),
-                                          ),
-                                          child: Icon(
-                                            FontAwesomeIcons.key,
-                                            size: 16,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          width: 10,
-                                        ),
-                                        Text(
-                                          localization.showPrivateKey,
-                                          style: TextStyle(fontSize: 18),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                      // ── Web ───────────────────────────────────────────────
+                      _SectionHeader(label: localization.web),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: _SettingsRow(
+                            icon: _CircleIcon(
+                              color: Color.fromARGB(255, 28, 119, 255),
+                              icon: FontAwesomeIcons.bookmark,
                             ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                          ],
-                          if (WalletService.isPharseKey()) ...[
-                            InkWell(
-                              onTap: () async {
-                                final data = WalletService.getActiveKey(
-                                  walletImportType,
-                                )!
-                                    .data;
-
-                                if (await authenticate(context)) {
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context)
-                                      .hideCurrentSnackBar();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (ctx) => RecoveryPhrase(
-                                        data: data,
-                                        viewOnly: true,
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: Colors.red,
-                                      content: Text(
-                                        localization.authFailed,
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: SizedBox(
-                                height: 35,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          width: 26,
-                                          height: 26,
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(13),
-                                            color: Color.fromARGB(
-                                                255, 142, 141, 148),
-                                          ),
-                                          child: Icon(
-                                            FontAwesomeIcons.key,
-                                            size: 16,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          width: 10,
-                                        ),
-                                        Text(
-                                          localization.showmnemonic,
-                                          style: TextStyle(fontSize: 18),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                          ],
-                          InkWell(
-                            onTap: () async {
-                              if (await authenticate(
-                                context,
-                                useLocalAuth: false,
-                              )) {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentSnackBar();
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (ctx) => const Security(
-                                      isChangingPin: true,
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.authFailed,
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              color: Colors.transparent,
-                              height: 35,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        width: 26,
-                                        height: 26,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(13),
-                                          color:
-                                              Color.fromARGB(255, 255, 61, 46),
-                                        ),
-                                        child: Icon(
-                                          FontAwesomeIcons.shieldHalved,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        localization.changePin,
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    localization.web,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          InkWell(
+                            label: localization.bookMark,
                             onTap: () async {
                               List data = [];
                               if (pref.get(bookMarkKey) != null) {
                                 data =
                                     jsonDecode(pref.get(bookMarkKey)) as List;
                               }
-
-                              final bookmarkTitle = localization.bookMark;
-                              final bookmarkEmpty = localization.noBookMark;
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (ctx) => SavedUrls(
-                                    bookmarkTitle,
-                                    bookmarkEmpty,
+                                  builder: (_) => SavedUrls(
+                                    localization.bookMark,
+                                    localization.noBookMark,
                                     bookMarkKey,
                                     data: data,
                                   ),
                                 ),
                               );
                             },
-                            child: Container(
-                              color: Colors.transparent,
-                              height: 35,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Community ─────────────────────────────────────────
+                      Card(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                localization.joinOurCommunities,
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        width: 26,
-                                        height: 26,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(13),
-                                          color:
-                                              Color.fromARGB(255, 28, 119, 255),
-                                        ),
-                                        child: Icon(
-                                          FontAwesomeIcons.bookmark,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        localization.bookMark,
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                    ],
-                                  ),
+                                  if (_isValidUrl(telegramLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.telegram,
+                                      url: telegramLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(twitterLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.twitter,
+                                      url: twitterLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(mediumLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.medium,
+                                      url: mediumLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(discordLink)) ...[
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.discord,
+                                      url: discordLink,
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                  if (_isValidUrl(instagramLink))
+                                    _SocialIcon(
+                                      icon: FontAwesomeIcons.instagram,
+                                      url: instagramLink,
+                                    ),
                                 ],
                               ),
-                            ),
-                          ),
-                        ]),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Card(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(15),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            localization.joinOurCommunities,
-                            style: TextStyle(fontSize: 18),
+                            ],
                           ),
                         ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Row(
-                          children: [
-                            if (_isValidUrl(telegramLink)) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchPageUrl(
-                                    context: context,
-                                    url: telegramLink,
-                                  );
-                                },
-                                child: const Icon(
-                                  FontAwesomeIcons.telegram,
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 20,
-                              ),
-                            ],
-                            if (_isValidUrl(twitterLink)) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchPageUrl(
-                                    context: context,
-                                    url: twitterLink,
-                                  );
-                                },
-                                child: const Icon(
-                                  FontAwesomeIcons.twitter,
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 20,
-                              )
-                            ],
-                            if (_isValidUrl(mediumLink)) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchPageUrl(
-                                    context: context,
-                                    url: mediumLink,
-                                  );
-                                },
-                                child: const Icon(
-                                  FontAwesomeIcons.medium,
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 20,
-                              ),
-                            ],
-                            if (_isValidUrl(discordLink)) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchPageUrl(
-                                    context: context,
-                                    url: discordLink,
-                                  );
-                                },
-                                child: const Icon(
-                                  FontAwesomeIcons.discord,
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 20,
-                              ),
-                            ],
-                            if (_isValidUrl(instagramLink)) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchPageUrl(
-                                    context: context,
-                                    url: instagramLink,
-                                  );
-                                },
-                                child: const Icon(
-                                  FontAwesomeIcons.instagram,
-                                ),
-                              ),
-                            ]
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                FutureBuilder<Map<String, dynamic>>(future: () async {
-                  PackageInfo packageInfo = await PackageInfo.fromPlatform();
-
-                  return {
-                    'appName': packageInfo.appName,
-                    'version': packageInfo.version,
-                    'buildNumber': packageInfo.buildNumber
-                  };
-                }(), builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    Map<String, dynamic> data = snapshot.data!;
-                    return Align(
-                      alignment: Alignment.center,
-                      child: Text.rich(
-                        TextSpan(
-                            text: data['appName'],
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                            children: [
-                              TextSpan(
-                                text:
-                                    ' v${data['version']} (${data['buildNumber']})',
-                                style:
-                                    TextStyle(fontSize: 16, color: Colors.grey),
-                              )
-                            ]),
                       ),
-                    );
-                  }
-                  return Text('');
-                })
-              ],
+                      const SizedBox(height: 20),
+
+                      // ── App version ───────────────────────────────────────
+                      FutureBuilder<PackageInfo>(
+                        future: _packageInfoFuture, // ← cached
+                        builder: (_, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox.shrink();
+                          final info = snapshot.data!;
+                          return Text(
+                            '${info.appName} v${info.version} (${info.buildNumber})',
+                            style: const TextStyle(
+                                fontSize: 16, color: Colors.grey),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showAuthFailed() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text(
+          localization.authFailed,
+          style: TextStyle(color: Colors.white),
         ),
       ),
     );
@@ -1117,4 +590,144 @@ class _SettingsState extends State<Settings>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  const _SectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+}
+
+/// A single settings row — icon + label + optional trailing widget.
+/// Pass [onTap] to make it tappable; omit for display-only rows.
+class _SettingsRow extends StatelessWidget {
+  final Widget icon;
+  final String label;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.label,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          height: 35,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  icon,
+                  const SizedBox(width: 10),
+                  Text(label, style: const TextStyle(fontSize: 18)),
+                ],
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular icon container used throughout the settings list.
+class _CircleIcon extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final double iconSize;
+
+  const _CircleIcon({
+    required this.color,
+    required this.icon,
+    this.iconSize = 16,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
+      child: Icon(icon, size: iconSize, color: Colors.white),
+    );
+  }
+}
+
+/// Tappable social media icon.
+class _SocialIcon extends StatelessWidget {
+  final IconData icon;
+  final String url;
+
+  const _SocialIcon({required this.icon, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => launchPageUrl(context: context, url: url),
+      child: Icon(icon),
+    );
+  }
+}
+
+class _DmsStatusBadge extends StatelessWidget {
+  final Future<bool> future;
+  const _DmsStatusBadge({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: future, // ← injected, not created here
+      builder: (context, data) {
+        var (color, label) = (Colors.grey, 'Off');
+        if (!data.hasError && data.hasData && data.data == true) {
+          (color, label) = switch (DeadManSwitchService.state) {
+            DmsState.active => (Colors.green, 'Armed'),
+            DmsState.triggered => (Colors.red, 'Triggered'),
+            DmsState.cancelled => (Colors.orange, 'Off'),
+            DmsState.inactive => (Colors.grey, 'Off'),
+          };
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.4)),
+          ),
+          child: Text(label, style: TextStyle(fontSize: 11, color: color)),
+        );
+      },
+    );
+  }
 }

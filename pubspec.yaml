@@ -36,6 +36,7 @@ dependencies:
   bip39: ^1.0.6
   bip32: ^2.0.0
   http: ^0.13.4
+  slip39: ^0.3.0
   intl: ^0.19.0
   dio: ^4.0.0
   web3dart: ^2.3.3
@@ -64,6 +65,10 @@ dependencies:
   image_picker: ^0.8.4+5
   awesome_dialog: ^3.2.1
   validators: ^3.0.0
+  csv: ^6.0.0
+  share_plus: ^7.0.0
+  pdf: ^3.10.0
+  printing: ^5.11.0
   device_info_plus: ^11.3.0
   eth_sig_util: ^0.0.7
   path: ^1.8.0
@@ -106,7 +111,7 @@ dependencies:
   borsh_annotation: ^0.3.1+5
   laksadart: ^0.2.1+1
 
-  fuse_wallet_sdk: ^0.3.5
+  fuse_wallet_sdk: ^0.3.8
 
 
   flutter_dotenv: ^5.0.2
@@ -137,6 +142,13 @@ dependencies:
   pointycastle: 3.9.1
   poseidon: ^0.0.1
   image: 4.3.0
+  reown_walletkit: "1.1.3"
+  safe_device: ^1.2.0
+  nanodart: ^2.0.0
+  agent_dart:
+    path: ./agent_dart-0.1.24+1
+  algorand_dart:
+    path: ./algorand_dart-1.0.3
   wallet_connect_dart_v2:
     path: ./wallet_connect_dart_v2
   jazzicon:
@@ -149,8 +161,7 @@ dependencies:
     path: ./bitbox
   solana_name_service:
     path: ./solana_name_service
-  sui:
-    path: ./sui
+  sui: ^0.3.7
   charts_flutter:
     path: ./charts_flutter-0.12.0
   alan:
@@ -163,8 +174,9 @@ dependencies:
     path: ./starknet-0.2.0
   starknet_provider:
     path: ./starknet_provider-0.2.0
-  reown_walletkit: "1.1.3"
-  safe_device: ^1.2.0
+  cardano_flutter_sdk:
+    path: ./cardano_dart_sdk-3.2.1
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -181,6 +193,7 @@ dependency_overrides:
   ffi: 2.0.0
   pinenacl: ^0.6.0
   pointycastle: ^3.4.0
+  cbor: ^6.3.5
   logger: ^2.5.0
   starknet:
     path: ./starknet-0.2.0

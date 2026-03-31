@@ -1,0 +1,286 @@
+// ignore_for_file: non_constant_identifier_names
+
+import 'dart:math';
+
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hex/hex.dart';
+import 'package:algorand_dart/algorand_dart.dart' as algo_rand;
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/algorand_trx_fetcher.dart';
+import '../interface/coin.dart';
+import '../main.dart';
+import '../model/seed_phrase_root.dart';
+import '../utils/app_config.dart';
+import '../utils/rpc_urls.dart';
+
+const algorandDecimals = 6;
+
+class AlgorandCoin extends Coin {
+  AlgorandTypes algoType;
+  String blockExplorer;
+  String symbol;
+  String default_;
+  String image;
+  String name;
+
+  AlgorandCoin({
+    required this.blockExplorer,
+    required this.symbol,
+    required this.default_,
+    required this.image,
+    required this.name,
+    required this.algoType,
+  });
+
+  @override
+  TransactionFetcher? get transactionFetcher => AlgorandTransactionFetcher(
+        algoType: algoType,
+        symbol: 'ALGO',
+        explorerBase: algoType == AlgorandTypes.mainNet
+            ? 'https://algoexplorer.io/tx/'
+            : 'https://testnet.algoexplorer.io/tx/',
+      );
+  // ── Coin interface ──────────────────────────────────────────────────────────
+
+  @override
+  String getExplorer() => blockExplorer;
+
+  @override
+  String getDefault() => default_;
+
+  @override
+  String getImage() => image;
+
+  @override
+  String getName() => name;
+
+  @override
+  String getSymbol() => symbol;
+
+  @override
+  int decimals() => algorandDecimals;
+
+  @override
+  String getGeckoId() => 'algorand';
+
+  @override
+  String getRampID() => algoType == AlgorandTypes.mainNet ? 'ALGO_ALGO' : '';
+
+  @override
+  String getPayScheme() => 'algorand';
+
+  // ── Serialization ───────────────────────────────────────────────────────────
+
+  factory AlgorandCoin.fromJson(Map<String, dynamic> json) {
+    return AlgorandCoin(
+      algoType: json['algoType'],
+      blockExplorer: json['blockExplorer'],
+      default_: json['default'],
+      symbol: json['symbol'],
+      image: json['image'],
+      name: json['name'],
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'algoType': algoType,
+      'default': default_,
+      'symbol': symbol,
+      'name': name,
+      'blockExplorer': blockExplorer,
+      'image': image,
+    };
+  }
+
+  // ── Key derivation ──────────────────────────────────────────────────────────
+
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'algorandDetails${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateAlgorandKey,
+          AlgorandDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
+
+  @override
+  bool get supportBip39Seed => true;
+
+  // ── Balance ─────────────────────────────────────────────────────────────────
+
+  @override
+  Future<double> getUserBalance({required String address}) async {
+    final microAlgos = await getAlgorandClient(algoType).getBalance(address);
+    return microAlgos / pow(10, algorandDecimals);
+  }
+
+  @override
+  Future<double> getBalance(bool useCache) async {
+    final address = await getAddress();
+    final key = 'algorandAddressBalance$address${algoType.index}';
+    final storedBalance = pref.get(key);
+    double savedBalance = storedBalance ?? 0;
+
+    if (useCache) return savedBalance;
+
+    try {
+      final balance = await getUserBalance(address: address);
+      await pref.put(key, balance);
+      return balance;
+    } catch (e) {
+      if (e is algo_rand.AlgorandException) {
+      } else {}
+      return savedBalance;
+    }
+  }
+
+  // ── Transfer ─────────────────────────────────────────────────────────────────
+
+  @override
+  Future<({String txHash, String? txRaw})?> transferToken(
+    String amount,
+    String to, {
+    String? memo,
+  }) async {
+    // Re-derive the full Account object (with signing capability) from seed.
+    final account = await compute(
+      _deriveAlgorandAccount,
+      AlgorandDeriveArgs(
+        seedRoot: seedPhraseRoot,
+      ),
+    );
+
+    String txHash;
+    try {
+      txHash = await getAlgorandClient(algoType).sendPayment(
+        account: account,
+        recipient: algo_rand.Address.fromAlgorandAddress(address: to),
+        amount: algo_rand.Algo.toMicroAlgos(double.parse(amount)),
+        note: memo,
+      );
+    } on algo_rand.AlgorandException catch (e) {
+      if (e.message.contains('below min')) {
+        throw Exception(
+          'Insufficient balance — Algorand requires a minimum of 0.1 ALGO to remain in the account after fees.',
+        );
+      }
+      throw Exception(e.message);
+    }
+
+    return (txHash: txHash, txRaw: null);
+  }
+
+  // ── Misc ────────────────────────────────────────────────────────────────────
+
+  @override
+  void validateAddress(String address) {
+    algo_rand.Address.fromAlgorandAddress(address: address);
+  }
+
+  @override
+  Future<double> getTransactionFee(String amount, String to) async => 0.001;
+
+  @override
+  Future<String> addressExplorer() async {
+    final address = await getAddress();
+    return blockExplorer
+        .replaceFirst('/tx/', '/address/')
+        .replaceFirst(blockExplorerPlaceholder, address);
+  }
+}
+
+// ── Registry ──────────────────────────────────────────────────────────────────
+
+List<AlgorandCoin> getAlgorandBlockchains() {
+  if (enableTestNet) {
+    return [
+      AlgorandCoin(
+        blockExplorer:
+            'https://testnet.algoexplorer.io/tx/$blockExplorerPlaceholder',
+        symbol: 'ALGO',
+        name: 'Algorand(Testnet)',
+        default_: 'ALGO',
+        image: 'assets/algorand.png',
+        algoType: AlgorandTypes.testNet,
+      ),
+    ];
+  }
+  return [
+    AlgorandCoin(
+      blockExplorer: 'https://algoexplorer.io/tx/$blockExplorerPlaceholder',
+      symbol: 'ALGO',
+      name: 'Algorand',
+      default_: 'ALGO',
+      image: 'assets/algorand.png',
+      algoType: AlgorandTypes.mainNet,
+    ),
+  ];
+}
+
+enum AlgorandTypes { mainNet, testNet }
+
+// ── Algorand client factory ───────────────────────────────────────────────────
+
+algo_rand.Algorand getAlgorandClient(AlgorandTypes type) {
+  final algodClient = algo_rand.AlgodClient(
+    apiUrl: type == AlgorandTypes.mainNet
+        ? 'https://mainnet-api.4160.nodely.dev'
+        : 'https://testnet-api.4160.nodely.dev',
+    apiKey: '', // no key required
+    tokenKey: 'X-Algo-API-Token',
+  );
+
+  final indexerClient = algo_rand.IndexerClient(
+    apiUrl: type == AlgorandTypes.mainNet
+        ? 'https://mainnet-idx.4160.nodely.dev'
+        : 'https://testnet-idx.4160.nodely.dev',
+    apiKey: '',
+    tokenKey: 'X-Algo-API-Token',
+  );
+
+  final kmdClient = algo_rand.KmdClient(
+    apiUrl: 'http://localhost', // unused, just needs a valid URL
+    apiKey: '',
+  );
+
+  return algo_rand.Algorand(
+    algodClient: algodClient,
+    indexerClient: indexerClient,
+    kmdClient: kmdClient,
+  );
+}
+
+// ── Isolate args & key derivation ─────────────────────────────────────────────
+
+class AlgorandDeriveArgs {
+  final SeedPhraseRoot seedRoot;
+
+  const AlgorandDeriveArgs({
+    required this.seedRoot,
+  });
+}
+
+/// Returns a serialisable [Map] with just the address (used by [fromMnemonic]).
+Future<Map<String, dynamic>> calculateAlgorandKey(
+    AlgorandDeriveArgs args) async {
+  final account = await _deriveAlgorandAccount(args);
+  return {'address': account.publicAddress};
+}
+
+/// Returns the full [algo_rand.Account] — used when signing is needed.
+Future<algo_rand.Account> _deriveAlgorandAccount(
+    AlgorandDeriveArgs args) async {
+  final masterKey = await ED25519_HD_KEY.derivePath(
+    "m/44'/283'/0'/0'/0'",
+    args.seedRoot.seed,
+  );
+  return algo_rand.Account.fromPrivateKey(HEX.encode(masterKey.key));
+}

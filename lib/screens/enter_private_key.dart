@@ -1,10 +1,10 @@
 import 'package:bs58check/bs58check.dart';
-import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/get_token_image.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -156,7 +156,10 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const WalletLogo(),
+                        GetTokenImage(
+                          currCoin: coin,
+                          radius: 30,
+                        ),
                         const SizedBox(
                           height: 20,
                         ),
@@ -446,7 +449,7 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
                                   Uint8List privKeyBytes;
 
-                                  if (isHEXStripox(privateKey)) {
+                                  if (isHEXstrip0x(privateKey)) {
                                     privKeyBytes =
                                         HEX.decode(privateKey) as Uint8List;
                                   } else {
@@ -475,17 +478,20 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
                                 for (final privKey in privKeyList) {
                                   if (privKey == privatKey) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: Colors.red,
-                                        content: Text(
-                                          localization.walletAlreadyImported,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                            localization.walletAlreadyImported,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
                                     setState(() {
                                       isLoading = false;
                                     });
@@ -505,13 +511,16 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                                   cryptoWallName,
                                 );
 
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (ctx) => const Wallet(),
-                                  ),
-                                  (r) => false,
-                                );
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (ctx) => const Wallet(),
+                                    ),
+                                    (r) => false,
+                                  );
+                                }
+
                                 setState(() {
                                   isLoading = false;
                                 });
@@ -520,16 +529,18 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
                                   print(e);
                                   print(sk);
                                 }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      e.toString(),
-                                      style:
-                                          const TextStyle(color: Colors.white),
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: Colors.red,
+                                      content: Text(
+                                        e.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
 
                                 setState(() {
                                   isLoading = false;

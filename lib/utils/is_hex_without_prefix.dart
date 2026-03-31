@@ -1,4 +1,4 @@
-isHEXStripox(String? str) {
+isHEXstrip0x(String? str) {
   if (str == null) {
     return false;
   }

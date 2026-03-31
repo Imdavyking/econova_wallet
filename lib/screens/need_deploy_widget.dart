@@ -5,97 +5,98 @@ import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/config/colors.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
-class NeedDeploymentWidget extends StatelessWidget {
-  NeedDeploymentWidget({super.key, required this.coin});
-  final ValueNotifier<bool> needDeployment = ValueNotifier(false);
-  final ValueNotifier<bool> isDeploying = ValueNotifier(false);
+class NeedDeploymentWidget extends StatefulWidget {
   final Coin coin;
-  late final AppLocalizations localization;
+  const NeedDeploymentWidget({super.key, required this.coin});
+
+  @override
+  State<NeedDeploymentWidget> createState() => _NeedDeploymentWidgetState();
+}
+
+class _NeedDeploymentWidgetState extends State<NeedDeploymentWidget> {
+  // ← cached future — not recreated on every build
+  late final Future<bool> _needDeployFuture;
+  bool _needsDeploy = false;
+  bool _isDeploying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _needDeployFuture = widget.coin.needDeploy();
+  }
+
+  Future<void> _deploy() async {
+    setState(() => _isDeploying = true);
+    try {
+      final deployed = await widget.coin.deployAccount();
+      if (mounted) setState(() => _needsDeploy = !deployed);
+    } catch (e) {
+      debugPrint(e.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content:
+              Text(e.toString(), style: const TextStyle(color: Colors.white)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDeploying = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
+    final localization = AppLocalizations.of(context)!;
+
     return FutureBuilder<bool>(
-      future: coin.needDeploy(),
+      future: _needDeployFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Container();
-        }
-        if (snapshot.data == false) {
-          return Container();
+        // Not loaded yet or doesn't need deploy
+        if (!snapshot.hasData || snapshot.data == false) {
+          return const SizedBox.shrink();
         }
 
-        needDeployment.value = snapshot.data!;
+        // Snapshot says needs deploy — but user may have deployed since
+        if (!_needsDeploy && snapshot.data == true) {
+          // first time — sync local state with snapshot
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) {
+              if (mounted) setState(() => _needsDeploy = true);
+            },
+          );
+          return const SizedBox.shrink();
+        }
 
-        return ValueListenableBuilder<bool>(
-            valueListenable: isDeploying,
-            builder: (context, isDeployingAccount, child) {
-              return ValueListenableBuilder<bool>(
-                  valueListenable: needDeployment,
-                  builder: (context, value, child) {
-                    if (!needDeployment.value) {
-                      return Container();
-                    }
+        if (!_needsDeploy) return const SizedBox.shrink();
 
-                    return Container(
-                      color: Colors.transparent,
-                      width: double.infinity,
-                      height: 50,
-                      margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                      child: ElevatedButton(
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.resolveWith(
-                            (states) => appBackgroundblue,
-                          ),
-                          shape: WidgetStateProperty.resolveWith(
-                            (states) => RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          textStyle: WidgetStateProperty.resolveWith(
-                            (states) => const TextStyle(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        child: isDeployingAccount
-                            ? Container(
-                                color: Colors.transparent,
-                                width: 20,
-                                height: 20,
-                                child: const Loader(color: black),
-                              )
-                            : Text(
-                                localization.deployAccount,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                        onPressed: () async {
-                          try {
-                            isDeploying.value = true;
-                            bool isDeployed = await coin.deployAccount();
-                            needDeployment.value = !isDeployed;
-                          } catch (e) {
-                            debugPrint(e.toString());
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: Colors.red,
-                                content: Text(
-                                  e.toString(),
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            );
-                          } finally {
-                            isDeploying.value = false;
-                          }
-                        },
-                      ),
-                    );
-                  });
-            });
+        return Container(
+          width: double.infinity,
+          height: 50,
+          margin: const EdgeInsets.only(top: 20),
+          child: ElevatedButton(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(appBackgroundblue),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            onPressed: _isDeploying ? null : _deploy,
+            child: _isDeploying
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Loader(color: black),
+                  )
+                : Text(
+                    localization.deployAccount,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+          ),
+        );
       },
     );
   }

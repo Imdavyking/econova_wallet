@@ -3,16 +3,19 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:solana/dto.dart' hide AccountData;
 import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/interface/user_quote.dart';
-import 'package:wallet_app/model/solana_transaction_versioned.dart';
+import 'package:wallet_app/model/solana_transaction_versioned.dart'
+    hide Message;
+import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/utils/solana_meme.coin.dart';
-
+import 'package:wallet_app/utils/logo_downloader.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:solana_name_service/solana_name_service.dart';
 import '../extensions/resign_solana.dart';
 import 'package:solana/encoder.dart';
@@ -38,6 +41,7 @@ class SolanaCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  int chainId;
 
   @override
   bool requireMemo() => true;
@@ -87,6 +91,7 @@ class SolanaCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.chainId,
   });
 
   factory SolanaCoin.fromJson(Map<String, dynamic> json) {
@@ -101,6 +106,7 @@ class SolanaCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      chainId: json['chainId'],
     );
   }
 
@@ -118,12 +124,225 @@ class SolanaCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['chainId'] = chainId;
 
     return data;
   }
 
   @override
   List<Coin> get networkTokens => getSplTokens();
+
+  // ─────────────────────────────────────────────────────────────────────────────
+// ADD these three overrides inside SolanaCoin (e.g. after getRampID())
+// Also add the new import at the top:
+//   import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
+//   (already imported in solana_coin.dart — just verify)
+// ─────────────────────────────────────────────────────────────────────────────
+
+  @override
+  bool get canAddCustomToken => true;
+
+  /// Fetches SPL token metadata via Jupiter token API.
+  /// Falls back to on-chain mint info (decimals only) if Jupiter doesn't know
+  /// the mint.
+  @override
+  Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async {
+    // 1. Jupiter (mainnet only)
+    try {
+      final res = await http
+          .get(Uri.parse('https://tokens.jup.ag/token/$contractAddress'))
+          .timeout(networkTimeOutDuration);
+
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body) as Map<String, dynamic>;
+        return CustomTokenMeta(
+          name: json['name'] as String? ?? contractAddress,
+          symbol: json['symbol'] as String? ?? '???',
+          decimals: (json['decimals'] as num?)?.toInt() ?? 0,
+          iconUrl: json['logoURI'] as String?,
+        );
+      }
+    } catch (_) {}
+
+    // 2. SPL Token Registry (covers devnet USDC and legacy tokens)
+    try {
+      final meta = await _fetchFromTokenRegistry(contractAddress);
+      if (meta != null) return meta;
+    } catch (_) {}
+
+    // 3. Metaplex on-chain metadata (devnet + mainnet)
+    try {
+      final meta = await _fetchMetaplexMetadata(contractAddress);
+      if (meta != null) return meta;
+    } catch (_) {}
+
+    // 3. On-chain mint (decimals only, last resort)
+    try {
+      final mint = await getProxy().getMint(
+        address: Ed25519HDPublicKey.fromBase58(contractAddress),
+      );
+      return CustomTokenMeta(
+        name: contractAddress,
+        symbol: '???',
+        decimals: mint.decimals,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static const _metaplexProgramId =
+      'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
+
+  Future<CustomTokenMeta?> _fetchMetaplexMetadata(String mintAddress) async {
+    // ── 1. Derive the metadata PDA ─────────────────────────────────────
+    // seeds: ["metadata", metaplex_program_id, mint_address]
+    final metaplexProgram = Ed25519HDPublicKey.fromBase58(_metaplexProgramId);
+    final mint = Ed25519HDPublicKey.fromBase58(mintAddress);
+
+    final seeds = [
+      utf8.encode('metadata'),
+      metaplexProgram.bytes,
+      mint.bytes,
+    ];
+
+    final pda = await Ed25519HDPublicKey.findProgramAddress(
+      seeds: seeds,
+      programId: metaplexProgram,
+    );
+
+    // ── 2. Fetch the raw account bytes ─────────────────────────────────
+    final accountInfo = await getProxy().rpcClient.getAccountInfo(
+          pda.toBase58(),
+          encoding: Encoding.base64,
+          commitment: Commitment.confirmed,
+        );
+
+    final data = accountInfo.value?.data;
+
+    if (data is! BinaryAccountData) return null;
+    final bytes = data.data;
+
+    // ── 3. Parse Metaplex borsh layout ────────────────────────────────
+    // Layout (bytes):
+    //   1  - key (account discriminator)
+    //  32  - update authority
+    //  32  - mint
+    //   4  - name length (u32 LE)
+    //   N  - name (padded with null bytes)
+    //   4  - symbol length (u32 LE)
+    //   M  - symbol (padded with null bytes)
+    //   4  - uri length (u32 LE)
+    //   K  - uri
+    int offset = 1 + 32 + 32;
+
+    String readString(List<int> b, int off) {
+      final len = ByteData.sublistView(
+        Uint8List.fromList(b.sublist(off, off + 4)),
+      ).getUint32(0, Endian.little);
+      final raw = utf8.decode(
+        b.sublist(off + 4, off + 4 + len),
+        allowMalformed: true,
+      );
+      // Strip null padding Metaplex pads all strings to fixed widths
+      return raw.replaceAll('\x00', '').trim();
+    }
+
+    final name = readString(bytes, offset);
+    offset += 4 + 32; // name field is always padded to 32 chars on-chain
+
+    final symbol = readString(bytes, offset);
+    offset += 4 + 10; // symbol field is always padded to 10 chars on-chain
+
+    final uri = readString(bytes, offset);
+
+    // ── 4. Optionally fetch logo from the URI (off-chain JSON) ─────────
+    String? iconUrl;
+    if (uri.isNotEmpty) {
+      try {
+        final res =
+            await http.get(Uri.parse(uri)).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body) as Map<String, dynamic>;
+          iconUrl = json['image'] as String?;
+        }
+      } catch (_) {}
+    }
+
+    // ── 5. Fetch decimals from mint ────────────────────────────────────
+    final mintInfo = await getProxy().getMint(
+      address: Ed25519HDPublicKey.fromBase58(mintAddress),
+    );
+
+    return CustomTokenMeta(
+      name: name.isEmpty ? mintAddress : name,
+      symbol: symbol.isEmpty ? '???' : symbol,
+      decimals: mintInfo.decimals,
+      iconUrl: iconUrl,
+    );
+  }
+
+  static Map<String, dynamic>? _tokenRegistryCache;
+
+  Future<CustomTokenMeta?> _fetchFromTokenRegistry(String mintAddress) async {
+    try {
+      _tokenRegistryCache ??= await _loadTokenRegistry();
+      if (_tokenRegistryCache == null) return null;
+
+      if (_tokenRegistryCache!.containsKey(mintAddress)) {
+        final match = _tokenRegistryCache![mintAddress];
+        if (match['chainId'] == chainId) {
+          String? localIconPath;
+          if (match['logoURI'] != null) {
+            localIconPath = await downloadLogo(match['logoURI'], match['name']);
+          }
+
+          return CustomTokenMeta(
+            name: match['name'] as String? ?? mintAddress,
+            symbol: match['symbol'] as String? ?? '???',
+            decimals: (match['decimals'] as num?)?.toInt() ?? 0,
+            iconUrl: localIconPath ?? match['logoURI'] as String?,
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _loadTokenRegistry() async {
+    final soltokens =
+        await rootBundle.loadString('json/solana_token_registry.json');
+    return jsonDecode(soltokens) as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Coin?> addCustomToken(
+    CustomTokenMeta meta,
+    String contractAddress,
+  ) async {
+    // Duplicate check against existing SPL tokens
+    final alreadyExists = getSplTokens().any(
+      (t) => t.tokenAddress().toLowerCase() == contractAddress.toLowerCase(),
+    );
+    if (alreadyExists) return null;
+
+    final token = SplTokenCoin(
+      mint: contractAddress,
+      name: meta.name,
+      geckoID: '',
+      symbol: meta.symbol,
+      mintDecimals: meta.decimals,
+      rpc: rpc,
+      ws: ws,
+      blockExplorer: blockExplorer,
+      default_: default_,
+      image: meta.iconUrl ?? 'assets/solana.webp',
+      chainId: chainId,
+    );
+
+    final added = await token.addCoinToStore();
+    return added ? token : null;
+  }
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
@@ -156,28 +375,21 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'solanaCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = SolanaArgs(
-      seedRoot: seedPhraseRoot,
-    );
-    final keys = await compute(calculateSolanaKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'solanaCoinDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateSolanaKey,
+          SolanaArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
     final instructions = simulation.message.compiledInstructions;
@@ -285,6 +497,58 @@ class SolanaCoin extends Coin {
     }
   }
 
+  @override
+  bool get haveTestAppproval => true;
+
+  @override
+  Future<String?> testCreateApproval() async {
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final response = await importData(data);
+      final privateKeyBytes = HEX.decode(response.privateKey!);
+      final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: privateKeyBytes,
+      );
+
+      const testMint = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
+      const testSpender = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
+      final accounts = await getProxy().rpcClient.getTokenAccountsByOwner(
+            await getAddress(),
+            const TokenAccountsFilter.byMint(testMint),
+            encoding: Encoding.jsonParsed,
+          );
+
+      if (accounts.value.isEmpty) return 'No USDC token account found';
+
+      final tokenAccount = Ed25519HDPublicKey.fromBase58(
+        accounts.value.first.pubkey,
+      );
+
+      final bh = await getProxy().rpcClient.getLatestBlockhash(
+            commitment: Commitment.finalized,
+          );
+
+      final approveIx = TokenInstruction.approve(
+        source: tokenAccount,
+        delegate: Ed25519HDPublicKey.fromBase58(testSpender),
+        sourceOwner: keyPair.publicKey,
+        amount: 1000000,
+      );
+
+      final signed = await keyPair.signMessage(
+        message: Message(instructions: [approveIx]),
+        recentBlockhash: bh.value.blockhash,
+      );
+
+      return await getProxy().rpcClient.sendTransaction(
+            base64Encode(signed.toByteArray().toList()),
+          );
+    } catch (e) {
+      return 'Error: $e';
+    }
+  }
+
   Future<List<int>> signVersionTx(Uint8List txBytes) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
@@ -304,6 +568,230 @@ class SolanaCoin extends Coin {
 
     return newCompiledMessage.toByteArray().toList();
   }
+
+  @override
+  Future<List<TokenApproval>>? getApprovals() {
+    return _fetchSolanaApprovals();
+  }
+
+  @override
+  Future<({String key, String timeKey})?> approvalCacheKeys() async {
+    final address = await getAddress();
+    final key = 'solana_approvals_$address$rpc';
+    return (key: key, timeKey: '${key}_time');
+  }
+
+  Future<List<TokenApproval>> _fetchSolanaApprovals() async {
+    final address = await getAddress();
+    final keys = await approvalCacheKeys();
+    if (keys == null) return [];
+    final String? cached = pref.get(keys.key) as String?;
+    final String? cachedTime = pref.get(keys.timeKey) as String?;
+
+    if (cached != null && cachedTime != null) {
+      final age = DateTime.now().difference(DateTime.parse(cachedTime));
+      if (age.inSeconds < 10) {
+        try {
+          final list = jsonDecode(cached) as List;
+          if (list.isNotEmpty) {
+            return list
+                .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final client = getProxy().rpcClient;
+
+      final accounts = await client.getTokenAccountsByOwner(
+        address,
+        const TokenAccountsFilter.byProgramId(TokenProgram.programId),
+        commitment: Commitment.confirmed,
+        encoding: Encoding.jsonParsed,
+      );
+
+      final approvals = <TokenApproval>[];
+
+      for (final account in accounts.value) {
+        final parsed = account.account.data;
+        if (parsed is! ParsedSplTokenProgramAccountData) continue;
+        final info = parsed.parsed;
+        if (info is! TokenAccountData) continue;
+
+        final delegate = info.info.delegate;
+        if (delegate == null) continue;
+
+        // ── Read raw account bytes for delegatedAmount ──────────────────
+        // The parsed JSON sometimes omits delegateAmount — read it from
+        // the raw SPL token account binary layout instead.
+        BigInt allowance;
+
+        try {
+          final accountInfo = await client.getAccountInfo(
+            account.pubkey,
+            encoding: Encoding.base64,
+            commitment: Commitment.finalized,
+          );
+
+          final data = accountInfo.value?.data;
+          if (data is BinaryAccountData) {
+            final bytes = data.data;
+            if (bytes.length >= 165) {
+              // delegateOption at bytes 72-75 (u32 LE)
+              final delegateOption = ByteData.sublistView(
+                Uint8List.fromList(bytes.sublist(72, 76)),
+              ).getUint32(0, Endian.little);
+
+              if (delegateOption == 0) continue; // no delegate
+
+              // delegatedAmount at bytes 121-128 (u64 LE)
+              final delegatedAmount = ByteData.sublistView(
+                Uint8List.fromList(bytes.sublist(121, 129)),
+              ).getUint64(0, Endian.little);
+
+              if (delegatedAmount == 0) continue;
+
+              allowance = BigInt.from(delegatedAmount);
+            } else {
+              continue;
+            }
+          } else {
+            // Fallback — use parsed value if available
+            final delegatedAmount = info.info.delegateAmount;
+            if (delegatedAmount == null || delegatedAmount.amount == '0') {
+              continue;
+            }
+            allowance = BigInt.parse(delegatedAmount.amount);
+          }
+        } catch (_) {
+          // Fallback to parsed value
+          final delegatedAmount = info.info.delegateAmount;
+          if (delegatedAmount == null || delegatedAmount.amount == '0') {
+            continue;
+          }
+          allowance = BigInt.parse(delegatedAmount.amount);
+        }
+
+        final mintAddress = info.info.mint;
+
+        final splToken = getSplTokens().cast<Coin?>().firstWhere(
+              (t) =>
+                  t?.tokenAddress()?.toLowerCase() == mintAddress.toLowerCase(),
+              orElse: () => null,
+            );
+
+        approvals.add(TokenApproval(
+          tokenAddress: mintAddress,
+          tokenSymbol: splToken?.getSymbol() ?? _shortAddr(mintAddress),
+          tokenName: splToken?.getName() ?? mintAddress,
+          spenderAddress: delegate,
+          spenderName: _resolveSpenderName(delegate),
+          allowance: allowance,
+          contractDecimals:
+              splToken?.decimals() ?? (info.info.delegateAmount?.decimals ?? 9),
+          lastUpdated: null,
+        ));
+      }
+
+      await pref.put(
+        keys.key,
+        jsonEncode(
+          approvals.map((a) => a.toJson()).toList(),
+        ),
+      );
+
+      await pref.put(keys.timeKey, DateTime.now().toIso8601String());
+
+      return approvals;
+    } catch (e) {
+      debugPrint('SolanaCoin.getApprovals error: $e');
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list
+              .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+              .toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+  } // ── Revoke delegate ────────────────────────────────────────────────────────
+
+  @override
+  Future<bool>? revokeApproval(TokenApproval approval) async {
+    try {
+      final keys = await approvalCacheKeys();
+      if (keys == null) return false;
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final response = await importData(data);
+      final privateKeyBytes = HEX.decode(response.privateKey!);
+      final keyPair = await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: privateKeyBytes,
+      );
+
+      // Find the token account for this mint
+      final accounts = await getProxy().rpcClient.getTokenAccountsByOwner(
+            await getAddress(),
+            TokenAccountsFilter.byMint(approval.tokenAddress),
+            encoding: Encoding.jsonParsed,
+          );
+
+      if (accounts.value.isEmpty) {
+        throw Exception('Token account not found for ${approval.tokenSymbol}');
+      }
+
+      final tokenAccountAddress = accounts.value.first.pubkey;
+
+      // Get latest blockhash
+      final bh = await getProxy().rpcClient.getLatestBlockhash(
+            commitment: Commitment.finalized,
+          );
+
+      // Build revoke instruction with correct parameter names
+      final revokeIx = TokenInstruction.revoke(
+        source: Ed25519HDPublicKey.fromBase58(
+          tokenAccountAddress,
+        ), // ← source not accountToChange
+        sourceOwner: keyPair.publicKey, // ← sourceOwner not accountOwner
+      );
+
+      final message = Message(instructions: [revokeIx]);
+
+      // signMessage takes Message + recentBlockhash, not compiled bytes
+      final signed = await keyPair.signMessage(
+        message: message, // ← Message not compiled.toByteArray()
+        recentBlockhash: bh.value.blockhash, // ← required param
+      );
+
+      await getProxy().rpcClient.sendTransaction(
+            base64Encode(signed.toByteArray().toList()),
+          );
+
+      await pref.delete(keys.key);
+      await pref.delete(keys.timeKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+  static const _knownSolanaSpenders = <String, String>{
+    'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter V6',
+    'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc': 'Orca Whirlpool',
+    '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP': 'Orca V2',
+    'RVKd61ztZW9GUwhRbbLoYVRE5Xf1B2tVscKqwZqXgEr': 'Raydium V4',
+    '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8': 'Raydium AMM',
+  };
+
+  String _resolveSpenderName(String address) {
+    return _knownSolanaSpenders[address] ?? _shortAddr(address);
+  }
+
+  String _shortAddr(String addr) =>
+      '${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}';
 
   @override
   Future<DeployMeme> deployMemeCoin({
@@ -730,6 +1218,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         geckoID: 'solana',
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
+        chainId: 103,
       ),
     );
   } else {
@@ -746,6 +1235,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         geckoID: 'solana',
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
+        chainId: 101,
       ),
     ]);
   }
@@ -760,7 +1250,7 @@ class SolanaArgs {
   });
 }
 
-Future calculateSolanaKey(SolanaArgs config) async {
+Future<Map<String, dynamic>> calculateSolanaKey(SolanaArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
 
   final solana.Ed25519HDKeyPair keyPair =

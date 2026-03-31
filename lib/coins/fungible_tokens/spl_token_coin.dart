@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 
@@ -15,6 +17,7 @@ import '../../utils/app_config.dart';
 class SplTokenCoin extends SolanaCoin implements FTExplorer {
   String mint;
   int mintDecimals;
+  int chainId;
 
   SplTokenCoin({
     required super.blockExplorer,
@@ -27,10 +30,8 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     required super.geckoID,
     required this.mint,
     required this.mintDecimals,
-  }) : super(
-          rampID: '',
-          payScheme: '',
-        );
+    required this.chainId,
+  }) : super(rampID: '', payScheme: '', chainId: chainId);
 
   factory SplTokenCoin.fromJson(Map<String, dynamic> json) {
     return SplTokenCoin(
@@ -44,6 +45,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
       mint: json['mint'],
       mintDecimals: json['mintDecimals'],
       geckoID: json['geckoID'],
+      chainId: json['chainId'],
     );
   }
 
@@ -53,11 +55,28 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   }
 
   @override
-  String? get badgeImage => solanaChains.first.image;
+  String? get badgeImage => getChains<SolanaCoin>().first.image;
 
   @override
   String savedTransKey() {
     return 'solanaSplTokenTransfers$mint$rpc';
+  }
+
+  static const _splTokenMapKey = 'splCustomTokens';
+
+  Future<bool> addCoinToStore() async {
+    // mint address is globally unique on Solana — no need to include rpc
+    final uniqueKey = mint.toLowerCase();
+    final raw = pref.get(_splTokenMapKey) as String?;
+    final tokenMap = raw != null
+        ? Map<String, dynamic>.from(jsonDecode(raw))
+        : <String, dynamic>{};
+
+    if (tokenMap.containsKey(uniqueKey)) return false;
+
+    tokenMap[uniqueKey] = toJson();
+    await pref.put(_splTokenMapKey, jsonEncode(tokenMap));
+    return true;
   }
 
   @override
@@ -73,6 +92,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     data['ws'] = ws;
     data['mint'] = mint;
     data['geckoID'] = geckoID;
+    data['chainId'] = chainId;
     data['mintDecimals'] = mintDecimals;
 
     return data;
@@ -93,7 +113,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   @override
   Future<double> getBalance(bool useCache) async {
     final address = await getAddress();
-    final key = 'solanaSplAddressBalance$address$rpc';
+    final key = 'solanaSplAddressBalance$address$rpc$mint';
 
     final storedBalance = pref.get(key);
 
@@ -185,6 +205,7 @@ List<SplTokenCoin> getSplTokens() {
         mint: 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT',
         mintDecimals: 6,
         geckoID: 'usd-coin',
+        chainId: 103,
       ),
     ]);
   } else {
@@ -201,6 +222,7 @@ List<SplTokenCoin> getSplTokens() {
         rpc: 'https://api.mainnet-beta.solana.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        chainId: 101,
       ),
       SplTokenCoin(
         name: 'Bonk',
@@ -214,8 +236,19 @@ List<SplTokenCoin> getSplTokens() {
         rpc: 'https://api.mainnet-beta.solana.com',
         ws: 'wss://solana-api.projectserum.com',
         mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+        chainId: 101,
       ),
     ]);
   }
+
+  final raw = pref.get(SplTokenCoin._splTokenMapKey) as String?;
+
+  if (raw != null && WalletService.isBip39PhraseOrSeedHexKey()) {
+    final saved = Map<String, dynamic>.from(jsonDecode(raw));
+    blockChains.addAll(
+      saved.values.map((e) => SplTokenCoin.fromJson(e as Map<String, dynamic>)),
+    );
+  }
+
   return blockChains;
 }

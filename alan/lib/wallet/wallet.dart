@@ -6,6 +6,26 @@ import 'package:equatable/equatable.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/export.dart';
 
+/// Raw cryptographic material derived from a seed.
+/// Network-agnostic — no bech32, no chain info.
+/// Use [bech32Address] on [Wallet] if you need a chain-specific address.
+/// Raw cryptographic material derived from a seed.
+/// Network-agnostic — no bech32, no chain info.
+class WalletKeys extends Equatable {
+  final Uint8List privateKey;
+  final Uint8List publicKey;
+  final Uint8List rawAddress; // 20 raw bytes, no encoding
+
+  const WalletKeys({
+    required this.privateKey,
+    required this.publicKey,
+    required this.rawAddress,
+  });
+
+  @override
+  List<Object> get props => [privateKey, publicKey, rawAddress];
+}
+
 /// Represents a wallet which contains the hex private key, the hex public key
 /// and the hex address.
 /// In order to create one properly, the [Wallet.derive] method should always
@@ -52,6 +72,91 @@ class Wallet extends Equatable {
       ..setRange(1, 33, x);
 
     return compressedKey;
+  }
+
+  /// Derives raw key material from [seed] without binding to any network.
+  /// Cheaper than [deriveSeed] — no bech32 encoding, no [NetworkInfo] required.
+  /// Call [Bech32Encoder.encode(hrp, keys.rawAddress)] to get a chain address.
+  static WalletKeys deriveRaw(
+    Uint8List seed, {
+    String derivationPath = Wallet.derivationPath,
+  }) {
+    final root = Bip32.fromSeed(seed);
+    final derivedNode = root.derivePath(derivationPath);
+
+    final secp256k1 = ECCurve_secp256k1();
+    final bigInt = BigInt.parse(HEX.encode(derivedNode.privateKey!), radix: 16);
+    final curvePoint = secp256k1.G * bigInt;
+
+    Uint8List publicKeyBytes;
+    Uint8List rawAddress;
+
+    if (isEthSecp256(derivationPath)) {
+      publicKeyBytes = curvePoint!.getEncoded(false);
+      final keccakAddress = KeccakDigest(256)
+          .process(publicKeyBytes.sublist(1, publicKeyBytes.length));
+      rawAddress = keccakAddress.sublist(keccakAddress.length - 20);
+    } else {
+      publicKeyBytes = curvePoint!.getEncoded();
+      final sha256Digest = SHA256Digest().process(publicKeyBytes);
+      rawAddress = RIPEMD160Digest().process(sha256Digest);
+    }
+
+    if (publicKeyBytes.length == 65) {
+      publicKeyBytes = compressPublicKey(publicKeyBytes);
+    }
+
+    return WalletKeys(
+      privateKey: derivedNode.privateKey!,
+      publicKey: publicKeyBytes,
+      rawAddress: rawAddress,
+    );
+  }
+
+  factory Wallet.deriveSeed(
+    Uint8List seed,
+    NetworkInfo networkInfo, {
+    String derivationPath = derivationPath,
+  }) {
+    final root = Bip32.fromSeed(seed);
+
+    // Get the node from the derivation path
+    final derivedNode = root.derivePath(derivationPath);
+
+    // Get the curve data
+    final secp256k1 = ECCurve_secp256k1();
+    final point = secp256k1.G;
+
+    // Compute the curve point associated to the private key
+    final bigInt = BigInt.parse(HEX.encode(derivedNode.privateKey!), radix: 16);
+    final curvePoint = point * bigInt;
+
+    Uint8List publicKeyBytes;
+    Uint8List address;
+
+    if (isEthSecp256(derivationPath)) {
+      publicKeyBytes = curvePoint!.getEncoded(false);
+      final keccakAddress = KeccakDigest(256)
+          .process(publicKeyBytes.sublist(1, publicKeyBytes.length));
+      address = keccakAddress.sublist(
+          keccakAddress.length - 20, keccakAddress.length);
+    } else {
+      publicKeyBytes = curvePoint!.getEncoded();
+      final sha256Digest = SHA256Digest().process(publicKeyBytes);
+      address = RIPEMD160Digest().process(sha256Digest);
+    }
+
+    if (publicKeyBytes.length == 65) {
+      publicKeyBytes = compressPublicKey(publicKeyBytes);
+    }
+
+    // Return the key bytes
+    return Wallet(
+      address: address,
+      publicKey: publicKeyBytes,
+      privateKey: derivedNode.privateKey!,
+      networkInfo: networkInfo,
+    );
   }
 
   /// Derives the private key from the given [mnemonic] using the specified

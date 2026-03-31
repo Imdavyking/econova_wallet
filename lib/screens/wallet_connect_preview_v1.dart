@@ -71,9 +71,9 @@ class WalletConnectPreviewV1 extends StatefulWidget {
   final WalletConnectData data;
 
   const WalletConnectPreviewV1({
-    Key? key,
+    super.key,
     required this.data,
-  }) : super(key: key);
+  });
 
   @override
   State<WalletConnectPreviewV1> createState() => _WalletConnectPreviewV1State();

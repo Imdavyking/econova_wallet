@@ -65,48 +65,20 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     );
   }
 
-  static String get _tokenMapKey => 'ethFTStore$enableTestNet';
-
-  static List<ERCFungibleCoin> getCoinsInStore() {
-    List<ERCFungibleCoin> blockChains = [];
-    final prefToken = pref.get(_tokenMapKey);
-
-    if (prefToken != null && WalletService.isPharseKey()) {
-      final tokenList = Map.from(jsonDecode(prefToken)).values.toList();
-
-      blockChains.addAll([
-        ...tokenList.map(
-          (e) => ERCFungibleCoin.fromJson(e),
-        ),
-      ]);
-    }
-    return blockChains;
-  }
+  static const _tokenMapKey =
+      'erc20CustomTokens'; // move to top of class as const
 
   Future<bool> addCoinToStore() async {
-    Map tokenMap = {};
-    final savedJsonImports = pref.get(_tokenMapKey);
-    final uniqueKey = '$contractAddress_$chainId';
+    final uniqueKey = '${contractAddress_.toLowerCase()}_$chainId';
+    final raw = pref.get(_tokenMapKey) as String?;
+    final tokenMap = raw != null
+        ? Map<String, dynamic>.from(jsonDecode(raw))
+        : <String, dynamic>{};
 
-    if (savedJsonImports != null) {
-      tokenMap = Map.from(jsonDecode(savedJsonImports));
-    }
+    if (tokenMap.containsKey(uniqueKey)) return false;
 
-    if (tokenMap.containsKey(uniqueKey)) {
-      return false;
-    }
-
-    Map details = {
-      uniqueKey: toJson(),
-    };
-
-    tokenMap.addAll(details);
-
-    await pref.put(
-      _tokenMapKey,
-      jsonEncode(tokenMap),
-    );
-
+    tokenMap[uniqueKey] = toJson();
+    await pref.put(_tokenMapKey, jsonEncode(tokenMap));
     return true;
   }
 
@@ -184,7 +156,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
       String amount, String to,
       {String? memo}) async {
     final sendAmt = amount.toBigIntDec(decimals());
-    final parameters_ = [EthereumAddress.fromHex(to), sendAmt];
+    final parameters_ = [EthereumAddress.fromHex(roninAddrToEth(to)), sendAmt];
 
     final client = Web3Client(
       rpc,
@@ -222,7 +194,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
     );
   }
 
-  Future<_ERC20Meta?> getERC20Meta() async {
+  Future<ERC20Meta?> getERC20Meta() async {
     final client = Web3Client(
       rpc,
       Client(),
@@ -247,7 +219,7 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 
     BigInt dec = decimals.first;
 
-    return _ERC20Meta(
+    return ERC20Meta(
       decimals: dec.toInt(),
       name: name.first,
       symbol: symbol.first,
@@ -582,18 +554,24 @@ List<ERCFungibleCoin> getERC20Coins() {
       ),
     ]);
   }
-
-  blockChains.addAll(ERCFungibleCoin.getCoinsInStore());
+  final raw = pref.get(ERCFungibleCoin._tokenMapKey) as String?;
+  if (raw != null && WalletService.isBip39PhraseOrSeedHexKey()) {
+    final saved = Map<String, dynamic>.from(jsonDecode(raw));
+    blockChains.addAll(
+      saved.values
+          .map((e) => ERCFungibleCoin.fromJson(e as Map<String, dynamic>)),
+    );
+  }
 
   return blockChains;
 }
 
-class _ERC20Meta {
+class ERC20Meta {
   String name;
   String symbol;
   int decimals;
 
-  _ERC20Meta({
+  ERC20Meta({
     required this.name,
     required this.symbol,
     required this.decimals,

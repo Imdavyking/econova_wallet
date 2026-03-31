@@ -1,13 +1,16 @@
-import 'package:wallet_app/modals/dialog_utils.dart';
-import 'package:wallet_app/screens/confirm_seed_phrase.dart';
-import 'package:wallet_app/screens/show_shamir_shares.dart';
-import 'package:wallet_app/utils/app_config.dart';
+// ignore_for_file: library_private_types_in_public_api
+
+import 'package:bip39/bip39.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
-
-import '../utils/rpc_urls.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
+import 'package:wallet_app/screens/confirm_seed_phrase.dart';
+import 'package:wallet_app/screens/show_shamir_shares.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 class RecoveryPhrase extends StatefulWidget {
   final String data;
@@ -25,325 +28,314 @@ class RecoveryPhrase extends StatefulWidget {
 
 class _RecoveryPhraseState extends State<RecoveryPhrase>
     with WidgetsBindingObserver {
-  // disallow screenshots
-  ScreenshotCallback screenshotCallback = ScreenshotCallback();
-  bool invisiblemnemonic = false;
-  bool securitydialogOpen = false;
-  final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _obscured = false;
+  bool _securityOverlayVisible = false;
+
+  bool validSeedPhrase = false;
+
+  late AppLocalizations _loc;
+  final _screenshotCallback = ScreenshotCallback();
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    disEnableScreenShot();
+    _screenshotCallback.addListener(
+      () => showDialogWithMessage(
+        context: context,
+        message: _loc.youCantScreenshot,
+      ),
+    );
+    _checkValidSeed();
+  }
+
+  Future<void> _checkValidSeed() async {
+    validSeedPhrase = await compute(validateMnemonic, widget.data);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     switch (state) {
-      case AppLifecycleState.resumed:
-        if (invisiblemnemonic) {
-          invisiblemnemonic = false;
-          if (await authenticate(context)) {
-            await disEnableScreenShot();
-            setState(() {
-              securitydialogOpen = false;
-            });
-          } else {
-            SystemNavigator.pop();
-          }
-        }
-        break;
       case AppLifecycleState.paused:
-        if (!securitydialogOpen) {
+        if (!_securityOverlayVisible) {
           setState(() {
-            invisiblemnemonic = true;
-            securitydialogOpen = true;
+            _obscured = true;
+            _securityOverlayVisible = true;
           });
         }
-        break;
+      case AppLifecycleState.resumed:
+        if (_obscured) _handleResume();
       default:
         break;
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    screenshotCallback.addListener(() {
-      showDialogWithMessage(
-        context: context,
-        message: localization.youCantScreenshot,
-      );
-    });
-    WidgetsBinding.instance.addObserver(this);
-    disEnableScreenShot();
+  Future<void> _handleResume() async {
+    final ok = await authenticate(context);
+    if (!mounted) return;
+    if (ok) {
+      await disEnableScreenShot();
+      setState(() {
+        _obscured = false;
+        _securityOverlayVisible = false;
+      });
+    } else {
+      SystemNavigator.pop();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _screenshotCallback.dispose();
     enableScreenShot();
     super.dispose();
   }
 
-  late AppLocalizations localization;
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  Future<void> _copyToClipboard() async {
+    await Clipboard.setData(ClipboardData(text: widget.data));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_loc.copiedToClipboard)),
+    );
+  }
+
+  void _goToShamirShares() => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ShowShamirShares(data: widget.data),
+        ),
+      );
+
+  void _goToConfirmMnemonic() => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConfirmMnemonic(mnemonic: widget.data.split(' ')),
+        ),
+      );
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
-    List mmemonic = widget.data.split(' ');
-    int currentIndex = 0;
+    _loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.yourSecretPhrase),
-      ),
-      key: scaffoldKey,
-      body: securitydialogOpen
-          ? Container()
+      appBar: AppBar(title: Text(_loc.yourSecretPhrase)),
+      body: _securityOverlayVisible
+          ? const SizedBox.expand()
           : SafeArea(
               child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(25),
-                  child: Column(
-                    children: [
-                      Text(
-                        localization.writeDownYourmnemonic,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
+                padding: const EdgeInsets.all(25),
+                child: Column(
+                  children: [
+                    Text(
+                      _loc.writeDownYourmnemonic,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 20),
+                    if (validSeedPhrase)
+                      _MnemonicGrid(words: widget.data.split(' '))
+                    else
+                      // Word grid
+                      Text(widget.data),
+                    const SizedBox(height: 15),
+
+                    // Copy button (setup flow only)
+                    if (!widget.viewOnly) ...[
+                      _CopyButton(
+                        label: _loc.copy,
+                        onTap: _copyToClipboard,
                       ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      for (int i = 0; i < mmemonic.length ~/ 3; i++) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text.rich(
-                                    TextSpan(
-                                      text: '${(currentIndex + 1)}. ',
-                                      style:
-                                          const TextStyle(color: Colors.grey),
-                                      children: [
-                                        TextSpan(
-                                          text: mmemonic[currentIndex++],
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge!
-                                                .color,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text.rich(
-                                    TextSpan(
-                                      text: '${(currentIndex + 1)}. ',
-                                      style:
-                                          const TextStyle(color: Colors.grey),
-                                      children: [
-                                        TextSpan(
-                                          text: mmemonic[currentIndex++],
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge!
-                                                .color,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text.rich(
-                                    TextSpan(
-                                      text: '${(currentIndex + 1)}. ',
-                                      style:
-                                          const TextStyle(color: Colors.grey),
-                                      children: [
-                                        TextSpan(
-                                          text: mmemonic[currentIndex++],
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge!
-                                                .color,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        )
-                      ],
-                      if (!widget.viewOnly)
-                        GestureDetector(
-                          onTap: () async {
-                            await Clipboard.setData(
-                              ClipboardData(
-                                text: widget.data,
-                              ),
-                            );
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  localization.copiedToClipboard,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Card(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    localization.copy,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const Icon(Icons.copy)
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(10)),
-                            color: Colors.red[100]),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                localization.doNotShareYourmnemonic,
-                                style: const TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                localization.ifSomeoneHasYourmnemonic,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 40,
-                      ),
-                      if (widget.viewOnly)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                  (states) => appBackgroundblue),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (ctx) => ShowShamirShares(
-                                    data: widget.data,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Text(
-                                localization.exportAsShamirShares,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (!widget.viewOnly) ...[
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                  (states) => appBackgroundblue),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (ctx) => Confirmmnemonic(
-                                    mmenomic: widget.data.split(' '),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Text(
-                                localization.continue_,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ]
+                      const SizedBox(height: 15),
                     ],
-                  ),
+
+                    // Warning banner
+                    _WarningBanner(
+                      title: _loc.doNotShareYourmnemonic,
+                      body: _loc.ifSomeoneHasYourmnemonic,
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Action buttons
+
+                    if (widget.viewOnly)
+                      _ActionButton(
+                        label: _loc.exportAsShamirShares,
+                        onPressed: _goToShamirShares,
+                      )
+                    else if (validSeedPhrase)
+                      _ActionButton(
+                        label: _loc.continue_,
+                        onPressed: _goToConfirmMnemonic,
+                      ),
+                  ],
                 ),
               ),
             ),
+    );
+  }
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+
+/// Renders the mnemonic words in a 3-column numbered grid.
+class _MnemonicGrid extends StatelessWidget {
+  final List<String> words;
+
+  const _MnemonicGrid({required this.words});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = words.length ~/ 3;
+
+    return Column(
+      children: List.generate(rows, (row) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 15),
+          child: Row(
+            children: List.generate(3, (col) {
+              final index = row * 3 + col;
+              return Expanded(
+                child: _WordCard(number: index + 1, word: words[index]),
+              );
+            }),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _WordCard extends StatelessWidget {
+  final int number;
+  final String word;
+
+  const _WordCard({required this.number, required this.word});
+
+  @override
+  Widget build(BuildContext context) {
+    final bodyColor = Theme.of(context).textTheme.bodyLarge?.color;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text.rich(
+          TextSpan(
+            text: '$number. ',
+            style: const TextStyle(color: Colors.grey),
+            children: [
+              TextSpan(text: word, style: TextStyle(color: bodyColor)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CopyButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _CopyButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              const Icon(Icons.copy, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WarningBanner extends StatelessWidget {
+  final String title;
+  final String body;
+
+  const _WarningBanner({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.red[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _ActionButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: appBackgroundblue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.all(15),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
     );
   }
 }

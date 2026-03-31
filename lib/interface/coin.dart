@@ -2,15 +2,19 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/extensions/first_or_null.dart';
+import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:flutter/material.dart';
+import 'package:xxh64/xxh64.dart';
 import '../main.dart';
 
 enum WalletType {
-  secretPhrase,
+  bip39PhraseOrSeedHex,
   privateKey,
   viewKey,
 }
@@ -32,6 +36,21 @@ abstract class Coin {
     return amountString.replaceAll(',', '');
   }
 
+  Future<({String key, String timeKey})?> approvalCacheKeys() async => null;
+  bool get canAddCustomToken => false;
+  Future<CustomTokenMeta?> fetchCustomToken(String contractAddress) async =>
+      null;
+  Future<Coin?> addCustomToken(
+    CustomTokenMeta meta,
+    String contractAddress,
+  ) async =>
+      null;
+  Future<List<TokenApproval>>? getApprovals() => null;
+  Future<bool>? revokeApproval(TokenApproval approval) => null;
+  Future<String?>? testCreateApproval() => null;
+  bool get haveTestAppproval => false;
+
+  TransactionFetcher? get transactionFetcher => null;
   void validateAddress(String address);
   Future<String> addressExplorer();
   Map toJson();
@@ -89,7 +108,9 @@ abstract class Coin {
   bool get supportsX402 => false;
   bool get supportKeystore => false;
   bool get supportPrivateKey => false;
+  bool get supportBip39Seed => false;
   bool get isRpcWorking => true;
+
   Future<bool> needDeploy() async => false;
   Future deployAccount() async {}
   Future<Map> getTransactions() async {
@@ -166,6 +187,59 @@ abstract class Coin {
     return details.address;
   }
 
+  Future<String?> getPublicKey() async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final details = await importData(data);
+    return details.publicKey;
+  }
+
+  static Future<AccountData> fromBip39PhraseOrSeedCached({
+    required String cacheKey,
+    required String bip39PhraseOrSeedHex,
+    required Future<Map<String, dynamic>> Function() derive,
+    Map<String, dynamic> Function(Map<String, dynamic> keys)? postProcess,
+  }) async {
+    // hash once, used everywhere below
+    final seedKey = XXH64
+        .digest(data: bip39PhraseOrSeedHex, seed: BigInt.zero)
+        .toUint8List()
+        .reversed
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+
+    AccountData toAccount(Map<String, dynamic> keys) {
+      final processed = postProcess != null
+          ? postProcess(Map<String, dynamic>.from(keys))
+          : keys;
+      return AccountData.fromJson(processed);
+    }
+
+    // ── 1. memory cache hit ──────────────────────────────────────────────────
+    final memEntry = decodedCache[cacheKey];
+    if (memEntry != null) {
+      final hit = memEntry[seedKey];
+      if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
+    }
+
+    // ── 2. hive cache hit → warm memory cache ───────────────────────────────
+    if (pref.containsKey(cacheKey)) {
+      final decoded = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
+      decodedCache[cacheKey] = decoded;
+      final hit = decoded[seedKey];
+      if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
+    }
+
+    // ── 3. cold path: derive keys ────────────────────────────────────────────
+    final keys = await derive();
+
+    // ── 4. persist to memory + hive ─────────────────────────────────────────
+    final entry = decodedCache[cacheKey] ??= {};
+    entry[seedKey] = keys;
+    await pref.put(cacheKey, jsonEncode(entry));
+
+    return toAccount(keys);
+  }
+
   String? getDexScreener(String tokenaddress) {
     return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';
   }
@@ -192,8 +266,8 @@ abstract class Coin {
   }
 
   Future<AccountData> importData(String data) async {
-    if (WalletService.isPharseKey()) {
-      return fromMnemonic(mnemonic: data);
+    if (WalletService.isBip39PhraseOrSeedHexKey()) {
+      return fromBip39PhraseOrSeed(bip39PhraseOrSeedHex: data);
     } else if (WalletService.isViewKey()) {
       return Future.value(
         AccountData(
@@ -206,7 +280,8 @@ abstract class Coin {
     throw Exception('invalid data type');
   }
 
-  Future<AccountData> fromMnemonic({required String mnemonic});
+  Future<AccountData> fromBip39PhraseOrSeed(
+      {required String bip39PhraseOrSeedHex});
 
   Future<AccountData> fromPrivateKey(String privateKey) async {
     throw UnimplementedError('private key derivation not implemented');
@@ -263,5 +338,19 @@ class DeployMeme {
     required this.liquidityTx,
     required this.tokenAddress,
     required this.deployTokenTx,
+  });
+}
+
+class CustomTokenMeta {
+  final String name;
+  final String symbol;
+  final int decimals;
+  final String? iconUrl;
+
+  const CustomTokenMeta({
+    required this.name,
+    required this.symbol,
+    required this.decimals,
+    this.iconUrl,
   });
 }

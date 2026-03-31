@@ -17,6 +17,8 @@ import '../model/seed_phrase_root.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import '../xrp_transaction/xrp_transaction.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/xrp_trx_fetcher.dart';
 
 const xrpDecimals = 6;
 
@@ -59,6 +61,12 @@ class XRPCoin extends Coin {
   String getExplorer() {
     return blockExplorer;
   }
+
+  @override
+  TransactionFetcher? get transactionFetcher => XrpTransactionFetcher(
+        rpcUrl: api,
+        isTestnet: name.contains('Testnet'),
+      );
 
   @override
   String getDefault() {
@@ -111,26 +119,19 @@ class XRPCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'xrpDeriveArgs${walletImportType.name}$api';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final deriveArgs = XRPDeriveArgs(seedRootKey: seedPhraseRoot);
-
-    final keys = await compute(calculateRippleKey, deriveArgs);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'xrpDeriveArgs${walletImportType.name}$api',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateRippleKey,
+          XRPDeriveArgs(seedRootKey: seedPhraseRoot),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -206,8 +207,15 @@ class XRPCoin extends Coin {
       "Destination": to
     };
 
-    if (memo != null) {
-      xrpJson['DestinationTag'] = memo;
+    if (memo != null && memo.trim().isNotEmpty) {
+      final tag = int.tryParse(memo.trim());
+      if (tag == null) {
+        throw Exception(
+          'Destination Tag must be a number. '
+          'Check the tag required by the recipient (e.g. exchange deposit tag).',
+        );
+      }
+      xrpJson['DestinationTag'] = tag;
     }
 
     if (response.address == to) {

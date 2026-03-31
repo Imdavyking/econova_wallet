@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wallet_app/main.dart';
+import 'package:wallet_app/utils/app_config.dart';
 import '../interface/coin.dart';
 import 'build_row.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

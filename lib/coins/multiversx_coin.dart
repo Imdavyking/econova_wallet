@@ -1,9 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
-import 'package:wallet_app/coins/fungible_tokens/esdt_coin.dart';
-
+import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/screens/view_nft_screens.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:dio/dio.dart';
@@ -15,7 +18,6 @@ import 'package:web3dart/crypto.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../model/multix_resolver.dart';
-import '../screens/view_multix_nfts.dart';
 import '../utils/app_config.dart';
 
 const multiversxDecimals = 18;
@@ -132,6 +134,9 @@ class MultiversxCoin extends Coin {
   }
 
   @override
+  bool get supportBip39Seed => true;
+
+  @override
   bool get supportPrivateKey => true;
 
   @override
@@ -161,29 +166,18 @@ class MultiversxCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'multivxDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = MultiversXDeriveArgs(
-      mnemonic: mnemonic,
-    );
-
-    final keys = await compute(calculateMultiversXKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'multivxDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateMultiversXKey,
+          MultiversXDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -223,7 +217,7 @@ class MultiversxCoin extends Coin {
     }
   }
 
-  Future<String> trnsTok(TrxCoinParams config) async {
+  Future<String> _sendEgld(TrxCoinParams config) async {
     multiversx.UserSecretKey signer =
         multiversx.UserSecretKey(HEX.decode(config.privateKey));
     multiversx.Wallet wallet = multiversx.Wallet(signer);
@@ -243,15 +237,16 @@ class MultiversxCoin extends Coin {
     return txHash.hash;
   }
 
-  static multiversx.Transaction signTransaction(Map config) {
-    multiversx.ISigner signer = config['signer'];
-    multiversx.ISignable transaction = config['transaction'];
+  static multiversx.Transaction signTransaction(
+      MultiversDappTransaction config) {
+    multiversx.ISigner signer = config.signer;
+    multiversx.ISignable transaction = config.transaction;
     return signer.sign(transaction);
   }
 
-  static List<int> signMessage(Map config) {
-    multiversx.UserSecretKey signer = config['signer'];
-    Uint8List message = config['message'];
+  static List<int> signMessage(MultiversDappMessage config) {
+    multiversx.UserSecretKey signer = config.signer;
+    Uint8List message = config.message;
     return signer.sign(message);
   }
 
@@ -262,7 +257,7 @@ class MultiversxCoin extends Coin {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);
     final sendTransaction = await compute(
-      trnsTok,
+      _sendEgld,
       TrxCoinParams(to: to, amount: amount, privateKey: response.privateKey!),
     );
 
@@ -321,7 +316,7 @@ class MultiversxCoin extends Coin {
   String getRampID() => rampID;
 }
 
-List<MultiversxCoin> getEGLBBlockchains() {
+List<MultiversxCoin> getEGLDBlockchains() {
   List<MultiversxCoin> blockChains = [];
   if (enableTestNet) {
     blockChains.add(
@@ -368,21 +363,27 @@ String egldPrivateKeyToAddress(String privateKey) {
 }
 
 class MultiversXDeriveArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const MultiversXDeriveArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
-Future calculateMultiversXKey(MultiversXDeriveArgs config) async {
-  multiversx.Wallet wallet = await multiversx.Wallet.fromSeed(config.mnemonic);
-
-  multiversx.UserSigner signer = wallet.signer as multiversx.UserSigner;
+Future<Map<String, dynamic>> calculateMultiversXKey(
+  MultiversXDeriveArgs config,
+) async {
+  const bip44DerivationPrefix = "m/44'/508'/0'/0'";
+  int addressIndex = 0;
+  final data = await ED25519_HD_KEY.derivePath(
+      "$bip44DerivationPrefix/$addressIndex'", config.seedRoot.seed);
+  final privateKey = multiversx.UserSecretKey(data.key);
+  final publicKey = privateKey.generatePublicKey();
+  final address = publicKey.toAddress();
 
   return {
-    'address': wallet.account.address.bech32,
-    'privateKey': HEX.encode(signer.secretKey.bytes),
+    'address': address.bech32,
+    'privateKey': HEX.encode(privateKey.bytes),
   };
 }
 
@@ -394,5 +395,23 @@ class TrxCoinParams {
     required this.amount,
     required this.to,
     required this.privateKey,
+  });
+}
+
+class MultiversDappMessage {
+  final multiversx.UserSecretKey signer;
+  final Uint8List message;
+  const MultiversDappMessage({
+    required this.signer,
+    required this.message,
+  });
+}
+
+class MultiversDappTransaction {
+  final multiversx.ISigner signer;
+  final multiversx.ISignable transaction;
+  const MultiversDappTransaction({
+    required this.signer,
+    required this.transaction,
   });
 }

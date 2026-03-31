@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:fraction/fraction.dart';
 import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/screens/view_nft_screens.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import '../extensions/uint256_starknet.dart';
 import 'package:wallet_app/utils/starknet_quote.helper.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/screens/stake_token.dart';
-import 'package:wallet_app/screens/view_starknet_nfts.dart';
 import 'package:wallet_app/service/ai_agent_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/percent.dart';
@@ -415,29 +417,22 @@ class StarknetCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'CairoStarknetUserAcc${walletImportType.name}$api';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = StarknetDeriveArgs(
-      mnemonic: mnemonic,
-      classHash: classHash,
-    );
-
-    final keys = await compute(calculateStarknetKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'CairoStarknetUserAcc${walletImportType.name}$api',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateStarknetKey,
+          StarknetDeriveArgs(
+            classHash: classHash,
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<String?> resolveAddress(String address) async {
@@ -1856,7 +1851,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -1879,7 +1874,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         default_: 'STRK',
         image: 'assets/starknet.png',
         api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/gpR0c9Le2dR45Fqit9OXTz6dtpf1HPfa",
+            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
         geckoID: "starknet",
         payScheme: 'starknet',
         rampID: '',
@@ -1898,17 +1893,24 @@ List<StarknetCoin> getStarknetBlockchains() {
 }
 
 class StarknetDeriveArgs {
-  final String mnemonic;
   final String classHash;
+  final SeedPhraseRoot seedRoot;
 
   const StarknetDeriveArgs({
-    required this.mnemonic,
     required this.classHash,
+    required this.seedRoot,
   });
 }
 
-Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
-  final privateKey = derivePrivateKey(mnemonic: config.mnemonic);
+Future<Map<String, dynamic>> calculateStarknetKey(
+    StarknetDeriveArgs config) async {
+  String pathPrefix = "m/44'/9004'/0'/0";
+  int index = 0;
+  final nodeFromSeed = config.seedRoot.root;
+  final child = nodeFromSeed.derivePath('$pathPrefix/$index');
+  Uint8List key = child.privateKey!;
+  key = grindKey(key);
+  final privateKey = Felt(bytesToUnsignedInt(key));
   final signer = StarkAccountSigner(
     signer: StarkSigner(privateKey: privateKey),
   );

@@ -128,7 +128,7 @@ class Stake implements Action {
   Stake({required this.stake, required this.publicKey});
 
   factory Stake.fromJson(Map<String, dynamic> json) {
-    final isBase16 = isHEXStripox(json['stake']);
+    final isBase16 = isHEXstrip0x(json['stake']);
 
     return Stake(
       stake: BigInt.parse(json['stake'], radix: isBase16 ? 16 : 10),

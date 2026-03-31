@@ -333,7 +333,7 @@ class EthereumHandler extends BaseWebViewHandler {
           return;
         }
 
-        String blockExplorer = blockExplorers[0] as String;
+        String blockExplorer = blockExplorers[0];
         if (blockExplorer.endsWith('/')) {
           blockExplorer = blockExplorer.substring(0, blockExplorer.length - 1);
         }

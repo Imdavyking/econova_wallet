@@ -1,8 +1,6 @@
 import 'dart:convert';
-
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';
-
 import '../main.dart';
 import '../utils/app_config.dart';
 import '../utils/wallet_connect_v1/wc_connector_v1.dart';

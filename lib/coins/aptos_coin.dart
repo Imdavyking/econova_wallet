@@ -1,16 +1,17 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:convert';
 import 'dart:math';
-
 import 'package:aptos/aptos.dart';
 import 'package:aptos/coin_client.dart';
 import 'package:aptos/constants.dart';
 import 'package:aptos/faucet_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/service/wallet_service.dart';
-
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/aptos_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -70,6 +71,15 @@ class AptosCoin extends Coin {
     return symbol;
   }
 
+  @override
+  bool get supportBip39Seed => true;
+
+  @override
+  TransactionFetcher? get transactionFetcher => AptosTransactionFetcher(
+        rpcUrl: rpc,
+        isTestnet: rpc.contains('devnet') || rpc.contains('testnet'),
+      );
+
   AptosCoin({
     required this.blockExplorer,
     required this.symbol,
@@ -113,33 +123,22 @@ class AptosCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'aptosCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final keys = await compute(
-      calculateAptosKey,
-      AptosArgs(
-        mnemonic: mnemonic,
-      ),
-    );
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'aptosCoinV5${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateAptosKey,
+          AptosArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
-    final aptosClient = AptosClient(rpc, enableDebugLog: kDebugMode);
+    final aptosClient = AptosClient(rpc, enableDebugLog: false);
     final coinClient = CoinClient(aptosClient);
 
     var resp = await coinClient.checkBalance(address);
@@ -264,15 +263,6 @@ Future<bool> getFaucetToken(String address) async {
 List<AptosCoin> getAptosBlockchain() {
   List<AptosCoin> blockChains = [];
   if (enableTestNet) {
-    // blockChains.add({
-    //   'name': 'Aptos(Testnet)',
-    //   'symbol': 'APT',
-    //   'default': 'APT',
-    //   'blockExplorer':
-    //       'https://explorer.aptoslabs.com/txn/$blockExplorerPlaceholder?network=devnet',
-    //   'image': 'assets/aptos.png',
-    //   'rpc': Constants.devnetAPI,
-    // });
     blockChains.addAll([
       AptosCoin(
         blockExplorer:
@@ -308,18 +298,31 @@ List<AptosCoin> getAptosBlockchain() {
 }
 
 class AptosArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const AptosArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
-Future calculateAptosKey(AptosArgs config) async {
-  final account = AptosAccount.generateAccount(
-    config.mnemonic,
-  );
+Future<Map<String, dynamic>> calculateAptosKey(AptosArgs config) async {
+  String path = "m/44'/637'/0'/0'/0'";
+  if (!isValidPath(path)) {
+    throw ArgumentError("Invalid derivation path");
+  }
 
+  final keys = getMasterKeyFromSeed(HEX.encode(config.seedRoot.seed));
+  final segments = path
+      .split("/")
+      .sublist(1)
+      .map(replaceDerive)
+      .map((el) => int.parse(el, radix: 10));
+
+  Keys parentKeys = keys;
+  for (int i in segments) {
+    parentKeys = ckdPriv(parentKeys, i + HARDENED_OFFSET);
+  }
+  final account = AptosAccount(parentKeys.key);
   return {
     'privateKey': HEX.encode(account.signingKey.privateKey.bytes),
     'address': account.address,

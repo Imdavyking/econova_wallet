@@ -1,0 +1,437 @@
+// ignore_for_file: non_constant_identifier_names
+
+import 'dart:convert';
+import 'dart:math';
+import 'package:bech32/bech32.dart';
+import 'package:wallet_app/extensions/big_int_ext.dart';
+import 'package:hex/hex.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:flutter/foundation.dart';
+import 'package:web3dart/crypto.dart';
+import 'package:web3dart/web3dart.dart';
+
+import '../interface/coin.dart';
+import '../main.dart';
+import '../model/seed_phrase_root.dart';
+import '../service/wallet_service.dart';
+import '../utils/app_config.dart';
+import '../utils/rpc_urls.dart';
+import 'ethereum_coin.dart';
+
+class EVMHrpCoin extends Coin {
+  String blockExplorer;
+  String symbol;
+  String default_;
+  String image;
+  String name;
+  String rpc;
+  String hrp;
+  String geckoID;
+  String rampID;
+  String payScheme;
+  int chainID;
+  int coinType;
+
+  @override
+  bool get supportKeystore => true;
+  @override
+  bool get supportPrivateKey => true;
+
+  @override
+  String getExplorer() {
+    return blockExplorer;
+  }
+
+  @override
+  String getDefault() {
+    return default_;
+  }
+
+  @override
+  String getImage() {
+    return image;
+  }
+
+  @override
+  String getName() {
+    return name;
+  }
+
+  @override
+  String getSymbol() {
+    return symbol;
+  }
+
+  EVMHrpCoin({
+    required this.blockExplorer,
+    required this.symbol,
+    required this.default_,
+    required this.image,
+    required this.name,
+    required this.rpc,
+    required this.geckoID,
+    required this.rampID,
+    required this.payScheme,
+    required this.hrp,
+    required this.chainID,
+    required this.coinType,
+  });
+
+  factory EVMHrpCoin.fromJson(Map<String, dynamic> json) {
+    return EVMHrpCoin(
+      blockExplorer: json['blockExplorer'],
+      default_: json['default'],
+      symbol: json['symbol'],
+      image: json['image'],
+      name: json['name'],
+      rpc: json['rpc'],
+      geckoID: json['geckoID'],
+      rampID: json['rampID'],
+      payScheme: json['payScheme'],
+      chainID: json['chainID'],
+      hrp: json['hrp'],
+      coinType: json['coinType'],
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+
+    data['default'] = default_;
+    data['symbol'] = symbol;
+    data['name'] = name;
+    data['blockExplorer'] = blockExplorer;
+    data['rpc'] = rpc;
+    data['image'] = image;
+    data['geckoID'] = geckoID;
+    data['rampID'] = rampID;
+    data['payScheme'] = payScheme;
+    data['chainID'] = chainID;
+    data['hrp'] = hrp;
+    data['coinType'] = coinType;
+
+    return data;
+  }
+
+  @override
+  Future<AccountData> fromPrivateKey(String privateKey) async {
+    String saveKey = 'evmHrpPrivate${walletImportType.name}$hrp';
+    Map<String, dynamic> privateKeyMap = {};
+
+    if (pref.containsKey(saveKey)) {
+      privateKeyMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
+      if (privateKeyMap.containsKey(privateKey)) {
+        return AccountData.fromJson(privateKeyMap[privateKey]);
+      }
+    }
+
+    final account = await deriveEthereumAccount(privateKey);
+
+    final keys = AccountData(
+      publicKey: account.publicKey,
+      address: _ethAddrToHrp(account.address, hrp),
+      hex_address: account.address,
+      privateKey: privateKey,
+    );
+
+    privateKeyMap[privateKey] = keys.toJson();
+
+    await pref.put(saveKey, jsonEncode(privateKeyMap));
+
+    return keys;
+  }
+
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'evmHrpCoinDetails${walletImportType.name}$hrp',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateEVMHrpKey,
+          EVMHrpArgs(
+            seedRoot: seedPhraseRoot,
+            hrp: hrp,
+            coinType: coinType,
+          ),
+        ),
+      );
+
+  @override
+  bool get supportBip39Seed => true;
+
+  @override
+  Future<double> getUserBalance({required String address}) async {
+    final ethClient = Web3Client(rpc, http.Client());
+
+    final userAddress = EthereumAddress.fromHex(_hrpAddrToEth(address));
+
+    final etherAmount = await ethClient.getBalance(userAddress);
+
+    final base = BigInt.from(10);
+
+    return etherAmount.getInWei / base.pow(decimals());
+  }
+
+  @override
+  Future<double> getBalance(bool useCache) async {
+    final address = await getAddress();
+    final key = 'evmHrpAddressBalance$address$rpc$hrp';
+
+    final storedBalance = pref.get(key);
+
+    double savedBalance = 0;
+
+    if (storedBalance != null) {
+      savedBalance = storedBalance;
+    }
+
+    if (useCache) return savedBalance;
+
+    try {
+      double ethBalance = await getUserBalance(address: address);
+      await pref.put(key, ethBalance);
+
+      return ethBalance;
+    } catch (e) {
+      return savedBalance;
+    }
+  }
+
+  @override
+  Future<({String txHash, String? txRaw})?> transferToken(
+    String amount,
+    String to, {
+    String? memo,
+  }) async {
+    final client = Web3Client(
+      rpc,
+      http.Client(),
+    );
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+
+    final credentials = EthPrivateKey.fromHex(
+      response.privateKey!,
+    );
+    final gasPrice = await client.getGasPrice();
+    final wei = amount.toBigIntDec(decimals());
+
+    final trans = await client.signTransaction(
+      credentials,
+      Transaction(
+        from: credentials.address,
+        to: EthereumAddress.fromHex(_hrpAddrToEth(to)),
+        value: EtherAmount.inWei(
+          wei,
+        ),
+        gasPrice: gasPrice,
+      ),
+      chainId: chainID,
+    );
+
+    final txHash = await client.sendRawTransaction(trans);
+    return (
+      txHash: txHash,
+      txRaw: HEX.encode(trans),
+    );
+  }
+
+  @override
+  validateAddress(String address) {
+    try {
+      EthereumAddress.fromHex(address);
+    } catch (e) {
+      Bech32 sel = bech32.decode(address);
+      if (hrp == sel.hrp) return;
+      throw Exception("Invalid address");
+    }
+  }
+
+  @override
+  int decimals() => 18;
+
+  @override
+  Future<double> getTransactionFee(String amount, String to) async {
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await importData(data);
+    final transactionFee = await getEtherTransactionFee(
+      rpc,
+      null,
+      EthereumAddress.fromHex(_hrpAddrToEth(response.address)),
+      EthereumAddress.fromHex(_hrpAddrToEth(to)),
+    );
+
+    return transactionFee / pow(10, decimals());
+  }
+
+  @override
+  Future<String> addressExplorer() async {
+    final address = await getAddress();
+    return blockExplorer
+        .replaceFirst('/tx/', '/address/')
+        .replaceFirst(blockExplorerPlaceholder, address);
+  }
+
+  @override
+  String getGeckoId() => geckoID;
+
+  @override
+  String getPayScheme() => payScheme;
+
+  @override
+  String getRampID() => rampID;
+}
+
+List<EVMHrpCoin> getEVMHrpBlockchains() {
+  List<EVMHrpCoin> blockChains = [];
+  if (enableTestNet) {
+    blockChains.addAll([
+      EVMHrpCoin(
+        name: 'IoTeX(Testnet)',
+        symbol: 'IOTX',
+        default_: 'IOTX',
+        hrp: 'io',
+        blockExplorer:
+            'https://testnet.iotexscan.io/tx/$blockExplorerPlaceholder',
+        image: 'assets/iotex.png',
+        rpc: 'https://babel-api.testnet.iotex.io',
+        geckoID: 'iotex',
+        rampID: "",
+        payScheme: 'iotex',
+        chainID: 4690,
+        coinType: 304,
+      ),
+      EVMHrpCoin(
+        name: 'Harmony(Testnet)',
+        symbol: 'ONE',
+        default_: 'ONE',
+        hrp: 'one',
+        blockExplorer:
+            'https://explorer.testnet.harmony.one/tx/$blockExplorerPlaceholder',
+        image: 'assets/harmony.png',
+        rpc: 'https://api.s0.b.hmny.io/',
+        geckoID: 'harmony',
+        rampID: "",
+        payScheme: 'harmony',
+        chainID: 1666700000,
+        coinType: 1023,
+      ),
+    ]);
+  } else {
+    blockChains.addAll([
+      EVMHrpCoin(
+        name: 'IoTeX',
+        symbol: 'IOTX',
+        default_: 'IOTX',
+        hrp: 'io',
+        blockExplorer: 'https://iotexscan.io/tx/$blockExplorerPlaceholder',
+        image: 'assets/iotex.png',
+        rpc: 'https://babel-api.mainnet.iotex.io',
+        geckoID: 'iotex',
+        rampID: "",
+        payScheme: 'iotex',
+        chainID: 4689,
+        coinType: 304,
+      ),
+      EVMHrpCoin(
+        name: 'Harmony',
+        symbol: 'ONE',
+        default_: 'ONE',
+        hrp: 'one',
+        blockExplorer:
+            'https://explorer.harmony.one/tx/$blockExplorerPlaceholder',
+        image: 'assets/harmony.png',
+        rpc: 'https://api.s0.t.hmny.io',
+        geckoID: 'harmony',
+        rampID: "",
+        payScheme: 'harmony',
+        chainID: 1666600000,
+        coinType: 1023,
+      ),
+    ]);
+  }
+  return blockChains;
+}
+
+class EVMHrpArgs {
+  final SeedPhraseRoot seedRoot;
+  final String hrp;
+  final int coinType;
+
+  const EVMHrpArgs({
+    required this.seedRoot,
+    required this.hrp,
+    required this.coinType,
+  });
+}
+
+Future<Map<String, dynamic>> calculateEVMHrpKey(EVMHrpArgs config) async {
+  SeedPhraseRoot seedRoot_ = config.seedRoot;
+  final path = "m/44'/${config.coinType}'/0'/0/0";
+  final node = seedRoot_.root.derivePath(path);
+  final privateKey = HEX.encode(node.privateKey!);
+  final privatekeyStr = "0x$privateKey";
+  final account = await deriveEthereumAccount(privatekeyStr);
+
+  return {
+    'address': _ethAddrToHrp(account.address, config.hrp),
+    'privateKey': privatekeyStr,
+    'hex_address': account.address,
+  };
+}
+
+String _ethAddrToHrp(String address, String hrp) {
+  final addrBz = _convertBits(HEX.decode(strip0x(address)) as Uint8List, 8, 5);
+  return bech32.encode(Bech32(hrp, addrBz));
+}
+
+String _hrpAddrToEth(String address) {
+  try {
+    return EthereumAddress.fromHex(address).hexEip55;
+  } catch (e) {
+    final bits = bech32.decode(address);
+    final buf = _convertBits(Uint8List.fromList(bits.data), 5, 8, pad: false);
+    return EthereumAddress.fromHex(HEX.encode(buf)).hexEip55;
+  }
+}
+
+Uint8List _convertBits(
+  Uint8List data,
+  int fromWidth,
+  int toWidth, {
+  bool pad = true,
+}) {
+  int acc = 0;
+  int bits = 0;
+  List<int> ret = [];
+  int maxv = (1 << toWidth) - 1;
+
+  for (int p = 0; p < data.length; p++) {
+    int value = data[p];
+
+    if (value < 0 || (value >> fromWidth) != 0) {
+      return Uint8List(0); // Return an empty list if invalid
+    }
+
+    acc = (acc << fromWidth) | value;
+    bits += fromWidth;
+
+    while (bits >= toWidth) {
+      bits -= toWidth;
+      ret.add((acc >> bits) & maxv);
+    }
+  }
+
+  if (pad) {
+    if (bits > 0) {
+      ret.add((acc << (toWidth - bits)) & maxv);
+    }
+  } else if (bits >= fromWidth || (acc << (toWidth - bits)) & maxv != 0) {
+    return Uint8List(0); // Return an empty list if invalid
+  }
+
+  return Uint8List.fromList(ret);
+}

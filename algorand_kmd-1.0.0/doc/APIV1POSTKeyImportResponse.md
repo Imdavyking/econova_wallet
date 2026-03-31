@@ -1,0 +1,17 @@
+# algorand_kmd.model.APIV1POSTKeyImportResponse
+
+## Load the model package
+```dart
+import 'package:algorand_kmd/api.dart';
+```
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**address** | **String** |  | [optional] 
+**error** | **bool** |  | [optional] 
+**message** | **String** |  | [optional] 
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

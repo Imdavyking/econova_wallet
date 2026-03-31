@@ -6,6 +6,7 @@ import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:http/http.dart' as http;
 import 'package:on_chain/tron/tron.dart';
+import 'package:wallet_app/model/token_approvals.dart';
 import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -148,27 +149,19 @@ class TronCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    String saveKey = 'tronDetails${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
-
-    final args = TronArgs(seedRoot: seedPhraseRoot);
-
-    final keys = await compute(calculateTronKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'tronDetails${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateTronKey,
+          TronArgs(seedRoot: seedPhraseRoot),
+        ),
+      );
 
   Future<String> get _canTransferKey async =>
       'tronAddressCanTransfer${await getAddress()}$api';
@@ -297,6 +290,291 @@ class TronCoin extends Coin {
   }
 
   @override
+  bool get haveTestAppproval => true;
+  @override
+  Future<String?> testCreateApproval() async {
+    try {
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final tronDetails = await importData(data);
+      final ownerAddress = TronAddress(tronDetails.address);
+      final rpcProvider = TronProvider(TronHTTPProvider(url: api));
+      final block = await rpcProvider.request(TronRequestGetNowBlock());
+
+      const testTokenAddress =
+          'TTFd5kQ8r34XPtUjK3Lk5Eh8rLBjynsX1k'; // PRIME TRC20
+
+      const testSpender = 'TXF1xDbVGdxFGbovmmmXvBGu8ZiE3Lq4mR';
+      final testAmount = BigInt.from(1000000);
+
+      final spenderHex = tronAddressToHex(testSpender)
+          .toLowerCase()
+          .replaceFirst('41', '')
+          .padLeft(64, '0');
+      final amountHex = testAmount.toRadixString(16).padLeft(64, '0');
+      final callData = '095ea7b3$spenderHex$amountHex';
+
+      final contract = TriggerSmartContract(
+        ownerAddress: ownerAddress,
+        contractAddress: TronAddress(testTokenAddress),
+        data: BytesUtils.fromHexString(callData),
+        callValue: BigInt.zero,
+      );
+
+      final any = Any(typeUrl: contract.typeURL, value: contract);
+      final transactionContract =
+          TransactionContract(type: contract.contractType, parameter: any);
+
+      final rawTr = TransactionRaw(
+        refBlockBytes: block.blockHeader.rawData.refBlockBytes,
+        refBlockHash: block.blockHeader.rawData.refBlockHash,
+        expiration:
+            block.blockHeader.rawData.timestamp + BigInt.from(60 * 6 * 60),
+        contract: [transactionContract],
+        timestamp: block.blockHeader.rawData.timestamp,
+        feeLimit: BigInt.from(TRX_FEE_LIMIT),
+      );
+
+      final privateKey =
+          Uint8List.fromList(HEX.decode(tronDetails.privateKey!));
+      final txID = Uint8List.fromList(HEX.decode(rawTr.txID));
+      final sig = sign(txID, privateKey);
+      final recid = sig.v - 27;
+      final signature = '${HEX.encode([
+            ...sig.r.toUint8List(),
+            ...sig.s.toUint8List(),
+          ])}0$recid';
+
+      final transaction =
+          Transaction(rawData: rawTr, signature: [HEX.decode(signature)]);
+      final raw = BytesUtils.toHexString(transaction.toBuffer());
+      final result =
+          await rpcProvider.request(TronRequestBroadcastHex(transaction: raw));
+
+      return result.txId;
+    } catch (e) {
+      return 'Error: $e';
+    }
+  }
+
+  @override
+  Future<({String key, String timeKey})?> approvalCacheKeys() async {
+    final address = await getAddress();
+    final key = 'tron_approvals_${address}_$api';
+    return (key: key, timeKey: '${key}_time');
+  }
+
+  @override
+  Future<List<TokenApproval>>? getApprovals() {
+    return _fetchTronApprovalsWithCache();
+  }
+
+  Future<List<TokenApproval>> _fetchTronApprovalsWithCache() async {
+    final address = await getAddress();
+    final keys = await approvalCacheKeys();
+    if (keys == null) return [];
+
+    final String? cached = pref.get(keys.key) as String?;
+    final String? cachedTime = pref.get(keys.timeKey) as String?;
+
+    if (cached != null && cachedTime != null) {
+      final age = DateTime.now().difference(DateTime.parse(cachedTime));
+      if (age.inSeconds < 10) {
+        try {
+          final list = jsonDecode(cached) as List;
+          if (list.isNotEmpty) {
+            return list
+                .map((e) => TokenApproval.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final approvals = await _fetchTronApprovals(address);
+      await pref.put(
+          keys.key, jsonEncode(approvals.map((a) => a.toJson()).toList()));
+      await pref.put(keys.timeKey, DateTime.now().toIso8601String());
+      return approvals;
+    } catch (e) {
+      debugPrint('TronCoin.getApprovals error: $e');
+      if (cached != null) {
+        try {
+          final list = jsonDecode(cached) as List;
+          return list.map((e) => TokenApproval.fromJson(e)).toList();
+        } catch (_) {}
+      }
+      return [];
+    }
+  }
+
+  Future<List<TokenApproval>> _fetchTronApprovals(String address) async {
+    final response = await http.get(
+      Uri.parse(
+        '$api/v1/accounts/$address/transactions/trc20'
+        '?limit=200&only_confirmed=true&order_by=block_timestamp,desc', // ← sort desc
+      ),
+      headers: {
+        'TRON-PRO-API-KEY': tronGridApiKey,
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode ~/ 100 != 2) {
+      throw Exception('TronGrid error: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final txList = data['data'] as List? ?? [];
+
+    // Sort by block_timestamp descending — latest first
+    final sorted = List.from(txList)
+      ..sort((a, b) {
+        final aTime = a['block_timestamp'] as int? ?? 0;
+        final bTime = b['block_timestamp'] as int? ?? 0;
+        return bTime.compareTo(aTime); // desc
+      });
+
+    // Track latest allowance per (token, spender) pair
+    // Since sorted latest first, first seen = most recent state
+    final seen = <String>{};
+    final approvalMap = <String, TokenApproval>{};
+
+    for (final tx in sorted) {
+      final type = tx['type'] as String?;
+      if (type != 'Approval') continue;
+
+      final tokenAddress = (tx['token_info']?['address'] as String? ?? '');
+      final spender = tx['to'] as String? ?? '';
+      if (spender.isEmpty || tokenAddress.isEmpty) continue;
+
+      final pairKey = '${tokenAddress}_$spender';
+
+      // Already seen a more recent tx for this pair — skip
+      if (seen.contains(pairKey)) continue;
+      seen.add(pairKey);
+
+      final tokenSymbol = tx['token_info']?['symbol'] as String? ?? '?';
+      final tokenName = tx['token_info']?['name'] as String? ?? tokenSymbol;
+      final value = tx['value'] as String? ?? '0';
+      final blockTimestamp = tx['block_timestamp'] as int?;
+
+      BigInt allowance;
+      try {
+        allowance = BigInt.parse(value);
+      } catch (_) {
+        allowance = BigInt.zero;
+      }
+
+      // Most recent tx for this pair is a revoke — skip
+      if (allowance == BigInt.zero) continue;
+
+      approvalMap[pairKey] = TokenApproval(
+        tokenAddress: tokenAddress,
+        tokenSymbol: tokenSymbol,
+        tokenName: tokenName,
+        spenderAddress: spender,
+        spenderName: _resolveSpenderName(spender),
+        allowance: allowance,
+        contractDecimals: tx['token_info']?['decimals'] as int? ?? 6,
+        lastUpdated: blockTimestamp != null
+            ? DateTime.fromMillisecondsSinceEpoch(blockTimestamp)
+            : null,
+      );
+    }
+
+    return approvalMap.values.toList()
+      ..sort((a, b) {
+        if (a.isDangerous && !b.isDangerous) return -1;
+        if (!a.isDangerous && b.isDangerous) return 1;
+        return 0;
+      });
+  }
+
+  @override
+  Future<bool>? revokeApproval(TokenApproval approval) async {
+    try {
+      final keys = await approvalCacheKeys();
+      if (keys == null) return false;
+      final data = WalletService.getActiveKey(walletImportType)!.data;
+      final tronDetails = await importData(data);
+      final ownerAddress = TronAddress(tronDetails.address);
+      final rpc = TronProvider(TronHTTPProvider(url: api));
+      final block = await rpc.request(TronRequestGetNowBlock());
+
+      // TRC20 approve(spender, 0) — same as ERC20
+      // Function selector: 0x095ea7b3
+      final spenderHex = tronAddressToHex(approval.spenderAddress)
+          .toLowerCase()
+          .replaceFirst('41', '')
+          .padLeft(64, '0');
+      final amountHex = '0' * 64; // amount = 0
+      final data_ = '095ea7b3$spenderHex$amountHex';
+
+      final contract = TriggerSmartContract(
+        ownerAddress: ownerAddress,
+        contractAddress: TronAddress(approval.tokenAddress),
+        data: BytesUtils.fromHexString(data_),
+        callValue: BigInt.zero,
+      );
+
+      final any = Any(typeUrl: contract.typeURL, value: contract);
+      final transactionContract =
+          TransactionContract(type: contract.contractType, parameter: any);
+
+      final rawTr = TransactionRaw(
+        refBlockBytes: block.blockHeader.rawData.refBlockBytes,
+        refBlockHash: block.blockHeader.rawData.refBlockHash,
+        expiration:
+            block.blockHeader.rawData.timestamp + BigInt.from(60 * 6 * 60),
+        contract: [transactionContract],
+        timestamp: block.blockHeader.rawData.timestamp,
+        feeLimit: BigInt.from(TRX_FEE_LIMIT),
+      );
+
+      final privateKey =
+          Uint8List.fromList(HEX.decode(tronDetails.privateKey!));
+      final txID = Uint8List.fromList(HEX.decode(rawTr.txID));
+      final sig = sign(txID, privateKey);
+      final recid = sig.v - 27;
+      final signature = '${HEX.encode([
+            ...sig.r.toUint8List(),
+            ...sig.s.toUint8List(),
+          ])}0$recid';
+
+      final transaction =
+          Transaction(rawData: rawTr, signature: [HEX.decode(signature)]);
+      final raw = BytesUtils.toHexString(transaction.toBuffer());
+      final result =
+          await rpc.request(TronRequestBroadcastHex(transaction: raw));
+
+      if (!result.isSuccess) {
+        throw Exception('Revoke failed: ${result.error}');
+      }
+
+      await pref.delete(keys.key);
+      await pref.delete(keys.timeKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static const _knownTronSpenders = <String, String>{
+    'TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax': 'SunSwap V2',
+    'TFVisXFaijZfeyeSjCEVkHfex7HGdTxzS9': 'JustLend',
+    'TXF1xDbVGdxFGbovmmmXvBGu8ZiE3Lq4mR': 'Sun.io',
+  };
+
+  String _resolveSpenderName(String address) {
+    return _knownTronSpenders[address] ?? _shortAddr(address);
+  }
+
+  String _shortAddr(String addr) => addr.length > 10
+      ? '${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}'
+      : addr;
+
+  @override
   validateAddress(String address) {
     if (!wallet.isValidTronAddress(address)) {
       throw Exception('Invalid $default_ address');
@@ -400,7 +678,7 @@ class TronArgs {
   });
 }
 
-calculateTronKey(TronArgs config) {
+Future<Map<String, dynamic>> calculateTronKey(TronArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final master = wallet.ExtendedPrivateKey.master(seedRoot_.seed, wallet.xprv);
   final root = master.forPath("m/44'/195'/0'/0/0");

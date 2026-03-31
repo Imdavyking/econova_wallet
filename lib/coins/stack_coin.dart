@@ -17,6 +17,8 @@ import '../service/x402_service.dart';
 import '../utils/app_config.dart';
 import '../utils/c32check.dart';
 import '../utils/stack_tx_utils.dart';
+import 'package:wallet_app/utils/wallet_transaction.dart';
+import 'package:wallet_app/fetchers/stacks_trx_fetcher.dart';
 
 // ─── Address version bytes ─────────────────────────────────────────────────────
 
@@ -81,6 +83,10 @@ class StacksCoin extends Coin {
   String getRampID() => rampID;
   @override
   String getPayScheme() => payScheme;
+
+  @override
+  TransactionFetcher? get transactionFetcher =>
+      StacksTransactionFetcher(isTestnet: isTestnet);
 
   static const int _stacksDecimals = 6;
 
@@ -266,33 +272,27 @@ class StacksCoin extends Coin {
   @override
   List<Coin> get networkTokens => getSIP010Coins();
 
+  @override
+  bool get supportBip39Seed => true;
+
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final cacheKey =
-        'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet';
-    Map<String, dynamic> cached = {};
-
-    if (pref.containsKey(cacheKey)) {
-      cached = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (cached.containsKey(mnemonic)) {
-        return AccountData.fromJson(cached[mnemonic]);
-      }
-    }
-
-    final args = StacksDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      derivationPath: derivationPath,
-      addressVersion: _addrVersion,
-    );
-
-    final keys = await compute(calculateStacksKey, args);
-    cached[mnemonic] = keys;
-    await pref.put(cacheKey, jsonEncode(cached));
-
-    return AccountData.fromJson(keys);
-  }
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateStacksKey,
+          StacksDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            derivationPath: derivationPath,
+            addressVersion: _addrVersion,
+          ),
+        ),
+      );
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {

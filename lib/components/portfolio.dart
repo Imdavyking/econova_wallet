@@ -9,6 +9,15 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
 
+class UserBalDetails {
+  final String symbol;
+  final double balance;
+  const UserBalDetails({
+    required this.symbol,
+    required this.balance,
+  });
+}
+
 class Portfolio extends StatefulWidget {
   const Portfolio({super.key});
 
@@ -17,7 +26,7 @@ class Portfolio extends StatefulWidget {
 }
 
 class _PortfolioState extends State<Portfolio> {
-  Map? userBalance;
+  UserBalDetails? userBalance;
   late Timer timer;
 
   @override
@@ -46,10 +55,8 @@ class _PortfolioState extends State<Portfolio> {
 
       if (mounted) {
         setState(() {
-          userBalance = {
-            'balance': balance,
-            'symbol': cryptoPrice.symbol,
-          };
+          userBalance =
+              UserBalDetails(symbol: cryptoPrice.symbol, balance: balance);
         });
       }
     } catch (_, sk) {
@@ -109,17 +116,19 @@ class _PortfolioState extends State<Portfolio> {
                     if (userBalance != null)
                       GestureDetector(
                         onTap: () async {
-                          final userPreviousHidingBalance =
+                          final userBalHidden =
                               pref.get(hideBalanceKey, defaultValue: false);
-
-                          await pref.put(
-                              hideBalanceKey, !userPreviousHidingBalance);
+                          if (userBalHidden) {
+                            final auth = await authenticate(context);
+                            if (!auth) return;
+                          }
+                          await pref.put(hideBalanceKey, !userBalHidden);
                         },
                         child: SizedBox(
                           height: 35,
                           child: UserBalance(
-                            symbol: userBalance!['symbol'],
-                            balance: userBalance!['balance'],
+                            symbol: userBalance!.symbol,
+                            balance: userBalance!.balance,
                             reversed: true,
                             iconSize: 29,
                             iconDivider: const SizedBox(
@@ -132,9 +141,10 @@ class _PortfolioState extends State<Portfolio> {
                             ),
                             iconColor: Colors.white,
                             textStyle: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       )

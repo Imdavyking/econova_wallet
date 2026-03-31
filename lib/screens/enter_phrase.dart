@@ -1,521 +1,341 @@
-import 'dart:async';
+// ignore_for_file: library_private_types_in_public_api
 
-import 'package:wallet_app/components/loader.dart';
-import 'package:wallet_app/components/wallet_logo.dart';
-import 'package:wallet_app/interface/coin.dart';
-import 'package:wallet_app/modals/dialog_utils.dart';
-import 'package:wallet_app/screens/import_shamir_secret.dart';
-import 'package:wallet_app/screens/wallet.dart';
-import 'package:wallet_app/service/crypto_transaction.dart';
-import 'package:wallet_app/service/wallet_service.dart';
-import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bip39/bip39.dart' as bip39;
-import 'package:pinput/pinput.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import '../main.dart';
-import '../model/seed_phrase_root.dart';
-import '../utils/qr_scan_view.dart';
+import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/components/wallet_logo.dart';
+import 'package:wallet_app/components/mnemonic_text_field.dart';
+import 'package:wallet_app/modals/dialog_utils.dart';
+import 'package:wallet_app/screens/import_shamir_secret.dart';
+import 'package:wallet_app/screens/wallet.dart';
+import 'package:wallet_app/service/wallet_import_service.dart';
+import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/qr_scan_view.dart';
+import 'package:wallet_app/main.dart';
+import 'package:pinput/pinput.dart';
 
 class EnterPhrase extends StatefulWidget {
   const EnterPhrase({super.key});
+
   @override
   State<EnterPhrase> createState() => _EnterPhraseState();
 }
 
 class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
-  final mnemonicController = TextEditingController();
-  final walletNameController = TextEditingController();
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool isLoading = false;
+  // ── Controllers ────────────────────────────────────────────────────────────
+  final _mnemonicController = TextEditingController();
+  final _walletNameController = TextEditingController();
 
-  // disallow screenshots
-  ScreenshotCallback screenshotCallback = ScreenshotCallback();
-  bool invisiblemnemonic = false;
-  bool securitydialogOpen = false;
+  // ── State ──────────────────────────────────────────────────────────────────
+  bool _isLoading = false;
+  bool _obscureMnemonic = false;
+  bool _securityOverlayVisible = false;
+  final _suggestions = ValueNotifier<List<String>>([]);
 
-  final _prediction = ValueNotifier<List<String>>([]);
-  late StreamSubscription<dynamic> _streamSubscription;
+  late AppLocalizations _loc;
+  final _screenshotCallback = ScreenshotCallback();
+  String info = 'Seed phrase/BIP39 seed hex';
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _streamSubscription =
-        EventBusService.instance.on<SeedPharseInitializationEvent>().listen(
-      (event) async {
-        debugPrint(
-            'Notification: ${event.coin.getName()} - ${event.coin.getSymbol()}');
-      },
-    );
-    screenshotCallback.addListener(() {
-      showDialogWithMessage(
-        context: context,
-        message: localization.youCantScreenshot,
-      );
-    });
     WidgetsBinding.instance.addObserver(this);
     disEnableScreenShot();
-    mnemonicController.text = kDebugMode ? testMnemonic : '';
-    walletNameController.text = kDebugMode ? 'Test Wallet(DO NOT USE)' : '';
+
+    _screenshotCallback.addListener(_onScreenshot);
+
+    if (kDebugMode) {
+      _mnemonicController.text = testMnemonic1;
+      _walletNameController.text = 'Test Wallet (DO NOT USE)';
+    }
   }
 
+  void _onScreenshot() => showDialogWithMessage(
+        context: context,
+        message: _loc.youCantScreenshot,
+      );
+
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
+  void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     switch (state) {
-      case AppLifecycleState.resumed:
-        if (invisiblemnemonic) {
-          invisiblemnemonic = false;
-          if (await authenticate(context)) {
-            await disEnableScreenShot();
-            setState(() {
-              securitydialogOpen = false;
-            });
-          } else {
-            SystemNavigator.pop();
-          }
-        }
-        break;
       case AppLifecycleState.paused:
-        if (!securitydialogOpen) {
+        if (!_securityOverlayVisible) {
           setState(() {
-            invisiblemnemonic = true;
-            securitydialogOpen = true;
+            _obscureMnemonic = true;
+            _securityOverlayVisible = true;
           });
         }
-        break;
+      case AppLifecycleState.resumed:
+        if (_obscureMnemonic) _handleResume();
       default:
         break;
     }
   }
 
+  Future<void> _handleResume() async {
+    final authenticated = await authenticate(context);
+    if (!mounted) return;
+    if (authenticated) {
+      await disEnableScreenShot();
+      setState(() {
+        _obscureMnemonic = false;
+        _securityOverlayVisible = false;
+      });
+    } else {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   void dispose() {
-    enableScreenShot();
-    _streamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    mnemonicController.dispose();
-    walletNameController.dispose();
+    enableScreenShot();
+    _screenshotCallback.dispose();
+    _mnemonicController.dispose();
+    _walletNameController.dispose();
+    _suggestions.dispose();
     super.dispose();
   }
 
-  late AppLocalizations localization;
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  Future<void> _onScanQr() async {
+    final seedPhrase = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const QRScanView()),
+    );
+    if (seedPhrase != null) _mnemonicController.setText(seedPhrase);
+  }
+
+  Future<void> _onImportShamir() async {
+    final mnemonics = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ImportShamirSecret()),
+    );
+    if (mnemonics != null) _mnemonicController.setText(mnemonics);
+  }
+
+  Future<void> _onConfirm() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final mnemonics = _mnemonicController.text.trim().toLowerCase();
+    final walletName = _walletNameController.text.trim();
+
+    if (walletName.isEmpty || mnemonics.isEmpty) {
+      _showError(_loc.enterName);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await WalletImportService.importFromMnemonic(
+      mnemonicOrBip39SeedHex: mnemonics,
+      walletName: walletName,
+    );
+
+    if (!mounted) return;
+
+    if (!result.success) {
+      _showError(_errorMessage(result.error!));
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    await pref.put(currentUserWalletNameKey, walletName);
+
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const Wallet()),
+        (_) => false,
+      );
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+
+  String _errorMessage(WalletImportError error) => switch (error) {
+        WalletImportError.invalidMnemonic => _loc.invalidmnemonic,
+        WalletImportError.duplicate => _loc.mnemonicAlreadyImported,
+        WalletImportError.unknown => _loc.errorTryAgain,
+      };
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
+    _loc = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          localization.entermnemonic,
-        ),
+        title: Text(info),
         actions: [
           IconButton(
-            onPressed: () async {
-              String? seedPhrase = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (ctx) => const QRScanView(),
-                ),
-              );
-              if (seedPhrase == null) return;
-              mnemonicController.setText(seedPhrase);
-            },
-            icon: const Icon(
-              Icons.qr_code_scanner,
-            ),
-          )
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: _onScanQr,
+          ),
         ],
       ),
-      key: _scaffoldKey,
-      body: securitydialogOpen
-          ? Container()
+      body: _securityOverlayVisible
+          ? const SizedBox.expand() // blank screen while locked
           : SafeArea(
               child: SingleChildScrollView(
-                child: Container(
-                  color: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(25),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const WalletLogo(),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        TextFormField(
-                          controller: walletNameController,
-                          keyboardType: TextInputType.visiblePassword,
-                          decoration: InputDecoration(
-                            hintText: localization.name,
-                            focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            border: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none), // you
-                            filled: true,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Stack(
-                          children: [
-                            TextFormField(
-                              maxLines: 3,
-                              controller: mnemonicController,
-                              onChanged: (val) {
-                                final userWords = val.split(' ');
-                                final lastWord =
-                                    userWords[userWords.length - 1].trim();
+                padding: const EdgeInsets.all(25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const WalletLogo(),
+                    const SizedBox(height: 20),
 
-                                if (lastWord == '') {
-                                  _prediction.value = [];
-                                  return;
-                                }
-                                final predictions =
-                                    mnemonicSuggester.autoComplete(
-                                  prefix: lastWord,
-                                  limit: 15,
-                                );
+                    // Wallet name
+                    _NameField(controller: _walletNameController, loc: _loc),
+                    const SizedBox(height: 20),
 
-                                _prediction.value = predictions;
-                              },
-                              keyboardType: TextInputType.visiblePassword,
-                              decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.only(
-                                  top: 100,
-                                  left: 12,
-                                  right: 12,
-                                ),
-                                hintText: localization.entermnemonic,
-                                focusedBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide: BorderSide.none,
-                                ),
-                                border: const OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(10.0)),
-                                    borderSide: BorderSide.none),
-                                enabledBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide: BorderSide.none,
-                                ), // you
-                                filled: true,
-                              ),
-                            ),
-                            Positioned(
-                              right: 10,
-                              top: 10,
-                              child: InkWell(
-                                onTap: () async {
-                                  ClipboardData? cdata =
-                                      await Clipboard.getData(
-                                          Clipboard.kTextPlain);
-                                  if (cdata == null) return;
-                                  if (cdata.text == null) return;
-                                  mnemonicController.setText(cdata.text!);
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .scaffoldBackgroundColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      localization.paste,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                (states) => appBackgroundblue,
-                              ),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: () async {
-                              String? mnemonics = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (ctx) => const ImportShamirSecret(),
-                                ),
-                              );
-
-                              if (mnemonics == null) return;
-                              mnemonicController.setText(mnemonics);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: Text(
-                                localization.importShamirSecret,
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                  (states) => appBackgroundblue),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    FocusManager.instance.primaryFocus
-                                        ?.unfocus();
-                                    ScaffoldMessenger.of(context)
-                                        .hideCurrentSnackBar();
-
-                                    final String mnemonics = mnemonicController
-                                        .text
-                                        .trim()
-                                        .toLowerCase();
-
-                                    String cryptoWallName =
-                                        walletNameController.text.trim();
-
-                                    if (cryptoWallName.isEmpty ||
-                                        mnemonics.isEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.red,
-                                          content: Text(
-                                            localization.enterName,
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    if (isLoading) return;
-                                    setState(() {
-                                      isLoading = true;
-                                    });
-                                    try {
-                                      final mnemonicValid = await compute(
-                                        bip39.validateMnemonic,
-                                        mnemonics,
-                                      );
-
-                                      if (!mnemonicValid) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              backgroundColor: Colors.red,
-                                              content: Text(
-                                                localization.invalidmnemonic,
-                                                style: const TextStyle(
-                                                    color: Colors.white),
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                        setState(() {
-                                          isLoading = false;
-                                        });
-                                        return;
-                                      }
-                                      final mnemonicsList =
-                                          WalletService.getActiveKeys(
-                                        WalletType.secretPhrase,
-                                      );
-
-                                      final phraseData = SeedPhraseParams(
-                                        data: mnemonics,
-                                        name: cryptoWallName,
-                                      );
-
-                                      for (WalletParams? phrases
-                                          in mnemonicsList) {
-                                        if (phrases == phraseData) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                backgroundColor: Colors.red,
-                                                content: Text(
-                                                  localization
-                                                      .mnemonicAlreadyImported,
-                                                  style: const TextStyle(
-                                                      color: Colors.white),
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                          setState(() {
-                                            isLoading = false;
-                                          });
-                                          return;
-                                        }
-                                      }
-
-                                      seedPhraseRoot = await compute(
-                                        seedFromMnemonic,
-                                        phraseData.data,
-                                      );
-
-                                      await WalletService.setActiveKey(
-                                        WalletType.secretPhrase,
-                                        phraseData,
-                                      );
-
-                                      await importAllKeys(phraseData.data);
-
-                                      await pref.put(
-                                        currentUserWalletNameKey,
-                                        cryptoWallName,
-                                      );
-
-                                      if (context.mounted) {
-                                        Navigator.pushAndRemoveUntil(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (ctx) => const Wallet(),
-                                          ),
-                                          (r) => false,
-                                        );
-                                      }
-
-                                      setState(() {
-                                        isLoading = false;
-                                      });
-                                    } catch (e, sk) {
-                                      if (kDebugMode) {
-                                        print(e);
-                                        print(sk);
-                                      }
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            backgroundColor: Colors.red,
-                                            content: Text(
-                                              localization.errorTryAgain,
-                                              style: const TextStyle(
-                                                  color: Colors.white),
-                                            ),
-                                          ),
-                                        );
-                                      }
-
-                                      setState(() {
-                                        isLoading = false;
-                                      });
-                                    }
-                                  },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: isLoading
-                                  ? const Loader(
-                                      color: Colors.black,
-                                    )
-                                  : Text(
-                                      localization.confirm,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        ValueListenableBuilder(
-                          valueListenable: _prediction,
-                          builder: (context, List value, child) {
-                            if (value.isEmpty) return Container();
-
-                            return Wrap(
-                              children: [
-                                for (String val in value) ...[
-                                  GestureDetector(
-                                    onTap: () {
-                                      final currentText =
-                                          mnemonicController.text;
-                                      const space = ' ';
-                                      final lastSpaceIndex =
-                                          currentText.lastIndexOf(space);
-
-                                      if (lastSpaceIndex == -1) {
-                                        mnemonicController
-                                            .setText('$val$space');
-                                      } else {
-                                        mnemonicController.setText(
-                                            '${currentText.substring(0, lastSpaceIndex)}$space$val$space');
-                                      }
-                                      _prediction.value = [];
-                                    },
-                                    child: Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Text(
-                                          val,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ]
-                              ],
-                            );
-                          },
-                        )
-                      ],
+                    // Mnemonic input
+                    MnemonicTextField(
+                      controller: _mnemonicController,
+                      hintText: info,
+                      obscure: _obscureMnemonic,
+                      onSuggestionsChanged: (s) => _suggestions.value = s,
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    ValueListenableBuilder<List<String>>(
+                      valueListenable: _suggestions,
+                      builder: (_, suggestions, __) => MnemonicSuggestionsRow(
+                        suggestions: suggestions,
+                        controller: _mnemonicController,
+                        onSelected: () => _suggestions.value = [],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _ConfirmButton(
+                      isLoading: _isLoading,
+                      label: _loc.confirm,
+                      onPressed: _isLoading ? null : _onConfirm,
+                    ),
+                    const SizedBox(height: 20),
+                    // Shamir secret import
+                    _OutlineButton(
+                      label: _loc.importShamirSecret,
+                      onPressed: _onImportShamir,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Confirm
+
+                    // Autocomplete suggestions
+                  ],
                 ),
+              ),
+            ),
+    );
+  }
+}
+
+// ── Local sub-widgets ─────────────────────────────────────────────────────────
+
+class _NameField extends StatelessWidget {
+  final TextEditingController controller;
+  final AppLocalizations loc;
+
+  const _NameField({required this.controller, required this.loc});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.visiblePassword,
+      decoration: InputDecoration(
+        hintText: loc.name,
+        filled: true,
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
+class _OutlineButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _OutlineButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: appBackgroundblue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.all(15),
+      ),
+      onPressed: onPressed,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConfirmButton extends StatelessWidget {
+  final bool isLoading;
+  final String label;
+  final VoidCallback? onPressed;
+
+  const _ConfirmButton({
+    required this.isLoading,
+    required this.label,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: appBackgroundblue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.all(15),
+      ),
+      onPressed: onPressed,
+      child: isLoading
+          ? const Loader(color: Colors.black)
+          : Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
     );

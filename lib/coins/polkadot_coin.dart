@@ -88,28 +88,44 @@ class PolkadotCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'polkadotDetailss${walletImportType.name}$ss58Prefix';
-    Map<String, dynamic> mnemonicMap = {};
+  bool get supportBip39Seed => true;
 
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
+// ── Top-level address encoder (mirrors _PolkadotDerive but without async) ──
+  String encodePolkadotAddress(Uint8List publicKey, int ss58Prefix) {
+    // For multi-byte ss58 prefixes this would need the canary encoding,
+    // but all current chains use single-byte prefixes (0-63).
+    List<int> prefix = [ss58Prefix, ...publicKey.sublist(1)]; // ← skips byte 0
 
-    final args = PolkadotArgs(
-      seedRoot: seedPhraseRoot,
-      path: path,
-      ss58Prefix: ss58Prefix,
+    return base58.encode(
+      Uint8List.fromList([
+        ...prefix,
+        ...sshash(Uint8List.fromList(prefix)).sublist(
+          0,
+          [32, 33].contains(publicKey.length) ? 2 : 1,
+        ),
+      ]),
     );
-    final keys = await compute(calculatePolkadotKey, args);
-    mnemonicMap[mnemonic] = keys;
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
   }
+  // ── In PolkadotCoin ──────────────────────────────────────────────────────────
 
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'polkadotDetails${path.replaceAll("/", "_")}${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculatePolkadotKey,
+          PolkadotArgs(seedRoot: seedPhraseRoot, path: path),
+        ),
+        postProcess: (cached) {
+          final publicKey =
+              Uint8List.fromList(HEX.decode(cached['publicKey'] as String));
+          cached['address'] = encodePolkadotAddress(publicKey, ss58Prefix);
+          return cached;
+        },
+      );
   @override
   String savedTransKey() => '$default_$api Details';
 
@@ -542,11 +558,9 @@ Uint8List xxh128(String data) {
 class PolkadotArgs {
   final SeedPhraseRoot seedRoot;
   final String path;
-  final int ss58Prefix;
   const PolkadotArgs({
     required this.seedRoot,
     required this.path,
-    required this.ss58Prefix,
   });
 }
 
@@ -572,21 +586,17 @@ class _PolkadotDerive {
   }
 }
 
-calculatePolkadotKey(PolkadotArgs config) async {
-  SeedPhraseRoot seedRoot_ = config.seedRoot;
-  final derivedKey =
-      await ED25519_HD_KEY.derivePath(config.path, seedRoot_.seed);
-  final results = await _PolkadotDerive.fromPrivateKey(
-    privateKey: derivedKey.key,
-    ss58Prefix: config.ss58Prefix,
+Future<Map<String, String>> calculatePolkadotKey(PolkadotArgs config) async {
+  final derivedKey = await ED25519_HD_KEY.derivePath(
+    config.path,
+    config.seedRoot.seed,
   );
+  final publicKey = await ED25519_HD_KEY.getPublicKey(derivedKey.key);
   return {
-    'address': results.address,
-    'publicKey': results.publicKey,
-    'privateKey': results.privateKey,
+    'privateKey': HEX.encode(derivedKey.key),
+    'publicKey': HEX.encode(publicKey),
   };
 }
-
 // ── Chain registry ────────────────────────────────────────────────────────────
 
 List<PolkadotCoin> getPolkadoBlockChains() {
@@ -605,9 +615,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         coinDecimals: 12,
         ss58Prefix: 42,
         path: "m/44'/354'/0'/0'/0'",
-        geckoID: '',
-        payScheme: '',
-        rampID: '',
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -620,9 +630,9 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         coinDecimals: 12,
         ss58Prefix: 42,
         path: "m/44'/354'/0'/0'/0'",
-        geckoID: '',
-        payScheme: '',
-        rampID: '',
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
       ),
       PolkadotCoin(
         blockExplorer:

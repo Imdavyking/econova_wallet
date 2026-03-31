@@ -191,13 +191,15 @@ class ViewOnlyWallet extends StatelessWidget {
                           viewKeyParams,
                         );
 
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (ctx) => const Wallet(),
-                          ),
-                          (r) => false,
-                        );
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (ctx) => const Wallet(),
+                            ),
+                            (r) => false,
+                          );
+                        }
                       },
                     ),
                   ),

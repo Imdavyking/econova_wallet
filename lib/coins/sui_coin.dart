@@ -2,14 +2,15 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
+import 'package:wallet_app/model/seed_phrase_root.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sui/signers/txn_data_serializers/txn_data_serializer.dart';
-import 'package:sui/sui.dart';
-
+import 'package:sui/sui.dart' hide Coin;
 import '../interface/coin.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -107,7 +108,7 @@ class SuiCoin extends Coin {
 
     final keyPair = SuiAccount.fromPrivateKey(
       privateKey,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
 
     final keys = AccountData(
@@ -124,32 +125,26 @@ class SuiCoin extends Coin {
   }
 
   @override
-  Future<AccountData> fromMnemonic({required String mnemonic}) async {
-    final saveKey = 'suiCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(mnemonic)) {
-        return AccountData.fromJson(mnemonicMap[mnemonic]);
-      }
-    }
+  bool get supportBip39Seed => true;
 
-    final args = SuiArgs(mnemonic: mnemonic);
-
-    final keys = await compute(calculateSuiKey, args);
-
-    mnemonicMap[mnemonic] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+  @override
+  Future<AccountData> fromBip39PhraseOrSeed(
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'suiCoinDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateSuiKey,
+          SuiArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
     final suiClient = SuiClient(rpc);
-
-    final resp = await suiClient.provider.getBalance(address);
+    final resp = await suiClient.getBalance(address);
     final base = BigInt.from(10);
     return resp.totalBalance / base.pow(decimals());
   }
@@ -179,11 +174,21 @@ class SuiCoin extends Coin {
     }
   }
 
+  Future<bool> getFaucetToken(String address) async {
+    try {
+      final faucet = FaucetClient(SuiUrls.faucetDev);
+      await faucet.requestSuiFromFaucetV1(address);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<String?> resolveAddress(String address) async {
     final client = SuiClient(rpc);
     try {
-      return await client.provider.resolveNameServiceAddress(name);
+      return await client.resolveNameServiceAddress(address);
     } catch (e) {
       return null;
     }
@@ -205,7 +210,7 @@ class SuiCoin extends Coin {
     final response = await importData(data);
     final keyPair = SuiAccount.fromPrivateKey(
       response.privateKey!,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
 
     final client = SuiClient(rpc, account: keyPair);
@@ -245,7 +250,7 @@ class SuiCoin extends Coin {
     final response = await importData(data);
     final keyPair = SuiAccount.fromPrivateKey(
       response.privateKey!,
-      SignatureScheme.ED25519,
+      SignatureScheme.Ed25519,
     );
     SuiAccount account = keyPair;
     final miniSui = double.parse(amount) * pow(10, suiDecimals);
@@ -286,16 +291,6 @@ class SuiCoin extends Coin {
   String getRampID() => rampID;
 }
 
-Future<bool> getFaucetToken(String address) async {
-  try {
-    final faucet = FaucetClient(Constants.faucetDevAPI);
-    await faucet.requestSui(address);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 List<SuiCoin> getSuiBlockChains() {
   List<SuiCoin> blockChains = [];
   if (enableTestNet) {
@@ -307,7 +302,7 @@ List<SuiCoin> getSuiBlockChains() {
         blockExplorer:
             'https://suiexplorer.com/txblock/$blockExplorerPlaceholder?network=devnet',
         image: 'assets/sui.png',
-        rpc: Constants.devnetAPI,
+        rpc: SuiUrls.devnet,
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
@@ -322,7 +317,7 @@ List<SuiCoin> getSuiBlockChains() {
         blockExplorer:
             'https://suiexplorer.com/txblock/$blockExplorerPlaceholder',
         image: 'assets/sui.png',
-        rpc: Constants.mainnetAPI,
+        rpc: SuiUrls.mainnet,
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
@@ -334,18 +329,30 @@ List<SuiCoin> getSuiBlockChains() {
 }
 
 class SuiArgs {
-  final String mnemonic;
+  final SeedPhraseRoot seedRoot;
 
   const SuiArgs({
-    required this.mnemonic,
+    required this.seedRoot,
   });
 }
 
-Future calculateSuiKey(SuiArgs config) async {
-  final account = SuiAccount.fromMnemonics(
-    config.mnemonic,
-    SignatureScheme.ED25519,
+Future<Map<String, dynamic>> calculateSuiKey(SuiArgs config) async {
+  const defaultEd25519DerivationPath = "m/44'/784'/0'/0'/0'";
+
+  final data = await ED25519_HD_KEY.derivePath(
+    defaultEd25519DerivationPath,
+    config.seedRoot.seed,
   );
+
+  final key = data.key;
+  final pubkey = await ED25519_HD_KEY.getPublicKey(key, false);
+
+  final fullPrivateKey = Uint8List(64);
+  fullPrivateKey.setAll(0, key);
+  fullPrivateKey.setAll(32, pubkey);
+
+  final account =
+      SuiAccount(Ed25519Keypair(Uint8List.fromList(fullPrivateKey)));
 
   return {
     'address': account.getAddress(),
