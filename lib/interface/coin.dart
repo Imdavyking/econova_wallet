@@ -202,14 +202,14 @@ abstract class Coin {
       return AccountData.fromJson(postProcess?.call(result) ?? result);
     }
 
-    // ── 1. memory cache hit ────────────────────────────────────────────────
+    // ── 1. memory cache hit ──────────────────────────────────────────────────
     final memEntry = decodedCache[cacheKey];
     if (memEntry != null) {
       final hit = memEntry[bip39PhraseOrSeedHex];
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 2. hive cache hit → warm memory cache ─────────────────────────────
+    // ── 2. hive cache hit → warm memory cache ───────────────────────────────
     if (pref.containsKey(cacheKey)) {
       final decoded = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
       decodedCache[cacheKey] = decoded;
@@ -217,13 +217,12 @@ abstract class Coin {
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 3. cold path: derive keys ──────────────────────────────────────────
+    // ── 3. cold path: derive keys ────────────────────────────────────────────
     final keys = await derive();
 
-    // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
+    // ── 4. memory only — Hive flush is handled by importAllKeys ─────────────
     final entry = decodedCache[cacheKey] ??= {};
     entry[bip39PhraseOrSeedHex] = keys;
-    await pref.put(cacheKey, jsonEncode(entry));
 
     return toAccount(keys);
   }

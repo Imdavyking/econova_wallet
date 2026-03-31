@@ -18,6 +18,7 @@ import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/polkadot_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'dart:convert';
 import 'package:pointycastle/export.dart';
@@ -56,7 +57,7 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
-  // ── dedup ────────────────────────────────────────────────────────────────
+  // ── dedup ─────────────────────────────────────────────────────────────────
   final seenCosmosPaths = <String>{};
   final seenPolkadotPaths = <String>{};
   final seenEvmCoinTypes = <int>{};
@@ -69,13 +70,14 @@ Future<void> importAllKeys(String mnemonic) async {
     return true;
   }).toList();
 
-  // ── batch: 10 at a time, wait for each batch to fully finish ─────────────
+  // ── batch: 10 at a time ───────────────────────────────────────────────────
   const batchSize = 10;
   final failed = <String>[];
 
   for (var i = 0; i < chains.length; i += batchSize) {
     final batch = chains.skip(i).take(batchSize).toList();
 
+    // all 10 compute() run in parallel
     final results = await Future.wait(
       batch.map((coin) async {
         try {
@@ -88,12 +90,15 @@ Future<void> importAllKeys(String mnemonic) async {
       eagerError: false,
     );
 
-    // collect failures for this batch
+    // ── isolates all dead — flush decodedCache to Hive in one shot ─────────
+    await Future.wait([
+      for (final entry in decodedCache.entries)
+        pref.put(entry.key, jsonEncode(entry.value)),
+    ]);
+
     batch.indexed
         .where((e) => results[e.$1] == null)
         .forEach((e) => failed.add(e.$2.getName()));
-
-    // batch isolates are all dead here before next 10 spawn
   }
 
   if (failed.isNotEmpty) {
