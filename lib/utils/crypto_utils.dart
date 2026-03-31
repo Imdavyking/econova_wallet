@@ -96,6 +96,8 @@ Future<void> importAllKeys(String mnemonic) async {
       eagerError: false,
     );
 
+    await Coin.flushCache();
+
     debugPrint(
         '── batch ${i ~/ batchSize + 1} done ${batchSw.elapsedMilliseconds}ms ──');
 
