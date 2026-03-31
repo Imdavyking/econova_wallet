@@ -1,10 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-
 import '../components/loader.dart';
 import '../utils/app_config.dart';
-import '../utils/auth_utils.dart';
 import '../utils/rpc_urls.dart';
 import '../utils/slide_up_panel.dart';
 import '../utils/starknet_call.dart';
@@ -28,7 +26,7 @@ Future<void> signStarkNetTransaction({
     DefaultTabController(
       length: 3,
       child: Column(children: [
-        _snHeader(localization.signTransaction, onReject),
+        _snHeader(localization.signTransaction, context, onReject),
         const SizedBox(
           height: 50,
           child: TabBar(tabs: [
@@ -54,57 +52,46 @@ Future<void> signStarkNetTransaction({
         ),
         Expanded(
           child: TabBarView(children: [
-            // ── Details ─────────────────────────────────────────────────
-            FutureBuilder(
-              future: Future.value(true),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: Loader());
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                        left: 25, right: 25, bottom: 25),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (networkIcon != null) _snIcon(networkIcon),
-                        if (name != null)
-                          Text(name,
-                              style: const TextStyle(fontSize: 16)),
-                        SizedBox(
-                          width: double.infinity,
-                          child: SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 25, vertical: 10),
-                              child: StarknetCallList(dapCalls: dapCalls),
-                            ),
-                          ),
-                        ),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: isSigning,
-                          builder: (_, signing, __) {
-                            if (signing) {
-                              return const Row(children: [Loader()]);
-                            }
-                            return _snButtons(context, localization,
-                                isSigning, onConfirm, onReject);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            // ── Data (empty) ─────────────────────────────────────────────
-            const SizedBox.shrink(),
-
-            // ── Hex ─────────────────────────────────────────────────────
+            // ── Details — no async work, render directly ──────────────────
             SingleChildScrollView(
               child: Padding(
-                padding:
-                    const EdgeInsets.only(left: 25, right: 25, bottom: 25),
+                padding: const EdgeInsets.only(left: 25, right: 25, bottom: 25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (networkIcon != null) _snIcon(networkIcon),
+                    if (name != null)
+                      Text(name, style: const TextStyle(fontSize: 16)),
+                    SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 25, vertical: 10),
+                          child: StarknetCallList(dapCalls: dapCalls),
+                        ),
+                      ),
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: isSigning,
+                      builder: (_, signing, __) {
+                        if (signing) return const Row(children: [Loader()]);
+                        return _snButtons(context, localization, isSigning,
+                            onConfirm, onReject);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Data (empty) ──────────────────────────────────────────────
+            const SizedBox.shrink(),
+
+            // ── Hex ───────────────────────────────────────────────────────
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 25, right: 25, bottom: 25),
                 child: Theme(
                   data: Theme.of(context)
                       .copyWith(dividerColor: Colors.transparent),
@@ -131,7 +118,9 @@ Future<void> signStarkNetTransaction({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-Widget _snHeader(String title, Function()? onReject) => Container(
+// ← context passed explicitly — no more dangling _snCtx global
+Widget _snHeader(String title, BuildContext context, Function()? onReject) =>
+    Container(
       alignment: Alignment.center,
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -141,19 +130,17 @@ Widget _snHeader(String title, Function()? onReject) => Container(
               onPressed: null,
               icon: Icon(Icons.close, color: Colors.transparent)),
           Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 20)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           IconButton(
             onPressed: () {
-              if (Navigator.canPop(_snCtx!)) onReject?.call();
+              if (Navigator.canPop(context)) onReject?.call();
             },
             icon: const Icon(Icons.close),
           ),
         ],
       ),
     );
-
-BuildContext? _snCtx;
 
 Widget _snIcon(String url) => SizedBox(
       height: 50,
@@ -162,8 +149,7 @@ Widget _snIcon(String url) => SizedBox(
         imageUrl: ipfsTohttp(url),
         placeholder: (_, __) =>
             const SizedBox(width: 20, height: 20, child: Loader()),
-        errorWidget: (_, __, ___) =>
-            const Icon(Icons.error, color: Colors.red),
+        errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
       ),
     );
 
@@ -192,8 +178,8 @@ Row _snButtons(
             }
           },
           child: Text(loc.confirm,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 18)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ),
       ),
       const SizedBox(width: 16),
@@ -204,8 +190,8 @@ Row _snButtons(
               backgroundColor: appBackgroundblue),
           onPressed: onReject,
           child: Text(loc.reject,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 18)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ),
       ),
     ]);

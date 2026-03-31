@@ -46,26 +46,41 @@ class _SettingsState extends State<Settings>
     with AutomaticKeepAliveClientMixin {
   late AppLocalizations localization;
 
+  // ── Cached futures — computed once per lifecycle ──────────────────────────
+  late final Future<bool> _deadSwitchFuture;
+  late final Future<bool> _dmsUserFuture;
+  late final Future<PackageInfo> _packageInfoFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _deadSwitchFuture = _checkDeadSwitch();
+    _dmsUserFuture = _checkDmsUser();
+    _packageInfoFuture = PackageInfo.fromPlatform();
+  }
+
+  Future<bool> _checkDeadSwitch() async {
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    return compute(validateMnemonic, mnemonic);
+  }
+
+  Future<bool> _checkDmsUser() async {
+    final ethCoin = getChains<EthereumCoin>().first;
+    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+    final response = await ethCoin.importData(mnemonic);
+    final config = DeadManSwitchService.config;
+    return config?.senderAddress == response.address;
+  }
+
   bool _isValidUrl(String url) {
     url = url.trim();
     return url.isNotEmpty && Uri.tryParse(url) != null;
   }
 
-  Future<bool> checkDeadSwitch() async {
-    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-    final validPhrase = await compute(validateMnemonic, mnemonic);
-
-    return validPhrase;
-  }
-
-  // ── Testnet toggle ──────────────────────────────────────────────────────────
-
+  // ── Testnet toggle ────────────────────────────────────────────────────────
   void _onTestNetToggle(bool value) {
     enableTestNet = value;
-
     debugPrint('enableTestNet changed → $enableTestNet');
-
-    // Notify user so they know a restart/refresh is needed
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
@@ -78,8 +93,7 @@ class _SettingsState extends State<Settings>
       );
   }
 
-  // ── Build ───────────────────────────────────────────────────────────────────
-
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -99,7 +113,7 @@ class _SettingsState extends State<Settings>
                   padding: const EdgeInsets.all(15),
                   child: Column(
                     children: [
-                      // ── Account ─────────────────────────────────────────────────
+                      // ── Account ───────────────────────────────────────────
                       _SectionHeader(label: localization.account),
                       const SizedBox(height: 10),
                       Card(
@@ -113,7 +127,7 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Wallet ───────────────────────────────────────────────────
+                      // ── Wallet ────────────────────────────────────────────
                       _SectionHeader(label: localization.wallet),
                       const SizedBox(height: 10),
                       Card(
@@ -228,11 +242,11 @@ class _SettingsState extends State<Settings>
                                 ),
                               if (WalletService.isBip39PhraseOrSeedHexKey())
                                 FutureBuilder<bool>(
-                                  future: checkDeadSwitch(),
+                                  future: _deadSwitchFuture, // ← cached
                                   builder: (context, data) {
-                                    if (data.hasError) return Container();
-                                    if (!data.hasData) return Container();
-                                    if (data.data == false) return Container();
+                                    if (!data.hasData || data.data == false) {
+                                      return const SizedBox.shrink();
+                                    }
                                     return _SettingsRow(
                                       icon: _CircleIcon(
                                         color: Color.fromARGB(255, 180, 30, 30),
@@ -240,7 +254,9 @@ class _SettingsState extends State<Settings>
                                         iconSize: 14,
                                       ),
                                       label: 'Dead Man\'s Switch',
-                                      trailing: _DmsStatusBadge(),
+                                      trailing: _DmsStatusBadge(
+                                        future: _dmsUserFuture, // ← cached
+                                      ),
                                       onTap: () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -293,7 +309,7 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Security ─────────────────────────────────────────────────
+                      // ── Security ──────────────────────────────────────────
                       _SectionHeader(label: localization.security),
                       const SizedBox(height: 10),
                       Card(
@@ -404,7 +420,7 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Network ───────────────────────────────────────────────────
+                      // ── Network ───────────────────────────────────────────
                       _SectionHeader(label: 'Network'),
                       const SizedBox(height: 10),
                       Card(
@@ -440,7 +456,7 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 10),
 
-                      // ── Web ──────────────────────────────────────────────────────
+                      // ── Web ───────────────────────────────────────────────
                       _SectionHeader(label: localization.web),
                       const SizedBox(height: 10),
                       Card(
@@ -478,7 +494,7 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Community ────────────────────────────────────────────────
+                      // ── Community ─────────────────────────────────────────
                       Card(
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(Radius.circular(15)),
@@ -536,15 +552,16 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── App version ──────────────────────────────────────────────
+                      // ── App version ───────────────────────────────────────
                       FutureBuilder<PackageInfo>(
-                        future: PackageInfo.fromPlatform(),
+                        future: _packageInfoFuture, // ← cached
                         builder: (_, snapshot) {
                           if (!snapshot.hasData) return const SizedBox.shrink();
                           final info = snapshot.data!;
                           return Text(
                             '${info.appName} v${info.version} (${info.buildNumber})',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                            style: const TextStyle(
+                                fontSize: 16, color: Colors.grey),
                           );
                         },
                       ),
@@ -683,20 +700,13 @@ class _SocialIcon extends StatelessWidget {
 }
 
 class _DmsStatusBadge extends StatelessWidget {
-  const _DmsStatusBadge();
-
-  Future<bool> _checkCurrentUser() async {
-    final ethCoin = getChains<EthereumCoin>().first;
-    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-    final response = await ethCoin.importData(mnemonic);
-    final config = DeadManSwitchService.config;
-    return config?.senderAddress == response.address;
-  }
+  final Future<bool> future;
+  const _DmsStatusBadge({required this.future});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: _checkCurrentUser(),
+      future: future, // ← injected, not created here
       builder: (context, data) {
         var (color, label) = (Colors.grey, 'Off');
         if (!data.hasError && data.hasData && data.data == true) {

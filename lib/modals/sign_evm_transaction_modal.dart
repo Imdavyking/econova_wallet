@@ -6,11 +6,9 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:http/http.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:web3dart/web3dart.dart' as web3;
-
 import '../coins/fungible_tokens/erc_fungible_coin.dart';
 import '../components/loader.dart';
 import '../utils/app_config.dart';
-import '../utils/auth_utils.dart';
 import '../utils/rpc_urls.dart';
 import '../utils/slide_up_panel.dart';
 
@@ -49,12 +47,62 @@ Future<void> signEVMTransaction({
   final decodedName = decodedFunction?.name;
   final isSigning = ValueNotifier(false);
 
+  // Cache the future so it isn't recreated on every build
+  final detailsFuture = () async {
+    userBalance =
+        (await wcClient.getBalance(web3.EthereumAddress.fromHex(from)))
+            .getInWei
+            .toDouble();
+    transactionFee = await getEtherTransactionFee(
+      coin.rpc,
+      trxDataList,
+      web3.EthereumAddress.fromHex(from),
+      to == null ? null : web3.EthereumAddress.fromHex(to),
+      value: value,
+      gasPrice: web3.EtherAmount.inWei(BigInt.from(gasPrice)),
+    );
+    if (decodedFunction == null) return true;
+    final decodedResult = decodedFunction.decodedInputs;
+    if (decodedName == 'safeBatchTransferFrom') {
+      final nftIds = decodedResult[2] as List;
+      final nftAmounts = decodedResult[3] as List;
+      BigInt total = BigInt.zero;
+      for (final a in nftAmounts) total += a as BigInt;
+      message =
+          '$total ${total == BigInt.one ? 'NFT' : 'NFTs'} (IDs: ${nftIds.join(', ')}) would be sent from ${decodedResult[0]} to ${decodedResult[1]}.';
+    } else if (decodedName == 'safeTransferFrom') {
+      message =
+          'Transfer NFT ${decodedResult[2]} ($to) from ${decodedResult[0]} to ${decodedResult[1]}';
+    } else if (decodedName == 'approve') {
+      final ftCoin = _ftCoin(to!, coin);
+      final meta = await ftCoin.getERC20Meta();
+      final amount =
+          (decodedResult[1] as BigInt) / BigInt.from(pow(10, meta!.decimals));
+      message =
+          'Allow ${decodedResult[0]} to spend $amount ${meta.symbol} ($to)';
+    } else if (decodedName == 'transfer') {
+      final ftCoin = _ftCoin(to!, coin);
+      final meta = await ftCoin.getERC20Meta();
+      final amount =
+          (decodedResult[1] as BigInt) / BigInt.from(pow(10, meta!.decimals));
+      message = 'Transfer $amount ${meta.symbol} ($to) to ${decodedResult[0]}';
+    } else if (decodedName == 'transferFrom') {
+      final ftCoin = _ftCoin(to!, coin);
+      final meta = await ftCoin.getERC20Meta();
+      final amount =
+          (decodedResult[2] as BigInt) / BigInt.from(pow(10, meta!.decimals));
+      message =
+          'Transfer $amount ${meta.symbol} ($to) from ${decodedResult[0]} to ${decodedResult[1]}';
+    }
+    return true;
+  }();
+
   slideUpPanel(
     context,
     DefaultTabController(
       length: 3,
       child: Column(children: [
-        _txHeader(localization.signTransaction, onReject),
+        _txHeader(localization.signTransaction, context, onReject),
         const SizedBox(
           height: 50,
           child: TabBar(tabs: [
@@ -80,60 +128,9 @@ Future<void> signEVMTransaction({
         ),
         Expanded(
           child: TabBarView(children: [
-            // ── Details tab ─────────────────────────────────────────────
+            // ── Details tab ──────────────────────────────────────────────
             FutureBuilder(
-              future: () async {
-                userBalance = (await wcClient
-                        .getBalance(web3.EthereumAddress.fromHex(from)))
-                    .getInWei
-                    .toDouble();
-                transactionFee = await getEtherTransactionFee(
-                  coin.rpc,
-                  trxDataList,
-                  web3.EthereumAddress.fromHex(from),
-                  to == null ? null : web3.EthereumAddress.fromHex(to),
-                  value: value,
-                  gasPrice: web3.EtherAmount.inWei(BigInt.from(gasPrice)),
-                );
-                if (decodedFunction == null) return true;
-                final decodedResult = decodedFunction.decodedInputs;
-                if (decodedName == 'safeBatchTransferFrom') {
-                  final nftIds = decodedResult[2] as List;
-                  final nftAmounts = decodedResult[3] as List;
-                  BigInt total = BigInt.zero;
-                  for (final a in nftAmounts) total += a as BigInt;
-                  message =
-                      '$total ${total == BigInt.one ? 'NFT' : 'NFTs'} (IDs: ${nftIds.join(', ')}) would be sent from ${decodedResult[0]} to ${decodedResult[1]}.';
-                } else if (decodedName == 'safeTransferFrom') {
-                  message =
-                      'Transfer NFT ${decodedResult[2]} ($to) from ${decodedResult[0]} to ${decodedResult[1]}';
-                } else if (decodedName == 'approve') {
-                  final ftCoin = _ftCoin(to!, coin);
-                  final meta = await ftCoin.getERC20Meta();
-                  final amount =
-                      (decodedResult[1] as BigInt) /
-                          BigInt.from(pow(10, meta!.decimals));
-                  message =
-                      'Allow ${decodedResult[0]} to spend $amount ${meta.symbol} ($to)';
-                } else if (decodedName == 'transfer') {
-                  final ftCoin = _ftCoin(to!, coin);
-                  final meta = await ftCoin.getERC20Meta();
-                  final amount =
-                      (decodedResult[1] as BigInt) /
-                          BigInt.from(pow(10, meta!.decimals));
-                  message =
-                      'Transfer $amount ${meta.symbol} ($to) to ${decodedResult[0]}';
-                } else if (decodedName == 'transferFrom') {
-                  final ftCoin = _ftCoin(to!, coin);
-                  final meta = await ftCoin.getERC20Meta();
-                  final amount =
-                      (decodedResult[2] as BigInt) /
-                          BigInt.from(pow(10, meta!.decimals));
-                  message =
-                      'Transfer $amount ${meta.symbol} ($to) from ${decodedResult[0]} to ${decodedResult[1]}';
-                }
-                return true;
-              }(),
+              future: detailsFuture, // ← cached, not recreated on rebuild
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -145,16 +142,14 @@ Future<void> signEVMTransaction({
                 }
                 return SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.only(
-                        left: 25, right: 25, bottom: 25),
+                    padding:
+                        const EdgeInsets.only(left: 25, right: 25, bottom: 25),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (networkIcon != null)
-                          _netIcon(networkIcon),
+                        if (networkIcon != null) _netIcon(networkIcon),
                         if (name != null)
-                          Text(name,
-                              style: const TextStyle(fontSize: 16)),
+                          Text(name, style: const TextStyle(fontSize: 16)),
                         if (message.isNotEmpty)
                           _txField(localization.info, message),
                         if (to != null)
@@ -177,8 +172,8 @@ Future<void> signEVMTransaction({
                             if (signing) {
                               return const Row(children: [Loader()]);
                             }
-                            return _evmButtons(context, localization,
-                                isSigning, onConfirm, onReject);
+                            return _evmButtons(context, localization, isSigning,
+                                onConfirm, onReject);
                           },
                         ),
                       ],
@@ -188,12 +183,12 @@ Future<void> signEVMTransaction({
               },
             ),
 
-            // ── Data tab ────────────────────────────────────────────────
+            // ── Data tab ─────────────────────────────────────────────────
             if (decodedFunction != null)
               SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                      left: 25, right: 25, bottom: 25),
+                  padding:
+                      const EdgeInsets.only(left: 25, right: 25, bottom: 25),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -211,11 +206,10 @@ Future<void> signEVMTransaction({
             else
               const SizedBox.shrink(),
 
-            // ── Hex tab ─────────────────────────────────────────────────
+            // ── Hex tab ──────────────────────────────────────────────────
             SingleChildScrollView(
               child: Padding(
-                padding:
-                    const EdgeInsets.only(left: 25, right: 25, bottom: 25),
+                padding: const EdgeInsets.only(left: 25, right: 25, bottom: 25),
                 child: Theme(
                   data: Theme.of(context)
                       .copyWith(dividerColor: Colors.transparent),
@@ -226,8 +220,7 @@ Future<void> signEVMTransaction({
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     children: [
-                      Text(txData,
-                          style: const TextStyle(fontSize: 16))
+                      Text(txData, style: const TextStyle(fontSize: 16))
                     ],
                   ),
                 ),
@@ -258,7 +251,9 @@ ERCFungibleCoin _ftCoin(String contractAddress, dynamic coin) =>
       symbol: '',
     );
 
-Widget _txHeader(String title, Function()? onReject) => Container(
+// ← context passed explicitly — no more dangling _ctx global
+Widget _txHeader(String title, BuildContext context, Function()? onReject) =>
+    Container(
       alignment: Alignment.center,
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -268,11 +263,11 @@ Widget _txHeader(String title, Function()? onReject) => Container(
               onPressed: null,
               icon: Icon(Icons.close, color: Colors.transparent)),
           Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 20)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           IconButton(
             onPressed: () {
-              if (Navigator.canPop(_ctx!)) onReject?.call();
+              if (Navigator.canPop(context)) onReject?.call();
             },
             icon: const Icon(Icons.close),
           ),
@@ -280,14 +275,11 @@ Widget _txHeader(String title, Function()? onReject) => Container(
       ),
     );
 
-BuildContext? _ctx;
-
 Widget _txField(String label, String value) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16)),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Text(value, style: const TextStyle(fontSize: 16)),
       ]),
@@ -300,8 +292,7 @@ Widget _netIcon(String url) => SizedBox(
         imageUrl: ipfsTohttp(url),
         placeholder: (_, __) =>
             const SizedBox(width: 20, height: 20, child: Loader()),
-        errorWidget: (_, __, ___) =>
-            const Icon(Icons.error, color: Colors.red),
+        errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
       ),
     );
 
@@ -330,8 +321,8 @@ Row _evmButtons(
             }
           },
           child: Text(loc.confirm,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 18)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ),
       ),
       const SizedBox(width: 16),
@@ -342,8 +333,8 @@ Row _evmButtons(
               backgroundColor: appBackgroundblue),
           onPressed: onReject,
           child: Text(loc.reject,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 18)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ),
       ),
     ]);

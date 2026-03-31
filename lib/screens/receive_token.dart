@@ -33,17 +33,24 @@ class ReceiveToken extends StatefulWidget {
 }
 
 class _ReceiveTokenState extends State<ReceiveToken> {
-  late String _userAddress;
   final _amountController = TextEditingController();
   final _receiveParams =
       ValueNotifier<ReceivePayParams>(const ReceivePayParams());
+
+  // ← cached once — not recreated on every build
+  late final Future<String> _addressFuture;
+  String _userAddress = '';
+
   late Coin _coin;
-  late AppLocalizations _l;
 
   @override
   void initState() {
     super.initState();
     _coin = widget.coin;
+    _addressFuture = _coin.getAddress().then((addr) {
+      _userAddress = addr;
+      return addr;
+    });
   }
 
   @override
@@ -96,22 +103,18 @@ class _ReceiveTokenState extends State<ReceiveToken> {
     await Clipboard.setData(ClipboardData(text: _userAddress));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(_l.copiedToClipboard),
+      content: Text(AppLocalizations.of(context)!.copiedToClipboard),
       duration: const Duration(seconds: 2),
     ));
   }
 
-  String get _symbolDisplay => _coin.getSymbol();
-
-  String get _nameDisplay => _coin.getName();
-
   @override
   Widget build(BuildContext context) {
-    _l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_l.receive} $_symbolDisplay'),
+        title: Text('${l.receive} ${_coin.getSymbol()}'),
         actions: [
           IconButton(
             onPressed: () async {
@@ -132,10 +135,9 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                 child: Padding(
                   padding: const EdgeInsets.all(25),
                   child: FutureBuilder<String>(
-                    future: _coin.getAddress(),
+                    future: _addressFuture, // ← cached
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox();
-                      _userAddress = snapshot.data!;
+                      if (!snapshot.hasData) return const SizedBox.shrink();
 
                       return ValueListenableBuilder<ReceivePayParams>(
                         valueListenable: _receiveParams,
@@ -184,8 +186,8 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                               Text.rich(
                                 TextSpan(children: [
                                   TextSpan(
-                                    text: _l.sendOnly(
-                                        '$_nameDisplay ($_symbolDisplay)'),
+                                    text: l.sendOnly(
+                                        '${_coin.getName()} (${_coin.getSymbol()})'),
                                   ),
                                 ]),
                                 textAlign: TextAlign.center,
@@ -198,22 +200,22 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                 children: [
                                   _ReceiveAction(
                                     icon: Icons.copy,
-                                    label: _l.copy,
+                                    label: l.copy,
                                     onTap: _copyAddress,
                                   ),
                                   _ReceiveAction(
                                     icon: Icons.share,
-                                    label: _l.share,
+                                    label: l.share,
                                     onTap: () => Share.share(
-                                      '${_l.publicAddressToReceive} ${_coin.getSymbol()} $_userAddress',
+                                      '${l.publicAddressToReceive} ${_coin.getSymbol()} $_userAddress',
                                     ),
                                   ),
                                   _ReceiveAction(
                                     icon: Icons.add,
-                                    label: _l.request,
+                                    label: l.request,
                                     iconBackground: Colors.black,
                                     iconColor: Colors.white,
-                                    onTap: () => _showRequestDialog(context),
+                                    onTap: () => _showRequestDialog(context, l),
                                   ),
                                 ],
                               ),
@@ -232,7 +234,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
     );
   }
 
-  void _showRequestDialog(BuildContext context) {
+  void _showRequestDialog(BuildContext context, AppLocalizations l) {
     AwesomeDialog(
       showCloseIcon: true,
       context: context,
@@ -244,7 +246,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
-            Text(_l.requestPayment),
+            Text(l.requestPayment),
             const SizedBox(height: 10),
             Material(
               elevation: 0,
@@ -255,7 +257,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                 autofocus: true,
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  labelText: _l.amount,
+                  labelText: l.amount,
                   prefixIcon: const Icon(Icons.text_fields),
                 ),
               ),
@@ -263,7 +265,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
             const SizedBox(height: 10),
             AnimatedButton(
               isFixedHeight: false,
-              text: _l.ok,
+              text: l.ok,
               pressEvent: () {
                 _createPayment();
                 if (Navigator.canPop(context)) Navigator.pop(context);
