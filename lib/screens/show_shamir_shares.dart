@@ -93,7 +93,9 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   String? _validateThreshold(String? v, AppLocalizations loc) {
     if (v == null || v.trim().isEmpty) return loc.enterValidthresholdCount;
     final threshold = int.tryParse(v);
-    if (threshold == null || threshold <= 0) return loc.enterValidthresholdCount;
+    if (threshold == null || threshold <= 0) {
+      return loc.enterValidthresholdCount;
+    }
     final shares = int.tryParse(_sharesCtrl.text.trim());
     if (shares == null) return loc.enterValidsharesCount;
     if (threshold > shares) return loc.enterValidthresholdCount;
