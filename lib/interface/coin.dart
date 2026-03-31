@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/service/wallet_service.dart';
@@ -9,6 +10,7 @@ import 'package:wallet_app/service/x402_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:flutter/material.dart';
+import 'package:xxh64/xxh64.dart';
 import '../main.dart';
 
 enum WalletType {
@@ -197,36 +199,44 @@ abstract class Coin {
     required Future<Map<String, dynamic>> Function() derive,
     Map<String, dynamic> Function(Map<String, dynamic> keys)? postProcess,
   }) async {
+    // hash once, used everywhere below
+    final seedKey = XXH64
+        .digest(data: bip39PhraseOrSeedHex, seed: BigInt.zero)
+        .toUint8List()
+        .reversed
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+
     AccountData toAccount(Map<String, dynamic> keys) {
       final processed = postProcess != null
-          ? postProcess(
-              Map<String, dynamic>.from(keys)) // copy only if mutating
-          : keys; // no postProcess = no copy needed
+          ? postProcess(Map<String, dynamic>.from(keys))
+          : keys;
       return AccountData.fromJson(processed);
     }
 
-    // ── 1. memory cache hit ────────────────────────────────────────────────
+    // ── 1. memory cache hit ──────────────────────────────────────────────────
     final memEntry = decodedCache[cacheKey];
     if (memEntry != null) {
-      final hit = memEntry[bip39PhraseOrSeedHex];
+      final hit = memEntry[seedKey];
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 2. hive cache hit → warm memory cache ─────────────────────────────
+    // ── 2. hive cache hit → warm memory cache ───────────────────────────────
     if (pref.containsKey(cacheKey)) {
       final decoded = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
       decodedCache[cacheKey] = decoded;
-      final hit = decoded[bip39PhraseOrSeedHex];
+      final hit = decoded[seedKey];
       if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
     }
 
-    // ── 3. cold path: derive keys ──────────────────────────────────────────
+    // ── 3. cold path: derive keys ────────────────────────────────────────────
     final keys = await derive();
 
-    // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
+    // ── 4. persist to memory + hive ─────────────────────────────────────────
     final entry = decodedCache[cacheKey] ??= {};
-    entry[bip39PhraseOrSeedHex] = keys;
+    entry[seedKey] = keys;
     await pref.put(cacheKey, jsonEncode(entry));
+
     return toAccount(keys);
   }
 
