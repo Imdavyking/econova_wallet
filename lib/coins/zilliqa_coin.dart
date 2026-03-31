@@ -130,29 +130,18 @@ class ZilliqaCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'ZilliqaCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = ZilliqaArgs(
-      seedRoot: seedPhraseRoot,
-      network: network,
-    );
-
-    final keys = await compute(calculateZilliqaKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'ZilliqaCoinDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateZilliqaKey,
+          ZilliqaArgs(
+            seedRoot: seedPhraseRoot,
+            network: network,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -321,7 +310,7 @@ class ZilliqaArgs {
   });
 }
 
-Future calculateZilliqaKey(ZilliqaArgs config) async {
+Future<Map<String, dynamic>> calculateZilliqaKey(ZilliqaArgs config) async {
   const index = 0;
 
   const rootString = "m/44'/313'/0'/0/$index";

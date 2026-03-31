@@ -123,26 +123,15 @@ class XRPCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'xrpDeriveArgs${walletImportType.name}$api';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final deriveArgs = XRPDeriveArgs(seedRootKey: seedPhraseRoot);
-
-    final keys = await compute(calculateRippleKey, deriveArgs);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'xrpDeriveArgs${walletImportType.name}$api',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateRippleKey,
+          XRPDeriveArgs(seedRootKey: seedPhraseRoot),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {

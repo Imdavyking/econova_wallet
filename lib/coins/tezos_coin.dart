@@ -127,27 +127,15 @@ class TezosCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final cacheKey = 'tezosV3_${networkType.index}_${walletImportType.name}';
-    Map<String, dynamic> cache = {};
-
-    if (pref.containsKey(cacheKey)) {
-      cache = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (cache.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(
-            Map<String, dynamic>.from(cache[bip39PhraseOrSeedHex]));
-      }
-    }
-
-    final keys = await compute(
-      _deriveTezosKeys,
-      TezosArgs(seedRoot: seedPhraseRoot),
-    );
-
-    cache[bip39PhraseOrSeedHex] = keys;
-    await pref.put(cacheKey, jsonEncode(cache));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'tezosV3_${networkType.index}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          _deriveTezosKeys,
+          TezosArgs(seedRoot: seedPhraseRoot),
+        ),
+      );
 
   // ── Balance ─────────────────────────────────────────────────────────────────
 

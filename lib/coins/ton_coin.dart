@@ -78,24 +78,15 @@ class TonCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'tonCoinDetailsV7${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = TonArgs(seedRoot: seedPhraseRoot);
-    final keys = await compute(calculateTonKey, args);
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'tonCoinDetailsV7${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateTonKey,
+          TonArgs(seedRoot: seedPhraseRoot),
+        ),
+      );
 
   @override
   bool get supportPrivateKey => true;
@@ -334,7 +325,7 @@ class _TonDerive {
   }
 }
 
-calculateTonKey(TonArgs config) async {
+Future<Map<String, dynamic>> calculateTonKey(TonArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
 
   final derivedKey =

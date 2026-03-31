@@ -280,28 +280,18 @@ class WavesCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey =
-        'wavesCoinDetail_V8338438434343334${chainId}_${walletImportType.name}';
-    Map<String, dynamic> cache = {};
-    if (pref.containsKey(saveKey)) {
-      cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
-      }
-    }
-    final result = await compute(
-      calculateWavesKey,
-      WavesDeriveArgs(
-        seedRoot: seedPhraseRoot,
-        chainId: chainId,
-      ),
-    );
-
-    cache[bip39PhraseOrSeedHex] = result;
-    await pref.put(saveKey, jsonEncode(cache));
-    return AccountData.fromJson(result);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'wavesCoinDetail_V9${chainId}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateWavesKey,
+          WavesDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            chainId: chainId,
+          ),
+        ),
+      );
 
   @override
   TransactionFetcher? get transactionFetcher => WavesTransactionFetcher(

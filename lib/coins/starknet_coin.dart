@@ -421,29 +421,18 @@ class StarknetCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'CairoStarknetUserAcc${walletImportType.name}$api';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = StarknetDeriveArgs(
-      classHash: classHash,
-      seedRoot: seedPhraseRoot,
-    );
-
-    final keys = await compute(calculateStarknetKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'CairoStarknetUserAcc${walletImportType.name}$api',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateStarknetKey,
+          StarknetDeriveArgs(
+            classHash: classHash,
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<String?> resolveAddress(String address) async {
@@ -1913,7 +1902,8 @@ class StarknetDeriveArgs {
   });
 }
 
-Future<Map> calculateStarknetKey(StarknetDeriveArgs config) async {
+Future<Map<String, dynamic>> calculateStarknetKey(
+    StarknetDeriveArgs config) async {
   String pathPrefix = "m/44'/9004'/0'/0";
   int index = 0;
   final nodeFromSeed = config.seedRoot.root;

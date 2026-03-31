@@ -119,28 +119,17 @@ class StellarCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'stellarDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = StellarArgs(
-      seedRoot: seedPhraseRoot,
-    );
-    final keys = await compute(calculateStellarKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'stellarDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateStellarKey,
+          StellarArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -363,7 +352,7 @@ class StellarArgs {
   });
 }
 
-Future<Map> calculateStellarKey(StellarArgs config) async {
+Future<Map<String, dynamic>> calculateStellarKey(StellarArgs config) async {
   final wallet = await stellar.Wallet.fromBip39Seed(config.seedRoot.seed);
   final userWalletAddress = await wallet.getKeyPair(index: 0);
   return {

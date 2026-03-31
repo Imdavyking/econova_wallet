@@ -129,28 +129,17 @@ class SuiCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'suiCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = SuiArgs(
-      seedRoot: seedPhraseRoot,
-    );
-
-    final keys = await compute(calculateSuiKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'suiCoinDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateSuiKey,
+          SuiArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -347,7 +336,7 @@ class SuiArgs {
   });
 }
 
-Future calculateSuiKey(SuiArgs config) async {
+Future<Map<String, dynamic>> calculateSuiKey(SuiArgs config) async {
   const defaultEd25519DerivationPath = "m/44'/784'/0'/0'/0'";
 
   final data = await ED25519_HD_KEY.derivePath(

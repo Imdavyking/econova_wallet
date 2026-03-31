@@ -153,27 +153,15 @@ class TronCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'tronDetails${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = TronArgs(seedRoot: seedPhraseRoot);
-
-    final keys = await compute(calculateTronKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'tronDetails${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateTronKey,
+          TronArgs(seedRoot: seedPhraseRoot),
+        ),
+      );
 
   Future<String> get _canTransferKey async =>
       'tronAddressCanTransfer${await getAddress()}$api';
@@ -690,7 +678,7 @@ class TronArgs {
   });
 }
 
-calculateTronKey(TronArgs config) {
+Future<Map<String, dynamic>> calculateTronKey(TronArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final master = wallet.ExtendedPrivateKey.master(seedRoot_.seed, wallet.xprv);
   final root = master.forPath("m/44'/195'/0'/0/0");
