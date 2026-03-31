@@ -105,10 +105,8 @@ String _buildWavesAddress(Uint8List pubKey, int chainId) {
 
 class WavesDeriveArgs {
   final SeedPhraseRoot seedRoot;
-  final int chainId;
   const WavesDeriveArgs({
     required this.seedRoot,
-    required this.chainId,
   });
 }
 
@@ -159,11 +157,7 @@ Future<Map<String, dynamic>> calculateWavesKey(WavesDeriveArgs args) async {
   // Step 3: Convert Ed25519 pubkey → Curve25519 pubkey for address
   final curve25519PubBytes = _ed25519PublicToCurve25519(edPubBytes);
 
-  final chainId = args.chainId;
-  final address = _buildWavesAddress(curve25519PubBytes, chainId);
-
   return {
-    'address': address,
     'privateKey': HEX.encode(derived.key),
     'publicKey': HEX.encode(curve25519PubBytes),
   };
@@ -278,21 +272,36 @@ class WavesCoin extends Coin {
 
   // ─── Key derivation ─────────────────────────────────────────────────────────
 
+// ─── Top-level isolate function (already exists, no change needed) ────────────
+// calculateWavesKey returns: { 'address', 'privateKey', 'publicKey' }
+// 'publicKey' is the Curve25519 pub (hex), which is chain-agnostic.
+// 'address' is chain-specific (depends on chainId), so we must recompute it
+// in postProcess just like Cosmos recomputes bech32 and Polkadot recomputes ss58.
+
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
           {required String bip39PhraseOrSeedHex}) =>
       Coin.fromBip39PhraseOrSeedCached(
-        cacheKey: 'wavesCoinDetail_V9${chainId}_${walletImportType.name}',
+        // Cache key excludes chainId so the expensive ED25519 derivation is done
+        // once across all Waves networks (mainnet / testnet / stagenet / local).
+        // chainId only affects the address, which is cheaply rebuilt in postProcess.
+        cacheKey: 'wavesCoinDetail_V9_${walletImportType.name}',
         bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
         derive: () => compute(
           calculateWavesKey,
           WavesDeriveArgs(
             seedRoot: seedPhraseRoot,
-            chainId: chainId,
           ),
         ),
+        postProcess: (cached) {
+          // Rebuild the chain-specific address from the cached Curve25519 pubkey.
+          // This mirrors how Cosmos re-encodes bech32 and Polkadot re-encodes ss58.
+          final curve25519Pub =
+              Uint8List.fromList(HEX.decode(cached['publicKey'] as String));
+          cached['address'] = _buildWavesAddress(curve25519Pub, chainId);
+          return cached;
+        },
       );
-
   @override
   TransactionFetcher? get transactionFetcher => WavesTransactionFetcher(
         nodeUrl: nodeUrl,
