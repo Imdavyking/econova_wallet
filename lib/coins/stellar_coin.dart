@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:convert';
 import 'dart:math';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
