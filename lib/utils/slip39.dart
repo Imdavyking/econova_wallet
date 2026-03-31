@@ -207,7 +207,7 @@ List<Uint8List> _splitSecret(
 
 Uint8List _generateIdentifier() {
   final byteCount = _bitsToBytes(_identifierBitsLength);
-  final bits = _identifierBitsLength % 8;
+  const bits = _identifierBitsLength % 8;
   final identifier = _randomBytes(byteCount);
   identifier[0] = identifier[0] & ((1 << bits) - 1);
   return Uint8List.fromList(identifier);
@@ -454,8 +454,9 @@ DecodedShare _decodeMnemonic(String mnemonic) {
       _bitsToBytes(_radixBits * valueData.length - paddingLen);
 
   var shareBytes = _encodeBigInt(valueInt);
-  if (shareBytes.length > valueByteCount)
+  if (shareBytes.length > valueByteCount) {
     throw Exception('Mnemonic padding error.');
+  }
   if (shareBytes.length < valueByteCount) {
     shareBytes = Uint8List.fromList(
         Uint8List(valueByteCount - shareBytes.length) + shareBytes);
