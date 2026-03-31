@@ -74,8 +74,8 @@ Future<void> importAllKeys(String mnemonic) async {
   final derivedCoinTypes = <int>{};
 
   for (final coin in evmChains) {
-    EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
     if (derivedCoinTypes.contains(coin.coinType)) continue;
+    EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
     try {
       await coin.importData(mnemonic);
       derivedCoinTypes.add(coin.coinType); // ← was commented out, now fixed
