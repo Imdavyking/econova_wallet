@@ -27,7 +27,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _passphraseCtrl = TextEditingController();
   final _sharesList = ValueNotifier<List<String>>([]);
   Map<String, Uint8List> cacheSeed = {};
-  Iterable<Column> bip39supported = [];
+  List<({String name, String symbol})> _unsupportedChains = [];
   static const _maxShares = 8;
   static const _minShares = 2;
   bool validSeedPhrase = false;
@@ -42,19 +42,10 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   @override
   void initState() {
     super.initState();
-    bip39supported = getChains().map((e) {
-      if (!e.supportBip39Seed && e.tokenAddress() == null) {
-        return Column(
-          children: [
-            Text(
-              '${e.getName()} (${e.getSymbol()}) do not support BIP39 seed, you may not be able to recover your address',
-            ),
-            const SizedBox(height: 10),
-          ],
-        );
-      }
-      return null;
-    }).nonNulls;
+    _unsupportedChains = getChains()
+        .where((e) => !e.supportBip39Seed && e.tokenAddress() == null)
+        .map((e) => (name: e.getName(), symbol: e.getSymbol()))
+        .toList();
     _checkValidSeed();
   }
 
@@ -150,8 +141,10 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
                 const SizedBox(height: 20),
 
                 // BIP39 compatibility warnings
-                ...bip39supported,
-                if (bip39supported.isNotEmpty) const SizedBox(height: 20),
+                if (_unsupportedChains.isNotEmpty) ...[
+                  _Bip39WarningPanel(chains: _unsupportedChains),
+                  const SizedBox(height: 20),
+                ],
 
                 // Generate button
                 _GenerateButton(
@@ -190,6 +183,133 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── BIP39 Warning Panel ────────────────────────────────────────────────────────
+
+class _Bip39WarningPanel extends StatefulWidget {
+  final List<({String name, String symbol})> chains;
+
+  const _Bip39WarningPanel({required this.chains});
+
+  @override
+  State<_Bip39WarningPanel> createState() => _Bip39WarningPanelState();
+}
+
+class _Bip39WarningPanelState extends State<_Bip39WarningPanel> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasMany = widget.chains.length > 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFBBF24), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          // ── Header row ────────────────────────────────────────────────────
+          GestureDetector(
+            onTap:
+                hasMany ? () => setState(() => _expanded = !_expanded) : null,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFD97706),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      hasMany
+                          ? '${widget.chains.length} chains may not recover correctly'
+                          : '${widget.chains.first.name} (${widget.chains.first.symbol}) does not support BIP39 seed',
+                      style: const TextStyle(
+                        color: Color(0xFF92400E),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (hasMany)
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Color(0xFFD97706),
+                        size: 20,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Chain list (inline for single, expandable for many) ───────────
+          if (!hasMany || _expanded) ...[
+            const Divider(height: 1, color: Color(0xFFFDE68A)),
+            ...widget.chains.asMap().entries.map((entry) {
+              final isLast = entry.key == widget.chains.length - 1;
+              final chain = entry.value;
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDE68A),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            chain.symbol,
+                            style: const TextStyle(
+                              color: Color(0xFF92400E),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${chain.name} — address recovery may fail',
+                            style: const TextStyle(
+                              color: Color(0xFF78350F),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isLast)
+                    const Divider(
+                      height: 1,
+                      indent: 14,
+                      endIndent: 14,
+                      color: Color(0xFFFDE68A),
+                    ),
+                ],
+              );
+            }),
+          ],
+        ],
       ),
     );
   }
