@@ -51,6 +51,12 @@ class _RecoveryPhraseState extends State<RecoveryPhrase>
     );
     _checkValidSeed();
   }
+
+  Future<void> _checkValidSeed() async {
+    validSeedPhrase = await compute(validateMnemonic, widget.data);
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
