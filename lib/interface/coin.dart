@@ -191,6 +191,43 @@ abstract class Coin {
     return details.publicKey;
   }
 
+  static Future<AccountData> fromBip39PhraseOrSeedCached({
+    required String cacheKey,
+    required String bip39PhraseOrSeedHex,
+    required Future<Map<String, dynamic>> Function() derive,
+    Map<String, dynamic> Function(Map<String, dynamic> keys)? postProcess,
+  }) async {
+    AccountData toAccount(Map<String, dynamic> keys) {
+      final result = Map<String, dynamic>.from(keys);
+      return AccountData.fromJson(postProcess?.call(result) ?? result);
+    }
+
+    // ── 1. memory cache hit ────────────────────────────────────────────────
+    final memEntry = decodedCache[cacheKey];
+    if (memEntry != null) {
+      final hit = memEntry[bip39PhraseOrSeedHex];
+      if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
+    }
+
+    // ── 2. hive cache hit → warm memory cache ─────────────────────────────
+    if (pref.containsKey(cacheKey)) {
+      final decoded = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
+      decodedCache[cacheKey] = decoded;
+      final hit = decoded[bip39PhraseOrSeedHex];
+      if (hit != null) return toAccount(Map<String, dynamic>.from(hit));
+    }
+
+    // ── 3. cold path: derive keys ──────────────────────────────────────────
+    final keys = await derive();
+
+    // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
+    final entry = decodedCache[cacheKey] ??= {};
+    entry[bip39PhraseOrSeedHex] = keys;
+    await pref.put(cacheKey, jsonEncode(entry));
+
+    return toAccount(keys);
+  }
+
   String? getDexScreener(String tokenaddress) {
     return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';
   }

@@ -184,27 +184,16 @@ class CardanoCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final cacheKey = 'cardanoCoin${isTestnet}_${walletImportType.name}';
-    Map<String, dynamic> cached = {};
-
-    if (pref.containsKey(cacheKey)) {
-      cached = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (cached.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cached[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final keys = await compute(
-      calculateCardanoKey,
-      CardanoDeriveArgs(
-          seedPhraseOrSeed: bip39PhraseOrSeedHex, isTestnet: isTestnet),
-    );
-
-    cached[bip39PhraseOrSeedHex] = keys;
-    await pref.put(cacheKey, jsonEncode(cached));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'cardanoCoin${isTestnet}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateCardanoKey,
+          CardanoDeriveArgs(
+              seedPhraseOrSeed: bip39PhraseOrSeedHex, isTestnet: isTestnet),
+        ),
+      );
 
   @override
   Future<String> addressExplorer() async {

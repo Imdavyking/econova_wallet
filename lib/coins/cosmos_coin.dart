@@ -198,46 +198,21 @@ class CosmosCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey =
-        'cosmosDetailsV2${path.replaceAll("/", "_")}${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        // re-encode address with THIS coin's bech32Hrp
-        final cached =
-            Map<String, dynamic>.from(mnemonicMap[bip39PhraseOrSeedHex]);
-        final rawAddress = HEX.decode(cached['hex_address']);
-        cached['address'] =
-            Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress));
-        return AccountData.fromJson(cached);
-      }
-    }
-
-    final keys = await compute(
-      calculateCosmosKey,
-      CosmosDeriveArgs(
-        path: path,
-        seedRoot: seedPhraseRoot,
-      ),
-    );
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys; // store WITHOUT address
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    final rawAddress = HEX.decode(keys['hex_address']);
-    final result = {
-      ...keys,
-      'address':
-          Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress)),
-    };
-
-    return AccountData.fromJson(result);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'cosmosDetailsV2${path.replaceAll("/", "_")}${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(calculateCosmosKey,
+            CosmosDeriveArgs(path: path, seedRoot: seedPhraseRoot)),
+        postProcess: (cached) {
+          final rawAddress = HEX.decode(cached['hex_address']);
+          cached['address'] =
+              Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress));
+          return cached;
+        },
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -884,7 +859,7 @@ class CosmosDeriveArgs {
   });
 }
 
-Map calculateCosmosKey(CosmosDeriveArgs config) {
+Future<Map<String, dynamic>> calculateCosmosKey(CosmosDeriveArgs config) async {
   final keys = cosmos.Wallet.deriveRaw(
     config.seedRoot.seed,
     derivationPath: config.path,

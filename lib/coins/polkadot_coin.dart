@@ -110,43 +110,22 @@ class PolkadotCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    // Key by PATH, not ss58Prefix — chains sharing a path share one cache entry.
-    final saveKey =
-        'polkadotDetails${path.replaceAll("/", "_")}${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        // Re-encode address with THIS coin's ss58Prefix — no crypto needed.
-        final cached =
-            Map<String, dynamic>.from(mnemonicMap[bip39PhraseOrSeedHex]);
-        final publicKey =
-            Uint8List.fromList(HEX.decode(cached['publicKey'] as String));
-        cached['address'] = encodePolkadotAddress(publicKey, ss58Prefix);
-        return AccountData.fromJson(cached);
-      }
-    }
-    final keys = await compute(
-      calculatePolkadotKey,
-      PolkadotArgs(
-        seedRoot: seedPhraseRoot,
-        path: path,
-      ),
-    );
-
-    mnemonicMap[bip39PhraseOrSeedHex] =
-        keys; // {privateKey, publicKey} — no address
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    final publicKey = Uint8List.fromList(HEX.decode(keys['publicKey']!));
-    return AccountData.fromJson({
-      ...keys,
-      'address': encodePolkadotAddress(publicKey, ss58Prefix),
-    });
-  }
-
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'polkadotDetails${path.replaceAll("/", "_")}${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculatePolkadotKey,
+          PolkadotArgs(seedRoot: seedPhraseRoot, path: path),
+        ),
+        postProcess: (cached) {
+          final publicKey =
+              Uint8List.fromList(HEX.decode(cached['publicKey'] as String));
+          cached['address'] = encodePolkadotAddress(publicKey, ss58Prefix);
+          return cached;
+        },
+      );
   @override
   String savedTransKey() => '$default_$api Details';
 

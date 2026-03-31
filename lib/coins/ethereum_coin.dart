@@ -608,29 +608,15 @@ class EthereumCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    String saveKey = 'ethereumDetailsV4$coinType${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = EthereumDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      coinType: coinType,
-    );
-
-    final keys = await compute(calculateEthereumKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
-
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'ethereumDetailsV4$coinType${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateEthereumKey,
+          EthereumDeriveArgs(seedRoot: seedPhraseRoot, coinType: coinType),
+        ),
+      );
   @override
   Future<String> addressExplorer() async {
     final address = await getAddress();
@@ -1203,7 +1189,9 @@ class EthereumDeriveArgs {
   const EthereumDeriveArgs({required this.seedRoot, required this.coinType});
 }
 
-Future<Map> calculateEthereumKey(EthereumDeriveArgs config) async {
+Future<Map<String, dynamic>> calculateEthereumKey(
+  EthereumDeriveArgs config,
+) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
   final path = "m/44'/${config.coinType}'/0'/0/0";
   final node = seedRoot_.root.derivePath(path);

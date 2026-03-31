@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
@@ -100,31 +99,17 @@ class AlgorandCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final cacheKey = 'algorandDetails${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(cacheKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(
-          Map<String, dynamic>.from(mnemonicMap[bip39PhraseOrSeedHex]),
-        );
-      }
-    }
-
-    final keys = await compute(
-      calculateAlgorandKey,
-      AlgorandDeriveArgs(
-        seedRoot: seedPhraseRoot,
-      ),
-    );
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-    await pref.put(cacheKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(Map<String, dynamic>.from(keys));
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'algorandDetails${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateAlgorandKey,
+          AlgorandDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   bool get supportBip39Seed => true;

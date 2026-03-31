@@ -142,6 +142,7 @@ Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
 }
 
 late Box pref;
+final Map<String, Map<String, dynamic>> decodedCache = {};
 final mnemonicSuggester = Trie();
 late WalletType walletImportType;
 late ByteData logoBytes;

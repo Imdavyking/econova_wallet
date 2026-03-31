@@ -1,8 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:convert';
 import 'dart:math';
-
 import 'package:aptos/aptos.dart';
 import 'package:aptos/coin_client.dart';
 import 'package:aptos/constants.dart';
@@ -126,29 +124,17 @@ class AptosCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'aptosCoinDetailv!${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final keys = await compute(
-      calculateAptosKey,
-      AptosArgs(
-        seedRoot: seedPhraseRoot,
-      ),
-    );
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'aptosCoinV5${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateAptosKey,
+          AptosArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -319,7 +305,7 @@ class AptosArgs {
   });
 }
 
-Future calculateAptosKey(AptosArgs config) async {
+Future<Map<String, dynamic>> calculateAptosKey(AptosArgs config) async {
   String path = "m/44'/637'/0'/0'/0'";
   if (!isValidPath(path)) {
     throw ArgumentError("Invalid derivation path");
