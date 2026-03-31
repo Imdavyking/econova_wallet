@@ -279,30 +279,20 @@ class StacksCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final cacheKey =
-        'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet';
-    Map<String, dynamic> cached = {};
-
-    if (pref.containsKey(cacheKey)) {
-      cached = Map<String, dynamic>.from(jsonDecode(pref.get(cacheKey)));
-      if (cached.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cached[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = StacksDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      derivationPath: derivationPath,
-      addressVersion: _addrVersion,
-    );
-
-    final keys = await compute(calculateStacksKey, args);
-    cached[bip39PhraseOrSeedHex] = keys;
-    await pref.put(cacheKey, jsonEncode(cached));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'stackscDetail$default_${walletImportType.name}$derivationPath$isTestnet',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateStacksKey,
+          StacksDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            derivationPath: derivationPath,
+            addressVersion: _addrVersion,
+          ),
+        ),
+      );
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {

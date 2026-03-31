@@ -332,31 +332,20 @@ class SegwitCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey =
-        'segwitCoinV1_${cfg.symbol}_${cfg.hrp}_${walletImportType.name}';
-    Map<String, dynamic> cache = {};
-
-    if (pref.containsKey(saveKey)) {
-      cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final result = await compute(
-      calculateSegwitKey,
-      SegwitDeriveArgs(
-        seedRoot: seedPhraseRoot,
-        derivationPath: cfg.derivationPath,
-        network: cfg.network,
-      ),
-    );
-
-    cache[bip39PhraseOrSeedHex] = result;
-    await pref.put(saveKey, jsonEncode(cache));
-    return AccountData.fromJson(result);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey:
+            'segwitCoinV1_${cfg.symbol}_${cfg.hrp}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateSegwitKey,
+          SegwitDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            derivationPath: cfg.derivationPath,
+            network: cfg.network,
+          ),
+        ),
+      );
 
   @override
   TransactionFetcher? get transactionFetcher => MempoolTransactionFetcher(

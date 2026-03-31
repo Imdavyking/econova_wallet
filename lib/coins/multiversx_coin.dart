@@ -7,7 +7,6 @@ import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:dio/dio.dart';
@@ -168,29 +167,17 @@ class MultiversxCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'multivxDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = MultiversXDeriveArgs(
-      seedRoot: seedPhraseRoot,
-    );
-
-    final keys = await compute(calculateMultiversXKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'multivxDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateMultiversXKey,
+          MultiversXDeriveArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
@@ -383,7 +370,9 @@ class MultiversXDeriveArgs {
   });
 }
 
-Future calculateMultiversXKey(MultiversXDeriveArgs config) async {
+Future<Map<String, dynamic>> calculateMultiversXKey(
+  MultiversXDeriveArgs config,
+) async {
   const bip44DerivationPrefix = "m/44'/508'/0'/0'";
   int addressIndex = 0;
   final data = await ED25519_HD_KEY.derivePath(

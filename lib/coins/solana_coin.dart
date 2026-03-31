@@ -379,28 +379,17 @@ class SolanaCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'solanaCoinDetail${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = SolanaArgs(
-      seedRoot: seedPhraseRoot,
-    );
-    final keys = await compute(calculateSolanaKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'solanaCoinDetail${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateSolanaKey,
+          SolanaArgs(
+            seedRoot: seedPhraseRoot,
+          ),
+        ),
+      );
 
   List<String> dappTrxVersionedResult(SolanaTransactionVersioned simulation) {
     final instructions = simulation.message.compiledInstructions;
@@ -1261,7 +1250,7 @@ class SolanaArgs {
   });
 }
 
-Future calculateSolanaKey(SolanaArgs config) async {
+Future<Map<String, dynamic>> calculateSolanaKey(SolanaArgs config) async {
   SeedPhraseRoot seedRoot_ = config.seedRoot;
 
   final solana.Ed25519HDKeyPair keyPair =

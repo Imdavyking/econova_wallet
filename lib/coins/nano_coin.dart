@@ -111,28 +111,19 @@ class NanoBaseCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = '${cachePrefix}DetailsV1${walletImportType.name}';
-    Map<String, dynamic> mnemonicMap = {};
-
-    if (pref.containsKey(saveKey)) {
-      mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
-      }
-    }
-
-    final args = NanoDeriveArgs(
-      seedRoot: seedPhraseRoot,
-      derivationPath: derivationPath,
-      accountType: accountType,
-    );
-    final keys = await compute(calculateNanoKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-    await pref.put(saveKey, jsonEncode(mnemonicMap));
-    return AccountData.fromJson(keys);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: '${cachePrefix}DetailsV1${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateNanoKey,
+          NanoDeriveArgs(
+            seedRoot: seedPhraseRoot,
+            derivationPath: derivationPath,
+            accountType: accountType,
+          ),
+        ),
+      );
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 

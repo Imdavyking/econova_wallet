@@ -136,25 +136,15 @@ class OntologyCoin extends Coin {
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
-      {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'ontCoinDetail_V5${isTestnet_}_${walletImportType.name}';
-    Map<String, dynamic> cache = {};
-
-    if (pref.containsKey(saveKey)) {
-      cache = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
-      if (cache.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(cache[bip39PhraseOrSeedHex]);
-      }
-    }
-    final result = await compute(
-      calculateOntologyKey,
-      OntDeriveArgs(seedRoot: seedPhraseRoot, path: _ontDerivationPath),
-    );
-
-    cache[bip39PhraseOrSeedHex] = result;
-    await pref.put(saveKey, jsonEncode(cache));
-    return AccountData.fromJson(result);
-  }
+          {required String bip39PhraseOrSeedHex}) =>
+      Coin.fromBip39PhraseOrSeedCached(
+        cacheKey: 'ontCoinDetail_V5${isTestnet_}_${walletImportType.name}',
+        bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
+        derive: () => compute(
+          calculateOntologyKey,
+          OntDeriveArgs(seedRoot: seedPhraseRoot, path: _ontDerivationPath),
+        ),
+      );
 
   @override
   Future<double> getUserBalance({required String address}) async {
