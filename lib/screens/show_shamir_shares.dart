@@ -1,7 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:bip39/bip39.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,12 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:slip39/slip39.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
-
-import 'package:wallet_app/ntcdcrypto.dart';
 import 'package:wallet_app/utils/app_config.dart';
-
-// Shared enum – move to a common file if both screens are in the same package.
-enum ShamirScheme { slip39, sss }
 
 class ShowShamirShares extends StatefulWidget {
   final String data;
@@ -32,8 +26,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   final _sharesCtrl = TextEditingController();
   final _passphraseCtrl = TextEditingController();
   final _sharesList = ValueNotifier<List<String>>([]);
-  final _isBase64 = ValueNotifier<bool>(true);
-  final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.slip39);
   Map<String, Uint8List> cacheSeed = {};
   Iterable<Column> bip39supported = [];
   static const _maxShares = 8;
@@ -42,9 +34,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
 
   Future<void> _checkValidSeed() async {
     validSeedPhrase = await compute(validateMnemonic, widget.data);
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -52,9 +42,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
   @override
   void initState() {
     super.initState();
-    // Clear generated shares whenever the scheme changes so stale results
-    // from the previous scheme are never shown.
-    _scheme.addListener(() => _sharesList.value = []);
     bip39supported = getChains().map((e) {
       if (!e.supportBip39Seed && e.tokenAddress() == null) {
         return Column(
@@ -62,9 +49,7 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
             Text(
               '${e.getName()} (${e.getSymbol()}) do not support BIP39 seed, you may not be able to recover your address',
             ),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
           ],
         );
       }
@@ -79,8 +64,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     _sharesCtrl.dispose();
     _passphraseCtrl.dispose();
     _sharesList.dispose();
-    _isBase64.dispose();
-    _scheme.dispose();
     super.dispose();
   }
 
@@ -91,32 +74,26 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     final minimum = int.parse(_thresholdCtrl.text.trim());
     final shares = int.parse(_sharesCtrl.text.trim());
 
-    if (_scheme.value == ShamirScheme.sss) {
-      _sharesList.value =
-          SSS().create(minimum, shares, widget.data, _isBase64.value);
-    } else {
-      if (!cacheSeed.containsKey(widget.data)) {
-        final seeds = await compute(seedFromMnemonic, widget.data);
-        cacheSeed[widget.data] = seeds.seed;
-      }
-      final slip = Slip39.from(
-        [
-          [minimum, shares]
-        ],
-        masterSecret: cacheSeed[widget.data]!,
-        passphrase: _passphraseCtrl.text.trim(),
-        threshold: 1,
-      );
-      _sharesList.value = slip.fromPath('r/0').mnemonics;
+    if (!cacheSeed.containsKey(widget.data)) {
+      final seeds = await compute(seedFromMnemonic, widget.data);
+      cacheSeed[widget.data] = seeds.seed;
     }
+
+    final slip = Slip39.from(
+      [
+        [minimum, shares]
+      ],
+      masterSecret: cacheSeed[widget.data]!,
+      passphrase: _passphraseCtrl.text.trim(),
+      threshold: 1,
+    );
+    _sharesList.value = slip.fromPath('r/0').mnemonics;
   }
 
   String? _validateThreshold(String? v, AppLocalizations loc) {
     if (v == null || v.trim().isEmpty) return loc.enterValidthresholdCount;
     final threshold = int.tryParse(v);
-    if (threshold == null || threshold <= 0) {
-      return loc.enterValidthresholdCount;
-    }
+    if (threshold == null || threshold <= 0) return loc.enterValidthresholdCount;
     final shares = int.tryParse(_sharesCtrl.text.trim());
     if (shares == null) return loc.enterValidsharesCount;
     if (threshold > shares) return loc.enterValidthresholdCount;
@@ -139,90 +116,75 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-          title: Text(validSeedPhrase ? loc.exportAsShamirShares : "SLIP39")),
+      appBar: AppBar(title: const Text('SLIP39')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(25),
           child: Form(
             key: _formKey,
-            child: ValueListenableBuilder<ShamirScheme>(
-              valueListenable: _scheme,
-              builder: (_, scheme, __) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (validSeedPhrase)
-                    // Scheme selector
-                    _SchemeToggle(notifier: _scheme),
-                  const SizedBox(height: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
 
-                  // Threshold input
-                  _NumberField(
-                    controller: _thresholdCtrl,
-                    hint: loc.thresholdCount,
-                    validator: (v) => _validateThreshold(v, loc),
-                  ),
-                  const SizedBox(height: 20),
+                // Threshold input
+                _NumberField(
+                  controller: _thresholdCtrl,
+                  hint: loc.thresholdCount,
+                  validator: (v) => _validateThreshold(v, loc),
+                ),
+                const SizedBox(height: 20),
 
-                  // Shares count input
-                  _NumberField(
-                    controller: _sharesCtrl,
-                    hint: loc.sharesCount,
-                    validator: (v) => _validateShares(v, loc),
-                  ),
-                  const SizedBox(height: 20),
+                // Shares count input
+                _NumberField(
+                  controller: _sharesCtrl,
+                  hint: loc.sharesCount,
+                  validator: (v) => _validateShares(v, loc),
+                ),
+                const SizedBox(height: 20),
 
-                  // SSS-only: Base64 / Hex toggle
-                  if (scheme == ShamirScheme.sss && validSeedPhrase) ...[
-                    _Base64Toggle(notifier: _isBase64, label: loc.isBase64),
-                    const SizedBox(height: 20),
-                  ],
+                // Optional passphrase
+                _PassphraseField(controller: _passphraseCtrl),
+                const SizedBox(height: 20),
 
-                  // SLIP39-only: optional passphrase
-                  if (scheme == ShamirScheme.slip39) ...[
-                    _PassphraseField(controller: _passphraseCtrl),
-                    const SizedBox(height: 20),
-                    ...bip39supported,
-                    if (bip39supported.isNotEmpty) const SizedBox(height: 20),
-                  ],
+                // BIP39 compatibility warnings
+                ...bip39supported,
+                if (bip39supported.isNotEmpty) const SizedBox(height: 20),
 
-                  // Generate button
-                  _GenerateButton(
-                    label: loc.confirm,
-                    onPressed: _generateShares,
-                  ),
-                  const SizedBox(height: 20),
+                // Generate button
+                _GenerateButton(
+                  label: loc.confirm,
+                  onPressed: _generateShares,
+                ),
+                const SizedBox(height: 20),
 
-                  // Generated shares list
-                  ValueListenableBuilder<List<String>>(
-                    valueListenable: _sharesList,
-                    builder: (_, shares, __) => shares.isEmpty
-                        ? const SizedBox.shrink()
-                        : Column(
-                            children: [
-                              ...shares.map(
-                                (share) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 20),
-                                  child: _ShareField(
-                                    share: share,
-                                    copiedLabel: loc.copiedToClipboard,
-                                  ),
+                // Generated shares list
+                ValueListenableBuilder<List<String>>(
+                  valueListenable: _sharesList,
+                  builder: (_, shares, __) => shares.isEmpty
+                      ? const SizedBox.shrink()
+                      : Column(
+                          children: [
+                            ...shares.map(
+                              (share) => Padding(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                child: _ShareField(
+                                  share: share,
+                                  copiedLabel: loc.copiedToClipboard,
                                 ),
                               ),
-                              _RecoveryWarning(
-                                threshold: _thresholdCtrl.text,
-                                total: _sharesCtrl.text,
-                                recoveryMessage: loc.recoverWithNofYShares(
-                                  _thresholdCtrl.text,
-                                  _sharesCtrl.text,
-                                ),
-                                warningMessage: loc.neverShareYourShamirSecrets,
+                            ),
+                            _RecoveryWarning(
+                              recoveryMessage: loc.recoverWithNofYShares(
+                                _thresholdCtrl.text,
+                                _sharesCtrl.text,
                               ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
+                              warningMessage: loc.neverShareYourShamirSecrets,
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ),
         ),
@@ -232,43 +194,6 @@ class _ShowShamirSharesState extends State<ShowShamirShares> {
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
-
-/// Segmented control to switch between SSS and SLIP39 schemes.
-class _SchemeToggle extends StatelessWidget {
-  final ValueNotifier<ShamirScheme> notifier;
-
-  const _SchemeToggle({required this.notifier});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ShamirScheme>(
-      valueListenable: notifier,
-      builder: (_, scheme, __) => SegmentedButton<ShamirScheme>(
-        segments: const [
-          ButtonSegment(
-            value: ShamirScheme.sss,
-            label: Text('SSS'),
-            icon: Icon(Icons.grid_view_rounded),
-          ),
-          ButtonSegment(
-            value: ShamirScheme.slip39,
-            label: Text('SLIP39'),
-            icon: Icon(Icons.vpn_key_rounded),
-          ),
-        ],
-        selected: {scheme},
-        onSelectionChanged: (s) => notifier.value = s.first,
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected)
-                ? appBackgroundblue
-                : null,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Optional passphrase field used with SLIP39.
 class _PassphraseField extends StatelessWidget {
@@ -328,32 +253,6 @@ class _NumberField extends StatelessWidget {
         border: _border,
         focusedBorder: _border,
         enabledBorder: _border,
-      ),
-    );
-  }
-}
-
-/// Labelled Cupertino switch for the Base64 / Hex toggle (SSS only).
-class _Base64Toggle extends StatelessWidget {
-  final ValueNotifier<bool> notifier;
-  final String label;
-
-  const _Base64Toggle({required this.notifier, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: notifier,
-      builder: (_, value, __) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 18)),
-          CupertinoSwitch(
-            value: value,
-            activeColor: appBackgroundblue,
-            onChanged: (_) => notifier.value = !notifier.value,
-          ),
-        ],
       ),
     );
   }
@@ -438,14 +337,10 @@ class _ShareField extends StatelessWidget {
 
 /// Red warning box shown after shares are generated.
 class _RecoveryWarning extends StatelessWidget {
-  final String threshold;
-  final String total;
   final String recoveryMessage;
   final String warningMessage;
 
   const _RecoveryWarning({
-    required this.threshold,
-    required this.total,
     required this.recoveryMessage,
     required this.warningMessage,
   });

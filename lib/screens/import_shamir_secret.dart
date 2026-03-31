@@ -1,19 +1,14 @@
 // ignore_for_file: library_private_types_in_public_api
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:hex/hex.dart';
-import 'package:pinput/pinput.dart';
 import 'package:slip39/slip39.dart';
-import 'package:wallet_app/ntcdcrypto.dart';
-import 'package:wallet_app/screens/show_shamir_shares.dart';
+import 'package:pinput/pinput.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
 import 'package:wallet_app/utils/slip39.dart' as slip39utils;
-
-// Shared enum – move to a common file if both screens are in the same package.
 
 class ImportShamirSecret extends StatefulWidget {
   const ImportShamirSecret({super.key});
@@ -26,25 +21,13 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
   // ── State ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _shares = ValueNotifier<List<String>>(['']);
-  final _isBase64 = ValueNotifier<bool>(true);
-  final _scheme = ValueNotifier<ShamirScheme>(ShamirScheme.sss);
   final _passphraseCtrl = TextEditingController();
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
-  void initState() {
-    super.initState();
-    // Reset shares list to a single blank entry when scheme changes so stale
-    // inputs from the previous scheme do not carry over.
-    _scheme.addListener(() => _shares.value = ['']);
-  }
-
-  @override
   void dispose() {
     _shares.dispose();
-    _isBase64.dispose();
-    _scheme.dispose();
     _passphraseCtrl.dispose();
     super.dispose();
   }
@@ -67,28 +50,25 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
   void _combine() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     try {
-      final String result;
       final sharesList = _shares.value.map((e) => e.trim()).toList();
       final setList = Set.from(sharesList);
       if (setList.length != sharesList.length) {
         throw Exception('A secret was duplicated');
       }
-      if (_scheme.value == ShamirScheme.sss) {
-        result = SSS().combine(sharesList, _isBase64.value);
-      } else {
-        final decoded = slip39utils.decodeMnemonics(sharesList);
-        final minimumlen = decoded.groups.first.memberThreshold;
 
-        if (sharesList.length < minimumlen) {
-          throw Exception('at least $minimumlen shares needed');
-        }
+      final decoded = slip39utils.decodeMnemonics(sharesList);
+      final minimumLen = decoded.groups.first.memberThreshold;
 
-        List<int> recovered = Slip39.recoverSecret(
-          sharesList.sublist(0, minimumlen),
-          passphrase: _passphraseCtrl.text.trim(),
-        );
-        result = HEX.encode(recovered);
+      if (sharesList.length < minimumLen) {
+        throw Exception('At least $minimumLen shares needed');
       }
+
+      final List<int> recovered = Slip39.recoverSecret(
+        sharesList.sublist(0, minimumLen),
+        passphrase: _passphraseCtrl.text.trim(),
+      );
+      final result = HEX.encode(recovered);
+
       Navigator.pop(context, result);
     } catch (e) {
       if (!mounted) return;
@@ -105,9 +85,9 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
             duration: const Duration(seconds: 2),
           ),
         );
-      // ... existing error snackbar
     }
   }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -115,69 +95,52 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Import Shamir Secrets')),
+      appBar: AppBar(title: const Text('Import SLIP39 Shares')),
       body: Form(
         key: _formKey,
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: ValueListenableBuilder<ShamirScheme>(
-            valueListenable: _scheme,
-            builder: (_, scheme, __) => Column(
-              children: [
-                // Scheme selector
-                _SchemeToggle(notifier: _scheme),
-                const SizedBox(height: 16),
-
-                // Dynamic share fields
-                Expanded(
-                  child: ValueListenableBuilder<List<String>>(
-                    valueListenable: _shares,
-                    builder: (_, shares, __) => ListView.separated(
-                      itemCount: shares.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (_, index) {
-                        final isLast = index == shares.length - 1;
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: _ShareTextField(
-                                key: ValueKey('share_${scheme.name}_$index'),
-                                initialValue: shares[index],
-                                onChanged: (v) => _updateShare(index, v),
-                              ),
+          child: Column(
+            children: [
+              // Dynamic share fields
+              Expanded(
+                child: ValueListenableBuilder<List<String>>(
+                  valueListenable: _shares,
+                  builder: (_, shares, __) => ListView.separated(
+                    itemCount: shares.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (_, index) {
+                      final isLast = index == shares.length - 1;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _ShareTextField(
+                              key: ValueKey('share_$index'),
+                              initialValue: shares[index],
+                              onChanged: (v) => _updateShare(index, v),
                             ),
-                            const SizedBox(width: 12),
-                            _AddRemoveButton(
-                              isAdd: isLast,
-                              onTap: isLast
-                                  ? _addShare
-                                  : () => _removeShare(index),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                          ),
+                          const SizedBox(width: 12),
+                          _AddRemoveButton(
+                            isAdd: isLast,
+                            onTap: isLast ? _addShare : () => _removeShare(index),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                // SSS-only: Base64 toggle
-                if (scheme == ShamirScheme.sss) ...[
-                  _Base64Toggle(notifier: _isBase64, label: loc.isBase64),
-                  const SizedBox(height: 12),
-                ],
+              // Passphrase field
+              _PassphraseField(controller: _passphraseCtrl),
+              const SizedBox(height: 12),
 
-                // SLIP39-only: passphrase
-                if (scheme == ShamirScheme.slip39) ...[
-                  _PassphraseField(controller: _passphraseCtrl),
-                  const SizedBox(height: 12),
-                ],
-
-                // Confirm / combine button
-                _ConfirmButton(label: loc.confirm, onPressed: _combine),
-                const SizedBox(height: 20),
-              ],
-            ),
+              // Confirm / combine button
+              _ConfirmButton(label: loc.confirm, onPressed: _combine),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
@@ -186,43 +149,6 @@ class _ImportShamirSecretState extends State<ImportShamirSecret> {
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
-
-/// Segmented control to switch between SSS and SLIP39 schemes.
-class _SchemeToggle extends StatelessWidget {
-  final ValueNotifier<ShamirScheme> notifier;
-
-  const _SchemeToggle({required this.notifier});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ShamirScheme>(
-      valueListenable: notifier,
-      builder: (_, scheme, __) => SegmentedButton<ShamirScheme>(
-        segments: const [
-          ButtonSegment(
-            value: ShamirScheme.sss,
-            label: Text('SSS'),
-            icon: Icon(Icons.grid_view_rounded),
-          ),
-          ButtonSegment(
-            value: ShamirScheme.slip39,
-            label: Text('SLIP39'),
-            icon: Icon(Icons.vpn_key_rounded),
-          ),
-        ],
-        selected: {scheme},
-        onSelectionChanged: (s) => notifier.value = s.first,
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected)
-                ? appBackgroundblue
-                : null,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Optional passphrase field used with SLIP39.
 class _PassphraseField extends StatelessWidget {
@@ -312,17 +238,16 @@ class _ShareTextFieldState extends State<_ShareTextField> {
     return TextFormField(
       controller: _controller,
       onChanged: widget.onChanged,
-      maxLines: 4, // ✅ allows it to grow up to 4 lines
-      minLines: 3, // ✅ always shows at least 3 lines tall
+      maxLines: 4,
+      minLines: 3,
       validator: (v) =>
           (v == null || v.trim().isEmpty) ? 'Please enter a share' : null,
       decoration: InputDecoration(
         filled: true,
-        hintText: 'Enter your secret share',
+        hintText: 'Enter your SLIP39 share',
         border: _border,
         focusedBorder: _border,
         enabledBorder: _border,
-        // ✅ Move action icons to the bottom-right so they don't fight the taller field
         suffixIcon: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
@@ -390,32 +315,6 @@ class _AddRemoveButton extends StatelessWidget {
           color: Colors.white,
           size: 18,
         ),
-      ),
-    );
-  }
-}
-
-/// Labelled Cupertino switch for Base64 / Hex toggle (SSS only).
-class _Base64Toggle extends StatelessWidget {
-  final ValueNotifier<bool> notifier;
-  final String label;
-
-  const _Base64Toggle({required this.notifier, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: notifier,
-      builder: (_, value, __) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 18)),
-          CupertinoSwitch(
-            value: value,
-            activeColor: appBackgroundblue,
-            onChanged: (_) => notifier.value = !notifier.value,
-          ),
-        ],
       ),
     );
   }

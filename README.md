@@ -166,32 +166,19 @@ The first mobile wallet where the AI funds itself. Features:
 
 ---
 
-## 🔐 Seed Security — Shamir Secret Sharing & SLIP39
+## 🔐 Seed Security — SLIP39
 
-EcoNova is the only mobile wallet with dual-scheme secret splitting built
-natively into the UI. Users can back up their seed phrase by splitting it
-into shares — no single share reveals anything about the original secret.
-
-### 🔀 SSS (Shamir's Secret Sharing)
-
-The original SSS scheme, implemented natively in Dart:
-
-- Split any seed phrase or hex seed into **N shares** with a **K-of-N
-  threshold** — any K shares reconstruct the secret, fewer than K reveal
-  nothing.
-- Base64 or hex output encoding — configurable per split.
-- QR scan and clipboard paste on each share field for fast input.
-- Duplicate share detection before recovery is attempted.
-- Reconstruction validates the digest of the shared secret — corrupted or
-  wrong shares are caught before any result is returned.
+EcoNova includes native SLIP39 secret splitting — the standardised,
+mnemonic-word share format used by Trezor and compatible hardware wallets.
+Users can back up their seed phrase by splitting it into shares — no single
+share reveals anything about the original secret.
 
 ### 🔑 SLIP39 (SatoshiLabs Improvement Proposal 39)
 
-The standardised, mnemonic-word share format used by Trezor and compatible
-hardware wallets — now available on mobile:
-
 - Shares are **BIP39-style human-readable word lists** (1024-word SLIP39
   dictionary), making them safe to write down or speak aloud.
+- **K-of-N threshold** — any K shares reconstruct the secret; fewer than K
+  reveal nothing.
 - Optional **passphrase** adds an additional encryption layer — the same
   shares with a different passphrase produce a completely different secret.
 - Shares from the same split share an **identifier prefix** (first 2–3
@@ -201,10 +188,8 @@ hardware wallets — now available on mobile:
   versa.
 - Even-length byte enforcement with explicit padding flag — round-trips
   correctly regardless of seed length.
-
-Both schemes are available from the same screen via a **segmented toggle**.
-Switching schemes clears all fields so stale shares from the previous scheme
-are never mixed in.
+- QR scan and clipboard paste on each share field for fast input.
+- Duplicate share detection before recovery is attempted.
 
 ```
 Export screen:  threshold / shares count → generate → copy each share
@@ -283,7 +268,7 @@ iOS, macOS, and in tests.
 | **AES-256-GCM**             | Symmetric encryption with authenticated data    |
 | **HMAC-SHA256**             | Data integrity hashes and HKDF key derivation   |
 | **HKDF-SHA256**             | ECIES shared-secret → AES key expansion         |
-| **SSS (GF-256)**            | Shamir secret splitting and recovery            |
+| **SSS (GF-256)**            | Shamir secret splitting for dead man's switch   |
 | **SLIP39**                  | BIP39-style mnemonic share encoding / decoding  |
 | **RS1024 checksum**         | SLIP39 mnemonic integrity validation            |
 | **Feistel cipher (PBKDF2)** | SLIP39 master secret encryption / decryption    |
@@ -386,7 +371,6 @@ No more copying long addresses or checking explorers.
 | Portfolio overview                                                  | ✅     |
 | AI natural language agent                                           | ✅     |
 | Multi-chain (ETH, SOL, Base, TON, and 25+ more)                     | ✅     |
-| Shamir Secret Sharing (SSS) — split & recover seed phrase           | ✅     |
 | SLIP39 — BIP39-style mnemonic shares, passphrase, Trezor-compatible | ✅     |
 | Dead man's switch — drand time-lock + ECIES + relay auto-delivery   | ✅     |
 | ECIES secp256k1 encryption / decryption (pure Dart)                 | ✅     |
@@ -437,8 +421,6 @@ Polkadot, Sui, Aptos, Harmony, Stellar, Filecoin, XRP, Zilliqa, FUSE, Ronin.
   distinct from bech32 (BIP173) used for witness v0 (SegWit)
 - **Leather-compatible `getAddresses`** — P2WPKH + P2TR + STX returned with
   correct public keys, tweaked keys, and derivation paths matching Leather exactly
-- **SSS in GF(256)** — Shamir secret splitting with RS1024 digest validation;
-  threshold shares reconstruct, sub-threshold shares reveal nothing
 - **SLIP39** — full implementation of SatoshiLabs' mnemonic share standard:
   RS1024 checksum, Feistel cipher, PBKDF2 passphrase stretching, 1024-word
   dictionary — cross-compatible with Trezor Suite and hardware wallets
@@ -561,7 +543,7 @@ bw get notes "econova .env" > .env
 | Bitcoin (SegWit + Taproot) | Native send/receive — no library, pure Dart signing               |
 | AI-powered interfaces      | Early-stage, high-demand UX differentiator                        |
 | Multi-chain fragmentation  | 30+ chains, one interface                                         |
-| Seed security              | Only mobile wallet with SSS + SLIP39 + dead man's switch built-in |
+| Seed security              | Only mobile wallet with SLIP39 + dead man's switch built-in       |
 
 ---
 
