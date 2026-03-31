@@ -240,7 +240,8 @@ abstract class Coin {
     // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
     final entry = decodedCache[cacheKey] ??= {};
     entry[bip39PhraseOrSeedHex] = keys;
-    _dirtyKeys.add(cacheKey);
+    // _dirtyKeys.add(cacheKey);
+    await pref.put(cacheKey, jsonEncode(entry));
 
     return toAccount(keys);
   }
