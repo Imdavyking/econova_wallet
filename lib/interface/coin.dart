@@ -191,20 +191,6 @@ abstract class Coin {
     return details.publicKey;
   }
 
-  static final Set<String> _dirtyKeys = {};
-
-  static Future<void> flushCache() async {
-    if (_dirtyKeys.isEmpty) return;
-    await Future.wait(
-      _dirtyKeys.map((k) {
-        final entry = decodedCache[k];
-        if (entry == null) return Future.value();
-        return pref.put(k, jsonEncode(entry));
-      }),
-    );
-    _dirtyKeys.clear();
-  }
-
   static Future<AccountData> fromBip39PhraseOrSeedCached({
     required String cacheKey,
     required String bip39PhraseOrSeedHex,
@@ -240,9 +226,7 @@ abstract class Coin {
     // ── 4. persist to memory + hive (without address — postProcess is caller's concern) ──
     final entry = decodedCache[cacheKey] ??= {};
     entry[bip39PhraseOrSeedHex] = keys;
-    // _dirtyKeys.add(cacheKey);
     await pref.put(cacheKey, jsonEncode(entry));
-
     return toAccount(keys);
   }
 
