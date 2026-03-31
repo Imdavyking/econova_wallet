@@ -77,24 +77,31 @@ Future<void> importAllKeys(String mnemonic) async {
 
   for (var i = 0; i < chains.length; i += batchSize) {
     final batch = chains.skip(i).take(batchSize).toList();
+
+    debugPrint('── batch ${i ~/ batchSize + 1} start ──');
+    final batchSw = Stopwatch()..start();
+
     final results = await Future.wait(
       batch.map((coin) async {
+        final sw = Stopwatch()..start();
         try {
-          return await coin.importData(mnemonic);
+          final result = await coin.importData(mnemonic);
+          debugPrint('✓ ${coin.getName()} ${sw.elapsedMilliseconds}ms');
+          return result;
         } catch (e) {
-          debugPrint('Failed to import ${coin.getName()}: $e');
+          debugPrint('✗ ${coin.getName()} ${sw.elapsedMilliseconds}ms — $e');
           return null;
         }
       }),
       eagerError: false,
     );
 
-    // collect failures for this batch
+    debugPrint(
+        '── batch ${i ~/ batchSize + 1} done ${batchSw.elapsedMilliseconds}ms ──');
+
     batch.indexed
         .where((e) => results[e.$1] == null)
         .forEach((e) => failed.add(e.$2.getName()));
-
-    // batch isolates are all dead here before next 10 spawn
   }
 
   if (failed.isNotEmpty) {
