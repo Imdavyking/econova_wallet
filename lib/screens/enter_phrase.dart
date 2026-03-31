@@ -12,7 +12,6 @@ import 'package:wallet_app/components/mnemonic_text_field.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/import_shamir_secret.dart';
 import 'package:wallet_app/screens/wallet.dart';
-import 'package:wallet_app/service/crypto_transaction.dart';
 import 'package:wallet_app/service/wallet_import_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
@@ -39,7 +38,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   final _suggestions = ValueNotifier<List<String>>([]);
 
   late AppLocalizations _loc;
-  late StreamSubscription<dynamic> _eventSub;
   final _screenshotCallback = ScreenshotCallback();
   String info = 'Seed phrase/BIP39 seed hex';
 
@@ -52,13 +50,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     disEnableScreenShot();
 
     _screenshotCallback.addListener(_onScreenshot);
-
-    _eventSub =
-        EventBusService.instance.on<SeedPharseInitializationEvent>().listen(
-              (event) => debugPrint(
-                'Importing: ${event.coin.getName()} (${event.coin.getSymbol()})',
-              ),
-            );
 
     if (kDebugMode) {
       _mnemonicController.text = testMnemonic1;
@@ -108,7 +99,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     enableScreenShot();
     _screenshotCallback.dispose();
-    _eventSub.cancel();
     _mnemonicController.dispose();
     _walletNameController.dispose();
     _suggestions.dispose();

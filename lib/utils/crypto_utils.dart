@@ -75,7 +75,6 @@ Future<void> importAllKeys(String mnemonic) async {
 
   for (final coin in evmChains) {
     if (derivedCoinTypes.contains(coin.coinType)) continue;
-    EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
     try {
       await coin.importData(mnemonic);
       derivedCoinTypes.add(coin.coinType); // ← was commented out, now fixed
@@ -90,7 +89,6 @@ Future<void> importAllKeys(String mnemonic) async {
 
   final results = await Future.wait(
     nonEvmChains.map((coin) async {
-      EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
       return semaphore.run(() async {
         try {
           return await coin.importData(mnemonic);

@@ -24,11 +24,3 @@ class CryptoNotificationEvent {
     required this.body,
   });
 }
-
-class SeedPharseInitializationEvent {
-  final Coin coin;
-
-  SeedPharseInitializationEvent({
-    required this.coin,
-  });
-}
