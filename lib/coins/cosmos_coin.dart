@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:alan/wallet/bech32_encoder.dart';
 import 'package:aptos/aptos.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
@@ -9,7 +10,7 @@ import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
 import 'package:alan/wallet/export.dart';
 import 'package:alan/x/export.dart';
-import 'package:bech32/bech32.dart';
+import 'package:bech32/bech32.dart' hide Bech32Encoder;
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:alan/alan.dart' as cosmos;
@@ -197,32 +198,45 @@ class CosmosCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
+  @override
   Future<AccountData> fromBip39PhraseOrSeed(
       {required String bip39PhraseOrSeedHex}) async {
-    final saveKey = 'cosmosDetailsV2$bech32Hrp${walletImportType.name}';
+    final saveKey =
+        'cosmosDetailsV2${path.replaceAll("/", "_")}${walletImportType.name}';
     Map<String, dynamic> mnemonicMap = {};
 
     if (pref.containsKey(saveKey)) {
       mnemonicMap = Map<String, dynamic>.from(jsonDecode(pref.get(saveKey)));
       if (mnemonicMap.containsKey(bip39PhraseOrSeedHex)) {
-        return AccountData.fromJson(mnemonicMap[bip39PhraseOrSeedHex]);
+        // re-encode address with THIS coin's bech32Hrp
+        final cached =
+            Map<String, dynamic>.from(mnemonicMap[bip39PhraseOrSeedHex]);
+        final rawAddress = HEX.decode(cached['hex_address']);
+        cached['address'] =
+            Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress));
+        return AccountData.fromJson(cached);
       }
     }
-    final networkInfo = getNetworkInfo();
 
-    final args = CosmosDeriveArgs(
-      networkInfo: networkInfo,
-      path: path,
-      seedRoot: seedPhraseRoot,
+    final keys = await compute(
+      calculateCosmosKey,
+      CosmosDeriveArgs(
+        path: path,
+        seedRoot: seedPhraseRoot,
+      ),
     );
 
-    final keys = await compute(calculateCosmosKey, args);
-
-    mnemonicMap[bip39PhraseOrSeedHex] = keys;
-
+    mnemonicMap[bip39PhraseOrSeedHex] = keys; // store WITHOUT address
     await pref.put(saveKey, jsonEncode(mnemonicMap));
 
-    return AccountData.fromJson(keys);
+    final rawAddress = HEX.decode(keys['hex_address']);
+    final result = {
+      ...keys,
+      'address':
+          Bech32Encoder.encode(bech32Hrp, Uint8List.fromList(rawAddress)),
+    };
+
+    return AccountData.fromJson(result);
   }
 
   @override
@@ -862,32 +876,23 @@ List<CosmosCoin> getCosmosBlockChains() {
 }
 
 class CosmosDeriveArgs {
-  final NetworkInfo networkInfo;
   final String path;
   final SeedPhraseRoot seedRoot;
   const CosmosDeriveArgs({
-    required this.networkInfo,
     required this.path,
     required this.seedRoot,
   });
 }
 
 Map calculateCosmosKey(CosmosDeriveArgs config) {
-  final wallet = cosmos.Wallet.deriveSeed(
+  final keys = cosmos.Wallet.deriveRaw(
     config.seedRoot.seed,
-    config.networkInfo,
     derivationPath: config.path,
   );
 
   return {
-    'address': wallet.bech32Address,
-    'privateKey': HEX.encode(wallet.privateKey),
-    'publicKey': HEX.encode(wallet.publicKey),
-    'hex_address': HEX.encode(wallet.address),
+    'privateKey': HEX.encode(keys.privateKey),
+    'publicKey': HEX.encode(keys.publicKey),
+    'hex_address': HEX.encode(keys.rawAddress),
   };
 }
-
-
-
-// peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
-// usdt injective

@@ -14,6 +14,7 @@ import 'package:path/path.dart';
 import 'package:sui/utils/sha.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/service/crypto_transaction.dart';
@@ -55,25 +56,26 @@ Future<void> reInstianteSeedRoot() async {
 }
 
 Future<void> importAllKeys(String mnemonic) async {
-  final seen = <String>{};
   final evmChains = supportedChains.whereType<EthereumCoin>().toList();
+
+  // dedup non-evm: skip tokens, skip cosmos coins with same path
+  final seenCosmosPaths = <String>{};
   final nonEvmChains = supportedChains.where((c) {
     if (c is EthereumCoin) return false;
-    if (c.tokenAddress() != null) return false; // skip tokens
-    return seen.add('${c.runtimeType}_${c.getDefault()}'); // skip duplicates
+    if (c.tokenAddress() != null) return false;
+    if (c is CosmosCoin) return seenCosmosPaths.add(c.path); // one per path
+    return true;
   }).toList();
 
-  // ── 1. EVM: sequential, deduplicated by coinType ─────────────────────────
-  final Set<int> derivedCoinTypes = {};
+  // ── 1. EVM: sequential, dedup by coinType ────────────────────────────────
+  final derivedCoinTypes = <int>{};
 
   for (final coin in evmChains) {
     EventBusService.instance.fire(SeedPharseInitializationEvent(coin: coin));
-
-    if (derivedCoinTypes.contains(coin.coinType)) continue; // already derived
-
+    if (derivedCoinTypes.contains(coin.coinType)) continue;
     try {
-      await coin.importData(mnemonic); // warms the pref cache
-      // derivedCoinTypes.add(coin.coinType);
+      await coin.importData(mnemonic);
+      derivedCoinTypes.add(coin.coinType); // ← was commented out, now fixed
     } catch (e) {
       debugPrint('Failed to import ${coin.getName()}: $e');
     }
