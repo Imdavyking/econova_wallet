@@ -953,7 +953,7 @@ void main() async {
       expect(currChain.caip10ChainId, isNotNull);
 
       debugPrint(
-          '${currChain.getName()} ${currChain.getSymbol()} -> ${await currChain.caip10AccountId}');
+          '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip10ChainId}');
     }
   });
 
