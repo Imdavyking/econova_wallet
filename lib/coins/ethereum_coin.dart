@@ -82,6 +82,11 @@ class EthereumCoin extends Coin {
   String getSymbol() => symbol;
 
   @override
+  String caip2Namespace() => 'eip155';
+  @override
+  String caip2Reference() => '$chainId';
+
+  @override
   List<Coin> get networkTokens => getERC20Coins();
 
   @override

@@ -116,6 +116,11 @@ class EVMHrpCoin extends Coin {
   }
 
   @override
+  String caip2Namespace() => 'eip155';
+  @override
+  String caip2Reference() => '$chainID';
+
+  @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
     String saveKey = 'evmHrpPrivate${walletImportType.name}$hrp';
     Map<String, dynamic> privateKeyMap = {};

@@ -115,6 +115,11 @@ class CosmosCoin extends Coin {
   }
 
   @override
+  String caip2Namespace() => 'cosmos';
+  @override
+  String caip2Reference() => chainId;
+
+  @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['lcdUrl'] = lcdUrl;

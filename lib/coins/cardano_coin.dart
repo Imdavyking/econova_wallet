@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 // ignore: depend_on_referenced_packages
 import 'package:bip39/bip39.dart';
+// ignore: depend_on_referenced_packages
 import 'package:cardano_dart_types/cardano_dart_types.dart' hide Coin;
 import 'package:cardano_flutter_sdk/cardano_flutter_sdk.dart';
 import 'package:flutter/foundation.dart';
@@ -122,11 +123,13 @@ class CardanoCoin extends Coin {
   final bool isTestnet;
   final String blockFrostKey;
   final String blockExplorer;
+  final String caipReference;
 
   CardanoCoin({
     required this.isTestnet,
     required this.blockFrostKey,
     required this.blockExplorer,
+    required this.caipReference,
   });
 
   String get _api => isTestnet ? _blockfrostPreprod : _blockfrostMainnet;
@@ -159,6 +162,11 @@ class CardanoCoin extends Coin {
   String savedTransKey() => 'cardanoTxV4${isTestnet}_$blockFrostKey';
 
   @override
+  String caip2Namespace() => 'cardano';
+  @override
+  String caip2Reference() => caipReference;
+
+  @override
   TransactionFetcher? get transactionFetcher => CardanoTransactionFetcher(
         blockFrostKey: blockFrostKey,
         isTestnet: isTestnet,
@@ -172,12 +180,14 @@ class CardanoCoin extends Coin {
         'blockFrostKey': blockFrostKey,
         'blockExplorer': blockExplorer,
         'type': 'CardanoCoin',
+        'caipReference': 'caipReference',
       };
 
   factory CardanoCoin.fromJson(Map<String, dynamic> json) => CardanoCoin(
         isTestnet: json['isTestnet'],
         blockFrostKey: json['blockFrostKey'],
         blockExplorer: json['blockExplorer'],
+        caipReference: json['caipReference'],
       );
 
   // ── Address ─────────────────────────────────────────────────────────────────
@@ -374,6 +384,7 @@ List<CardanoCoin> getCardanoBlockChains() {
         blockFrostKey: 'preprodmpCaCFGCxLihVPPxXxqEvEnp7dyFmG6J',
         blockExplorer:
             'https://preprod.cardanoscan.io/transaction/$blockExplorerPlaceholder',
+        caipReference: 'preprod',
       ),
     ];
   }
@@ -383,6 +394,7 @@ List<CardanoCoin> getCardanoBlockChains() {
       blockFrostKey: 'mainnetpgkQqXqQ4HjK6gzUKaHW6VU9jcmcKEbd',
       blockExplorer:
           'https://cardanoscan.io/transaction/$blockExplorerPlaceholder',
+      caipReference: 'mainnet',
     ),
   ];
 }

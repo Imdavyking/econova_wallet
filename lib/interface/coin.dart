@@ -179,6 +179,14 @@ abstract class Coin {
   String getSymbol();
   String getExplorer();
   String getDefault();
+  String caip2Namespace();
+  String caip2Reference();
+  String get caip2ChainId => '$caip2Namespace:$caip2Reference';
+  String get caip10ChainId => caip2ChainId;
+
+  Future<String> get caip10AccountId async =>
+      '$caip2ChainId:${await getAddress()}';
+
   List<Coin> get networkTokens => [];
 
   Future<String> getAddress() async {

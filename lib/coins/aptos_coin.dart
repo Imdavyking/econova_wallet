@@ -28,6 +28,7 @@ class AptosCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   @override
   Future<String> addressExplorer() async {
@@ -47,29 +48,24 @@ class AptosCoin extends Coin {
   String getRampID() => rampID;
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getSymbol() => symbol;
+
+  @override
+  String caip2Namespace() => 'aptos';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   bool get supportBip39Seed => true;
@@ -90,6 +86,7 @@ class AptosCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory AptosCoin.fromJson(Map<String, dynamic> json) {
@@ -103,6 +100,7 @@ class AptosCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -118,6 +116,7 @@ class AptosCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -275,6 +274,7 @@ List<AptosCoin> getAptosBlockchain() {
         geckoID: 'aptos',
         rampID: 'aptos',
         payScheme: 'aptos',
+        caipReference: '34',
       )
     ]);
   } else {
@@ -290,6 +290,7 @@ List<AptosCoin> getAptosBlockchain() {
         geckoID: 'aptos',
         rampID: 'aptos',
         payScheme: 'aptos',
+        caipReference: '1',
       )
     ]);
   }

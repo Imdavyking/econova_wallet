@@ -23,6 +23,7 @@ class AlgorandCoin extends Coin {
   String default_;
   String image;
   String name;
+  String caipReference;
 
   AlgorandCoin({
     required this.blockExplorer,
@@ -31,6 +32,7 @@ class AlgorandCoin extends Coin {
     required this.image,
     required this.name,
     required this.algoType,
+    required this.caipReference,
   });
 
   @override
@@ -70,6 +72,11 @@ class AlgorandCoin extends Coin {
   @override
   String getPayScheme() => 'algorand';
 
+  @override
+  String caip2Namespace() => 'algorand';
+  @override
+  String caip2Reference() => caipReference;
+
   // ── Serialization ───────────────────────────────────────────────────────────
 
   factory AlgorandCoin.fromJson(Map<String, dynamic> json) {
@@ -80,6 +87,7 @@ class AlgorandCoin extends Coin {
       symbol: json['symbol'],
       image: json['image'],
       name: json['name'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -92,6 +100,7 @@ class AlgorandCoin extends Coin {
       'name': name,
       'blockExplorer': blockExplorer,
       'image': image,
+      'caipReference': caipReference,
     };
   }
 
@@ -210,6 +219,7 @@ List<AlgorandCoin> getAlgorandBlockchains() {
         default_: 'ALGO',
         image: 'assets/algorand.png',
         algoType: AlgorandTypes.testNet,
+        caipReference: 'SGO1GKSzyE7IEPItTxCByw9x8FmnrCDe',
       ),
     ];
   }
@@ -221,6 +231,7 @@ List<AlgorandCoin> getAlgorandBlockchains() {
       default_: 'ALGO',
       image: 'assets/algorand.png',
       algoType: AlgorandTypes.mainNet,
+      caipReference: 'wGHE2Pwdvd7S12BL5FaOP20EGYesN73k',
     ),
   ];
 }
