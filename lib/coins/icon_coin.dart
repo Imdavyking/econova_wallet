@@ -330,5 +330,19 @@ List<IconCoin> getIconBlockChains() {
       payScheme: 'icon',
       nid: '0x1',
     ),
+    if (enableTestNet)
+      IconCoin(
+        name: 'ICON',
+        symbol: 'ICX',
+        default_: 'ICX',
+        image: 'assets/icon.png',
+        blockExplorer:
+            'https://tracker.lisbon.icon.community/transaction/$blockExplorerPlaceholder',
+        api: 'https://lisbon.net.solidwallet.io/api/v3',
+        geckoID: 'icon',
+        rampID: '',
+        payScheme: 'icon',
+        nid: '0x2',
+      ),
   ];
 }

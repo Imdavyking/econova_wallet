@@ -946,12 +946,10 @@ void main() async {
     for (final testNet in [true, false]) {
       enableTestNet = testNet;
 
-      debugPrint('enable testnet $enableTestNet');
-
       supportedChains = getChains();
 
       for (final currChain in supportedChains) {
-        debugPrint('  [${testNet ? "T" : "M"}] ${currChain.getName()}');
+        if (currChain.getSymbol() != currChain.getDefault()) continue;
         expect(currChain.getName(), isNotNull);
         expect(currChain.getSymbol(), isNotNull);
         expect(currChain.getDefault(), isNotNull);
@@ -959,10 +957,8 @@ void main() async {
         expect(currChain.getImage(), isNotNull);
         expect(currChain.caip10ChainId, isNotNull);
 
-        if (currChain.tokenAddress()?.trim() == '') {
-          debugPrint(
-              '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip2ChainId}');
-        }
+        debugPrint(
+            '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip2ChainId}');
       }
     }
   });

@@ -292,8 +292,8 @@ final _ltcMainnet = SegwitCoinConfig(
   geckoId: 'litecoin',
   rampId: 'LTC_LTC',
   payScheme: 'litecoin',
-  //TODO: get reference forlitecoin
-  caipReference: '',
+  caipReference:
+      '12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2',
 );
 
 // ─── Isolate args ─────────────────────────────────────────────────────────────

@@ -484,13 +484,31 @@ class FuseCoin extends Coin {
 List<FuseCoin> getFUSEBlockchains() {
   List<FuseCoin> blockChains = [];
 
+  blockChains.add(
+    FuseCoin(
+      name: 'Fuse',
+      rpc: 'https://rpc.fuse.io',
+      chainId: 122,
+      blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
+      symbol: 'FUSE',
+      default_: 'FUSE',
+      image: 'assets/fuse.png',
+      coinType: 60,
+      geckoID: "fuse-network-token",
+      payScheme: 'fuse',
+      rampID: '',
+      contractAddress: Variables.NATIVE_TOKEN_ADDRESS,
+    ),
+  );
+
   if (enableTestNet) {
-    blockChains.addAll([
+    blockChains.add(
       FuseCoin(
-        name: 'Fuse(4337)',
-        rpc: 'https://rpc.fuse.io',
-        chainId: 122,
-        blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
+        name: 'Fuse(Spark Testnet)',
+        rpc: 'https://rpc.fusespark.io',
+        chainId: 123,
+        blockExplorer:
+            'https://explorer.fusespark.io/tx/$blockExplorerPlaceholder',
         symbol: 'FUSE',
         default_: 'FUSE',
         image: 'assets/fuse.png',
@@ -500,32 +518,7 @@ List<FuseCoin> getFUSEBlockchains() {
         rampID: '',
         contractAddress: Variables.NATIVE_TOKEN_ADDRESS,
       ),
-    ]);
-  } else {
-    blockChains.addAll([
-      FuseCoin(
-        name: 'Fuse',
-        rpc: 'https://rpc.fuse.io',
-        chainId: 122,
-        blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
-        symbol: 'FUSE',
-        default_: 'FUSE',
-        image: 'assets/fuse.png',
-        coinType: 60,
-        geckoID: "fuse-network-token",
-        payScheme: 'fuse',
-        rampID: '',
-        contractAddress: Variables.NATIVE_TOKEN_ADDRESS,
-      ),
-    ]);
-  }
-
-  final prefCoin = pref.get(newEVMChainKey);
-  if (prefCoin != null && WalletService.isBip39PhraseOrSeedHexKey()) {
-    final tokenList =
-        Map.from(jsonDecode(prefCoin)).values.map((e) => FuseCoin.fromJson(e));
-
-    blockChains.addAll([...tokenList]);
+    );
   }
 
   return blockChains;
