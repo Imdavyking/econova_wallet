@@ -229,6 +229,8 @@ class SegwitCoinConfig {
   /// Smallest spendable output in satoshis.
   final int dustLimit;
 
+  final String caipReference;
+
   const SegwitCoinConfig({
     required this.apiBase,
     required this.network,
@@ -241,6 +243,7 @@ class SegwitCoinConfig {
     required this.geckoId,
     required this.rampId,
     required this.payScheme,
+    required this.caipReference,
     this.dustLimit = 546,
   });
 }
@@ -259,6 +262,7 @@ final _btcMainnet = SegwitCoinConfig(
   geckoId: 'bitcoin',
   rampId: 'BTC_BTC',
   payScheme: 'bitcoin',
+  caipReference: '000000000019d6689c085ae165831e93',
 );
 
 final _btcTestnet = SegwitCoinConfig(
@@ -273,6 +277,7 @@ final _btcTestnet = SegwitCoinConfig(
   geckoId: 'bitcoin',
   rampId: 'BTC_BTC',
   payScheme: 'bitcoin',
+  caipReference: '000000000933ea01ad0ee984209779ba',
 );
 
 final _ltcMainnet = SegwitCoinConfig(
@@ -287,6 +292,8 @@ final _ltcMainnet = SegwitCoinConfig(
   geckoId: 'litecoin',
   rampId: 'LTC_LTC',
   payScheme: 'litecoin',
+  //TODO: get reference forlitecoin
+  caipReference: '',
 );
 
 // ─── Isolate args ─────────────────────────────────────────────────────────────
@@ -324,6 +331,11 @@ class SegwitCoin extends Coin {
   final SegwitCoinConfig cfg;
 
   SegwitCoin(this.cfg);
+
+  @override
+  String caip2Namespace() => 'bip122';
+  @override
+  String caip2Reference() => cfg.caipReference;
 
   @override
   bool get supportBip39Seed => true;
@@ -620,11 +632,13 @@ class TaprootBtcCoin extends Coin {
   final bool isTestnet;
   final String blockExplorer;
   final String image;
+  final String caipReference;
 
   TaprootBtcCoin({
     required this.isTestnet,
     required this.blockExplorer,
     required this.image,
+    required this.caipReference,
   });
 
   String get _api => isTestnet ? _mempoolTest : _mempoolMain;
@@ -753,6 +767,11 @@ class TaprootBtcCoin extends Coin {
   bool get isRpcWorking => true;
 
   @override
+  String caip2Namespace() => 'bip122';
+  @override
+  String caip2Reference() => caipReference;
+
+  @override
   Future<String?> resolveAddress(String address) async => null;
 
   // Accepts same address types as NativeBtcCoin for consistency
@@ -781,6 +800,7 @@ List<TaprootBtcCoin> getTaprootBtcCoins() {
         blockExplorer:
             'https://mempool.space/testnet4/tx/$blockExplorerPlaceholder',
         image: 'assets/bitcoin.jpg',
+        caipReference: '000000000933ea01ad0ee984209779ba',
       ),
     ];
   }
@@ -789,6 +809,7 @@ List<TaprootBtcCoin> getTaprootBtcCoins() {
       isTestnet: false,
       blockExplorer: 'https://mempool.space/tx/$blockExplorerPlaceholder',
       image: 'assets/bitcoin.jpg',
+      caipReference: '000000000019d6689c085ae165831e93',
     ),
   ];
 }
