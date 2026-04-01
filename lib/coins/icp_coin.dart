@@ -237,21 +237,7 @@ List<ICPCoin> getICPBlockchains() {
   List<ICPCoin> blockChains = [];
 
   if (enableTestNet) {
-    blockChains.add(
-      ICPCoin(
-        blockExplorer:
-            'http://127.0.0.1:4943/transaction/$blockExplorerPlaceholder',
-        symbol: 'ICP',
-        name: 'ICP(Testnet)',
-        default_: 'ICP',
-        image: 'assets/icp.png',
-        api: "http://127.0.0.1:4943/",
-        geckoID: "internet-computer",
-        payScheme: 'internet_computer',
-        rampID: '',
-        canisterID: 'r7inp-6aaaa-aaaaa-aaabq-cai',
-      ),
-    );
+    blockChains.addAll([]);
   } else {
     blockChains.addAll([
       ICPCoin(
