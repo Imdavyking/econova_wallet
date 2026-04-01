@@ -941,6 +941,22 @@ void main() async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(testMnemonic2, mnemonic2Addresses);
   });
+
+  test('check if CAIP10 works', () async {
+    for (int i = 0; i < supportedChains.length; i++) {
+      final currChain = supportedChains[i];
+      expect(currChain.getName(), isNotNull);
+      expect(currChain.getSymbol(), isNotNull);
+      expect(currChain.getDefault(), isNotNull);
+      expect(currChain.getExplorer(), isNotNull);
+      expect(currChain.getImage(), isNotNull);
+      expect(currChain.caip10ChainId, isNotNull);
+
+      debugPrint(
+          '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip10ChainId}');
+    }
+  });
+
   test('check if bip39 seeds 2 generates the correct crypto address', () async {
     walletImportType = WalletType.bip39PhraseOrSeedHex;
     await runAddressTest(bip39SeedHex2, mnemonic2Addresses);
