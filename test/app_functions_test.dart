@@ -943,17 +943,27 @@ void main() async {
   });
 
   test('check if CAIP10 works', () async {
-    for (int i = 0; i < supportedChains.length; i++) {
-      final currChain = supportedChains[i];
-      expect(currChain.getName(), isNotNull);
-      expect(currChain.getSymbol(), isNotNull);
-      expect(currChain.getDefault(), isNotNull);
-      expect(currChain.getExplorer(), isNotNull);
-      expect(currChain.getImage(), isNotNull);
-      expect(currChain.caip10ChainId, isNotNull);
+    for (final testNet in [true, false]) {
+      enableTestNet = testNet;
 
-      debugPrint(
-          '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip2ChainId}');
+      debugPrint('enable testnet $enableTestNet');
+
+      supportedChains = getChains();
+
+      for (final currChain in supportedChains) {
+        debugPrint('  [${testNet ? "T" : "M"}] ${currChain.getName()}');
+        expect(currChain.getName(), isNotNull);
+        expect(currChain.getSymbol(), isNotNull);
+        expect(currChain.getDefault(), isNotNull);
+        expect(currChain.getExplorer(), isNotNull);
+        expect(currChain.getImage(), isNotNull);
+        expect(currChain.caip10ChainId, isNotNull);
+
+        if (currChain.tokenAddress()?.trim() == '') {
+          debugPrint(
+              '${currChain.getName()} ${currChain.getSymbol()} -> ${currChain.caip2ChainId}');
+        }
+      }
     }
   });
 

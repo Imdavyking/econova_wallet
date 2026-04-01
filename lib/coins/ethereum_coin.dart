@@ -797,7 +797,6 @@ class EthereumCoin extends Coin {
 
 List<EthereumCoin> getEVMBlockchains() {
   List<EthereumCoin> blockChains = [];
-
   if (enableTestNet) {
     blockChains.addAll([
       EthereumCoin(
