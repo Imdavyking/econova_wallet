@@ -286,6 +286,11 @@ class FuseCoin extends Coin {
   }
 
   @override
+  String caip2Namespace() => 'eip155';
+  @override
+  String caip2Reference() => '$chainId';
+  
+  @override
   Future<AccountData> fromPrivateKey(String privateKey) async {
     String saveKey =
         'ethereumDetailsPrivate4337$coinType${walletImportType.name}';

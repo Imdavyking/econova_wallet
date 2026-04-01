@@ -37,6 +37,7 @@ class FilecoinCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   FilecoinCoin({
     required this.blockExplorer,
@@ -49,32 +50,29 @@ class FilecoinCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
-  @override
-  @override
-  String getExplorer() {
-    return blockExplorer;
-  }
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getDefault() => default_;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getImage() => image;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getName() => name;
+
+  @override
+  String getSymbol() => symbol;
+
+  @override
+  String caip2Namespace() => 'fil';
+
+  @override
+  String caip2Reference() => caipReference;
 
   factory FilecoinCoin.fromJson(Map<String, dynamic> json) {
     return FilecoinCoin(
@@ -88,6 +86,7 @@ class FilecoinCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -104,6 +103,7 @@ class FilecoinCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -490,6 +490,7 @@ List<FilecoinCoin> getFilecoinBlockChains() {
         geckoID: 'filecoin',
         payScheme: 'filecoin',
         rampID: "FILECOIN_FIL",
+        caipReference: 'testnet',
       ),
     );
   } else {
@@ -506,6 +507,7 @@ List<FilecoinCoin> getFilecoinBlockChains() {
         geckoID: 'filecoin',
         payScheme: 'filecoin',
         rampID: "FILECOIN_FIL",
+        caipReference: 'mainnet',
       ),
     ]);
   }

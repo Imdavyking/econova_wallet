@@ -48,6 +48,11 @@ class IconCoin extends Coin {
   @override
   String getRampID() => rampID;
 
+  @override
+  String caip2Namespace() => 'icon';
+  @override
+  String caip2Reference() => nid;
+
   IconCoin({
     required this.blockExplorer,
     required this.symbol,
@@ -311,24 +316,6 @@ Future<Map<String, dynamic>> calculateIconKey(IconDeriveArgs args) async {
 }
 
 List<IconCoin> getIconBlockChains() {
-  if (enableTestNet) {
-    return [
-      IconCoin(
-        name: 'ICON (Lisbon Testnet)',
-        symbol: 'ICX',
-        default_: 'ICX',
-        image: 'assets/icon.png',
-        blockExplorer:
-            'https://tracker.lisbon.icon.community/transaction/$blockExplorerPlaceholder',
-        api: 'https://lisbon.net.solidwallet.io/api/v3',
-        geckoID: 'icon',
-        rampID: '',
-        payScheme: 'icon',
-        nid: '0x2',
-      ),
-    ];
-  }
-
   return [
     IconCoin(
       name: 'ICON',

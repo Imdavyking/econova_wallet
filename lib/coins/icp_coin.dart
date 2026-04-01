@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-
 import 'package:agent_dart/agent_dart.dart';
 import 'package:agent_dart/wallet/ledger.dart';
 import 'package:flutter/foundation.dart';
@@ -76,6 +75,11 @@ class ICPCoin extends Coin {
 
   @override
   bool get supportBip39Seed => true;
+
+  @override
+  String caip2Namespace() => 'icp';
+  @override
+  String caip2Reference() => '737ba355e855bd4b61f5f5c522f2a6d3';
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(
