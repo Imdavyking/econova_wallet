@@ -27,6 +27,7 @@ class StellarCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   @override
   Future<String?> resolveAddress(String address) async {
@@ -64,6 +65,11 @@ class StellarCoin extends Coin {
   }
 
   @override
+  String caip2Namespace() => 'stellar';
+  @override
+  String caip2Reference() => caipReference;
+
+  @override
   TransactionFetcher? get transactionFetcher => StellarTransactionFetcher(
         isTestnet: cluster == stellar.Network.TESTNET,
       );
@@ -79,6 +85,7 @@ class StellarCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory StellarCoin.fromJson(Map<String, dynamic> json) {
@@ -93,6 +100,7 @@ class StellarCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -109,6 +117,7 @@ class StellarCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -321,6 +330,7 @@ List<StellarCoin> getStellarBlockChains() {
         geckoID: 'stellar',
         payScheme: 'stellar',
         rampID: "XLM_XLM",
+        caipReference: 'testnet',
       ),
     );
   } else {
@@ -337,6 +347,7 @@ List<StellarCoin> getStellarBlockChains() {
         geckoID: 'stellar',
         payScheme: 'stellar',
         rampID: "XLM_XLM",
+        caipReference: 'pubnet',
       ),
     ]);
   }

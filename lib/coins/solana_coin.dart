@@ -42,6 +42,7 @@ class SolanaCoin extends Coin {
   String rampID;
   String payScheme;
   int chainId;
+  String caipReference;
 
   @override
   bool requireMemo() => true;
@@ -80,6 +81,11 @@ class SolanaCoin extends Coin {
     return symbol;
   }
 
+  @override
+  String caip2Namespace() => 'solana';
+  @override
+  String caip2Reference() => caipReference;
+
   SolanaCoin({
     required this.blockExplorer,
     required this.symbol,
@@ -92,6 +98,7 @@ class SolanaCoin extends Coin {
     required this.rampID,
     required this.payScheme,
     required this.chainId,
+    required this.caipReference,
   });
 
   factory SolanaCoin.fromJson(Map<String, dynamic> json) {
@@ -107,6 +114,7 @@ class SolanaCoin extends Coin {
       rampID: json['rampID'],
       payScheme: json['payScheme'],
       chainId: json['chainId'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -125,7 +133,7 @@ class SolanaCoin extends Coin {
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
     data['chainId'] = chainId;
-
+    data['caipReference'] = caipReference;
     return data;
   }
 
@@ -1219,6 +1227,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
         chainId: 103,
+        caipReference: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
       ),
     );
   } else {
@@ -1236,6 +1245,7 @@ List<SolanaCoin> getSolanaBlockChains() {
         rampID: "SOLANA_SOL",
         payScheme: 'solana',
         chainId: 101,
+        caipReference: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
       ),
     ]);
   }

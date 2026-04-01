@@ -56,6 +56,7 @@ class StarknetCoin extends Coin {
   String multiCallAddress;
   String factoryAddress;
   String tokenClassHash;
+  String caipReference;
 
   StarknetCoin({
     required this.blockExplorer,
@@ -73,6 +74,7 @@ class StarknetCoin extends Coin {
     required this.multiCallAddress,
     required this.factoryAddress,
     required this.tokenClassHash,
+    required this.caipReference,
   });
 
   factory StarknetCoin.fromJson(Map<String, dynamic> json) {
@@ -92,6 +94,7 @@ class StarknetCoin extends Coin {
       multiCallAddress: json['multiCallAddress'],
       factoryAddress: json['factoryAddress'],
       tokenClassHash: json['tokenClassHash'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -319,6 +322,11 @@ class StarknetCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
+  String caip2Namespace() => 'starknet';
+  @override
+  String caip2Reference() => caipReference;
+
+  @override
   Future<bool> needDeploy() async {
     try {
       final address = await getAddress();
@@ -374,6 +382,7 @@ class StarknetCoin extends Coin {
     data['classHash'] = classHash;
     data['tokenContractAddress'] = tokenContractAddress;
     data['useStarkToken'] = useStarkToken;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -1861,6 +1870,7 @@ List<StarknetCoin> getStarknetBlockchains() {
         useStarkToken: true,
         tokenClassHash: '',
         factoryAddress: '',
+        caipReference: 'SN_SEPOLIA',
       ),
     ]);
   } else {
@@ -1886,6 +1896,7 @@ List<StarknetCoin> getStarknetBlockchains() {
             '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
+        caipReference: 'SN_MAIN',
       ),
     ]);
   }

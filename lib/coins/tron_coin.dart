@@ -37,6 +37,7 @@ class TronCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   @override
   bool get supportKeystore => true;
@@ -70,6 +71,11 @@ class TronCoin extends Coin {
     return symbol;
   }
 
+  @override
+  String caip2Namespace() => 'tron';
+  @override
+  String caip2Reference() => caipReference;
+
   TronCoin({
     required this.blockExplorer,
     required this.symbol,
@@ -80,6 +86,7 @@ class TronCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory TronCoin.fromJson(Map<String, dynamic> json) {
@@ -93,6 +100,7 @@ class TronCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -108,6 +116,7 @@ class TronCoin extends Coin {
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
     data['image'] = image;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -635,12 +644,13 @@ List<TronCoin> getTronBlockchains() {
             'https://shasta.tronscan.org/#/transaction/$blockExplorerPlaceholder',
         symbol: 'TRX',
         default_: 'TRX',
-        name: 'Tron(Testnet)',
+        name: 'Tron(Testnet Shasta)',
         image: 'assets/tron.png',
         api: 'https://api.shasta.trongrid.io',
         geckoID: "tron",
         payScheme: "tron",
         rampID: '',
+        caipReference: '0x94a9059e',
       ),
     );
   } else {
@@ -656,6 +666,7 @@ List<TronCoin> getTronBlockchains() {
         geckoID: "tron",
         payScheme: "tron",
         rampID: '',
+        caipReference: '0x2b6653dc',
       ),
     ]);
   }

@@ -30,6 +30,7 @@ class TonCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   @override
   String getExplorer() {
@@ -66,6 +67,11 @@ class TonCoin extends Coin {
   int decimals() {
     return tonDecimals;
   }
+
+  @override
+  String caip2Namespace() => 'ton';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   String? getSwapDappUrl() => 'https://ston.fi';
@@ -171,6 +177,7 @@ class TonCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory TonCoin.fromJson(Map<String, dynamic> json) {
@@ -184,6 +191,7 @@ class TonCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -200,6 +208,7 @@ class TonCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -356,6 +365,7 @@ List<TonCoin> getTonBlockChains() {
         geckoID: 'the-open-network',
         payScheme: 'ton',
         rampID: '',
+        caipReference: 'testnet',
       ),
     ]);
   } else {
@@ -370,6 +380,7 @@ List<TonCoin> getTonBlockChains() {
         geckoID: 'the-open-network',
         payScheme: 'ton',
         rampID: '',
+        caipReference: 'mainnet',
       ),
     ]);
   }

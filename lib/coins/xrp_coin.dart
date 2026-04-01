@@ -24,7 +24,7 @@ const xrpDecimals = 6;
 
 class XRPCoin extends Coin {
   String api;
-
+  String caipReference;
   String blockExplorer;
   String symbol;
   String default_;
@@ -44,6 +44,7 @@ class XRPCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   @override
@@ -88,6 +89,11 @@ class XRPCoin extends Coin {
     return symbol;
   }
 
+  @override
+  String caip2Namespace() => 'xrpl';
+  @override
+  String caip2Reference() => caipReference;
+
   factory XRPCoin.fromJson(Map<String, dynamic> json) {
     return XRPCoin(
       api: json['api'],
@@ -99,6 +105,7 @@ class XRPCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -114,6 +121,7 @@ class XRPCoin extends Coin {
     data['geckoID'] = geckoID;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -316,6 +324,7 @@ List<XRPCoin> getXRPBlockChains() {
       geckoID: 'ripple',
       rampID: 'ripple',
       payScheme: 'ripple',
+      caipReference: '1',
     ));
   } else {
     blockChains.addAll([
@@ -330,6 +339,7 @@ List<XRPCoin> getXRPBlockChains() {
         geckoID: 'ripple',
         rampID: 'ripple',
         payScheme: 'ripple',
+        caipReference: '0',
       )
     ]);
   }

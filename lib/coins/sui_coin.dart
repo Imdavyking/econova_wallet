@@ -27,6 +27,7 @@ class SuiCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
   @override
   String getExplorer() {
     return blockExplorer;
@@ -52,6 +53,11 @@ class SuiCoin extends Coin {
     return symbol;
   }
 
+  @override
+  String caip2Namespace() => 'sui';
+  @override
+  String caip2Reference() => caipReference;
+
   SuiCoin({
     required this.blockExplorer,
     required this.symbol,
@@ -62,6 +68,7 @@ class SuiCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory SuiCoin.fromJson(Map<String, dynamic> json) {
@@ -75,6 +82,7 @@ class SuiCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -91,6 +99,7 @@ class SuiCoin extends Coin {
     data['image'] = image;
     data['rampID'] = rampID;
     data['payScheme'] = payScheme;
+    data['caipReference'] = caipReference;
     return data;
   }
 
@@ -306,6 +315,7 @@ List<SuiCoin> getSuiBlockChains() {
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
+        caipReference: 'testnet',
       ),
     );
   } else {
@@ -321,6 +331,7 @@ List<SuiCoin> getSuiBlockChains() {
         geckoID: "sui",
         payScheme: "sui",
         rampID: '',
+        caipReference: 'mainnet',
       ),
     ]);
   }

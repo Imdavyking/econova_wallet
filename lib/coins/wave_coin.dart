@@ -569,6 +569,11 @@ class WavesCoin extends Coin {
   bool requireMemo() => true;
 
   @override
+  String caip2Namespace() => 'waves';
+  @override
+  String caip2Reference() => ascii.decode([chainId]);
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'WavesCoin',
         'symbol': symbol,

@@ -51,6 +51,7 @@ class TezosCoin extends Coin {
   final String default_;
   final String image;
   final String name;
+  final String caipReference;
 
   TezosCoin({
     required this.networkType,
@@ -59,6 +60,7 @@ class TezosCoin extends Coin {
     required this.default_,
     required this.image,
     required this.name,
+    required this.caipReference,
   });
 
   _TezosNetwork get _net => _networks[networkType]!;
@@ -107,6 +109,7 @@ class TezosCoin extends Coin {
       default_: json['default'] as String,
       image: json['image'] as String,
       name: json['name'] as String,
+      caipReference: json['caipReference'] as String,
     );
   }
 
@@ -118,10 +121,16 @@ class TezosCoin extends Coin {
         'name': name,
         'blockExplorer': blockExplorer,
         'image': image,
+        'caipReference': caipReference,
       };
 
   @override
   bool get supportBip39Seed => true;
+
+  @override
+  String caip2Namespace() => 'tezos';
+  @override
+  String caip2Reference() => caipReference;
 
   // ── Key derivation ──────────────────────────────────────────────────────────
 
@@ -312,6 +321,7 @@ List<TezosCoin> getTezosBlockchains() {
         default_: 'XTZ',
         name: 'Tezos(Testnet)',
         image: 'assets/tezos.png',
+        caipReference: 'NetXnHfVqm9iesp',
       ),
     ];
   }
@@ -323,6 +333,7 @@ List<TezosCoin> getTezosBlockchains() {
       default_: 'XTZ',
       name: 'Tezos',
       image: 'assets/tezos.png',
+      caipReference: 'NetXdQprcVkpaWU',
     ),
   ];
 }

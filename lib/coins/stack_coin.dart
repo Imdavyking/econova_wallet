@@ -40,6 +40,7 @@ class StacksCoin extends Coin {
   final String geckoID;
   final String rampID;
   final String payScheme;
+  final String caipReference;
 
   StacksCoin({
     required this.isTestnet,
@@ -52,6 +53,7 @@ class StacksCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   int get _addrVersion =>
@@ -83,6 +85,11 @@ class StacksCoin extends Coin {
   String getRampID() => rampID;
   @override
   String getPayScheme() => payScheme;
+
+  @override
+  String caip2Namespace() => 'stacks';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   TransactionFetcher? get transactionFetcher =>
@@ -230,6 +237,7 @@ class StacksCoin extends Coin {
         'rampID': rampID,
         'payScheme': payScheme,
         'derivationPath': derivationPath,
+        'caipReference': caipReference,
       };
 
   factory StacksCoin.fromJson(Map<String, dynamic> json) => StacksCoin(
@@ -243,6 +251,7 @@ class StacksCoin extends Coin {
         rampID: json['rampID'],
         payScheme: json['payScheme'],
         derivationPath: json['derivationPath'],
+        caipReference: json['caipReference'],
       );
 
   // ─── Address ────────────────────────────────────────────────────────────────
@@ -479,6 +488,7 @@ List<StacksCoin> getStacksBlockchains() {
         geckoID: 'blockstack',
         rampID: '',
         payScheme: 'stacks',
+        caipReference: '2147483648',
       ),
     ];
   }
@@ -496,6 +506,7 @@ List<StacksCoin> getStacksBlockchains() {
       geckoID: 'blockstack',
       rampID: '',
       payScheme: 'stacks',
+      caipReference: '1',
     ),
   ];
 }
