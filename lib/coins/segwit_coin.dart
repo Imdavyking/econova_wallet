@@ -333,9 +333,9 @@ class SegwitCoin extends Coin {
   SegwitCoin(this.cfg);
 
   @override
-  String caip2Namespace() => 'bip122';
+  String get caip2Namespace => 'bip122';
   @override
-  String caip2Reference() => cfg.caipReference;
+  String get caip2Reference => cfg.caipReference;
 
   @override
   bool get supportBip39Seed => true;
@@ -767,9 +767,9 @@ class TaprootBtcCoin extends Coin {
   bool get isRpcWorking => true;
 
   @override
-  String caip2Namespace() => 'bip122';
+  String get caip2Namespace => 'bip122';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   Future<String?> resolveAddress(String address) async => null;

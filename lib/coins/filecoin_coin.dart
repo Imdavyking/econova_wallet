@@ -69,10 +69,10 @@ class FilecoinCoin extends Coin {
   String getSymbol() => symbol;
 
   @override
-  String caip2Namespace() => 'fil';
+  String get caip2Namespace => 'fil';
 
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   factory FilecoinCoin.fromJson(Map<String, dynamic> json) {
     return FilecoinCoin(

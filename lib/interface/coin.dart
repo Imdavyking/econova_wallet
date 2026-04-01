@@ -179,8 +179,8 @@ abstract class Coin {
   String getSymbol();
   String getExplorer();
   String getDefault();
-  String caip2Namespace();
-  String caip2Reference();
+  String get caip2Namespace;
+  String get caip2Reference;
   String get caip2ChainId => '$caip2Namespace:$caip2Reference';
   String get caip10ChainId => caip2ChainId;
 

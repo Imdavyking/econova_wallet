@@ -90,9 +90,9 @@ class XRPCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'xrpl';
+  String get caip2Namespace => 'xrpl';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   factory XRPCoin.fromJson(Map<String, dynamic> json) {
     return XRPCoin(

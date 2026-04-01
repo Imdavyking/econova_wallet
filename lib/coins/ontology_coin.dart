@@ -128,9 +128,9 @@ class OntologyCoin extends Coin {
   int decimals() => coinDecimals;
 
   @override
-  String caip2Namespace() => 'ont';
+  String get caip2Namespace => 'ont';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   Future<Map<String, dynamic>> _rpc(String method, List params) =>
       neoOntRpc(rpcUrl, method, params);

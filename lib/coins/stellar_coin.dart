@@ -65,9 +65,9 @@ class StellarCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'stellar';
+  String get caip2Namespace => 'stellar';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   TransactionFetcher? get transactionFetcher => StellarTransactionFetcher(

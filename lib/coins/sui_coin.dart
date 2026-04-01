@@ -54,9 +54,9 @@ class SuiCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'sui';
+  String get caip2Namespace => 'sui';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   SuiCoin({
     required this.blockExplorer,

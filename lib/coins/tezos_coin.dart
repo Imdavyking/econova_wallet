@@ -128,9 +128,9 @@ class TezosCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  String caip2Namespace() => 'tezos';
+  String get caip2Namespace => 'tezos';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   // ── Key derivation ──────────────────────────────────────────────────────────
 

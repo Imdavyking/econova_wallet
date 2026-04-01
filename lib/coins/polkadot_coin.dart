@@ -63,9 +63,9 @@ class PolkadotCoin extends Coin {
   int decimals() => coinDecimals;
 
   @override
-  String caip2Namespace() => 'polkadot';
+  String get caip2Namespace => 'polkadot';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   bool get supportPrivateKey => true;

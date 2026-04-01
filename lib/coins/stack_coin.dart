@@ -87,9 +87,9 @@ class StacksCoin extends Coin {
   String getPayScheme() => payScheme;
 
   @override
-  String caip2Namespace() => 'stacks';
+  String get caip2Namespace => 'stacks';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   TransactionFetcher? get transactionFetcher =>

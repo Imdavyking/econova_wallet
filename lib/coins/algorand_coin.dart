@@ -73,9 +73,9 @@ class AlgorandCoin extends Coin {
   String getPayScheme() => 'algorand';
 
   @override
-  String caip2Namespace() => 'algorand';
+  String get caip2Namespace => 'algorand';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   // ── Serialization ───────────────────────────────────────────────────────────
 

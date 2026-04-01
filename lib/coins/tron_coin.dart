@@ -72,9 +72,9 @@ class TronCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'tron';
+  String get caip2Namespace => 'tron';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   TronCoin({
     required this.blockExplorer,

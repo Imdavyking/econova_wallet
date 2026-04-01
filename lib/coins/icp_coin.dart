@@ -77,9 +77,9 @@ class ICPCoin extends Coin {
   bool get supportBip39Seed => true;
 
   @override
-  String caip2Namespace() => 'icp';
+  String get caip2Namespace => 'icp';
   @override
-  String caip2Reference() => '737ba355e855bd4b61f5f5c522f2a6d3';
+  String get caip2Reference => '737ba355e855bd4b61f5f5c522f2a6d3';
 
   @override
   Future<AccountData> fromBip39PhraseOrSeed(

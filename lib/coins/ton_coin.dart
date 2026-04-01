@@ -69,9 +69,9 @@ class TonCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'ton';
+  String get caip2Namespace => 'ton';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   String? getSwapDappUrl() => 'https://ston.fi';

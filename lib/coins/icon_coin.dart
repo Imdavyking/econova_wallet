@@ -49,9 +49,9 @@ class IconCoin extends Coin {
   String getRampID() => rampID;
 
   @override
-  String caip2Namespace() => 'icon';
+  String get caip2Namespace => 'icon';
   @override
-  String caip2Reference() => nid;
+  String get caip2Reference => nid;
 
   IconCoin({
     required this.blockExplorer,

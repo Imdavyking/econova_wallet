@@ -54,9 +54,9 @@ class ZilliqaCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'zil';
+  String get caip2Namespace => 'zil';
   @override
-  String caip2Reference() => '${network.chainID}';
+  String get caip2Reference => '${network.chainID}';
 
   ZilliqaCoin({
     required this.blockExplorer,

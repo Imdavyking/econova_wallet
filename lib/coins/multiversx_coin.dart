@@ -64,9 +64,9 @@ class MultiversxCoin extends Coin {
   String getSymbol() => symbol;
 
   @override
-  String caip2Namespace() => 'mvx';
+  String get caip2Namespace => 'mvx';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   List<Coin> get networkTokens => getESDTCoins();

@@ -116,9 +116,9 @@ class EVMHrpCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'eip155';
+  String get caip2Namespace => 'eip155';
   @override
-  String caip2Reference() => '$chainID';
+  String get caip2Reference => '$chainID';
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {

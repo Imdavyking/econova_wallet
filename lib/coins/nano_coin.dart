@@ -68,9 +68,9 @@ class NanoBaseCoin extends Coin {
   String getRampID() => rampID;
 
   @override
-  String caip2Namespace() => 'nano';
+  String get caip2Namespace => 'nano';
   @override
-  String caip2Reference() => 'nano';
+  String get caip2Reference => 'nano';
 
   NanoBaseCoin({
     required this.blockExplorer,

@@ -162,9 +162,9 @@ class CardanoCoin extends Coin {
   String savedTransKey() => 'cardanoTxV4${isTestnet}_$blockFrostKey';
 
   @override
-  String caip2Namespace() => 'cardano';
+  String get caip2Namespace => 'cardano';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   TransactionFetcher? get transactionFetcher => CardanoTransactionFetcher(

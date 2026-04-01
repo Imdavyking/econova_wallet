@@ -132,9 +132,9 @@ class NearCoin extends Coin {
   String? getStakeDappUrl() => 'https://app.ref.finance/staking';
 
   @override
-  String caip2Namespace() => 'near';
+  String get caip2Namespace => 'near';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   bool get supportPrivateKey => true;

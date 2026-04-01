@@ -115,9 +115,9 @@ class CosmosCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'cosmos';
+  String get caip2Namespace => 'cosmos';
   @override
-  String caip2Reference() => chainId;
+  String get caip2Reference => chainId;
 
   @override
   Map<String, dynamic> toJson() {

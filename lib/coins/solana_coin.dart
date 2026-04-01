@@ -82,9 +82,9 @@ class SolanaCoin extends Coin {
   }
 
   @override
-  String caip2Namespace() => 'solana';
+  String get caip2Namespace => 'solana';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   SolanaCoin({
     required this.blockExplorer,

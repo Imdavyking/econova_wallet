@@ -322,9 +322,9 @@ class StarknetCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
-  String caip2Namespace() => 'starknet';
+  String get caip2Namespace => 'starknet';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   Future<bool> needDeploy() async {

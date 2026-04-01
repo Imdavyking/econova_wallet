@@ -63,9 +63,9 @@ class AptosCoin extends Coin {
   String getSymbol() => symbol;
 
   @override
-  String caip2Namespace() => 'aptos';
+  String get caip2Namespace => 'aptos';
   @override
-  String caip2Reference() => caipReference;
+  String get caip2Reference => caipReference;
 
   @override
   bool get supportBip39Seed => true;
