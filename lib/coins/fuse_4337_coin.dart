@@ -484,23 +484,6 @@ class FuseCoin extends Coin {
 List<FuseCoin> getFUSEBlockchains() {
   List<FuseCoin> blockChains = [];
 
-  blockChains.add(
-    FuseCoin(
-      name: 'Fuse',
-      rpc: 'https://rpc.fuse.io',
-      chainId: 122,
-      blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
-      symbol: 'FUSE',
-      default_: 'FUSE',
-      image: 'assets/fuse.png',
-      coinType: 60,
-      geckoID: "fuse-network-token",
-      payScheme: 'fuse',
-      rampID: '',
-      contractAddress: Variables.NATIVE_TOKEN_ADDRESS,
-    ),
-  );
-
   if (enableTestNet) {
     blockChains.add(
       FuseCoin(
@@ -509,6 +492,23 @@ List<FuseCoin> getFUSEBlockchains() {
         chainId: 123,
         blockExplorer:
             'https://explorer.fusespark.io/tx/$blockExplorerPlaceholder',
+        symbol: 'FUSE',
+        default_: 'FUSE',
+        image: 'assets/fuse.png',
+        coinType: 60,
+        geckoID: "fuse-network-token",
+        payScheme: 'fuse',
+        rampID: '',
+        contractAddress: Variables.NATIVE_TOKEN_ADDRESS,
+      ),
+    );
+  } else {
+    blockChains.add(
+      FuseCoin(
+        name: 'Fuse',
+        rpc: 'https://rpc.fuse.io',
+        chainId: 122,
+        blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
         symbol: 'FUSE',
         default_: 'FUSE',
         image: 'assets/fuse.png',
