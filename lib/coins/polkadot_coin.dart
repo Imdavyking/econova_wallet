@@ -42,6 +42,7 @@ class PolkadotCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   @override
   String getExplorer() => blockExplorer;
@@ -60,6 +61,11 @@ class PolkadotCoin extends Coin {
 
   @override
   int decimals() => coinDecimals;
+
+  @override
+  String caip2Namespace() => 'polkadot';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   bool get supportPrivateKey => true;
@@ -236,6 +242,7 @@ class PolkadotCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
   });
 
   factory PolkadotCoin.fromJson(Map<String, dynamic> json) {
@@ -252,6 +259,7 @@ class PolkadotCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -270,6 +278,7 @@ class PolkadotCoin extends Coin {
       'geckoID': geckoID,
       'rampID': rampID,
       'payScheme': payScheme,
+      'caipReference': caipReference,
     };
   }
 
@@ -618,6 +627,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
+        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -633,6 +643,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
+        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -648,6 +659,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: '',
         payScheme: '',
         rampID: '',
+        caipReference: '77afd6190f1554ad45fd0d31aee62aac', // Paseo genesis
       ),
     ]);
   } else {
@@ -666,6 +678,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
+        caipReference: '91b171bb158e2d3848fa23a9f1c25182',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -681,6 +694,8 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
+        caipReference:
+            '68d56f15f85d3136970ec16946040bc1', // Asset Hub Polkadot genesis
       ),
       PolkadotCoin(
         blockExplorer:
@@ -696,6 +711,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'kusama',
         payScheme: 'kusama',
         rampID: 'KUSAMA_KSM',
+        caipReference: 'b0a8d493285c2df73290dfb7e61f870f',
       ),
       PolkadotCoin(
         blockExplorer:
@@ -711,6 +727,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'acala',
         payScheme: 'acala',
         rampID: '',
+        caipReference: 'fc41b9bd8ef8fe53d58c7ea67c794c7e',
       ),
     ]);
   }

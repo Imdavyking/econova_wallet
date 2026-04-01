@@ -375,6 +375,7 @@ class LegacyUtxoCoin extends Coin {
   final String rampID;
   final String payScheme;
   final bool isTestnet;
+  final String caipReference;
 
   final _CoinConfig _cfg;
 
@@ -388,6 +389,7 @@ class LegacyUtxoCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
     this.isTestnet = false,
   }) : _cfg = _configs[isTestnet ? '${symbol}_testnet' : symbol]!;
 
@@ -413,6 +415,11 @@ class LegacyUtxoCoin extends Coin {
   int decimals() => _legacyDecimals;
   @override
   bool get isRpcWorking => true;
+
+  @override
+  String caip2Namespace() => 'bip122';
+  @override
+  String caip2Reference() => caipReference;
 
   // ── BCH address helpers ───────────────────────────────────────────────────────
 
@@ -784,6 +791,7 @@ class LegacyUtxoCoin extends Coin {
         'geckoID': geckoID,
         'rampID': rampID,
         'payScheme': payScheme,
+        'caipReference': caipReference,
         'isTestnet': isTestnet,
       };
 
@@ -797,6 +805,7 @@ class LegacyUtxoCoin extends Coin {
         geckoID: j['geckoID'] as String,
         rampID: j['rampID'] as String,
         payScheme: j['payScheme'] as String,
+        caipReference: j['caipReference'] as String,
         isTestnet: j['isTestnet'] as bool? ?? false,
       );
 }
@@ -865,6 +874,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
         rampID: 'BTC_BTC',
         payScheme: 'bitcoin',
         isTestnet: true,
+        caipReference: '000000000933ea01ad0ee984209779ba',
       ),
       LegacyUtxoCoin(
         name: 'Zcash (Test)',
@@ -878,6 +888,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
         rampID: '',
         payScheme: 'zcash',
         isTestnet: true,
+        caipReference: '05a60a92d99d85997cce3b87616c089f',
       ),
     ];
   }
@@ -894,6 +905,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       rampID: 'BTC_BTC',
       payScheme: 'bitcoin',
       isTestnet: false,
+      caipReference: '000000000019d6689c085ae165831e93',
     ),
     LegacyUtxoCoin(
       name: 'Dogecoin',
@@ -906,6 +918,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       geckoID: 'dogecoin',
       rampID: 'DOGE_DOGE',
       payScheme: 'doge',
+      caipReference: '1a91e3dace36e2be3bf030a65679fe82',
     ),
     LegacyUtxoCoin(
       name: 'Dash',
@@ -918,6 +931,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       geckoID: 'dash',
       rampID: '',
       payScheme: 'dash',
+      caipReference: '00000ffd590b1485b3caadc19b22e126',
     ),
     LegacyUtxoCoin(
       name: 'Bitcoin Cash',
@@ -930,6 +944,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       geckoID: 'bitcoin-cash',
       rampID: 'BCH_BCH',
       payScheme: 'bitcoincash',
+      caipReference: '000000000019d6689c085ae165831e93',
     ),
     LegacyUtxoCoin(
       name: 'Zcash',
@@ -942,6 +957,7 @@ List<LegacyUtxoCoin> getLegacyUtxoCoins() {
       geckoID: 'zcash',
       rampID: '',
       payScheme: 'zcash',
+      caipReference: '00040fe8ec8471911baa1db1266ea15d',
     ),
   ];
 }

@@ -90,6 +90,7 @@ class OntologyCoin extends Coin {
   final String contractAddress;
   final bool isTestnet_;
   final int coinDecimals;
+  final String caipReference;
 
   OntologyCoin({
     required this.blockExplorer,
@@ -104,6 +105,7 @@ class OntologyCoin extends Coin {
     required this.contractAddress,
     required this.isTestnet_,
     required this.coinDecimals,
+    required this.caipReference,
   });
 
   @override
@@ -124,6 +126,11 @@ class OntologyCoin extends Coin {
   String getRampID() => rampID;
   @override
   int decimals() => coinDecimals;
+
+  @override
+  String caip2Namespace() => 'ont';
+  @override
+  String caip2Reference() => caipReference;
 
   Future<Map<String, dynamic>> _rpc(String method, List params) =>
       neoOntRpc(rpcUrl, method, params);
@@ -375,6 +382,7 @@ class OntologyCoin extends Coin {
         'decimals': coinDecimals,
         'payScheme': payScheme,
         'contractAddress': contractAddress,
+        'caipReference': caipReference,
       };
 }
 
@@ -397,6 +405,7 @@ List<OntologyCoin> getOntologyBlockChains() {
         isTestnet_: true,
         coinDecimals: 0,
         contractAddress: '0000000000000000000000000000000000000001',
+        caipReference: '2',
       ),
       OntologyCoin(
         name: 'Ontology Gas (Testnet)',
@@ -411,8 +420,8 @@ List<OntologyCoin> getOntologyBlockChains() {
         payScheme: 'ontology',
         isTestnet_: true,
         coinDecimals: 9,
-        contractAddress:
-            '0000000000000000000000000000000000000002', // ONG contract
+        contractAddress: '0000000000000000000000000000000000000002',
+        caipReference: '2', // ONG contract
       ),
     ];
   }
@@ -431,6 +440,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       coinDecimals: 0,
       isTestnet_: false,
       contractAddress: '0000000000000000000000000000000000000001',
+      caipReference: '1',
     ),
     OntologyCoin(
       name: 'Ontology Gas',
@@ -446,6 +456,7 @@ List<OntologyCoin> getOntologyBlockChains() {
       coinDecimals: 9,
       contractAddress:
           '0000000000000000000000000000000000000002', // ONG contract
+      caipReference: '1',
     ),
   ];
 }

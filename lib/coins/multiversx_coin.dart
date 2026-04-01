@@ -35,6 +35,7 @@ class MultiversxCoin extends Coin {
   String geckoID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   multiversx.ProxyProvider getProxy() {
     return multiversx.ProxyProvider(
@@ -48,29 +49,24 @@ class MultiversxCoin extends Coin {
   }
 
   @override
-  String getExplorer() {
-    return blockExplorer;
-  }
+  String getExplorer() => blockExplorer;
 
   @override
-  String getDefault() {
-    return default_;
-  }
+  String getDefault() => default_;
 
   @override
-  String getImage() {
-    return image;
-  }
+  String getImage() => image;
 
   @override
-  String getName() {
-    return name;
-  }
+  String getName() => name;
 
   @override
-  String getSymbol() {
-    return symbol;
-  }
+  String getSymbol() => symbol;
+
+  @override
+  String caip2Namespace() => 'mvx';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   List<Coin> get networkTokens => getESDTCoins();
@@ -85,6 +81,7 @@ class MultiversxCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
     this.nftApi,
   });
 
@@ -100,6 +97,7 @@ class MultiversxCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -129,6 +127,7 @@ class MultiversxCoin extends Coin {
     data['blockExplorer'] = blockExplorer;
     data['image'] = image;
     data['geckoID'] = geckoID;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -332,6 +331,7 @@ List<MultiversxCoin> getEGLDBlockchains() {
         geckoID: "elrond-erd-2",
         payScheme: 'elrond',
         rampID: 'ELROND_EGLD',
+        caipReference: 'T',
       ),
     );
   } else {
@@ -348,6 +348,7 @@ List<MultiversxCoin> getEGLDBlockchains() {
         geckoID: "elrond-erd-2",
         payScheme: 'elrond',
         rampID: 'ELROND_EGLD',
+        caipReference: '1',
       ),
     ]);
   }

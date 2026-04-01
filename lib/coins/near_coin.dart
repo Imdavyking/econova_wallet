@@ -57,6 +57,7 @@ class NearCoin extends Coin {
   String? mintContractID;
   String rampID;
   String payScheme;
+  String caipReference;
 
   NearCoin({
     required this.blockExplorer,
@@ -69,6 +70,7 @@ class NearCoin extends Coin {
     required this.geckoID,
     required this.rampID,
     required this.payScheme,
+    required this.caipReference,
     this.mintContractID,
   });
 
@@ -85,6 +87,7 @@ class NearCoin extends Coin {
       geckoID: json['geckoID'],
       rampID: json['rampID'],
       payScheme: json['payScheme'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -100,6 +103,7 @@ class NearCoin extends Coin {
     data['suffix'] = suffix;
     data['mintContractID'] = mintContractID;
     data['geckoID'] = geckoID;
+    data['caipReference'] = caipReference;
 
     return data;
   }
@@ -126,6 +130,11 @@ class NearCoin extends Coin {
 
   @override
   String? getStakeDappUrl() => 'https://app.ref.finance/staking';
+
+  @override
+  String caip2Namespace() => 'near';
+  @override
+  String caip2Reference() => caipReference;
 
   @override
   bool get supportPrivateKey => true;
@@ -501,6 +510,7 @@ List<NearCoin> getNearBlockChains() {
         geckoID: "near",
         payScheme: "near",
         rampID: "NEAR_NEAR",
+        caipReference: 'testnet',
       ),
     );
   } else {
@@ -517,6 +527,7 @@ List<NearCoin> getNearBlockChains() {
         geckoID: "near",
         payScheme: "near",
         rampID: "NEAR_NEAR",
+        caipReference: 'mainnet',
       )
     ]);
   }

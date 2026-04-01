@@ -22,8 +22,6 @@ const nanoDecimals = 30;
 // Default representatives
 const _nanoRep =
     'nano_3arg3asgtigae3xckabaaewkx3bzsh7nwz7jkmjos79ihyaxwphhm6qgjps4';
-const _bananoRep =
-    'ban_1cake36ua5aqcq1zaa6lb7kty3fs31seu3unw6wa4jk57bc5jppcxe3ackhx';
 
 // ── Base class (shared logic for Nano-protocol coins) ─────────────────────────
 
@@ -68,6 +66,11 @@ class NanoBaseCoin extends Coin {
   String getPayScheme() => payScheme;
   @override
   String getRampID() => rampID;
+
+  @override
+  String caip2Namespace() => 'nano';
+  @override
+  String caip2Reference() => 'nano';
 
   NanoBaseCoin({
     required this.blockExplorer,
@@ -481,40 +484,6 @@ class NanoCoin extends NanoBaseCoin {
         payScheme: json['payScheme'],
       );
 }
-
-// ── Banano ────────────────────────────────────────────────────────────────────
-
-class BananoCoin extends NanoBaseCoin {
-  BananoCoin({
-    required super.blockExplorer,
-    required super.symbol,
-    required super.default_,
-    required super.image,
-    required super.name,
-    required super.api,
-    required super.geckoID,
-    required super.rampID,
-    required super.payScheme,
-  }) : super(
-          derivationPath: "m/44'/198'/0'",
-          accountType: NanoAccountType.BANANO,
-          defaultRepresentative: _bananoRep,
-          cachePrefix: 'banano',
-        );
-
-  factory BananoCoin.fromJson(Map<String, dynamic> json) => BananoCoin(
-        blockExplorer: json['blockExplorer'],
-        symbol: json['symbol'],
-        default_: json['default'],
-        image: json['image'],
-        name: json['name'],
-        api: json['api'],
-        geckoID: json['geckoID'],
-        rampID: json['rampID'],
-        payScheme: json['payScheme'],
-      );
-}
-
 // ── Key derivation ────────────────────────────────────────────────────────────
 
 class NanoDeriveArgs {
