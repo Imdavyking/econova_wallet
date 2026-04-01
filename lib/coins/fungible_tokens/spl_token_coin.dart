@@ -28,6 +28,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     required super.rpc,
     required super.ws,
     required super.geckoID,
+    required super.caipReference,
     required this.mint,
     required this.mintDecimals,
     required this.chainId,
@@ -46,6 +47,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
       mintDecimals: json['mintDecimals'],
       geckoID: json['geckoID'],
       chainId: json['chainId'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -206,6 +208,7 @@ List<SplTokenCoin> getSplTokens() {
         mintDecimals: 6,
         geckoID: 'usd-coin',
         chainId: 103,
+        caipReference: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
       ),
     ]);
   } else {
@@ -223,6 +226,7 @@ List<SplTokenCoin> getSplTokens() {
         ws: 'wss://solana-api.projectserum.com',
         mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
         chainId: 101,
+        caipReference: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
       ),
       SplTokenCoin(
         name: 'Bonk',
@@ -237,6 +241,7 @@ List<SplTokenCoin> getSplTokens() {
         ws: 'wss://solana-api.projectserum.com',
         mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
         chainId: 101,
+        caipReference: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
       ),
     ]);
   }

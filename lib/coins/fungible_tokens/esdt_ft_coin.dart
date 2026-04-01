@@ -25,6 +25,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
     required super.default_,
     required super.image,
     required super.rpc,
+    required super.caipReference,
     required super.name,
     required super.geckoID,
     required this.identifier,
@@ -54,6 +55,7 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
       name: json['name'],
       geckoID: json['geckoID'],
       mintDecimals: json['mintDecimals'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -195,6 +197,7 @@ List<ESDTCoin> getESDTCoins() {
         rpc: 'https://gateway.multiversx.com/',
         identifier: 'ASH-a642d1',
         mintDecimals: 18,
+        caipReference: '1',
       ),
       ESDTCoin(
         name: 'WrappedEGLD',
@@ -207,6 +210,7 @@ List<ESDTCoin> getESDTCoins() {
         identifier: 'WEGLD-bd4d79',
         mintDecimals: 18,
         geckoID: "wrapped-elrond",
+        caipReference: '1',
       ),
       ESDTCoin(
         name: 'USDC',
@@ -219,6 +223,7 @@ List<ESDTCoin> getESDTCoins() {
         identifier: 'USDC-c76f1f',
         mintDecimals: 6,
         geckoID: 'usd-coin',
+        caipReference: '1',
       ),
       ESDTCoin(
         name: 'ZoidPay',
@@ -231,6 +236,7 @@ List<ESDTCoin> getESDTCoins() {
         identifier: 'ZPAY-247875',
         mintDecimals: 18,
         geckoID: "zoid-pay",
+        caipReference: '1',
       ),
     ]);
   }

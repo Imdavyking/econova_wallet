@@ -25,6 +25,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
     required super.name,
     required super.suffix,
     required super.geckoID,
+    required super.caipReference,
     required this.mintDecimals,
     required this.contractID,
   }) : super(
@@ -44,6 +45,7 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
       contractID: json['contractID'],
       mintDecimals: json['mintDecimals'],
       geckoID: json['geckoID'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -250,6 +252,7 @@ List<NearFungibleCoin> walletNearCoin() {
       suffix: '.testnet',
       mintDecimals: 9,
       geckoID: '',
+      caipReference: 'testnet',
     ));
   } else {
     blockChains.addAll([
@@ -264,6 +267,7 @@ List<NearFungibleCoin> walletNearCoin() {
         suffix: '.near',
         mintDecimals: 9,
         geckoID: '',
+        caipReference: 'mainnet',
       ),
     ]);
   }
@@ -289,6 +293,7 @@ List<NearFungibleCoin> getNearFungibles() {
           suffix: '.testnet',
           mintDecimals: 6,
           geckoID: 'usd-coin',
+          caipReference: 'testnet',
         ),
       ],
     );
@@ -306,6 +311,7 @@ List<NearFungibleCoin> getNearFungibles() {
         suffix: '.near',
         mintDecimals: 6,
         geckoID: 'usd-coin',
+        caipReference: 'mainnet',
       ),
       NearFungibleCoin(
         name: 'Tether USD',
@@ -318,6 +324,7 @@ List<NearFungibleCoin> getNearFungibles() {
         suffix: '.near',
         mintDecimals: 6,
         geckoID: 'tether',
+        caipReference: 'mainnet',
       ),
       NearFungibleCoin(
         name: 'SWEAT',
@@ -330,6 +337,7 @@ List<NearFungibleCoin> getNearFungibles() {
         suffix: '.near',
         mintDecimals: 18,
         geckoID: 'sweatcoin',
+        caipReference: 'mainnet',
       ),
     ]);
   }

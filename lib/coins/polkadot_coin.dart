@@ -643,6 +643,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
+        //TODO://check this
         caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
       PolkadotCoin(

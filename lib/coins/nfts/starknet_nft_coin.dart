@@ -36,6 +36,7 @@ class StarknetNFTCoin extends StarknetCoin {
     required super.multiCallAddress,
     required super.factoryAddress,
     required super.tokenClassHash,
+    required super.caipReference,
     required this.tokenType,
     required this.tokenId,
     required this.contractAddress_,
@@ -62,6 +63,7 @@ class StarknetNFTCoin extends StarknetCoin {
       factoryAddress: json['factoryAddress'],
       tokenContractAddress: json['contractAddress'],
       tokenClassHash: json['tokenClassHash'],
+      caipReference: json['caipReference'],
     );
   }
 

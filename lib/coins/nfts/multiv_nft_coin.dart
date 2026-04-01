@@ -39,6 +39,7 @@ class MultiversxNFTCoin extends MultiversxCoin {
     required super.symbol,
     required super.default_,
     required super.image,
+    required super.caipReference,
     required super.rpc,
     required super.name,
     required this.tokenType,
@@ -66,6 +67,7 @@ class MultiversxNFTCoin extends MultiversxCoin {
       name: json['name'],
       balance: json['balance'],
       collection: json['collection'],
+      caipReference: json['caipReference'],
       tokenType: json['tokenType'] ?? MultivNFTType.NonFungibleESDT,
     );
   }

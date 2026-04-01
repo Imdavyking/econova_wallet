@@ -35,6 +35,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     required super.geckoID,
     required super.rampID,
     required super.payScheme,
+    required super.caipReference,
     required this.contractAddress,
     required this.contractName,
     required this.mintDecimals,
@@ -194,6 +195,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
         contractAddress: json['contractAddress'],
         contractName: json['contractName'],
         mintDecimals: json['mintDecimals'],
+        caipReference: json['caipReference'],
       );
 
   // ─── Balance ────────────────────────────────────────────────────────────────
@@ -331,6 +333,7 @@ List<SIP010Coin> getSIP010Coins() {
         contractAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
         contractName: 'usdcx',
         mintDecimals: 6,
+        caipReference: '2147483648',
       ),
     ];
   }
@@ -351,6 +354,7 @@ List<SIP010Coin> getSIP010Coins() {
       contractAddress: 'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE',
       contractName: 'usdcx',
       mintDecimals: 6,
+      caipReference: '1',
     ),
     SIP010Coin(
       name: 'sBTC',
@@ -367,6 +371,7 @@ List<SIP010Coin> getSIP010Coins() {
       contractAddress: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4',
       contractName: 'sbtc-token',
       mintDecimals: 8,
+      caipReference: '1',
     ),
   ];
 }

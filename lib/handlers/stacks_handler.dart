@@ -549,6 +549,7 @@ class StacksHandler extends BaseWebViewHandler {
         isTestnet: baseCoin.isTestnet,
         derivationPath: baseCoin.derivationPath,
         blockExplorer: baseCoin.blockExplorer,
+        caipReference: baseCoin.caipReference,
         symbol: symbol,
         default_: baseCoin.default_,
         image: obj['image'] as String? ?? baseCoin.image,

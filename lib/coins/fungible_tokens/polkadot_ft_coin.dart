@@ -35,6 +35,7 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
     required super.path,
     required super.geckoID,
     required super.payScheme,
+    required super.caipReference,
     required this.assetId,
     required this.mintDecimals,
   }) : super(
@@ -56,6 +57,7 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
       payScheme: json['payScheme'],
       assetId: json['assetId'],
       mintDecimals: json['mintDecimals'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -233,6 +235,8 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
         ss58Prefix: 42,
         path: "m/44'/354'/0'/0'/0'",
         payScheme: '',
+        //TODO://check this
+        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
     ]);
   } else {
@@ -252,6 +256,7 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
         ss58Prefix: 0,
         path: "m/44'/354'/0'/0'/0'",
         payScheme: 'polkadot',
+        caipReference: '68d56f15f85d3136970ec16946040bc1',
       ),
       PolkadotFungibleCoin(
         name: 'USD Coin',
@@ -267,6 +272,7 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
         ss58Prefix: 0,
         path: "m/44'/354'/0'/0'/0'",
         payScheme: 'polkadot',
+        caipReference: '68d56f15f85d3136970ec16946040bc1',
       ),
     ]);
   }

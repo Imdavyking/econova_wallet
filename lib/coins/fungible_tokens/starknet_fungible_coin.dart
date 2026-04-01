@@ -20,6 +20,7 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
     required super.multiCallAddress,
     required super.factoryAddress,
     required super.tokenClassHash,
+    required super.caipReference,
     required this.mintDecimals,
   }) : super(
           rampID: '',
@@ -77,6 +78,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
         mintDecimals: 18,
+        caipReference: 'SN_SEPOLIA',
       ),
     ]);
   } else {
@@ -101,6 +103,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
         mintDecimals: 18,
+        caipReference: 'SN_MAIN',
       ),
       StarknetFungibleCoin(
         name: 'USDC',
@@ -122,6 +125,7 @@ List<StarknetFungibleCoin> getStarknetFungibleCoins() {
         factoryAddress:
             '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
         mintDecimals: 6,
+        caipReference: 'SN_MAIN',
       ),
     ]);
   }

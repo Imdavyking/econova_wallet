@@ -33,6 +33,7 @@ class StacksNFTCoin extends StacksCoin {
     required super.geckoID,
     required super.rampID,
     required super.payScheme,
+    required super.caipReference,
     required this.contractAddress,
     required this.contractName,
     required this.tokenId,
@@ -81,6 +82,7 @@ class StacksNFTCoin extends StacksCoin {
         tokenId: BigInt.parse(json['tokenId'] as String),
         description: json['description'] as String? ?? '',
         tokenImageUrl: json['tokenImageUrl'] as String?,
+        caipReference: json['caipReference'] as String,
       );
 
   @override
@@ -259,6 +261,7 @@ Future<List<StacksNFTCoin>> getStacksNFTs({
         contractAddress: contractAddress,
         contractName: contractName,
         tokenId: tokenId,
+        caipReference: '',
         description: '$contractName #$tokenId',
       ));
     } catch (_) {

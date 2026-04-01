@@ -33,6 +33,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
     required super.image,
     required super.name,
     required super.api,
+    required super.caipReference,
     required this.type,
     required this.mintDecimals,
     required this.tokenID,
@@ -54,6 +55,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
       tokenID: json['tokenID'],
       type: json['type'],
       geckoID: json['geckoID'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -347,6 +349,7 @@ List<TronFungibleCoin> getTronFungibleCoins() {
         mintDecimals: 6,
         type: TRCFTTYPES.v20,
         geckoID: '',
+        caipReference: '0x94a9059e',
       ),
       TronFungibleCoin(
         name: 'PRIME (Testnet)',
@@ -360,6 +363,7 @@ List<TronFungibleCoin> getTronFungibleCoins() {
         mintDecimals: 6,
         type: TRCFTTYPES.v10,
         geckoID: '',
+        caipReference: '0x94a9059e',
       )
     ]);
   } else {
@@ -376,6 +380,7 @@ List<TronFungibleCoin> getTronFungibleCoins() {
         mintDecimals: 6,
         type: TRCFTTYPES.v10,
         geckoID: 'bittorrent-old',
+        caipReference: '0x2b6653dc',
       ),
       TronFungibleCoin(
         name: 'BitTorrent',
@@ -389,6 +394,7 @@ List<TronFungibleCoin> getTronFungibleCoins() {
         mintDecimals: 18,
         type: TRCFTTYPES.v20,
         geckoID: 'bittorrent',
+        caipReference: '0x2b6653dc',
       ),
       TronFungibleCoin(
         name: 'USDC',
@@ -402,6 +408,7 @@ List<TronFungibleCoin> getTronFungibleCoins() {
         mintDecimals: 6,
         type: TRCFTTYPES.v20,
         geckoID: 'usd-coin',
+        caipReference: '0x2b6653dc',
       ),
     ]);
   }

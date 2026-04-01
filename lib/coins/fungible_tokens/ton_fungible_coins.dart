@@ -21,6 +21,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
     required super.image,
     required super.name,
     required super.api,
+    required super.caipReference,
     required this.mintDecimals,
     required this.tokenID,
     required super.geckoID,
@@ -40,6 +41,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       mintDecimals: json['mintDecimals'],
       tokenID: json['tokenID'],
       geckoID: json['geckoID'],
+      caipReference: json['caipReference'],
     );
   }
 
@@ -278,6 +280,7 @@ List<TonFungibleCoin> getTonFungibleCoins() {
         geckoID: '',
         mintDecimals: 9,
         tokenID: 'EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to',
+        caipReference: 'testnet',
       ),
     ]);
   } else {
@@ -292,6 +295,7 @@ List<TonFungibleCoin> getTonFungibleCoins() {
         geckoID: 'notcoin',
         mintDecimals: 9,
         tokenID: 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT',
+        caipReference: 'mainnet',
       ),
       TonFungibleCoin(
         blockExplorer: 'https://tonscan.org/tx/$blockExplorerPlaceholder',
@@ -303,6 +307,7 @@ List<TonFungibleCoin> getTonFungibleCoins() {
         geckoID: 'tether',
         mintDecimals: 6,
         tokenID: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+        caipReference: 'mainnet',
       ),
     ]);
   }

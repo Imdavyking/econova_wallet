@@ -346,6 +346,7 @@ class SolanaCoin extends Coin {
       default_: default_,
       image: meta.iconUrl ?? 'assets/solana.webp',
       chainId: chainId,
+      caipReference: caipReference,
     );
 
     final added = await token.addCoinToStore();
