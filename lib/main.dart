@@ -111,7 +111,7 @@ List<T> getChains<T extends Coin>() {
     ...getESDTCoins(),
     ...getTonFungibleCoins(),
     ...getTronFungibleCoins(),
-    // ...getNearFungibles(),
+    ...getNearFungibles(),
     ...getPolkadotFungibleCoins(),
     ...getSIP010Coins(),
     ...getERC20Coins(),

@@ -263,22 +263,6 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
   String getGeckoId() => geckoID;
 }
 
-List<NearFungibleCoin> walletNearCoin() {
-  final parent = getChains<NearCoin>().first;
-
-  return [
-    NearFungibleCoin.fromParent(
-      parent: parent,
-      name: enableTestNet ? 'PRIME (Testnet)' : 'PRIME',
-      symbol: 'PRM',
-      image: 'assets/logo.png',
-      geckoID: '',
-      contractID: enableTestNet ? 'primewallet.testnet' : 'primewallet.near',
-      mintDecimals: 9,
-    ),
-  ];
-}
-
 List<NearFungibleCoin> getNearFungibles() {
   final parent = getNearBlockChains().first;
 
@@ -330,6 +314,5 @@ List<NearFungibleCoin> getNearFungibles() {
     ];
   }
 
-  blockChains.addAll(walletNearCoin());
   return blockChains;
 }
