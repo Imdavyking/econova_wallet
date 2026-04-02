@@ -286,7 +286,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
 }
 
 List<TonFungibleCoin> getTonFungibleCoins() {
-  final parent = getChains<TonCoin>().first;
+  final parent = getTonBlockChains().first;
 
   if (enableTestNet) {
     return [

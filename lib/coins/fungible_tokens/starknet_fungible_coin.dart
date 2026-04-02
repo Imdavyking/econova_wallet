@@ -88,7 +88,7 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
 }
 
 List<StarknetFungibleCoin> getStarknetFungibleCoins() {
-  final parent = getChains<StarknetCoin>().first;
+  final parent = getStarknetBlockchains().first;
 
   if (enableTestNet) {
     return [

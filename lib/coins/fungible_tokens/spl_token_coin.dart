@@ -218,7 +218,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
 }
 
 List<SplTokenCoin> getSplTokens() {
-  final parent = getChains<SolanaCoin>().first;
+  final parent = getSolanaBlockChains().first;
 
   final List<SplTokenCoin> blockChains;
 

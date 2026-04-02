@@ -360,7 +360,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
 }
 
 List<TronFungibleCoin> getTronFungibleCoins() {
-  final parent = getChains<TronCoin>().first;
+  final parent = getTronBlockchains().first;
 
   if (enableTestNet) {
     return [

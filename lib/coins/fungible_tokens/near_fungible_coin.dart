@@ -280,7 +280,7 @@ List<NearFungibleCoin> walletNearCoin() {
 }
 
 List<NearFungibleCoin> getNearFungibles() {
-  final parent = getChains<NearCoin>().first;
+  final parent = getNearBlockChains().first;
 
   final List<NearFungibleCoin> blockChains;
 
