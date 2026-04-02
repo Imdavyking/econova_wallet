@@ -46,11 +46,6 @@ class AItools {
   }
 
 // ── dApp browser offer helper ───────────────────────────────────────────────
-//
-// Prompts the user via the confirmation dialog whether they want to open the
-// in-app dApp browser as a fallback when a native action is unavailable.
-// Opens the browser immediately if approved; returns a polite decline message
-// if the user says no.
 
   Future<String> _offerDappBrowser(String? url, String action) async {
     if (url == null) {
@@ -62,7 +57,6 @@ class AItools {
       '🌐 $url',
     );
 
-    // confirmTransaction returns non-null when the user declined
     if (confirmation != null) {
       return 'Okay, let me know if you need anything else.';
     }
@@ -100,7 +94,9 @@ class AItools {
         } catch (e) {
           return 'Invalid $currentCoin address: $address';
         }
-        return 'Your $currentCoin address is $address';
+        // Return CAIP-10 so the agent knows both chain and address unambiguously
+        final caip10 = await coin.caip10AccountId;
+        return 'Your $currentCoin address is $address (CAIP-10: $caip10)';
       },
       getInputFromJson: _GetAddressInput.fromJson,
     );
@@ -123,8 +119,9 @@ class AItools {
       },
       func: (final _GetContactNameInput toolInput) async {
         final contactName = toolInput.contactName;
-        final contacts =
-            ContactService.getContacts().where((c) => c.coin == coin).toList();
+
+        // Use CAIP-2 based filtering — no Coin object needed
+        final contacts = ContactService.getContactsForCoin(coin);
 
         final exactMatch = contacts.firstWhereOrNull(
           (c) => c.name.toLowerCase() == contactName.toLowerCase(),
@@ -138,16 +135,21 @@ class AItools {
           try {
             coin.validateAddress(address);
           } catch (e) {
-            return 'Invalid address for $coin: $address';
+            return 'Invalid address for ${coin.getName()}: $address';
           }
           final hasMemo = exactMatch.memo?.isNotEmpty == true;
           final memoText = hasMemo
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
-          return 'The address for "$contactName" on $coin is "$address"$memoText.';
+          return 'The address for "$contactName" on ${coin.getName()} is '
+              '"$address"$memoText (CAIP-10: ${exactMatch.caip10AccountId}).';
         }
 
         final contactNames = contacts.map((c) => c.name).toList();
+        if (contactNames.isEmpty) {
+          return 'No contacts found for ${coin.getName()} (${coin.caip2ChainId}).';
+        }
+
         final bestMatch =
             StringSimilarity.findBestMatch(contactName, contactNames).bestMatch;
         debugPrint('bestMatch: ${bestMatch.target} ${bestMatch.rating}');
@@ -159,7 +161,8 @@ class AItools {
         } else if (bestMatch.rating! > 0.25) {
           return 'Closest match is "${bestMatch.target}", but similarity is low.';
         } else {
-          return 'Contact "$contactName" not found for $coin.';
+          return 'Contact "$contactName" not found for ${coin.getName()} '
+              '(${coin.caip2ChainId}).';
         }
       },
       getInputFromJson: _GetContactNameInput.fromJson,
@@ -695,7 +698,7 @@ class AItools {
 
           coin = target;
           Constants.user.profileImage = coin.getImage();
-          return 'Switched to $name $default_';
+          return 'Switched to $name $default_ (${coin.caip2ChainId})';
         } catch (e) {
           return 'Switching failed for $name $default_: $e';
         }
@@ -971,12 +974,41 @@ class AItools {
             );
           }
 
+          // ── Network mismatch guard ──────────────────────────────────────────
+          // Compare coin's CAIP-2 against the normalised payment network.
+          // If they differ, suggest switching before the user approves.
+          final paymentNetwork = probeResult.option.normalisedNetwork;
+          final coinNetwork = coin.caip2ChainId;
+          String? networkWarning;
+
+          if (coinNetwork != paymentNetwork) {
+            final coinNamespace = coinNetwork.split(':').first;
+            final payNamespace = paymentNetwork.split(':').first;
+
+            if (coinNamespace != payNamespace) {
+              // Different blockchain entirely — find target coin to suggest switch
+              final target = supportedChains.firstWhereOrNull(
+                (c) =>
+                    c.caip2ChainId == paymentNetwork &&
+                    c.tokenAddress() == null,
+              );
+              final hint = target != null
+                  ? 'Please use CMD_switchCoin to switch to ${target.getName()} first.'
+                  : 'Required network: $paymentNetwork';
+              networkWarning =
+                  '⚠️ Network mismatch: you are on $coinNetwork but payment '
+                  'requires $paymentNetwork. $hint';
+            }
+            // Same namespace (e.g. eip155:1 vs eip155:8453) — allowed, no warning
+          }
+
           final message = 'x402 Payment Required\n\n'
               'Resource: ${toolInput.resourceUrl}\n'
               'Amount: ${probeResult.humanReadableAmount}\n'
               'Recipient: ${probeResult.option.payTo}\n'
-              'Network: ${probeResult.option.network}\n'
+              'Network: $paymentNetwork\n'
               'Token: ${probeResult.option.asset}\n\n'
+              '${networkWarning != null ? '$networkWarning\n\n' : ''}'
               'Approve this payment?';
 
           final confirmation = await confirmTransaction(message);

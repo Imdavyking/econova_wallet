@@ -6,19 +6,41 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../interface/coin.dart';
 import '../service/contact_service.dart';
+import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 
 class Contact extends StatefulWidget {
   final bool showAdd;
-  const Contact({super.key, this.showAdd = true});
+
+  /// When set, only contacts whose [ContactParams.caip2ChainId] matches
+  /// [filterCoin.caip2ChainId] are shown.
+  final Coin? filterCoin;
+
+  const Contact({
+    super.key,
+    this.showAdd = true,
+    this.filterCoin,
+  });
 
   @override
   State<Contact> createState() => _ContactState();
 }
 
 class _ContactState extends State<Contact> {
-  final ValueNotifier<List<ContactParams>> _contacts =
-      ValueNotifier(ContactService.getContacts());
+  late final ValueNotifier<List<ContactParams>> _contacts;
+
+  @override
+  void initState() {
+    super.initState();
+    _contacts = ValueNotifier(_filteredContacts());
+  }
+
+  List<ContactParams> _filteredContacts() {
+    final all = ContactService.getContacts();
+    final filterCoin = widget.filterCoin;
+    if (filterCoin == null) return all;
+    return all.where((c) => c.matchesCoin(filterCoin)).toList();
+  }
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
@@ -45,7 +67,7 @@ class _ContactState extends State<Contact> {
       ),
     );
 
-    if (updated != null) _contacts.value = updated;
+    if (updated != null) _contacts.value = _filteredContacts();
   }
 
   Future<void> _editContact(ContactParams params) async {
@@ -53,7 +75,7 @@ class _ContactState extends State<Contact> {
       context,
       MaterialPageRoute(builder: (_) => AddContact(params: params)),
     );
-    if (updated != null) _contacts.value = updated;
+    if (updated != null) _contacts.value = _filteredContacts();
   }
 
   Future<bool> _deleteContact(ContactParams contact) async {
@@ -61,8 +83,8 @@ class _ContactState extends State<Contact> {
 
     if (!await authenticate(context)) return false;
 
-    final updated = await ContactService.deleteContact(contact.id);
-    _contacts.value = updated;
+    await ContactService.deleteContact(contact.id);
+    _contacts.value = _filteredContacts();
     return true;
   }
 
@@ -75,10 +97,15 @@ class _ContactState extends State<Contact> {
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations.of(context)!;
+    final isFiltered = widget.filterCoin != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(localization.contact),
+        title: Text(
+          isFiltered
+              ? '${localization.contact} · ${widget.filterCoin!.getName().split('(')[0].trim()}'
+              : localization.contact,
+        ),
         actions: [
           if (widget.showAdd)
             IconButton(
@@ -90,7 +117,7 @@ class _ContactState extends State<Contact> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            _contacts.value = ContactService.getContacts();
+            _contacts.value = _filteredContacts();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -102,6 +129,7 @@ class _ContactState extends State<Contact> {
                   if (contacts.isEmpty) {
                     return _EmptyState(
                       onAdd: widget.showAdd ? _addContact : null,
+                      filterCoin: widget.filterCoin,
                     );
                   }
                   return Column(
@@ -136,10 +164,16 @@ class _ContactState extends State<Contact> {
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback? onAdd;
-  const _EmptyState({this.onAdd});
+  final Coin? filterCoin;
+
+  const _EmptyState({this.onAdd, this.filterCoin});
 
   @override
   Widget build(BuildContext context) {
+    final label = filterCoin != null
+        ? 'No ${filterCoin!.getName().split('(')[0].trim()} contacts yet'
+        : 'No contacts yet';
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -147,9 +181,9 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 60),
           const Icon(Icons.contact_page_outlined, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text(
-            'No contacts yet',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
           ),
           if (onAdd != null) ...[
             const SizedBox(height: 16),
@@ -178,8 +212,22 @@ class _ContactTile extends StatelessWidget {
     required this.onDelete,
   });
 
+  /// Resolves the chain image from [supportedChains] using caip2ChainId.
+  /// Falls back to a generic icon if the chain is not found.
+  String? _chainImage() {
+    try {
+      return supportedChains
+          .firstWhere((c) => c.caip2ChainId == contact.caip2ChainId)
+          .getImage();
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final chainImage = _chainImage();
+
     return Dismissible(
       key: ValueKey(contact.id),
       direction: DismissDirection.endToStart,
@@ -225,10 +273,16 @@ class _ContactTile extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundImage: AssetImage(contact.coin.getImage()),
-                      ),
+                      if (chainImage != null)
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: AssetImage(chainImage),
+                        )
+                      else
+                        const CircleAvatar(
+                          radius: 18,
+                          child: Icon(Icons.link, size: 18),
+                        ),
                       const SizedBox(width: 10),
                       const Icon(Icons.arrow_forward_ios,
                           size: 14, color: Colors.grey),

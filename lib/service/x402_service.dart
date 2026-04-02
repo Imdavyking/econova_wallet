@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
+import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
 
 // ── Supported versions ────────────────────────────────────────────────────────
@@ -22,6 +23,32 @@ enum X402Version {
 }
 
 const _supportedVersions = {X402Version.v0, X402Version.v1, X402Version.v2};
+
+// ── V1 legacy network name → CAIP-2 mapping ───────────────────────────────────
+// Used only for backward-compatible V1 option picking.
+
+const _v1ToCapip2 = <String, String>{
+  'base': 'eip155:8453',
+  'base-mainnet': 'eip155:8453',
+  'base-sepolia': 'eip155:84532',
+  'optimism-mainnet': 'eip155:10',
+  'optimism-sepolia': 'eip155:11155111',
+  'arbitrum-mainnet': 'eip155:42161',
+  'arbitrum-sepolia': 'eip155:421614',
+  'polygon': 'eip155:137',
+  'polygon-mainnet': 'eip155:137',
+  'polygon-amoy': 'eip155:80002',
+  'avalanche': 'eip155:43114',
+  'avalanche-fuji': 'eip155:43113',
+  'ethereum': 'eip155:1',
+  'ethereum-sepolia': 'eip155:11155111',
+  'solana': 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+  'solana-devnet': 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+};
+
+/// Normalises a network string to CAIP-2 format.
+/// V2 strings are already CAIP-2; V1 legacy strings are mapped via [_v1ToCapip2].
+String _normaliseToCaip2(String network) => _v1ToCapip2[network] ?? network;
 
 // ── Request context — carries original method/body/headers through the flow ───
 
@@ -125,11 +152,12 @@ class X402Service {
     Map<String, String> headers = const {},
   }) async {
     final signingCoin = _resolveSigningCoin(probeResult.option) ?? coin;
+    final normalisedNetwork = _normaliseToCaip2(probeResult.option.network);
 
-    if (!_canSignForNetwork(signingCoin, probeResult.option.network)) {
+    if (!_canSignForNetwork(signingCoin, normalisedNetwork)) {
       final requiredSymbol = _symbolForAsset(probeResult.option.asset);
       return 'x402: This resource requires payment on '
-          '${probeResult.option.network}. '
+          '$normalisedNetwork. '
           'Please switch to a $requiredSymbol wallet and try again.';
     }
 
@@ -140,7 +168,7 @@ class X402Service {
 
     if (paymentHeader == null) {
       return 'x402: ${signingCoin.getSymbol()} does not support x402 payments '
-          'on network ${probeResult.option.network}.';
+          'on network $normalisedNetwork.';
     }
 
     // Merge payment header into original headers — preserves Content-Type etc.
@@ -225,12 +253,26 @@ class X402Service {
     return coin.findToken(option.asset);
   }
 
-  bool _canSignForNetwork(Coin c, String network) {
-    final isStacksNetwork =
-        network == 'stacks:1' || network == 'stacks:2147483648';
-    final coinScheme = c.getPayScheme().toLowerCase();
-    if (isStacksNetwork) return coinScheme == 'stacks';
-    return coinScheme != 'stacks';
+  // ── CAIP-2-based network check ────────────────────────────────────────────
+  //
+  // Both V2 (native CAIP-2) and normalised V1 strings are compared against
+  // the coin's caip2ChainId. Falls back to namespace prefix matching so that
+  // e.g. a wildcard facilitator registration ("eip155:*") still works.
+
+  bool _canSignForNetwork(Coin c, String normalisedNetwork) {
+    // Exact CAIP-2 match — the happy path
+    if (c.caip2ChainId == normalisedNetwork) return true;
+
+    // Check network tokens (e.g. USDCX lives on the Stacks coin)
+    if (c.networkTokens.any((t) => t.caip2ChainId == normalisedNetwork)) {
+      return true;
+    }
+
+    // Same namespace fallback — e.g. coin is "eip155:1", network is "eip155:8453"
+    // Allow if the coin's namespace matches and the coin can sign EVM payments.
+    final coinNamespace = c.caip2ChainId.split(':').first;
+    final networkNamespace = normalisedNetwork.split(':').first;
+    return coinNamespace == networkNamespace && c.supportsX402;
   }
 
   bool _coinMatchesAsset(Coin c, String asset) {
@@ -245,6 +287,67 @@ class X402Service {
             (contract == key || contract.split('.').last == keyTail));
   }
 
+  // ── Option picking — V2 uses pure CAIP-2; V1 uses legacy name mapping ─────
+
+  X402PaymentOption? _pickOption(
+      List<X402PaymentOption> options, X402Version version) {
+    final myCaip2 = coin.caip2ChainId; // e.g. "stacks:1", "eip155:1"
+    final myNamespace = myCaip2.split(':').first;
+
+    bool isTestnet(String network) =>
+        network.contains('sepolia') ||
+        network.contains('2147483648') ||
+        network.contains('testnet') ||
+        network.contains('devnet') ||
+        network.contains('fuji') ||
+        network.contains('amoy');
+
+    X402PaymentOption? pickFromCaip2List(Iterable<String> caip2Networks) {
+      X402PaymentOption? testnetFallback;
+      for (final option in options) {
+        if (option.scheme != 'exact') continue;
+        final normNet = _normaliseToCaip2(option.network);
+        if (!caip2Networks.contains(normNet)) continue;
+        if (!isTestnet(normNet)) return option; // prefer mainnet
+        testnetFallback ??= option;
+      }
+      return testnetFallback;
+    }
+
+    // ── Exact coin match ─────────────────────────────────────────────────────
+    final exactMatch = options.firstWhereOrNull(
+      (o) => o.scheme == 'exact' && _normaliseToCaip2(o.network) == myCaip2,
+    );
+    if (exactMatch != null) return exactMatch;
+
+    // ── Same-namespace match (e.g. any eip155 chain for an EVM coin) ─────────
+    final sameNamespace = options
+        .where((o) =>
+            o.scheme == 'exact' &&
+            _normaliseToCaip2(o.network).startsWith('$myNamespace:'))
+        .toList();
+
+    if (sameNamespace.isNotEmpty) {
+      X402PaymentOption? testnetFallback;
+      for (final option in sameNamespace) {
+        final normNet = _normaliseToCaip2(option.network);
+        if (!isTestnet(normNet)) return option;
+        testnetFallback ??= option;
+      }
+      if (testnetFallback != null) return testnetFallback;
+    }
+
+    // ── V1-only cross-namespace fallback (EVM coin → Stacks option or vice versa)
+    if (version == X402Version.v0 || version == X402Version.v1) {
+      const stacksNetworks = {'stacks:1', 'stacks:2147483648'};
+      final isStacksCoin = myNamespace == 'stacks';
+      final fallbackNetworks = isStacksCoin ? <String>{} : stacksNetworks;
+      return pickFromCaip2List(fallbackNetworks);
+    }
+
+    return null;
+  }
+
   // ── Version-aware payment header key ─────────────────────────────────────
 
   Map<String, String> _buildPaymentHeaders(
@@ -254,48 +357,6 @@ class X402Service {
       X402Version.v1 => {'X-PAYMENT': paymentHeader},
       X402Version.v2 => {'payment-signature': paymentHeader},
     };
-  }
-
-  X402PaymentOption? _pickOption(
-      List<X402PaymentOption> options, X402Version version) {
-    final evmNetworks = switch (version) {
-      X402Version.v0 || X402Version.v1 => [
-          'base-mainnet',
-          'base-sepolia',
-        ],
-      X402Version.v2 => [
-          'base-mainnet',
-          'base-sepolia',
-          'optimism-mainnet',
-          'optimism-sepolia',
-          'arbitrum-mainnet',
-          'arbitrum-sepolia',
-          'polygon-mainnet',
-          'polygon-amoy',
-        ],
-    };
-
-    const stacksNetworks = ['stacks:1', 'stacks:2147483648'];
-    const supportedSchemes = ['exact'];
-
-    final isStacksCoin = coin.getPayScheme() == 'stacks';
-    final preferredNetworks = isStacksCoin ? stacksNetworks : evmNetworks;
-    final fallbackNetworks = isStacksCoin ? evmNetworks : stacksNetworks;
-
-    X402PaymentOption? firstMatch(List<String> networks) {
-      X402PaymentOption? testnetFallback;
-      for (final option in options) {
-        if (!supportedSchemes.contains(option.scheme)) continue;
-        if (!networks.contains(option.network)) continue;
-        final isTestnet = option.network.contains('sepolia') ||
-            option.network.contains('2147483648');
-        if (!isTestnet) return option;
-        testnetFallback ??= option;
-      }
-      return testnetFallback;
-    }
-
-    return firstMatch(preferredNetworks) ?? firstMatch(fallbackNetworks);
   }
 
   String _symbolForAsset(String asset) {
@@ -379,6 +440,9 @@ class X402PaymentOption {
     required this.asset,
     this.extra,
   });
+
+  /// The network normalised to CAIP-2 format (V1 names are mapped).
+  String get normalisedNetwork => _normaliseToCaip2(network);
 
   Map<String, dynamic> toJson() => {
         'scheme': scheme,

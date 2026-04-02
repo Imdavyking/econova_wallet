@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:pinput/pinput.dart';
+import '../interface/coin.dart';
 import '../service/contact_service.dart';
 
 // ── Shared border ─────────────────────────────────────────────────────────────
@@ -56,6 +57,10 @@ class RecipientField extends StatelessWidget {
   final bool showContacts;
   final bool showMemoFromContact;
 
+  /// When provided, the contact picker is filtered to only show contacts
+  /// whose [ContactParams.caip2ChainId] matches [coin.caip2ChainId].
+  final Coin? coin;
+
   const RecipientField({
     super.key,
     required this.controller,
@@ -64,6 +69,7 @@ class RecipientField extends StatelessWidget {
     this.qrMode = QrParseMode.both,
     this.showContacts = true,
     this.showMemoFromContact = false,
+    this.coin,
   });
 
   Future<void> _onQrScan(BuildContext context) async {
@@ -108,7 +114,13 @@ class RecipientField extends StatelessWidget {
   Future<void> _onPickContact(BuildContext context) async {
     final contact = await Navigator.push<ContactParams>(
       context,
-      MaterialPageRoute(builder: (_) => const Contact(showAdd: false)),
+      MaterialPageRoute(
+        builder: (_) => Contact(
+          showAdd: false,
+          filterCoin:
+              coin, // ← pass coin so picker only shows matching contacts
+        ),
+      ),
     );
     if (contact == null) return;
     controller.setText(contact.address);

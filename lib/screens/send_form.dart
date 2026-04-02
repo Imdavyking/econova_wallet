@@ -146,6 +146,7 @@ class _SendFormState extends State<SendForm> {
                             ? QrParseMode.eip681
                             : QrParseMode.both,
                         showMemoFromContact: true,
+                        coin: _coin,
                       ),
                       const SizedBox(height: 20),
                       AmountField(
