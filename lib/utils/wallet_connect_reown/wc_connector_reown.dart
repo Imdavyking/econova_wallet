@@ -19,6 +19,9 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:http/http.dart' as http;
+import 'package:hex/hex.dart';
+import 'package:solana/solana.dart' as solana;
+import 'package:wallet_app/coins/solana_coin.dart';
 
 class WCConnectorReown {
   // Static accessor — mirrors the pattern used by WcConnectorV2.signClient so
@@ -83,7 +86,7 @@ class WCConnectorReown {
         projectId: walletConnectKey,
         logLevel: LogLevel.nothing,
       ),
-      metadata:  const PairingMetadata(
+      metadata: const PairingMetadata(
         name: walletName,
         url: walletURL,
         description: walletAbbr,
@@ -452,7 +455,193 @@ class WCConnectorReown {
           }
         }
         break;
+      case 'solana_signMessage':
+        {
+          try {
+            // params: [{ message: "<base58>", pubkey: "<base58>" }]
+            // or link-mode wraps in { params: [...], scheme: "..." }
+            final msgParams = paramsList.first as Map<String, dynamic>;
+            final messageBase58 = msgParams['message'] as String;
+            final iconUrl = dAppMetadata?.icons.isNotEmpty == true
+                ? dAppMetadata!.icons[0]
+                : '';
 
+            await signMessage(
+              messageType: personalSignKey,
+              context: _context,
+              data: messageBase58,
+              networkIcon: iconUrl,
+              name: dAppMetadata?.name ?? 'Unknown',
+              onConfirm: () async {
+                try {
+                  final walletData =
+                      WalletService.getActiveKey(walletImportType)!.data;
+                  final coin = getSolanaBlockChains().first;
+                  final response = await coin.importData(walletData);
+                  final privateKeyBytes = HEX.decode(response.privateKey!);
+                  final keyPair =
+                      await solana.Ed25519HDKeyPair.fromPrivateKeyBytes(
+                          privateKey: privateKeyBytes);
+
+                  // Decode the base58 message bytes and sign
+                  final msgBytes = base58.decode(messageBase58);
+                  final sig = await keyPair.sign(msgBytes);
+                  final sigBase58 = base58.encode(sig.bytes as Uint8List);
+
+                  await _walletKit.respondSessionRequest(
+                    topic: event.topic,
+                    response: JsonRpcResponse(
+                      id: event.id,
+                      jsonrpc: '2.0',
+                      result: {'signature': sigBase58},
+                    ),
+                  );
+                  handleRedirect(scheme);
+                  if (_context.mounted) Navigator.pop(_context);
+                } catch (e) {
+                  onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                  if (_context.mounted) Navigator.pop(_context);
+                }
+              },
+              onReject: () {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                if (_context.mounted) Navigator.pop(_context);
+              },
+            );
+          } catch (_) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+          }
+        }
+        break;
+
+      case 'solana_signTransaction':
+        {
+          try {
+            final txParams = paramsList.first as Map<String, dynamic>;
+            final txBase58 = txParams['transaction'] as String;
+
+            final iconUrl = dAppMetadata?.icons.isNotEmpty == true
+                ? dAppMetadata!.icons[0]
+                : '';
+            final coin = getSolanaBlockChains().first;
+
+            // Decode for fee/simulation display
+            final txBytes = base58.decode(txBase58);
+            final feeMessageB64 = base64Encode(txBytes);
+            final fee = await coin.getFeeForMessage(feeMessageB64);
+            if (!_context.mounted) return;
+            await signTransactionUI(
+              // Reuse the EVM sign sheet — swap for a Solana-specific one if you have it
+              gasPriceInWei_: null,
+              to: null,
+              from: '',
+              txData: txBase58,
+              valueInWei_: null,
+              gasInWei_: fee.toString(),
+              networkIcon: iconUrl,
+              context: _context,
+              symbol: 'SOL',
+              name: dAppMetadata?.name ?? 'Unknown',
+              title: 'Sign Transaction',
+              chainId: chainId ?? 101,
+              onConfirm: () async {
+                try {
+                  final signedBytes = await coin.signVersionTx(
+                    Uint8List.fromList(txBytes),
+                  );
+                  final signedBase58 =
+                      base58.encode(Uint8List.fromList(signedBytes));
+
+                  await _walletKit.respondSessionRequest(
+                    topic: event.topic,
+                    response: JsonRpcResponse(
+                      id: event.id,
+                      jsonrpc: '2.0',
+                      result: {'transaction': signedBase58},
+                    ),
+                  );
+                  handleRedirect(scheme);
+                } catch (e) {
+                  onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                } finally {
+                  if (_context.mounted) Navigator.pop(_context);
+                }
+              },
+              onReject: () {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                if (_context.mounted) Navigator.pop(_context);
+              },
+            );
+          } catch (_) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+          }
+        }
+        break;
+
+      case 'solana_signAndSendTransaction':
+        {
+          try {
+            final txParams = paramsList.first as Map<String, dynamic>;
+            final txBase58 = txParams['transaction'] as String;
+            final iconUrl = dAppMetadata?.icons.isNotEmpty == true
+                ? dAppMetadata!.icons[0]
+                : '';
+            final coin = getSolanaBlockChains().first;
+            final txBytes = base58.decode(txBase58);
+            final feeMessageB64 = base64Encode(txBytes);
+            final fee = await coin.getFeeForMessage(feeMessageB64);
+
+            if (!_context.mounted) return;
+
+            await signTransactionUI(
+              gasPriceInWei_: null,
+              to: null,
+              from: '',
+              txData: txBase58,
+              valueInWei_: null,
+              gasInWei_: fee.toString(),
+              networkIcon: iconUrl,
+              context: _context,
+              symbol: 'SOL',
+              name: dAppMetadata?.name ?? 'Unknown',
+              title: 'Send Transaction',
+              chainId: chainId ?? 101,
+              onConfirm: () async {
+                try {
+                  final signedBytes = await coin.signVersionTx(
+                    Uint8List.fromList(txBytes),
+                  );
+
+                  final txHash =
+                      await coin.getProxy().rpcClient.sendTransaction(
+                            base64Encode(signedBytes),
+                          );
+
+                  await _walletKit.respondSessionRequest(
+                    topic: event.topic,
+                    response: JsonRpcResponse(
+                      id: event.id,
+                      jsonrpc: '2.0',
+                      result: {'signature': txHash},
+                    ),
+                  );
+                  handleRedirect(scheme);
+                } catch (e) {
+                  onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                } finally {
+                  if (_context.mounted) Navigator.pop(_context);
+                }
+              },
+              onReject: () {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                if (_context.mounted) Navigator.pop(_context);
+              },
+            );
+          } catch (_) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+          }
+        }
+        break;
       default:
         onHandleErrorReject(event, ErrorCodes.unsupportMethod);
     }
@@ -469,7 +658,7 @@ class WCConnectorReown {
     final List icons =
         session != null ? session.peer.metadata.icons : <String>[];
 
-    await signEVMTransaction(
+    await signTransactionUI(
       gasPriceInWei_: ethereumTransaction.gasPrice,
       to: ethereumTransaction.to,
       from: ethereumTransaction.from,
@@ -556,35 +745,70 @@ class WCConnectorReown {
     return (accounts, ethCoins);
   }
 
+  Future<(List<String> accounts, List<SolanaCoin> solCoins)>
+      _buildSolanaAccounts(List<String> chainIds) async {
+    final List<SolanaCoin> solCoins = [];
+    final List<String> accounts = [];
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final availableChains = getSolanaBlockChains();
+
+    for (final id in chainIds) {
+      // chainId format: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+      final ref = id.split(':').last;
+      final SolanaCoin? coin = availableChains.cast<SolanaCoin?>().firstWhere(
+            (c) => c?.caipReference == ref,
+            orElse: () => null,
+          );
+      if (coin == null) continue;
+      final response = await coin.importData(data);
+      accounts.add('solana:$ref:${response.address}');
+      solCoins.add(coin);
+    }
+    return (accounts, solCoins);
+  }
+
   void _onSessionProposal(SessionProposalEvent? args) async {
     if (args == null) return;
     debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args.params)}');
 
     final proposer = args.params.proposer;
 
-    // FIX #2 & #9: collect chains from both required and optional namespaces
-    final requiredChains =
+    // ── EVM chains ──────────────────────────────────────────────────────────
+    final requiredEvmChains =
         args.params.requiredNamespaces['eip155']?.chains ?? [];
-    final optionalChains =
+    final optionalEvmChains =
         args.params.optionalNamespaces['eip155']?.chains ?? [];
-    // Deduplicate while preserving required-first order
-    final allChains = {
-      ...requiredChains,
-      ...optionalChains,
-    }.toList();
+    final allEvmChains = {...requiredEvmChains, ...optionalEvmChains}.toList();
+    final (evmAccounts, ethCoins) = await _buildAccountsForChains(allEvmChains);
 
-    final (accounts, ethCoins) = await _buildAccountsForChains(allChains);
-
-    // If required chains couldn't be satisfied, reject immediately
-    if (requiredChains.isNotEmpty && accounts.isEmpty) {
-      final error = Errors.getSdkError(Errors.UNSUPPORTED_CHAINS).toSignError();
-      await _walletKit.rejectSession(id: args.id, reason: error);
+    if (requiredEvmChains.isNotEmpty && evmAccounts.isEmpty) {
+      await _walletKit.rejectSession(
+          id: args.id,
+          reason: Errors.getSdkError(Errors.UNSUPPORTED_CHAINS).toSignError());
       return;
     }
 
-    final Map<String, Namespace> namespaces = {
-      'eip155': Namespace(
-        accounts: accounts,
+    // ── Solana chains ───────────────────────────────────────────────────────
+    final requiredSolChains =
+        args.params.requiredNamespaces['solana']?.chains ?? [];
+    final optionalSolChains =
+        args.params.optionalNamespaces['solana']?.chains ?? [];
+    final allSolChains = {...requiredSolChains, ...optionalSolChains}.toList();
+    final (solAccounts, solCoins) = await _buildSolanaAccounts(allSolChains);
+
+    if (requiredSolChains.isNotEmpty && solAccounts.isEmpty) {
+      await _walletKit.rejectSession(
+          id: args.id,
+          reason: Errors.getSdkError(Errors.UNSUPPORTED_CHAINS).toSignError());
+      return;
+    }
+
+    // ── Build namespaces ────────────────────────────────────────────────────
+    final Map<String, Namespace> namespaces = {};
+
+    if (evmAccounts.isNotEmpty) {
+      namespaces['eip155'] = Namespace(
+        accounts: evmAccounts,
         methods: [
           'eth_sendTransaction',
           'eth_signTransaction',
@@ -596,8 +820,20 @@ class WCConnectorReown {
           'wallet_addEthereumChain',
         ],
         events: ['accountsChanged', 'chainChanged'],
-      ),
-    };
+      );
+    }
+
+    if (solAccounts.isNotEmpty) {
+      namespaces['solana'] = Namespace(
+        accounts: solAccounts,
+        methods: [
+          'solana_signMessage',
+          'solana_signTransaction',
+          'solana_signAndSendTransaction',
+        ],
+        events: [],
+      );
+    }
 
     if (!_context.mounted) return;
     showDialog(
@@ -606,11 +842,16 @@ class WCConnectorReown {
       builder: (_) {
         final AppLocalizations localization = AppLocalizations.of(_context)!;
         final metadata = proposer.metadata;
+
+        // Merge EVM + Solana coin widgets for the dialog
+        final allCoinWidgets = [
+          ...ethCoins.map((e) => buildRow(e, isSelected: true)),
+          ...solCoins.map((e) => buildRow(e, isSelected: true)),
+        ];
+
         return _WCSessionProposalDialog(
           metadata: metadata,
-          // FIX #2: populate coin widgets from the resolved ethCoins
-          coinWidgets:
-              ethCoins.map((e) => buildRow(e, isSelected: true)).toList(),
+          coinWidgets: allCoinWidgets,
           localization: localization,
           onConfirm: () async {
             try {

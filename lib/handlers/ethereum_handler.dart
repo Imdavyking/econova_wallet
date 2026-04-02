@@ -225,7 +225,7 @@ class EthereumHandler extends BaseWebViewHandler {
       int chainId) async {
     final data = JsTransactionObject.fromJson(jsData.object ?? {});
     if (!context.mounted) return;
-    await signEVMTransaction(
+    await signTransactionUI(
       gasPriceInWei_: null,
       to: data.to,
       from: sendingAddress,

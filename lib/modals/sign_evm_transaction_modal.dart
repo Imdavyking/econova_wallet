@@ -12,7 +12,7 @@ import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
 import '../utils/slide_up_panel.dart';
 
-Future<void> signEVMTransaction({
+Future<void> signTransactionUI({
   required BuildContext context,
   required Function onConfirm,
   required Function()? onReject,
