@@ -121,7 +121,7 @@ class _SettingsState extends State<Settings>
                         ),
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                          child: UserDetailsPlaceHolder(size: .5, textSize: 18),
+                          child: UserDetailsPlaceHolder(textSize: 18),
                         ),
                       ),
                       const SizedBox(height: 20),

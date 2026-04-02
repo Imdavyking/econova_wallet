@@ -1,6 +1,8 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:wallet_app/screens/polkadot_identicons.dart';
 import 'package:web3dart/crypto.dart';
 import '../extensions/big_int_ext.dart';
 import '../service/wallet_service.dart';
@@ -69,6 +71,11 @@ class PolkadotCoin extends Coin {
 
   @override
   bool get supportPrivateKey => true;
+
+  @override
+  Widget getIdenticon(String address, {double size = 40}) {
+    return PolkadotIdenticon(address: address, size: size);
+  }
 
   @override
   Future<AccountData> fromPrivateKey(String privateKey) async {

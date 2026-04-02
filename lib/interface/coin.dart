@@ -248,6 +248,10 @@ abstract class Coin {
     return toAccount(keys);
   }
 
+  Widget? getIdenticon(String address, {double size = 40}) {
+    return null;
+  }
+
   String? getDexScreener(String tokenaddress) {
     return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';
   }

@@ -3,91 +3,78 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../main.dart';
-import '../screens/identicons.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
-import '../service/wallet_service.dart';
+
+// ── Data class — replaces the loose Map ──────────────────────────────────────
+
+class _WalletInfo {
+  final String name;
+
+  const _WalletInfo({required this.name});
+}
+
+// ── Widget ────────────────────────────────────────────────────────────────────
 
 class UserDetailsPlaceHolder extends StatefulWidget {
-  final double? size;
-
   final double? textSize;
 
-  const UserDetailsPlaceHolder({super.key, this.size, this.textSize});
+  const UserDetailsPlaceHolder({super.key, this.textSize});
 
   @override
   State<UserDetailsPlaceHolder> createState() => _UserDetailsPlaceHolderState();
 }
 
 class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
-  Map ethInfo = {};
-  Future<void> getETHDetails() async {
-    try {
-      final currentWalletName = pref.get(currentUserWalletNameKey);
-      final data = WalletService.getActiveKey(walletImportType)!.data;
+  _WalletInfo? _info;
 
-      final web3Response = await evmFromSymbol('ETH')!.importData(data);
-
-      final String useraddress = web3Response.address;
-
-      Map userDetails = {
-        'user_address': useraddress.toLowerCase(),
-      };
-      userDetails['name'] = currentWalletName;
-
-      if (mounted) {
-        setState(() {
-          ethInfo = userDetails;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print(e.toString());
-      }
-    }
-  }
-
-  @override
-  void didUpdateWidget(UserDetailsPlaceHolder widget) {
-    super.didUpdateWidget(widget);
-    getETHDetails();
-  }
+  // Removed `size` param — it was declared but never used anywhere in the widget
 
   @override
   void initState() {
     super.initState();
-    getETHDetails();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(UserDetailsPlaceHolder old) {
+    super.didUpdateWidget(old);
+    // Only reload if the active key actually changed, not on every rebuild
+    if (old.textSize != widget.textSize) _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      // We only need the wallet name here now — no ETH address derivation needed
+      // since the identicon was removed. If the address is needed later for
+      // something else, pass in the active Coin and call coin.getAddress().
+      final name = pref.get(currentUserWalletNameKey) as String?;
+      if (mounted) {
+        setState(() => _info = _WalletInfo(name: name ?? ''));
+      }
+    } catch (e) {
+      if (kDebugMode) print(e);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const loader = SizedBox(
-      width: 20,
-      height: 20,
-      child: Loader(
-        color: appBackgroundblue,
-      ),
-    );
-    if (ethInfo.isEmpty) {
-      return loader;
+    final info = _info;
+
+    if (info == null) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: Loader(color: appBackgroundblue),
+      );
     }
 
-    if (ethInfo['name'] == null) {
-      ethInfo['name'] = AppLocalizations.of(context)!.user;
-    }
-    return Row(
-      children: [
-        Identicon(address: ethInfo['user_address']),
-        const SizedBox(
-          width: 10,
-        ),
-        Text(
-          ellipsify(str: ethInfo['name']),
-          style: TextStyle(
-            fontSize: widget.textSize,
-          ),
-        )
-      ],
+    final name =
+        info.name.isEmpty ? AppLocalizations.of(context)!.user : info.name;
+
+    return Text(
+      name,
+      style: TextStyle(fontSize: widget.textSize),
     );
   }
 }

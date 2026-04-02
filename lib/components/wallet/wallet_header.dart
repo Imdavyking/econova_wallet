@@ -19,7 +19,7 @@ class WalletHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    UserDetailsPlaceHolder(size: .5),
+                    UserDetailsPlaceHolder(),
                     SizedBox(width: 20),
                   ],
                 ),
