@@ -612,8 +612,10 @@ class TronCoin extends Coin {
 
   @override
   Widget getExplorerIdenticon(String address, {double size = 40}) {
+    final hex = tronAddressToHex(address); // "41ABCDEF..."
+    final evmStyle = '0x${hex.substring(2)}';
     return Jazzicon.getIconWidget(
-      Jazzicon.getJazziconData(size, address: address),
+      Jazzicon.getJazziconData(size, address: evmStyle),
     );
   }
 
