@@ -85,8 +85,20 @@ final Map<Eip155Events, String> events = {
 
 class WcConnectorV2 {
   late BuildContext context;
-  static late SignClient signClient;
+
+  // Nullable — null means V2 failed to initialize or is unavailable.
+  static SignClient? _signClient;
+  static bool get isInitialized => _signClient != null;
   static String connEvent = 'connectedDapp';
+
+  /// Safe accessor — throws a readable error if V2 never initialized.
+  static SignClient get signClient {
+    if (_signClient == null) {
+      throw StateError(
+          '[WcConnectorV2] SignClient is not initialized. V2 may be unavailable.');
+    }
+    return _signClient!;
+  }
 
   WcConnectorV2() {
     context = NavigationService.navigatorKey.currentContext!;
@@ -98,153 +110,161 @@ class WcConnectorV2 {
   }
 
   Future<void> init() async {
-    const wcEndpoint = 'wss://relay.walletconnect.com';
-    final channel = WebSocketChannel.connect(Uri.parse(wcEndpoint));
-    await channel.ready.timeout(const Duration(seconds: 3));
-    await channel.sink.close();
-    signClient = await SignClient.init(
-      projectId: walletConnectKey,
-      relayUrl: wcEndpoint,
-      metadata: const AppMetadata(
-        name: walletName,
-        url: walletURL,
-        description: walletAbbr,
-        icons: [walletIconURL],
-      ),
-      database: 'wallet.db',
-      logger: Logger(
-        filter: ProductionFilter(),
-        level: Level.off,
-      ),
-    );
+    try {
+      const wcEndpoint = 'wss://relay.walletconnect.com';
+      final channel = WebSocketChannel.connect(Uri.parse(wcEndpoint));
+      await channel.ready.timeout(const Duration(seconds: 3));
+      await channel.sink.close();
 
-    signClient.on(SignClientEvent.SESSION_PROPOSAL.value, (data) async {
-      final eventData = data as SignClientEventParams<RequestSessionPropose>;
-      log('SESSION_PROPOSAL: $eventData');
-      _onSessionRequest(eventData.id!, eventData.params!);
-    });
+      _signClient = await SignClient.init(
+        projectId: walletConnectKey,
+        relayUrl: wcEndpoint,
+        metadata: const AppMetadata(
+          name: walletName,
+          url: walletURL,
+          description: walletAbbr,
+          icons: [walletIconURL],
+        ),
+        database: 'wallet.db',
+        logger: Logger(
+          filter: ProductionFilter(),
+          level: Level.off,
+        ),
+      );
 
-    signClient.on(SignClientEvent.SESSION_REQUEST.value, (data) async {
-      final eventData = data as SignClientEventParams<RequestSessionRequest>;
-      log('SESSION_REQUEST: $eventData');
-      final session = signClient.session.get(eventData.topic!);
+      _signClient!.on(SignClientEvent.SESSION_PROPOSAL.value, (data) async {
+        final eventData = data as SignClientEventParams<RequestSessionPropose>;
+        log('SESSION_PROPOSAL: $eventData');
+        _onSessionRequest(eventData.id!, eventData.params!);
+      });
 
-      switch (eventData.params!.request.method.toEip155Method()) {
-        case Eip155Methods.PERSONAL_SIGN:
-          final requestParams =
-              (eventData.params!.request.params as List).cast<String>();
-          final dataToSign = requestParams[0];
-          final address = requestParams[1];
-          return _onSign(
-            eventData,
-            eventData.topic!,
-            session,
-            WCEthereumSignMessage(
-              data: dataToSign,
-              address: address,
-              type: WCSignType.PERSONAL_MESSAGE,
-            ),
-          );
+      _signClient!.on(SignClientEvent.SESSION_REQUEST.value, (data) async {
+        final eventData = data as SignClientEventParams<RequestSessionRequest>;
+        log('SESSION_REQUEST: $eventData');
+        final session = _signClient!.session.get(eventData.topic!);
 
-        case Eip155Methods.ETH_SIGN:
-          final requestParams =
-              (eventData.params!.request.params as List).cast<String>();
-          return _onSign(
-            eventData,
-            eventData.topic!,
-            session,
-            WCEthereumSignMessage(
-              data: requestParams[1],
-              address: requestParams[0],
-              type: WCSignType.MESSAGE,
-            ),
-          );
+        switch (eventData.params!.request.method.toEip155Method()) {
+          case Eip155Methods.PERSONAL_SIGN:
+            final requestParams =
+                (eventData.params!.request.params as List).cast<String>();
+            final dataToSign = requestParams[0];
+            final address = requestParams[1];
+            return _onSign(
+              eventData,
+              eventData.topic!,
+              session,
+              WCEthereumSignMessage(
+                data: dataToSign,
+                address: address,
+                type: WCSignType.PERSONAL_MESSAGE,
+              ),
+            );
 
-        case Eip155Methods.ETH_SIGN_TYPED_DATA:
-          final requestParams =
-              (eventData.params!.request.params as List).cast<String>();
-          return _onSign(
-            eventData,
-            eventData.topic!,
-            session,
-            WCEthereumSignMessage(
-              data: requestParams[1],
-              address: requestParams[0],
-              type: WCSignType.TYPED_MESSAGE_V4,
-            ),
-          );
+          case Eip155Methods.ETH_SIGN:
+            final requestParams =
+                (eventData.params!.request.params as List).cast<String>();
+            return _onSign(
+              eventData,
+              eventData.topic!,
+              session,
+              WCEthereumSignMessage(
+                data: requestParams[1],
+                address: requestParams[0],
+                type: WCSignType.MESSAGE,
+              ),
+            );
 
-        case Eip155Methods.ETH_SIGN_TYPED_DATA_V3:
-          final requestParams =
-              (eventData.params!.request.params as List).cast<String>();
-          return _onSign(
-            eventData,
-            eventData.topic!,
-            session,
-            WCEthereumSignMessage(
-              data: requestParams[1],
-              address: requestParams[0],
-              type: WCSignType.TYPED_MESSAGE_V3,
-            ),
-          );
+          case Eip155Methods.ETH_SIGN_TYPED_DATA:
+            final requestParams =
+                (eventData.params!.request.params as List).cast<String>();
+            return _onSign(
+              eventData,
+              eventData.topic!,
+              session,
+              WCEthereumSignMessage(
+                data: requestParams[1],
+                address: requestParams[0],
+                type: WCSignType.TYPED_MESSAGE_V4,
+              ),
+            );
 
-        case Eip155Methods.ETH_SIGN_TYPED_DATA_V4:
-          final requestParams =
-              (eventData.params!.request.params as List).cast<String>();
-          return _onSign(
-            eventData,
-            eventData.topic!,
-            session,
-            WCEthereumSignMessage(
-              data: requestParams[1],
-              address: requestParams[0],
-              type: WCSignType.TYPED_MESSAGE_V4,
-            ),
-          );
+          case Eip155Methods.ETH_SIGN_TYPED_DATA_V3:
+            final requestParams =
+                (eventData.params!.request.params as List).cast<String>();
+            return _onSign(
+              eventData,
+              eventData.topic!,
+              session,
+              WCEthereumSignMessage(
+                data: requestParams[1],
+                address: requestParams[0],
+                type: WCSignType.TYPED_MESSAGE_V3,
+              ),
+            );
 
-        case Eip155Methods.ETH_SIGN_TRANSACTION:
-          final ethereumTransaction = WCEthereumTransaction.fromJson(
-              eventData.params!.request.params.first as Map<String, dynamic>);
-          return _onSignTransaction(
-            eventData.id!,
-            int.parse(eventData.params!.chainId.split(':').last),
-            session,
-            ethereumTransaction,
-          );
+          case Eip155Methods.ETH_SIGN_TYPED_DATA_V4:
+            final requestParams =
+                (eventData.params!.request.params as List).cast<String>();
+            return _onSign(
+              eventData,
+              eventData.topic!,
+              session,
+              WCEthereumSignMessage(
+                data: requestParams[1],
+                address: requestParams[0],
+                type: WCSignType.TYPED_MESSAGE_V4,
+              ),
+            );
 
-        case Eip155Methods.ETH_SEND_TRANSACTION:
-          final ethereumTransaction = WCEthereumTransaction.fromJson(
-              eventData.params!.request.params.first as Map<String, dynamic>);
-          return _onSendTransaction(
-            eventData.id!,
-            int.parse(eventData.params!.chainId.split(':').last),
-            session,
-            ethereumTransaction,
-          );
+          case Eip155Methods.ETH_SIGN_TRANSACTION:
+            final ethereumTransaction = WCEthereumTransaction.fromJson(
+                eventData.params!.request.params.first as Map<String, dynamic>);
+            return _onSignTransaction(
+              eventData.id!,
+              int.parse(eventData.params!.chainId.split(':').last),
+              session,
+              ethereumTransaction,
+            );
 
-        case Eip155Methods.ETH_SEND_RAW_TRANSACTION:
-          break;
+          case Eip155Methods.ETH_SEND_TRANSACTION:
+            final ethereumTransaction = WCEthereumTransaction.fromJson(
+                eventData.params!.request.params.first as Map<String, dynamic>);
+            return _onSendTransaction(
+              eventData.id!,
+              int.parse(eventData.params!.chainId.split(':').last),
+              session,
+              ethereumTransaction,
+            );
 
-        default:
-          debugPrint('Unsupported request.');
-      }
-    });
+          case Eip155Methods.ETH_SEND_RAW_TRANSACTION:
+            break;
 
-    signClient.on(SignClientEvent.SESSION_EVENT.value, (data) async {
-      final eventData = data as SignClientEventParams<RequestSessionEvent>;
-      log('SESSION_EVENT: $eventData');
-    });
+          default:
+            debugPrint('Unsupported request.');
+        }
+      });
 
-    signClient.on(SignClientEvent.SESSION_PING.value, (data) async {
-      final eventData = data as SignClientEventParams<void>;
-      log('SESSION_PING: $eventData');
-    });
+      _signClient!.on(SignClientEvent.SESSION_EVENT.value, (data) async {
+        final eventData = data as SignClientEventParams<RequestSessionEvent>;
+        log('SESSION_EVENT: $eventData');
+      });
 
-    signClient.on(SignClientEvent.SESSION_DELETE.value, (data) async {
-      final eventData = data as SignClientEventParams<void>;
-      log('SESSION_DELETE: $eventData');
-      _onSessionClosed(9999, 'Ended.');
-    });
+      _signClient!.on(SignClientEvent.SESSION_PING.value, (data) async {
+        final eventData = data as SignClientEventParams<void>;
+        log('SESSION_PING: $eventData');
+      });
+
+      _signClient!.on(SignClientEvent.SESSION_DELETE.value, (data) async {
+        final eventData = data as SignClientEventParams<void>;
+        log('SESSION_DELETE: $eventData');
+        _onSessionClosed(9999, 'Ended.');
+      });
+
+      debugPrint('[WcConnectorV2] initialized successfully');
+    } catch (e) {
+      debugPrint('[WcConnectorV2] init failed — V2 will be unavailable: $e');
+      _signClient = null;
+    }
   }
 
   Future<WCRequestResponse> _handleEIP155(
@@ -306,7 +326,7 @@ class WcConnectorV2 {
     }
 
     if (error != null) {
-      signClient.reject(SessionRejectParams(
+      _signClient!.reject(SessionRejectParams(
         id: id,
         reason: getSdkError(error),
       ));
@@ -352,14 +372,14 @@ class WcConnectorV2 {
                     ),
                     onPressed: () async {
                       try {
-                        await signClient.approve(SessionApproveParams(
+                        await _signClient!.approve(SessionApproveParams(
                           id: id,
                           namespaces: namespaces,
                         ));
-                        signClient.events.emit(WcConnectorV2.connEvent);
+                        _signClient!.events.emit(WcConnectorV2.connEvent);
                         if (context.mounted) Navigator.pop(context);
                       } catch (_) {
-                        signClient.reject(SessionRejectParams(
+                        _signClient!.reject(SessionRejectParams(
                           id: id,
                           reason: getSdkError(SdkErrorKey.USER_DISCONNECTED),
                         ));
@@ -376,7 +396,7 @@ class WcConnectorV2 {
                       backgroundColor: Theme.of(context).colorScheme.secondary,
                     ),
                     onPressed: () {
-                      signClient.reject(SessionRejectParams(
+                      _signClient!.reject(SessionRejectParams(
                         id: id,
                         reason: getSdkError(SdkErrorKey.USER_DISCONNECTED),
                       ));
@@ -456,7 +476,7 @@ class WcConnectorV2 {
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: chainId,
           );
-          signClient.respond(SessionRespondParams(
+          _signClient!.respond(SessionRespondParams(
             topic: session.topic,
             response: JsonRpcResult<String>(
               id: id,
@@ -464,7 +484,7 @@ class WcConnectorV2 {
             ),
           ));
         } catch (e) {
-          signClient.respond(SessionRespondParams(
+          _signClient!.respond(SessionRespondParams(
             topic: session.topic,
             response: JsonRpcError(id: id),
           ));
@@ -473,7 +493,7 @@ class WcConnectorV2 {
         }
       },
       onReject: () {
-        signClient.respond(SessionRespondParams(
+        _signClient!.respond(SessionRespondParams(
           topic: session.topic,
           response: JsonRpcError(id: id),
         ));
@@ -508,12 +528,12 @@ class WcConnectorV2 {
             chainId: chainId,
           );
           debugPrint('txhash $txhash');
-          signClient.respond(SessionRespondParams(
+          _signClient!.respond(SessionRespondParams(
             topic: session.topic,
             response: JsonRpcResult<String>(id: id, result: txhash),
           ));
         } catch (e) {
-          signClient.respond(SessionRespondParams(
+          _signClient!.respond(SessionRespondParams(
             topic: session.topic,
             response: JsonRpcError(id: id),
           ));
@@ -522,7 +542,7 @@ class WcConnectorV2 {
         }
       },
       onReject: () {
-        signClient.respond(SessionRespondParams(
+        _signClient!.respond(SessionRespondParams(
           topic: session.topic,
           response: JsonRpcError(id: id),
         ));
@@ -639,7 +659,7 @@ class WcConnectorV2 {
         }
 
         debugPrint('SIGNED $signedDataHex');
-        signClient.respond(SessionRespondParams(
+        _signClient!.respond(SessionRespondParams(
           topic: topic,
           response: JsonRpcResult<String>(
             id: data.id!,
@@ -649,7 +669,7 @@ class WcConnectorV2 {
         if (context.mounted) Navigator.pop(context);
       },
       onReject: () {
-        signClient.respond(SessionRespondParams(
+        _signClient!.respond(SessionRespondParams(
           topic: session.topic,
           response: JsonRpcError(id: data.id!),
         ));

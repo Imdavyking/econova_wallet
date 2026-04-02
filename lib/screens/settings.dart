@@ -27,7 +27,6 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
 import 'change_identicon.dart';
@@ -216,33 +215,18 @@ class _SettingsState extends State<Settings>
                                     width: 25,
                                   ),
                                   label: 'Wallet Connect',
-                                  onTap: () async {
-                                    try {
-                                      WcConnectorV2.signClient;
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const WalletConnect()),
-                                      );
-                                    } catch (e) {
-                                      if (!context.mounted) return;
-                                      ScaffoldMessenger.of(context)
-                                        ..hideCurrentSnackBar()
-                                        ..showSnackBar(SnackBar(
-                                          backgroundColor: Colors.red,
-                                          content: Text(
-                                            localization.errorTryAgain,
-                                            style:
-                                                TextStyle(color: Colors.white),
-                                          ),
-                                        ));
-                                    }
-                                  },
+                                  // FIX: removed the broken WcConnectorV2.signClient
+                                  // check — WalletConnect screen handles V2 being
+                                  // unavailable gracefully on its own.
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const WalletConnect()),
+                                  ),
                                 ),
                               if (WalletService.isBip39PhraseOrSeedHexKey())
                                 FutureBuilder<bool>(
-                                  future: _deadSwitchFuture, // ← cached
+                                  future: _deadSwitchFuture,
                                   builder: (context, data) {
                                     if (!data.hasData || data.data == false) {
                                       return const SizedBox.shrink();
@@ -255,7 +239,7 @@ class _SettingsState extends State<Settings>
                                       ),
                                       label: 'Dead Man\'s Switch',
                                       trailing: _DmsStatusBadge(
-                                        future: _dmsUserFuture, // ← cached
+                                        future: _dmsUserFuture,
                                       ),
                                       onTap: () => Navigator.push(
                                         context,
@@ -554,7 +538,7 @@ class _SettingsState extends State<Settings>
 
                       // ── App version ───────────────────────────────────────
                       FutureBuilder<PackageInfo>(
-                        future: _packageInfoFuture, // ← cached
+                        future: _packageInfoFuture,
                         builder: (_, snapshot) {
                           if (!snapshot.hasData) return const SizedBox.shrink();
                           final info = snapshot.data!;
@@ -614,8 +598,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// A single settings row — icon + label + optional trailing widget.
-/// Pass [onTap] to make it tappable; omit for display-only rows.
 class _SettingsRow extends StatelessWidget {
   final Widget icon;
   final String label;
@@ -657,7 +639,6 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-/// Circular icon container used throughout the settings list.
 class _CircleIcon extends StatelessWidget {
   final Color color;
   final IconData icon;
@@ -683,7 +664,6 @@ class _CircleIcon extends StatelessWidget {
   }
 }
 
-/// Tappable social media icon.
 class _SocialIcon extends StatelessWidget {
   final IconData icon;
   final String url;
@@ -706,7 +686,7 @@ class _DmsStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: future, // ← injected, not created here
+      future: future,
       builder: (context, data) {
         var (color, label) = (Colors.grey, 'Off');
         if (!data.hasError && data.hasData && data.data == true) {

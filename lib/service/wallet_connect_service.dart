@@ -14,12 +14,13 @@ class WCService {
   // ── QR / URI routing ────────────────────────────────────────────────────
 
   static Future<void> _qrScanHandlerReown(String value) async {
-    // Reown WalletKit handles wc: v2 URIs (topic@2?...) and link-mode URIs.
     final uri = Uri.parse(value);
     await WCConnectorReown.instance.pair(uri);
   }
 
   static Future<void> _qrScanHandlerV2(String value) async {
+    // Guard — V2 may have failed to initialize
+    if (!WcConnectorV2.isInitialized) return;
     await WcConnectorV2.signClient.pair(value);
   }
 
@@ -76,6 +77,7 @@ class WCService {
   // ── V2 session management ────────────────────────────────────────────────
 
   static Future<bool> removeSessionV2(SessionStruct session) async {
+    if (!WcConnectorV2.isInitialized) return false;
     try {
       await WcConnectorV2.signClient.disconnect(topic: session.topic);
       return true;

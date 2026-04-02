@@ -25,40 +25,54 @@ class WalletConnect extends StatefulWidget {
 
 class _WalletConnectState extends State<WalletConnect> {
   final TextEditingController wcUriCntrl = TextEditingController();
-  ValueNotifier<List<SessionStruct>> sessions =
-      ValueNotifier(WcConnectorV2.signClient.session.getAll());
+
+  // V2 sessions — empty list if V2 is not initialized
+  ValueNotifier<List<SessionStruct>> sessions = ValueNotifier(
+    WcConnectorV2.isInitialized
+        ? WcConnectorV2.signClient.session.getAll()
+        : [],
+  );
+
   ValueNotifier<List<SessionData>> reownSessions =
       ValueNotifier(WCConnectorReown.instance.getSessions());
-  late Listener<String> event;
+
+  // Nullable — only set if V2 is initialized
+  Listener<String>? _v2ConnEvent;
 
   @override
   void initState() {
     super.initState();
-    for (final e in [
-      SignClientEvent.SESSION_DELETE,
-      SignClientEvent.SESSION_UPDATE,
-      SignClientEvent.SESSION_EXPIRE,
-    ]) {
-      WcConnectorV2.signClient.on(e.value, (_) async {
-        sessions.value = WcConnectorV2.signClient.session.getAll();
+
+    // ── V2 listeners — only wire up if V2 actually initialized ──────────────
+    if (WcConnectorV2.isInitialized) {
+      for (final e in [
+        SignClientEvent.SESSION_DELETE,
+        SignClientEvent.SESSION_UPDATE,
+        SignClientEvent.SESSION_EXPIRE,
+      ]) {
+        WcConnectorV2.signClient.on(e.value, (_) async {
+          if (mounted) {
+            sessions.value = WcConnectorV2.signClient.session.getAll();
+          }
+        });
+      }
+      _v2ConnEvent = WcConnectorV2.signClient.events.on(WcConnectorV2.connEvent,
+          (_) async {
+        if (mounted) {
+          sessions.value = WcConnectorV2.signClient.session.getAll();
+        }
       });
     }
-    event =
-        WcConnectorV2.signClient.events.on(WcConnectorV2.connEvent, (_) async {
-      sessions.value = WcConnectorV2.signClient.session.getAll();
-    });
 
-    // Refresh Reown sessions whenever the wallet kit fires session events
-    for (final _ in [
-      'session_delete',
-      'session_expire',
-      'session_update',
-      'session_connect',
-    ]) {
-      WCConnectorReown.instance.walletKit.core.relayClient.onRelayClientConnect
-          // ignore: invalid_use_of_protected_member
-          .subscribe((_) => _refreshReownSessions());
-    }
+    // ── Reown session listeners — correct events on walletKit ───────────────
+    WCConnectorReown.instance.walletKit.onSessionConnect
+        .subscribe(_onReownSessionChanged);
+    WCConnectorReown.instance.walletKit.onSessionDelete
+        .subscribe(_onReownSessionChanged);
+  }
+
+  void _onReownSessionChanged(_) {
+    if (mounted) _refreshReownSessions();
   }
 
   void _refreshReownSessions() {
@@ -68,8 +82,16 @@ class _WalletConnectState extends State<WalletConnect> {
   @override
   void dispose() {
     wcUriCntrl.dispose();
-    event.cancel();
+    _v2ConnEvent?.cancel();
     reownSessions.dispose();
+    sessions.dispose();
+
+    // Unsubscribe Reown listeners
+    WCConnectorReown.instance.walletKit.onSessionConnect
+        .unsubscribe(_onReownSessionChanged);
+    WCConnectorReown.instance.walletKit.onSessionDelete
+        .unsubscribe(_onReownSessionChanged);
+
     super.dispose();
   }
 
@@ -82,8 +104,10 @@ class _WalletConnectState extends State<WalletConnect> {
       appBar: AppBar(title: const Text('WalletConnect')),
       body: RefreshIndicator(
         onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 2));
-          if (mounted) setState(() {});
+          _refreshReownSessions();
+          if (WcConnectorV2.isInitialized) {
+            sessions.value = WcConnectorV2.signClient.session.getAll();
+          }
         },
         child: SafeArea(
           child: SingleChildScrollView(
@@ -93,6 +117,33 @@ class _WalletConnectState extends State<WalletConnect> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // ── V2 unavailable banner ────────────────────────────────
+                  if (!WcConnectorV2.isInitialized)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.4)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'WalletConnect v2 is currently unavailable. '
+                              'Reown and v1 connections still work.',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // ── QR scan button ───────────────────────────────────────
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.85,
@@ -252,38 +303,43 @@ class _WalletConnectState extends State<WalletConnect> {
                     },
                   ),
 
-                  // ── v2 sessions ──────────────────────────────────────────
-                  ValueListenableBuilder<List<SessionStruct>>(
-                    valueListenable: sessions,
-                    builder: (context, value, _) {
-                      return Column(
-                        children: value.map((struct) {
-                          final iconUrl = struct.peer.metadata.icons.isNotEmpty
-                              ? struct.peer.metadata.icons[0]
-                              : null;
-                          return _SessionTile(
-                            key: ValueKey(struct.topic),
-                            iconUrl: iconUrl,
-                            name: struct.peer.metadata.name,
-                            url: struct.peer.metadata.url,
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => WalletConnectPreviewV2(
-                                    data: WalletConnectDataV2.fromSessionStruct(
-                                        struct),
+                  // ── V2 sessions — only shown if V2 initialized ───────────
+                  if (WcConnectorV2.isInitialized)
+                    ValueListenableBuilder<List<SessionStruct>>(
+                      valueListenable: sessions,
+                      builder: (context, value, _) {
+                        return Column(
+                          children: value.map((struct) {
+                            final iconUrl =
+                                struct.peer.metadata.icons.isNotEmpty
+                                    ? struct.peer.metadata.icons[0]
+                                    : null;
+                            return _SessionTile(
+                              key: ValueKey(struct.topic),
+                              iconUrl: iconUrl,
+                              name: struct.peer.metadata.name,
+                              url: struct.peer.metadata.url,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => WalletConnectPreviewV2(
+                                      data:
+                                          WalletConnectDataV2.fromSessionStruct(
+                                              struct),
+                                    ),
                                   ),
-                                ),
-                              );
-                              sessions.value =
-                                  WcConnectorV2.signClient.session.getAll();
-                            },
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
+                                );
+                                if (WcConnectorV2.isInitialized) {
+                                  sessions.value =
+                                      WcConnectorV2.signClient.session.getAll();
+                                }
+                              },
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
 
                   // ── v1 sessions ──────────────────────────────────────────
                   ...WCService.getSessionsV1().map((session) {
@@ -352,7 +408,7 @@ class _WalletConnectState extends State<WalletConnect> {
 }
 
 // ---------------------------------------------------------------------------
-// Extracted tile used for both v1 and v2 session rows
+// Extracted tile used for all session rows
 // ---------------------------------------------------------------------------
 
 class _SessionTile extends StatelessWidget {
