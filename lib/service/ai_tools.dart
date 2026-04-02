@@ -140,6 +140,7 @@ class AItools {
           final memoText = exactMatch.memo?.isNotEmpty == true
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
+
           return 'The address for "$contactName" on ${coin.getName()} is '
               '"$address"$memoText (CAIP-10: ${exactMatch.caip10AccountId}).';
         }
