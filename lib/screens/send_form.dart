@@ -156,6 +156,11 @@ class _SendFormState extends State<SendForm> {
                         builder: (context, ctrl, _) {
                           final addr = ctrl.text.trim();
                           if (addr.isEmpty) return const SizedBox.shrink();
+                          try {
+                            _coin.validateAddress(addr);
+                          } catch (e) {
+                            return const SizedBox.shrink();
+                          }
 
                           // Look up contact first
                           final contact =
