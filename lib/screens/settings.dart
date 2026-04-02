@@ -29,7 +29,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
-import 'change_identicon.dart';
 import '../service/wallet_service.dart';
 import 'google_fa/google_fa_status.dart';
 import 'launch_url.dart';
@@ -148,18 +147,6 @@ class _SettingsState extends State<Settings>
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => const SetCurrency()),
-                                ),
-                              ),
-                              _SettingsRow(
-                                icon: _CircleIcon(
-                                  color: Color.fromARGB(255, 142, 141, 148),
-                                  icon: FontAwesomeIcons.icons,
-                                ),
-                                label: localization.accountIdenticon,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => ChangeIdenticon()),
                                 ),
                               ),
                               _SettingsRow(

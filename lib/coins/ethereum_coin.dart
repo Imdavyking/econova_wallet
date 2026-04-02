@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:hex/hex.dart';
-import 'package:jazzicon/jazzicon.dart';
 import 'package:pointycastle/pointycastle.dart';
 import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
@@ -98,31 +97,23 @@ class EthereumCoin extends Coin {
   String? getStakeDappUrl() => 'https://lido.fi';
 
   @override
-  Widget getIdenticon(String address, {double size = 40}) {
-    final useBlockies = pref.get(useBlockiesKey, defaultValue: true);
-
-    if (useBlockies) {
-      return Container(
+  Widget getExplorerIdenticon(String address, {double size = 40}) {
+    return Container(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(75)),
+      ),
+      child: Container(
+        width: 40,
+        height: 40,
         decoration: const BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(75)),
+          shape: BoxShape.circle,
         ),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-          ),
-          child: BlockieWidget(
-            size: .6,
-            data: address,
-          ),
+        child: BlockieWidget(
+          size: .6,
+          data: address,
         ),
-      );
-    } else {
-      return Jazzicon.getIconWidget(
-        Jazzicon.getJazziconData(size, address: address),
-      );
-    }
+      ),
+    );
   }
 
   // ── x402 ─────────────────────────────────────────────────────────────────

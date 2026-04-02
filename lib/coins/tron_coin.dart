@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 import 'package:blockchain_utils/blockchain_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:jazzicon/jazzicon.dart';
 import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:http/http.dart' as http;
@@ -606,6 +608,13 @@ class TronCoin extends Coin {
     return blockExplorer
         .replaceFirst('/transaction/', '/address/')
         .replaceFirst(blockExplorerPlaceholder, address);
+  }
+
+  @override
+  Widget getExplorerIdenticon(String address, {double size = 40}) {
+    return Jazzicon.getIconWidget(
+      Jazzicon.getJazziconData(size, address: address),
+    );
   }
 
   bool _canTransfer(

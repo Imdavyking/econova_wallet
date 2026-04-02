@@ -788,7 +788,8 @@ class _TransactionItem extends StatelessWidget {
                 Flexible(
                   child: Row(
                     children: [
-                      coin.getIdenticon(isSent ? tx.to : tx.from, size: 36) ??
+                      coin.getExplorerIdenticon(isSent ? tx.to : tx.from,
+                              size: 36) ??
                           const SizedBox.shrink(),
                       const SizedBox(width: 8),
                       Transform.rotate(

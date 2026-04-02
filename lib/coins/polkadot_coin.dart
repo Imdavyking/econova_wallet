@@ -73,7 +73,7 @@ class PolkadotCoin extends Coin {
   bool get supportPrivateKey => true;
 
   @override
-  Widget getIdenticon(String address, {double size = 40}) {
+  Widget getExplorerIdenticon(String address, {double size = 40}) {
     return PolkadotIdenticon(address: address, size: size);
   }
 

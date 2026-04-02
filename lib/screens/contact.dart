@@ -323,7 +323,7 @@ class _ContactAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final identicon = coin?.getIdenticon(contact.address, size: 36);
+    final identicon = coin?.getExplorerIdenticon(contact.address, size: 36);
 
     // identicon exists → show it with chain badge
     // no identicon but chainImage exists → full chain image as avatar

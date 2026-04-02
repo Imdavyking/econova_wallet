@@ -248,7 +248,7 @@ abstract class Coin {
     return toAccount(keys);
   }
 
-  Widget? getIdenticon(String address, {double size = 40}) => null;
+  Widget? getExplorerIdenticon(String address, {double size = 40}) => null;
 
   String? getDexScreener(String tokenaddress) {
     return 'https://dexscreener.com/${getGeckoId()}/$tokenaddress';
