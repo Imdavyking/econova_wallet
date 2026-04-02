@@ -241,8 +241,9 @@ class SignTypedDomain {
   });
 
   factory SignTypedDomain.fromJson(Map<String, dynamic> json) {
+    final raw = json['domain']['chainId'];
     return SignTypedDomain(
-      chainId: BigInt.parse(json['domain']['chainId']).toInt(),
+      chainId: raw is int ? raw : BigInt.parse(raw.toString()).toInt(),
     );
   }
 
