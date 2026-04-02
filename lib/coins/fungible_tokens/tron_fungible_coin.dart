@@ -43,6 +43,33 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
           payScheme: '',
         );
 
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory TronFungibleCoin.fromParent({
+    required TronCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String tokenID,
+    required String type,
+    required int mintDecimals,
+  }) =>
+      TronFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        api: parent.api,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        tokenID: tokenID,
+        type: type,
+        mintDecimals: mintDecimals,
+      );
+
   factory TronFungibleCoin.fromJson(Map<String, dynamic> json) {
     return TronFungibleCoin(
       api: json['api'],
@@ -61,6 +88,7 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
 
   @override
   String? get badgeImage => getChains<TronCoin>().first.image;
+
   @override
   String savedTransKey() => '$tokenID$api FTDetails';
 
@@ -170,7 +198,6 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
       BigInt balance = (result as List)[0];
       final base = BigInt.from(10);
       double fraction = balance / base.pow(decimals());
-      // Convert the balance to a double and return it
       await pref.put(key, fraction);
 
       return fraction;
@@ -333,87 +360,65 @@ class TronFungibleCoin extends TronCoin implements FTExplorer {
 }
 
 List<TronFungibleCoin> getTronFungibleCoins() {
-  List<TronFungibleCoin> blockChains = [];
+  final parent = getChains<TronCoin>().first;
 
   if (enableTestNet) {
-    blockChains.addAll([
-      TronFungibleCoin(
+    return [
+      TronFungibleCoin.fromParent(
+        parent: parent,
         name: 'PRIME (TestnetV20)',
         symbol: 'PRM',
-        default_: 'TRX',
-        blockExplorer:
-            'https://shasta.tronscan.org/#/transaction/$blockExplorerPlaceholder',
         image: 'assets/logo.png',
-        api: 'https://api.shasta.trongrid.io',
+        geckoID: '',
         tokenID: 'TTFd5kQ8r34XPtUjK3Lk5Eh8rLBjynsX1k',
         mintDecimals: 6,
         type: TRCFTTYPES.v20,
-        geckoID: '',
-        caipReference: '0x94a9059e',
       ),
-      TronFungibleCoin(
+      TronFungibleCoin.fromParent(
+        parent: parent,
         name: 'PRIME (Testnet)',
         symbol: 'PRM',
-        default_: 'TRX',
-        blockExplorer:
-            'https://shasta.tronscan.org/#/transaction/$blockExplorerPlaceholder',
         image: 'assets/logo.png',
-        api: 'https://api.shasta.trongrid.io',
+        geckoID: '',
         tokenID: '1001465',
         mintDecimals: 6,
         type: TRCFTTYPES.v10,
-        geckoID: '',
-        caipReference: '0x94a9059e',
-      )
-    ]);
-  } else {
-    blockChains.addAll([
-      TronFungibleCoin(
-        name: 'BitTorrent Old',
-        symbol: 'BTTOLD',
-        default_: 'TRX',
-        blockExplorer:
-            'https://tronscan.org/#/transaction/$blockExplorerPlaceholder',
-        image: 'assets/btt.png',
-        api: 'https://api.trongrid.io',
-        tokenID: '1002000',
-        mintDecimals: 6,
-        type: TRCFTTYPES.v10,
-        geckoID: 'bittorrent-old',
-        caipReference: '0x2b6653dc',
       ),
-      TronFungibleCoin(
-        name: 'BitTorrent',
-        symbol: 'BTT',
-        default_: 'TRX',
-        blockExplorer:
-            'https://tronscan.org/#/transaction/$blockExplorerPlaceholder',
-        image: 'assets/btt.png',
-        api: 'https://api.trongrid.io',
-        tokenID: 'TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4',
-        mintDecimals: 18,
-        type: TRCFTTYPES.v20,
-        geckoID: 'bittorrent',
-        caipReference: '0x2b6653dc',
-      ),
-      TronFungibleCoin(
-        name: 'USDC',
-        symbol: 'USDC',
-        default_: 'TRX',
-        blockExplorer:
-            'https://tronscan.org/#/transaction/$blockExplorerPlaceholder',
-        image: 'assets/wusd.png',
-        api: 'https://api.trongrid.io',
-        tokenID: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
-        mintDecimals: 6,
-        type: TRCFTTYPES.v20,
-        geckoID: 'usd-coin',
-        caipReference: '0x2b6653dc',
-      ),
-    ]);
+    ];
   }
 
-  return blockChains;
+  return [
+    TronFungibleCoin.fromParent(
+      parent: parent,
+      name: 'BitTorrent Old',
+      symbol: 'BTTOLD',
+      image: 'assets/btt.png',
+      geckoID: 'bittorrent-old',
+      tokenID: '1002000',
+      mintDecimals: 6,
+      type: TRCFTTYPES.v10,
+    ),
+    TronFungibleCoin.fromParent(
+      parent: parent,
+      name: 'BitTorrent',
+      symbol: 'BTT',
+      image: 'assets/btt.png',
+      geckoID: 'bittorrent',
+      tokenID: 'TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4',
+      mintDecimals: 18,
+      type: TRCFTTYPES.v20,
+    ),
+    TronFungibleCoin.fromParent(
+      parent: parent,
+      name: 'USDC',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      tokenID: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
+      mintDecimals: 6,
+      type: TRCFTTYPES.v20,
+    ),
+  ];
 }
 
 class RPCHttpService with EthereumServiceProvider {
@@ -424,6 +429,7 @@ class RPCHttpService with EthereumServiceProvider {
   final String url;
   final Client client;
   final Duration defaultTimeOut;
+
   @override
   Future<BaseServiceResponse<T>> doRequest<T>(EthereumRequestDetails params,
       {Duration? timeout}) async {
