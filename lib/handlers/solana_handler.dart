@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bs58check/bs58check.dart';
 import 'package:hex/hex.dart';
 import 'package:solana/solana.dart' as solana;
 import 'package:wallet_app/main.dart';
-
 import '../coins/solana_coin.dart';
 import '../utils/json_model_callback.dart';
 import '../model/solana_transaction_legacy.dart';
