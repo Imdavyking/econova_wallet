@@ -338,7 +338,7 @@ class _ContactAvatar extends StatelessWidget {
               bottom: -2,
               right: -2,
               child: CircleAvatar(
-                radius: 8,
+                radius: 10,
                 backgroundImage: AssetImage(chainImage!),
               ),
             ),
