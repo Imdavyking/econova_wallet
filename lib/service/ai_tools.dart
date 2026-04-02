@@ -120,7 +120,7 @@ class AItools {
       func: (final _GetContactNameInput toolInput) async {
         final contactName = toolInput.contactName;
 
-        // Use CAIP-2 based filtering — no Coin object needed
+        // ── 1. Search on the current network first ──────────────────────────
         final contacts = ContactService.getContactsForCoin(coin);
 
         final exactMatch = contacts.firstWhereOrNull(
@@ -137,14 +137,37 @@ class AItools {
           } catch (e) {
             return 'Invalid address for ${coin.getName()}: $address';
           }
-          final hasMemo = exactMatch.memo?.isNotEmpty == true;
-          final memoText = hasMemo
+          final memoText = exactMatch.memo?.isNotEmpty == true
               ? ', memo: ${exactMatch.memo!.replaceAll('"', '\\"')}'
               : '';
           return 'The address for "$contactName" on ${coin.getName()} is '
               '"$address"$memoText (CAIP-10: ${exactMatch.caip10AccountId}).';
         }
 
+        // ── 2. Not found on current network — check ALL contacts ────────────
+        final allContacts = ContactService.getContacts();
+
+        final crossChainMatches = allContacts
+            .where(
+              (c) => c.name.toLowerCase() == contactName.toLowerCase(),
+            )
+            .toList();
+
+        if (crossChainMatches.isNotEmpty) {
+          final networks = crossChainMatches.map((c) {
+            final matchedCoin = supportedChains.firstWhereOrNull(
+              (ch) => ch.caip2ChainId == c.caip2ChainId,
+            );
+            final networkName = matchedCoin?.getName() ?? c.caip2ChainId;
+            return '• $networkName — ${c.address}';
+          }).join('\n');
+
+          return 'Contact "$contactName" was not found on ${coin.getName()}, '
+              'but exists on other networks:\n$networks\n\n'
+              'Use CMD_switchCoin to switch to the correct network first.';
+        }
+
+        // ── 3. Fuzzy match fallback across current network ──────────────────
         final contactNames = contacts.map((c) => c.name).toList();
         if (contactNames.isEmpty) {
           return 'No contacts found for ${coin.getName()} (${coin.caip2ChainId}).';
@@ -152,18 +175,19 @@ class AItools {
 
         final bestMatch =
             StringSimilarity.findBestMatch(contactName, contactNames).bestMatch;
-        debugPrint('bestMatch: ${bestMatch.target} ${bestMatch.rating}');
         if (bestMatch.rating == null) {
           return 'Contact "$contactName" not found.';
         }
+
         if (bestMatch.rating! > 0.5) {
-          return 'Contact "$contactName" not found. Did you mean "${bestMatch.target}"?';
+          return 'Contact "$contactName" not found on ${coin.getName()}. '
+              'Did you mean "${bestMatch.target}"?';
         } else if (bestMatch.rating! > 0.25) {
           return 'Closest match is "${bestMatch.target}", but similarity is low.';
-        } else {
-          return 'Contact "$contactName" not found for ${coin.getName()} '
-              '(${coin.caip2ChainId}).';
         }
+
+        return 'Contact "$contactName" not found for ${coin.getName()} '
+            '(${coin.caip2ChainId}).';
       },
       getInputFromJson: _GetContactNameInput.fromJson,
     );
