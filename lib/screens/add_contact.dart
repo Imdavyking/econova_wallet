@@ -188,11 +188,11 @@ class _AddContactState extends State<AddContact> {
                       builder: (_, ctrl, __) {
                         final addr = ctrl.text.trim();
                         if (addr.isEmpty) return const SizedBox.shrink();
+                        final identicon = _coin.getIdenticon(addr, size: 56);
+                        if (identicon == null) return const SizedBox.shrink();
                         return Padding(
                           padding: const EdgeInsets.only(top: 16),
-                          child: Center(
-                            child: _coin!.getIdenticon(addr, size: 56),
-                          ),
+                          child: Center(child: identicon),
                         );
                       },
                     ),

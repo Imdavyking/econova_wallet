@@ -789,7 +789,7 @@ class _TransactionItem extends StatelessWidget {
                   child: Row(
                     children: [
                       coin.getIdenticon(isSent ? tx.to : tx.from, size: 36) ??
-                          Container(),
+                          const SizedBox.shrink(),
                       const SizedBox(width: 8),
                       Transform.rotate(
                         angle: isSent ? 0 : pi,

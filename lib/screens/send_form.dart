@@ -170,7 +170,7 @@ class _SendFormState extends State<SendForm> {
                             child: Row(
                               children: [
                                 _coin.getIdenticon(addr, size: 36) ??
-                                    Container(),
+                                    const SizedBox.shrink(),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: contact != null
