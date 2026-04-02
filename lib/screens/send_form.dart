@@ -1,9 +1,11 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:wallet_app/components/testnet_banner.dart';
+import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/screens/send_form_widgets.dart';
 import 'package:wallet_app/screens/confirm_transfer.dart';
+import 'package:wallet_app/service/contact_service.dart';
 import 'package:wallet_app/utils/qr_scan_view.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:decimal/decimal.dart';
@@ -147,6 +149,62 @@ class _SendFormState extends State<SendForm> {
                             : QrParseMode.both,
                         showMemoFromContact: true,
                         coin: _coin,
+                      ),
+                      // Replace the ValueListenableBuilder you had before with this:
+                      ValueListenableBuilder(
+                        valueListenable: _recipientCtrl,
+                        builder: (context, ctrl, _) {
+                          final addr = ctrl.text.trim();
+                          if (addr.isEmpty) return const SizedBox.shrink();
+
+                          // Look up contact first
+                          final contact =
+                              ContactService.getContactsForCoin(_coin)
+                                  .firstWhereOrNull(
+                            (c) =>
+                                c.address.toLowerCase() == addr.toLowerCase(),
+                          );
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Row(
+                              children: [
+                                _coin.getIdenticon(addr, size: 36),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: contact != null
+                                      // ── Known contact — show name prominently ──────────────
+                                      ? Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              contact.name,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            Text(
+                                              ellipsify(str: addr),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      // ── Unknown address — just show truncated address ───────
+                                      : Text(
+                                          ellipsify(str: addr),
+                                          style: const TextStyle(
+                                              fontSize: 13, color: Colors.grey),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 20),
                       AmountField(

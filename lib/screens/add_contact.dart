@@ -182,6 +182,20 @@ class _AddContactState extends State<AddContact> {
                       pasteLabel: localization.paste,
                     ),
                   ),
+                  if (_coin != null)
+                    ValueListenableBuilder(
+                      valueListenable: _addressCtrl,
+                      builder: (_, ctrl, __) {
+                        final addr = ctrl.text.trim();
+                        if (addr.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Center(
+                            child: _coin!.getIdenticon(addr, size: 56),
+                          ),
+                        );
+                      },
+                    ),
                   if (requiresMemo) ...[
                     const SizedBox(height: 20),
                     _RoundedTextField(

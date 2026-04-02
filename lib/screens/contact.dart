@@ -212,8 +212,7 @@ class _ContactTile extends StatelessWidget {
     required this.onDelete,
   });
 
-  /// Resolves the chain image from [supportedChains] using caip2ChainId.
-  /// Falls back to a generic icon if the chain is not found.
+  // Kept — still needed for the badge
   String? _chainImage() {
     try {
       return supportedChains
@@ -226,9 +225,22 @@ class _ContactTile extends StatelessWidget {
     }
   }
 
+  // ADD — resolves the coin for getIdenticon()
+  Coin? _resolveCoin() {
+    try {
+      return supportedChains.firstWhere(
+        (c) =>
+            c.caip2ChainId == contact.caip2ChainId && c.tokenAddress() == null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chainImage = _chainImage();
+    final coin = _resolveCoin(); // ADD
 
     return Dismissible(
       key: ValueKey(contact.id),
@@ -253,8 +265,14 @@ class _ContactTile extends StatelessWidget {
             child: SizedBox(
               height: 60,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // REPLACE the trailing chain logo Row with this leading avatar
+                  _ContactAvatar(
+                    contact: contact,
+                    coin: coin,
+                    chainImage: chainImage,
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -263,6 +281,12 @@ class _ContactTile extends StatelessWidget {
                         Text(
                           ellipsify(str: contact.name, maxLength: 20),
                           style: const TextStyle(fontSize: 16),
+                        ),
+                        // ADD — show truncated address below name
+                        Text(
+                          ellipsify(str: contact.address),
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         if (contact.memo != null && contact.memo!.isNotEmpty)
                           Text(
@@ -273,23 +297,8 @@ class _ContactTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      if (chainImage != null)
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundImage: AssetImage(chainImage),
-                        )
-                      else
-                        const CircleAvatar(
-                          radius: 18,
-                          child: Icon(Icons.link, size: 18),
-                        ),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.arrow_forward_ios,
-                          size: 14, color: Colors.grey),
-                    ],
-                  ),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Colors.grey),
                 ],
               ),
             ),
@@ -300,6 +309,42 @@ class _ContactTile extends StatelessWidget {
   }
 }
 
+// ADD — new widget at the bottom of the file
+class _ContactAvatar extends StatelessWidget {
+  final ContactParams contact;
+  final Coin? coin;
+  final String? chainImage;
+
+  const _ContactAvatar({
+    required this.contact,
+    required this.coin,
+    this.chainImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        coin != null
+            ? coin!.getIdenticon(contact.address, size: 36)
+            : const CircleAvatar(
+                radius: 18,
+                child: Icon(Icons.person, size: 18),
+              ),
+        if (chainImage != null)
+          Positioned(
+            bottom: -2,
+            right: -2,
+            child: CircleAvatar(
+              radius: 8,
+              backgroundImage: AssetImage(chainImage!),
+            ),
+          ),
+      ],
+    );
+  }
+}
 // ── Swipe background ──────────────────────────────────────────────────────────
 
 class _SwipeBackground extends StatelessWidget {

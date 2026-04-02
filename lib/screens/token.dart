@@ -7,6 +7,7 @@ import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_balance.dart';
 import 'package:wallet_app/crypto_charts/crypto_chart.dart';
+import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
 import 'package:wallet_app/main.dart';
@@ -17,6 +18,7 @@ import 'package:wallet_app/screens/receive_token.dart';
 import 'package:wallet_app/screens/send_form.dart';
 import 'package:wallet_app/screens/token_approvals_screen.dart';
 import 'package:wallet_app/screens/token_contract_info.dart';
+import 'package:wallet_app/service/contact_service.dart';
 import 'package:wallet_app/service/transaction_export_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/format_money.dart';
@@ -762,6 +764,10 @@ class _TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trnDate = DateFormat('yyyy-MM-dd hh:mm:ss').parse(tx.time);
+    final counterparty = isSent ? tx.to : tx.from;
+    final contact = ContactService.getContactsForCoin(coin).firstWhereOrNull(
+      (c) => c.address.toLowerCase() == counterparty.toLowerCase(),
+    );
 
     return GestureDetector(
       onTap: () async {
@@ -782,6 +788,8 @@ class _TransactionItem extends StatelessWidget {
                 Flexible(
                   child: Row(
                     children: [
+                      coin.getIdenticon(isSent ? tx.to : tx.from, size: 36),
+                      const SizedBox(width: 8),
                       Transform.rotate(
                         angle: isSent ? 0 : pi,
                         child: SvgPicture.asset('assets/sent-trans.svg'),
@@ -820,9 +828,16 @@ class _TransactionItem extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              ellipsify(str: isSent ? tx.to : tx.from),
+                              contact != null
+                                  ? ellipsify(str: contact.name)
+                                  : ellipsify(str: counterparty),
                               overflow: TextOverflow.fade,
-                              style: const TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: contact != null
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
                             ),
                           ],
                         ),

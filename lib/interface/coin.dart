@@ -248,8 +248,8 @@ abstract class Coin {
     return toAccount(keys);
   }
 
-  Widget? getIdenticon(String address, {double size = 40}) {
-    return null;
+  Widget getIdenticon(String address, {double size = 40}) {
+    return Container();
   }
 
   String? getDexScreener(String tokenaddress) {
