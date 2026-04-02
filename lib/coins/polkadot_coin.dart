@@ -615,22 +615,6 @@ List<PolkadotCoin> getPolkadoBlockChains() {
     blockChains.addAll([
       PolkadotCoin(
         blockExplorer:
-            'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'WND',
-        name: 'Westend',
-        default_: 'WND',
-        image: 'assets/polkadot.png',
-        api: 'https://westend-rpc.polkadot.io',
-        coinDecimals: 12,
-        ss58Prefix: 42,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: 'polkadot',
-        payScheme: 'polkadot',
-        rampID: 'POLKADOT_DOT',
-        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
-      ),
-      PolkadotCoin(
-        blockExplorer:
             'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
         symbol: 'WND',
         name: 'Asset Hub Westend',
@@ -643,7 +627,22 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         geckoID: 'polkadot',
         payScheme: 'polkadot',
         rampID: 'POLKADOT_DOT',
-        //TODO://check this
+        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'WND',
+        name: 'Westend',
+        default_: 'WND',
+        image: 'assets/polkadot.png',
+        api: 'https://westend-rpc.polkadot.io',
+        coinDecimals: 12,
+        ss58Prefix: 42,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
         caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
       PolkadotCoin(
@@ -667,22 +666,6 @@ List<PolkadotCoin> getPolkadoBlockChains() {
     blockChains.addAll([
       PolkadotCoin(
         blockExplorer:
-            'https://polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        symbol: 'DOT',
-        name: 'Polkadot',
-        default_: 'DOT',
-        image: 'assets/polkadot.png',
-        api: 'https://rpc.polkadot.io/',
-        coinDecimals: 10,
-        ss58Prefix: 0,
-        path: "m/44'/354'/0'/0'/0'",
-        geckoID: 'polkadot',
-        payScheme: 'polkadot',
-        rampID: 'POLKADOT_DOT',
-        caipReference: '91b171bb158e2d3848fa23a9f1c25182',
-      ),
-      PolkadotCoin(
-        blockExplorer:
             'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
         symbol: 'DOT',
         name: 'Asset Hub Polkadot',
@@ -697,6 +680,22 @@ List<PolkadotCoin> getPolkadoBlockChains() {
         rampID: 'POLKADOT_DOT',
         caipReference:
             '68d56f15f85d3136970ec16946040bc1', // Asset Hub Polkadot genesis
+      ),
+      PolkadotCoin(
+        blockExplorer:
+            'https://polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
+        symbol: 'DOT',
+        name: 'Polkadot',
+        default_: 'DOT',
+        image: 'assets/polkadot.png',
+        api: 'https://rpc.polkadot.io/',
+        coinDecimals: 10,
+        ss58Prefix: 0,
+        path: "m/44'/354'/0'/0'/0'",
+        geckoID: 'polkadot',
+        payScheme: 'polkadot',
+        rampID: 'POLKADOT_DOT',
+        caipReference: '91b171bb158e2d3848fa23a9f1c25182',
       ),
       PolkadotCoin(
         blockExplorer:

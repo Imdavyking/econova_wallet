@@ -45,8 +45,6 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
   /// Asset Hub uses different endpoints than the relay chain.
   factory PolkadotFungibleCoin.fromParent({
     required PolkadotCoin parent,
-    required String api,
-    required String blockExplorer,
     required String name,
     required String symbol,
     required String image,
@@ -62,8 +60,8 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
         caipReference: parent.caipReference,
         default_: parent.default_,
         // ── Asset Hub specific ─────────────────────────────
-        api: api,
-        blockExplorer: blockExplorer,
+        api: parent.api,
+        blockExplorer: parent.blockExplorer,
         // ── token-specific ─────────────────────────────────
         name: name,
         symbol: symbol,
@@ -249,9 +247,6 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
     return [
       PolkadotFungibleCoin.fromParent(
         parent: relayParent,
-        api: 'https://westend-asset-hub-rpc.polkadot.io',
-        blockExplorer:
-            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
         name: 'USDC (Devnet)',
         symbol: 'USDC',
         image: 'assets/wusd.png',
@@ -262,16 +257,9 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
     ];
   }
 
-  // Mainnet Asset Hub — shared by all tokens below
-  const assetHubApi = 'https://asset-hub-polkadot-rpc.dwellir.com';
-  const assetHubExplorer =
-      'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder';
-
   return [
     PolkadotFungibleCoin.fromParent(
       parent: relayParent,
-      api: assetHubApi,
-      blockExplorer: assetHubExplorer,
       name: 'Tether USD',
       symbol: 'USDT',
       image: 'assets/usdt.png',
@@ -281,8 +269,6 @@ List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
     ),
     PolkadotFungibleCoin.fromParent(
       parent: relayParent,
-      api: assetHubApi,
-      blockExplorer: assetHubExplorer,
       name: 'USD Coin',
       symbol: 'USDC',
       image: 'assets/wusd.png',
