@@ -2,7 +2,6 @@ import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/wallet_connect_preview_v1.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:wallet_app/utils/wc_dapp_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';

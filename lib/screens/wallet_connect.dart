@@ -1,5 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:reown_walletkit/reown_walletkit.dart';
+import 'package:wallet_app/screens/wallet_connect_preview_reown.dart';
 import 'package:wallet_app/screens/wallet_connect_preview_v1.dart';
 import 'package:wallet_app/screens/wallet_connect_preview_v2.dart';
 import 'package:wallet_app/utils/wc_dapp_icon.dart';
@@ -11,6 +13,7 @@ import '../service/wallet_connect_service.dart';
 import '../utils/app_config.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../utils/qr_scan_view.dart';
+import '../utils/wallet_connect_reown/wc_connector_reown.dart';
 import '../utils/wallet_connect_v2/wc_connector_v2.dart';
 
 class WalletConnect extends StatefulWidget {
@@ -24,6 +27,8 @@ class _WalletConnectState extends State<WalletConnect> {
   final TextEditingController wcUriCntrl = TextEditingController();
   ValueNotifier<List<SessionStruct>> sessions =
       ValueNotifier(WcConnectorV2.signClient.session.getAll());
+  ValueNotifier<List<SessionData>> reownSessions =
+      ValueNotifier(WCConnectorReown.instance.getSessions());
   late Listener<String> event;
 
   @override
@@ -42,12 +47,29 @@ class _WalletConnectState extends State<WalletConnect> {
         WcConnectorV2.signClient.events.on(WcConnectorV2.connEvent, (_) async {
       sessions.value = WcConnectorV2.signClient.session.getAll();
     });
+
+    // Refresh Reown sessions whenever the wallet kit fires session events
+    for (final _ in [
+      'session_delete',
+      'session_expire',
+      'session_update',
+      'session_connect',
+    ]) {
+      WCConnectorReown.instance.walletKit.core.relayClient.onRelayClientConnect
+          // ignore: invalid_use_of_protected_member
+          .subscribe((_) => _refreshReownSessions());
+    }
+  }
+
+  void _refreshReownSessions() {
+    reownSessions.value = WCConnectorReown.instance.getSessions();
   }
 
   @override
   void dispose() {
     wcUriCntrl.dispose();
     event.cancel();
+    reownSessions.dispose();
     super.dispose();
   }
 
@@ -196,6 +218,39 @@ class _WalletConnectState extends State<WalletConnect> {
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  // ── Reown (WC v2 modern) sessions ────────────────────────
+                  ValueListenableBuilder<List<SessionData>>(
+                    valueListenable: reownSessions,
+                    builder: (context, reownValue, _) {
+                      return Column(
+                        children: reownValue.map((session) {
+                          final data =
+                              WalletConnectDataReown.fromSessionData(session);
+                          return _SessionTile(
+                            key: ValueKey('reown_${session.topic}'),
+                            iconUrl:
+                                data.icons.isNotEmpty ? data.icons[0] : null,
+                            name: data.name,
+                            url: data.url,
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WalletConnectPreviewReown(
+                                    data: data,
+                                  ),
+                                ),
+                              );
+                              if (result == true) {
+                                _refreshReownSessions();
+                              }
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
 
                   // ── v2 sessions ──────────────────────────────────────────
                   ValueListenableBuilder<List<SessionStruct>>(

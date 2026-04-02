@@ -21,12 +21,22 @@ import 'package:eth_sig_util/util/utils.dart';
 import 'package:http/http.dart' as http;
 
 class WCConnectorReown {
+  // Static accessor — mirrors the pattern used by WcConnectorV2.signClient so
+  // that WCService and the preview screen can reach sessions without a ref.
+  static WCConnectorReown? _instance;
+  static WCConnectorReown get instance {
+    assert(
+        _instance != null, 'WCConnectorReown has not been instantiated yet.');
+    return _instance!;
+  }
+
   late ReownWalletKit _walletKit;
   late BuildContext _context;
   bool _isInitialized = false;
   String? tempScheme;
 
   WCConnectorReown() {
+    _instance = this;
     _context = NavigationService.navigatorKey.currentContext!;
     init();
   }
@@ -40,6 +50,27 @@ class WCConnectorReown {
   }
 
   bool get isInitialized => _isInitialized;
+
+  /// Returns all active Reown sessions.
+  List<SessionData> getSessions() =>
+      _isInitialized ? _walletKit.sessions.getAll() : [];
+
+  /// Terminates a session by topic and disconnects its underlying pairing.
+  Future<void> disconnectSession(String topic) async {
+    try {
+      await _walletKit.disconnectSession(
+        topic: topic,
+        reason: Errors.getSdkError(Errors.USER_DISCONNECTED).toSignError(),
+      );
+    } catch (_) {}
+    // Also clean up the pairing if one still exists for this topic.
+    final session = _walletKit.sessions.get(topic);
+    if (session != null) {
+      try {
+        await _walletKit.core.pairing.disconnect(topic: session.pairingTopic);
+      } catch (_) {}
+    }
+  }
 
   void setTempScheme(String? scheme) {
     tempScheme = scheme;
