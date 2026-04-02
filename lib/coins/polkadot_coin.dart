@@ -613,6 +613,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
 
   if (enableTestNet) {
     blockChains.addAll([
+      //NOTE: do not remove this as polkadot fungible (except) this as first
       PolkadotCoin(
         blockExplorer:
             'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
@@ -664,6 +665,7 @@ List<PolkadotCoin> getPolkadoBlockChains() {
     ]);
   } else {
     blockChains.addAll([
+      //NOTE: do not remove this as polkadot fungible (except) this as first
       PolkadotCoin(
         blockExplorer:
             'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
