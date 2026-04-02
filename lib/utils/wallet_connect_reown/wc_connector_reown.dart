@@ -83,7 +83,7 @@ class WCConnectorReown {
         projectId: walletConnectKey,
         logLevel: LogLevel.nothing,
       ),
-      metadata: const PairingMetadata(
+      metadata:  const PairingMetadata(
         name: walletName,
         url: walletURL,
         description: walletAbbr,
