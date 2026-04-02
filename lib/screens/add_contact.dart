@@ -78,7 +78,7 @@ class _AddContactState extends State<AddContact> {
     // Validate address if we could resolve the coin; skip if unknown chain
     if (_coin != null) {
       try {
-        _coin!.validateAddress(address);
+        _coin.validateAddress(address);
       } catch (_) {
         return l.invalidAddress;
       }

@@ -241,7 +241,8 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
 
 List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
   // Relay chain parent — supplies ss58Prefix, path, payScheme, caipRef, default_
-  final relayParent = getPolkadoBlockChains().first;
+  final relayParent = getPolkadoBlockChains()
+      .firstWhere((c) => c.blockExplorer.contains('assethub'));
 
   if (enableTestNet) {
     return [
