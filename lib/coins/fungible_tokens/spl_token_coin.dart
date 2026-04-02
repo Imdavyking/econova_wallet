@@ -84,7 +84,7 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
   }
 
   @override
-  String? get badgeImage => getChains<SolanaCoin>().first.image;
+  String? get badgeImage => getSolanaBlockChains().first.image;
 
   @override
   String savedTransKey() {

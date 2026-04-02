@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wallet_app/coins/stack_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
 import 'package:wallet_app/main.dart';
@@ -84,7 +85,7 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
   String? tokenAddress() => tokenContractAddress;
 
   @override
-  String? get badgeImage => getChains<StarknetCoin>().first.image;
+  String? get badgeImage => getStacksBlockchains().first.image;
 }
 
 List<StarknetFungibleCoin> getStarknetFungibleCoins() {

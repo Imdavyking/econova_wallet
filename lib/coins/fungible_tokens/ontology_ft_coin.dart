@@ -51,7 +51,7 @@ class OntologyFungibleCoin extends OntologyCoin implements FTExplorer {
       );
 
   @override
-  String? get badgeImage => getChains<OntologyCoin>().first.image;
+  String? get badgeImage => getOntologyBlockChains().first.image;
 
   @override
   String tokenAddress() => contractAddress;

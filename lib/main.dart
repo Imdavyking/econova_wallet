@@ -19,7 +19,7 @@ import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/ton_fungible_coins.dart';
 import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/near_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/near_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/segwit_coin.dart';
