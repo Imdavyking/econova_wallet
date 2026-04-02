@@ -208,7 +208,6 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
 
 List<ESDTCoin> getESDTCoins() {
   if (enableTestNet) return [];
-
   final parent = getEGLDBlockchains().first;
 
   return [
