@@ -210,9 +210,9 @@ class _WalletConnectState extends State<WalletConnect> {
                         showGeneralDialog(
                           context: context,
                           barrierDismissible: true,
-                          barrierLabel: localization.pasteCode,
+                          barrierLabel: 'Paste url/code',
                           pageBuilder: (context, _, __) => SimpleDialog(
-                            title: Text(localization.pasteCode),
+                            title: const Text('Paste url/code'),
                             titlePadding:
                                 const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
                             contentPadding: const EdgeInsets.all(16.0),
