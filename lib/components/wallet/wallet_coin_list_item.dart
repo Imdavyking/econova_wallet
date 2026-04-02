@@ -7,9 +7,11 @@ import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/token.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
 import 'package:wallet_app/service/dms_background_listener.dart';
+import 'package:wallet_app/service/dms_relay_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/get_blockchain_widget.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WalletCoinListItem extends StatefulWidget {
   final Coin coin;
@@ -24,6 +26,7 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
   final ValueNotifier<double?> _balanceNotifier = ValueNotifier(null);
   Timer? _timer;
   bool _heartbeatInFlight = false; // ← guard against concurrent heartbeats
+  bool _wsWorking = false;
 
   @override
   void initState() {
@@ -51,7 +54,15 @@ class _WalletCoinListItemState extends State<WalletCoinListItem>
       final balance =
           await widget.coin.getBalance(_balanceNotifier.value == null);
       if (mounted) _balanceNotifier.value = balance;
-      await _maybeHeartbeat();
+
+      if (_wsWorking) {
+        await _maybeHeartbeat();
+      } else {
+        final channel = WebSocketChannel.connect(Uri.parse(wsDefaultRelayUrl));
+        await channel.ready.timeout(const Duration(seconds: 3));
+        await channel.sink.close();
+        _wsWorking = true;
+      }
     } catch (_) {}
   }
 
