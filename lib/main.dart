@@ -10,17 +10,17 @@ import 'package:wallet_app/coins/legacy_utxo_coin.dart';
 import 'package:wallet_app/coins/nano_coin.dart';
 import 'package:wallet_app/coins/tezos_coin.dart';
 import 'package:wallet_app/coins/algorand_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
+import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 // import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/starknet_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/polkadot_ft_coin.dart';
 // import 'package:wallet_app/coins/fungible_tokens/esdt_ft_coin.dart';
 // import 'package:wallet_app/coins/fungible_tokens/ton_fungible_coins.dart';
 // import 'package:wallet_app/coins/fungible_tokens/tron_fungible_coin.dart';
 // import 'package:wallet_app/coins/fungible_tokens/near_fungible_coin.dart';
-// import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/segwit_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
@@ -107,17 +107,17 @@ List<T> getChains<T extends Coin>() {
     ...getAptosBlockchain(),
     ...getStacksBlockchains(),
     ...getSegwitCoins(),
-    // ...getSplTokens(),
+    ...getSplTokens(),
     // ...getESDTCoins(),
     // ...getTonFungibleCoins(),
     // ...getTronFungibleCoins(),
     // ...getNearFungibles(),
-    // ...getPolkadotFungibleCoins(),
+    ...getPolkadotFungibleCoins(),
     // ...getSIP010Coins(),
-    // ...getERC20Coins(),
-    // ...getFUSEFTBlockchains(),
-    // ...getCosmosFungibleCoins(),
-    // ...getStarknetFungibleCoins(),
+    ...getERC20Coins(),
+    ...getFUSEFTBlockchains(),
+    ...getCosmosFungibleCoins(),
+    ...getStarknetFungibleCoins(),
   ];
 
   return (T == Coin ? all : all.whereType<T>().toList()) as List<T>;
