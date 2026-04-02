@@ -30,10 +30,6 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   /// Decimals for this specific token (may differ from the native coin).
   final int mintDecimals;
 
-  /// Optional: the base chain's image used as the badge.
-  /// If null, falls back to the parent chain lookup.
-  final String? badgeImageOverride;
-
   factory CosmosFungibleCoin.fromParent({
     required CosmosCoin parent,
     required String name,
@@ -55,7 +51,6 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
         pubKeyTypeUrl: parent.pubKeyTypeUrl,
         payScheme: parent.payScheme,
         feeDenom: parent.denom, // native denom pays fees
-        badgeImageOverride: parent.image,
         default_: parent.default_,
         // ── token-specific ─────────────────────────────────
         name: name,
@@ -84,7 +79,6 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
     required super.payScheme,
     required this.feeDenom,
     required this.mintDecimals,
-    this.badgeImageOverride,
   }) : super(
           coinDecimals: mintDecimals,
           rampID: '',
@@ -112,17 +106,8 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   String? tokenAddress() => denom;
 
   @override
-  String? get badgeImage {
-    if (badgeImageOverride != null) return badgeImageOverride;
-    // Find the parent chain by matching lcdUrl and return its image
-    try {
-      return getCosmosBlockChains()
-          .firstWhere((c) => c.lcdUrl == lcdUrl && c.denom != denom)
-          .image;
-    } catch (_) {
-      return null;
-    }
-  }
+  String? get badgeImage =>
+      getCosmosBlockChains().firstWhere((c) => c.chainId == chainId).image;
 
   // ── Decimals override ───────────────────────────────────────────────────────
 
