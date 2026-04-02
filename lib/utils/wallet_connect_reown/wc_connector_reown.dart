@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:reown_walletkit/reown_walletkit.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
-import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/main.dart';
+import 'package:wallet_app/screens/build_row.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
@@ -16,8 +14,10 @@ import 'package:wallet_app/utils/rpc_urls.dart' hide wcEthTxToWeb3Tx;
 import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_sign_message.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/models/ethereum/wc_ethereum_transaction.dart';
 import 'package:wallet_app/utils/wallet_connect_v2/wc_connector_v2.dart';
+import 'package:wallet_app/utils/wc_dapp_icon.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
+import 'package:eth_sig_util/util/utils.dart';
 import 'package:http/http.dart' as http;
 
 class WCConnectorReown {
@@ -52,12 +52,12 @@ class WCConnectorReown {
         projectId: walletConnectKey,
         logLevel: LogLevel.nothing,
       ),
-      metadata:  PairingMetadata(
+      metadata: const PairingMetadata(
         name: walletName,
         url: walletURL,
         description: walletAbbr,
         icons: [walletIconURL],
-        redirect: const Redirect(
+        redirect: Redirect(
           native: 'econova://',
           universal: 'https://econova.app.links',
           linkMode: true,
@@ -67,24 +67,13 @@ class WCConnectorReown {
 
     _setupListeners();
     await _walletKit.init();
-    debugPrint("[econova] _walletKit init success");
+    debugPrint('[econova] _walletKit init success');
     _isInitialized = true;
     getAllPairedLinks();
   }
 
-  List<String> getAllSupportChains() {
-    List<String> currentSupportChainList = [];
-    debugPrint("[econova] currentSupportChainList: $currentSupportChainList");
-    return currentSupportChainList;
-  }
-
-  String getMessageFromCode(int code,
-      [String fallbackMessage = fallbackMessage]) {
-    final Map<String, String>? messageMap = errorMessages[code];
-
-    final String? message = messageMap?["message"];
-
-    return message ?? fallbackMessage;
+  String getMessageFromCode(int code, [String fallbackMsg = fallbackMessage]) {
+    return errorMessages[code]?['message'] ?? fallbackMsg;
   }
 
   void _setupListeners() {
@@ -122,7 +111,8 @@ class WCConnectorReown {
     if (event == null) return;
 
     final method = event.method;
-    final params = event.params;
+    // event.params is {"params": [...], "scheme": "..."} in Reown link-mode
+    final params = event.params as Map<String, dynamic>;
     final topic = event.topic;
     PairingMetadata? dAppMetadata;
     final session = walletKit.sessions.get(topic);
@@ -133,7 +123,7 @@ class WCConnectorReown {
     } catch (_) {}
 
     final sessionChainId = event.chainId.split(':').last;
-    int? chainId = int.tryParse(sessionChainId);
+    final int? chainId = int.tryParse(sessionChainId);
 
     switch (method) {
       case 'personal_sign':
@@ -150,28 +140,28 @@ class WCConnectorReown {
           } else if (method == ethMethods[Eip155Methods.ETH_SIGN]) {
             messageType = normalSignKey;
             signType = WCSignType.MESSAGE;
-          } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA]) {
-            messageType = typedMessageSignKey;
-            signType = WCSignType.TYPED_MESSAGE_V4;
-          } else if (method ==
-              ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA_V4]) {
+          } else if (method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA] ||
+              method == ethMethods[Eip155Methods.ETH_SIGN_TYPED_DATA_V4]) {
             messageType = typedMessageSignKey;
             signType = WCSignType.TYPED_MESSAGE_V4;
           }
 
-          final requestParams = (params["params"] as List).cast<String>();
-          final message = requestParams[1];
+          final requestParams = (params['params'] as List).cast<String>();
+          // personal_sign: [message, address]; eth_sign: [address, message]
+          final message = (signType == WCSignType.PERSONAL_MESSAGE)
+              ? requestParams[0]
+              : requestParams[1];
 
           final iconUrl = dAppMetadata?.icons.isNotEmpty == true
               ? dAppMetadata!.icons[0]
-              : "";
+              : '';
 
           await signMessage(
             messageType: messageType,
             context: _context,
             data: message,
             networkIcon: iconUrl,
-            name: dAppMetadata?.name ?? "Unknown",
+            name: dAppMetadata?.name ?? 'Unknown',
             onConfirm: () async {
               try {
                 final coin = chainId == null
@@ -197,7 +187,8 @@ class WCConnectorReown {
                       credentials.signPersonalMessageToUint8List(
                           txDataToUintList(message));
                   signedDataHex = bytesToHex(signedBytes, include0x: true);
-                } else if (signType == WCSignType.MESSAGE) {
+                } else {
+                  // WCSignType.MESSAGE — fallback to personal sign on failure
                   try {
                     signedDataHex = EthSigUtil.signMessage(
                       privateKey: privateKey,
@@ -219,7 +210,8 @@ class WCConnectorReown {
                     result: signedDataHex,
                   ),
                 );
-                handleRedirect(params?["scheme"]);
+                // FIX #4: params is a non-nullable Map, no ? needed
+                handleRedirect(params['scheme'] as String?);
                 if (_context.mounted) Navigator.pop(_context);
               } catch (e) {
                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
@@ -235,108 +227,192 @@ class WCConnectorReown {
         break;
 
       case 'eth_signTransaction':
-        AppLocalizations localization = AppLocalizations.of(_context)!;
-        final ethereumTransaction =
-            WCEthereumTransaction.fromJson(event.params);
-        _onTransaction(
-          session: session,
-          ethereumTransaction: ethereumTransaction,
-          title: localization.signTransaction,
-          chainId: chainId!,
-          onConfirm: () async {
-            try {
-              EthereumCoin coin = evmFromChainId(chainId)!;
-              final walletData =
-                  WalletService.getActiveKey(walletImportType)!.data;
-              final response = await coin.importData(walletData);
-              String privateKey = response.privateKey!;
-              Web3Client web3client = Web3Client(
-                coin.rpc,
-                http.Client(),
-              );
-              final creds = EthPrivateKey.fromHex(privateKey);
-              final tx = await web3client.signTransaction(
-                creds,
-                wcEthTxToWeb3Tx(ethereumTransaction),
-                chainId: chainId,
-              );
-
-              _walletKit.respondSessionRequest(
-                topic: event.topic,
-                response: JsonRpcResponse(
-                  id: event.id,
-                  jsonrpc: '2.0',
-                  result: tx,
-                ),
-              );
-              handleRedirect(params?["scheme"]);
-            } catch (e) {
-              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-            } finally {
-              if (_context.mounted) {
-                Navigator.pop(_context);
+        {
+          if (chainId == null) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+            break;
+          }
+          final AppLocalizations localization = AppLocalizations.of(_context)!;
+          // FIX #3: transaction is the first element of params["params"] list
+          final ethereumTransaction = WCEthereumTransaction.fromJson(
+            (params['params'] as List).first as Map<String, dynamic>,
+          );
+          _onTransaction(
+            session: session,
+            ethereumTransaction: ethereumTransaction,
+            title: localization.signTransaction,
+            chainId: chainId,
+            onConfirm: () async {
+              try {
+                final EthereumCoin coin = evmFromChainId(chainId)!;
+                final walletData =
+                    WalletService.getActiveKey(walletImportType)!.data;
+                final response = await coin.importData(walletData);
+                final String privateKey = response.privateKey!;
+                final Web3Client web3client =
+                    Web3Client(coin.rpc, http.Client());
+                final creds = EthPrivateKey.fromHex(privateKey);
+                final tx = await web3client.signTransaction(
+                  creds,
+                  wcEthTxToWeb3Tx(ethereumTransaction),
+                  chainId: chainId,
+                );
+                await _walletKit.respondSessionRequest(
+                  topic: event.topic,
+                  response: JsonRpcResponse(
+                    id: event.id,
+                    jsonrpc: '2.0',
+                    result: tx,
+                  ),
+                );
+                handleRedirect(params['scheme'] as String?);
+              } catch (e) {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              } finally {
+                if (_context.mounted) Navigator.pop(_context);
               }
-            }
-          },
-          onReject: () {
-            onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-            Navigator.pop(_context);
-          },
-        );
-
+            },
+            onReject: () {
+              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              if (_context.mounted) Navigator.pop(_context);
+            },
+          );
+        }
         break;
 
       case 'eth_sendTransaction':
-        AppLocalizations localization = AppLocalizations.of(_context)!;
-        final ethereumTransaction =
-            WCEthereumTransaction.fromJson(event.params);
-        _onTransaction(
-          session: session,
-          ethereumTransaction: ethereumTransaction,
-          title: localization.sendTransaction,
-          onConfirm: () async {
-            try {
-              EthereumCoin coin = evmFromChainId(chainId)!;
-              final walletData =
-                  WalletService.getActiveKey(walletImportType)!.data;
-              final response = await coin.importData(walletData);
-              String privateKey = response.privateKey!;
-              final creds = EthPrivateKey.fromHex(privateKey);
-              Web3Client web3client = Web3Client(
-                coin.rpc,
-                http.Client(),
-              );
-              final txhash = await web3client.sendTransaction(
-                creds,
-                wcEthTxToWeb3Tx(ethereumTransaction),
-                chainId: chainId,
-              );
-              debugPrint('txhash $txhash');
+        {
+          if (chainId == null) {
+            // FIX #8: guard against null chainId instead of force-unwrapping
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+            break;
+          }
+          final AppLocalizations localization = AppLocalizations.of(_context)!;
+          // FIX #3: transaction is the first element of params["params"] list
+          final ethereumTransaction = WCEthereumTransaction.fromJson(
+            (params['params'] as List).first as Map<String, dynamic>,
+          );
+          _onTransaction(
+            session: session,
+            ethereumTransaction: ethereumTransaction,
+            title: localization.sendTransaction,
+            onConfirm: () async {
+              try {
+                final EthereumCoin coin = evmFromChainId(chainId)!;
+                final walletData =
+                    WalletService.getActiveKey(walletImportType)!.data;
+                final response = await coin.importData(walletData);
+                final String privateKey = response.privateKey!;
+                final creds = EthPrivateKey.fromHex(privateKey);
+                final Web3Client web3client =
+                    Web3Client(coin.rpc, http.Client());
+                final txhash = await web3client.sendTransaction(
+                  creds,
+                  wcEthTxToWeb3Tx(ethereumTransaction),
+                  chainId: chainId,
+                );
+                debugPrint('txhash $txhash');
+                await _walletKit.respondSessionRequest(
+                  topic: event.topic,
+                  response: JsonRpcResponse(
+                    id: event.id,
+                    jsonrpc: '2.0',
+                    result: txhash,
+                  ),
+                );
+                handleRedirect(params['scheme'] as String?);
+              } catch (e) {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              } finally {
+                if (_context.mounted) Navigator.pop(_context);
+              }
+            },
+            onReject: () {
+              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+              if (_context.mounted) Navigator.pop(_context);
+            },
+            chainId: chainId,
+          );
+        }
+        break;
 
-              _walletKit.respondSessionRequest(
+      // FIX #7: handle wallet_switchEthereumChain (declared in namespace but was missing)
+      case 'wallet_switchEthereumChain':
+        {
+          try {
+            final switchParams =
+                (params['params'] as List).first as Map<String, dynamic>;
+            final hexChainId = switchParams['chainId'] as String;
+            final newChainId = int.parse(
+              hexChainId.replaceFirst('0x', ''),
+              radix: 16,
+            );
+            final currentCoin =
+                chainId != null ? evmFromChainId(chainId) : null;
+            final switchCoin = evmFromChainId(newChainId);
+
+            if (switchCoin == null) {
+              onHandleErrorReject(event, ErrorCodes.notSupportChain);
+              break;
+            }
+
+            switchEthereumChain(
+              context: _context,
+              currentChain: currentCoin ?? evmFromSymbol('ETH')!,
+              switchChain: switchCoin,
+              onConfirm: () async {
+                await _walletKit.respondSessionRequest(
+                  topic: event.topic,
+                  response: JsonRpcResponse(
+                    id: event.id,
+                    jsonrpc: '2.0',
+                    result: null,
+                  ),
+                );
+                handleRedirect(params['scheme'] as String?);
+                if (_context.mounted) Navigator.pop(_context);
+              },
+              onReject: () {
+                onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
+                if (_context.mounted) Navigator.pop(_context);
+              },
+            );
+          } catch (_) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+          }
+        }
+        break;
+
+      // wallet_addEthereumChain: approve silently if the chain is known,
+      // otherwise reject as unsupported.
+      case 'wallet_addEthereumChain':
+        {
+          try {
+            final addParams =
+                (params['params'] as List).first as Map<String, dynamic>;
+            final hexChainId = addParams['chainId'] as String;
+            final newChainId = int.parse(
+              hexChainId.replaceFirst('0x', ''),
+              radix: 16,
+            );
+            if (evmFromChainId(newChainId) != null) {
+              // Chain already supported — return null (success per EIP-3085)
+              await _walletKit.respondSessionRequest(
                 topic: event.topic,
                 response: JsonRpcResponse(
                   id: event.id,
                   jsonrpc: '2.0',
-                  result: txhash,
+                  result: null,
                 ),
               );
-              handleRedirect(params?["scheme"]);
-            } catch (e) {
-              onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-            } finally {
-              if (_context.mounted) {
-                Navigator.pop(_context);
-              }
+              handleRedirect(params['scheme'] as String?);
+            } else {
+              onHandleErrorReject(event, ErrorCodes.notSupportChain);
             }
-          },
-          onReject: () {
-            onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
-            Navigator.pop(_context);
-          },
-          chainId: chainId!,
-        );
-
+          } catch (_) {
+            onHandleErrorReject(event, ErrorCodes.invalidParams);
+          }
+        }
         break;
 
       default:
@@ -344,7 +420,7 @@ class WCConnectorReown {
     }
   }
 
-  _onTransaction({
+  void _onTransaction({
     required SessionData? session,
     required WCEthereumTransaction ethereumTransaction,
     required String title,
@@ -352,7 +428,8 @@ class WCConnectorReown {
     required VoidCallback onConfirm,
     required VoidCallback onReject,
   }) async {
-    List icons = session != null ? session.peer.metadata.icons : [];
+    final List icons =
+        session != null ? session.peer.metadata.icons : <String>[];
 
     await signEVMTransaction(
       gasPriceInWei_: ethereumTransaction.gasPrice,
@@ -361,7 +438,7 @@ class WCConnectorReown {
       txData: ethereumTransaction.data,
       valueInWei_: ethereumTransaction.value,
       gasInWei_: ethereumTransaction.gas,
-      networkIcon: icons.isNotEmpty ? icons[0] : null,
+      networkIcon: icons.isNotEmpty ? icons[0] as String : null,
       context: _context,
       symbol: evmFromChainId(chainId)?.getSymbol(),
       name: session != null ? session.peer.metadata.name : '',
@@ -404,11 +481,14 @@ class WCConnectorReown {
         errorMessage =
             errorMessage.replaceFirst('Supported:', '\n\nSupported:');
       }
+      debugPrint('[WalletConnect] error detail: $errorMessage');
     }
   }
 
   void _onSessionAuthRequest(SessionAuthRequest? args) {
-    if (args != null) {}
+    if (args != null) {
+      debugPrint('[WalletConnect] _onSessionAuthRequest $args');
+    }
   }
 
   void _onSessionConnect(SessionConnect? args) {
@@ -418,186 +498,128 @@ class WCConnectorReown {
     }
   }
 
+  /// FIX #1 & #2: builds accounts by extracting chains from [chainIds] rather
+  /// than relying on a hardcoded empty list. Called from [_onSessionProposal].
   Future<(List<String> accounts, List<EthereumCoin> ethCoins)>
-      getAccounts() async {
-    List<EthereumCoin> ethCoins = [];
+      _buildAccountsForChains(List<String> chainIds) async {
+    final List<EthereumCoin> ethCoins = [];
     final data = WalletService.getActiveKey(walletImportType)!.data;
-    List<String> accounts = []; //TODO: get from config or settings
-    List<String> chainIds = []; //TODO: get from config or settings
+    final List<String> accounts = [];
 
-    for (String ids in chainIds) {
-      final chainID = int.parse(ids.split(':').last);
-
-      EthereumCoin? ethCoin = evmFromChainId(chainID);
+    for (final ids in chainIds) {
+      final chainID = int.tryParse(ids.split(':').last);
+      if (chainID == null) continue;
+      final EthereumCoin? ethCoin = evmFromChainId(chainID);
       if (ethCoin == null) continue;
       final response = await ethCoin.importData(data);
-
-      accounts.add(
-        '${EIP155WC.name}:${ethCoin.chainId}:${response.address}',
-      );
-
+      accounts.add('${EIP155WC.name}:${ethCoin.chainId}:${response.address}');
       ethCoins.add(ethCoin);
     }
     return (accounts, ethCoins);
   }
 
   void _onSessionProposal(SessionProposalEvent? args) async {
-    debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args?.params)}');
-    List<Widget> coinWidgets = [];
-    if (args != null) {
-      final proposer = args.params.proposer;
-      final (accounts, ethCoins) = await getAccounts();
+    if (args == null) return;
+    debugPrint('[SampleWallet] _onSessionProposal ${jsonEncode(args.params)}');
 
-      Map<String, Namespace> defaultNamespaces = {
-        'eip155': Namespace(
-          accounts: accounts,
-          methods: [
-            'eth_sendTransaction',
-            'eth_signTransaction',
-            'personal_sign',
-            'eth_sign',
-            'eth_signTypedData',
-            'eth_signTypedData_v4',
-            'wallet_switchEthereumChain',
-            'wallet_addEthereumChain',
-          ],
-          events: ['accountsChanged', 'chainChanged'],
-        ),
-      };
-      if (_context.mounted) {
-        showDialog(
-          barrierDismissible: false,
-          context: _context,
-          builder: (_) {
-            AppLocalizations localization = AppLocalizations.of(_context)!;
-            final metadata = proposer.metadata;
-            return SimpleDialog(
-              title: Column(
-                children: [
-                  if (metadata.icons.isNotEmpty)
-                    Container(
-                      height: 100.0,
-                      width: 100.0,
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: CachedNetworkImage(
-                        imageUrl: ipfsTohttp(metadata.icons.first),
-                        placeholder: (context, url) => const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: Loader(
-                                color: appPrimaryColor,
-                              ),
-                            )
-                          ],
-                        ),
-                        errorWidget: (context, url, error) => const Icon(
-                          Icons.error,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  Text(metadata.name),
-                ],
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-              children: [
-                if (metadata.description.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(metadata.description),
-                  ),
-                if (metadata.url.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text('${localization.connectedTo} ${metadata.url}'),
-                  ),
-                if (coinWidgets.isNotEmpty) ...coinWidgets,
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(_context).colorScheme.secondary,
-                        ),
-                        onPressed: () async {
-                          try {
-                            await _walletKit.approveSession(
-                              id: args.id,
-                              namespaces: defaultNamespaces,
-                              sessionProperties: args.params.sessionProperties,
-                            );
-                            handleRedirect(tempScheme);
-                          } catch (error) {
-                            debugPrint('showConnectAction===0,$error');
-                          } finally {
-                            if (_context.mounted) {
-                              Navigator.pop(_context);
-                            }
-                          }
-                        },
-                        child: Text(localization.confirm),
-                      ),
-                    ),
-                    const SizedBox(width: 16.0),
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(_context).colorScheme.secondary,
-                        ),
-                        onPressed: () async {
-                          final error = Errors.getSdkError(Errors.USER_REJECTED)
-                              .toSignError();
-                          await _walletKit.rejectSession(
-                              id: args.id, reason: error);
-                          await _walletKit.core.pairing
-                              .disconnect(topic: args.params.pairingTopic);
+    final proposer = args.params.proposer;
 
-                          if (_context.mounted) {
-                            Navigator.pop(_context);
-                          }
-                        },
-                        child: Text(localization.reject),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
+    // FIX #2 & #9: collect chains from both required and optional namespaces
+    final requiredChains =
+        args.params.requiredNamespaces['eip155']?.chains ?? [];
+    final optionalChains =
+        args.params.optionalNamespaces['eip155']?.chains ?? [];
+    // Deduplicate while preserving required-first order
+    final allChains = {
+      ...requiredChains,
+      ...optionalChains,
+    }.toList();
+
+    final (accounts, ethCoins) = await _buildAccountsForChains(allChains);
+
+    // If required chains couldn't be satisfied, reject immediately
+    if (requiredChains.isNotEmpty && accounts.isEmpty) {
+      final error = Errors.getSdkError(Errors.UNSUPPORTED_CHAINS).toSignError();
+      await _walletKit.rejectSession(id: args.id, reason: error);
+      return;
+    }
+
+    final Map<String, Namespace> namespaces = {
+      'eip155': Namespace(
+        accounts: accounts,
+        methods: [
+          'eth_sendTransaction',
+          'eth_signTransaction',
+          'personal_sign',
+          'eth_sign',
+          'eth_signTypedData',
+          'eth_signTypedData_v4',
+          'wallet_switchEthereumChain',
+          'wallet_addEthereumChain',
+        ],
+        events: ['accountsChanged', 'chainChanged'],
+      ),
+    };
+
+    if (!_context.mounted) return;
+    showDialog(
+      barrierDismissible: false,
+      context: _context,
+      builder: (_) {
+        final AppLocalizations localization = AppLocalizations.of(_context)!;
+        final metadata = proposer.metadata;
+        return _WCSessionProposalDialog(
+          metadata: metadata,
+          // FIX #2: populate coin widgets from the resolved ethCoins
+          coinWidgets:
+              ethCoins.map((e) => buildRow(e, isSelected: true)).toList(),
+          localization: localization,
+          onConfirm: () async {
+            try {
+              await _walletKit.approveSession(
+                id: args.id,
+                namespaces: namespaces,
+                sessionProperties: args.params.sessionProperties,
+              );
+              handleRedirect(tempScheme);
+            } catch (error) {
+              debugPrint('showConnectAction===0,$error');
+            } finally {
+              if (_context.mounted) Navigator.pop(_context);
+            }
+          },
+          onReject: () async {
+            final error =
+                Errors.getSdkError(Errors.USER_REJECTED).toSignError();
+            await _walletKit.rejectSession(id: args.id, reason: error);
+            await _walletKit.core.pairing
+                .disconnect(topic: args.params.pairingTopic);
+            if (_context.mounted) Navigator.pop(_context);
           },
         );
-      }
-    }
+      },
+    );
   }
 
   void handleRedirect(String? scheme) async {
-    if (Platform.isAndroid) {
-      if (scheme != null && scheme.isNotEmpty) {
-        const MethodChannel channel = MethodChannel('browser_launcher');
-        String targetPackageName = scheme;
+    if (!Platform.isAndroid) return;
+    if (scheme == null || scheme.isEmpty) return;
 
-        try {
-          await channel
-              .invokeMethod('openBrowser', {'packageName': targetPackageName});
-        } on PlatformException catch (e) {
-          debugPrint("Failed to open browser: '${e.message}'");
-          if (_context.mounted) {
-            ScaffoldMessenger.of(_context).showSnackBar(
-              SnackBar(
-                backgroundColor: Colors.red,
-                content: Text(
-                  "Failed to open browser: '${e.message}'",
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          }
-        }
+    const MethodChannel channel = MethodChannel('browser_launcher');
+    try {
+      await channel.invokeMethod('openBrowser', {'packageName': scheme});
+    } on PlatformException catch (e) {
+      debugPrint("Failed to open browser: '${e.message}'");
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              "Failed to open browser: '${e.message}'",
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        );
       }
     }
   }
@@ -620,73 +642,137 @@ class WCConnectorReown {
   }
 
   List<PairingInfo> getAllPairedLinks() {
-    final pairings = _walletKit.core.pairing.getPairings();
-    if (pairings.isEmpty) {
-      return [];
-    }
-
-    return pairings;
+    return _walletKit.core.pairing.getPairings();
   }
 
   Future<void> dispatchEnvelope(String uri) async {
     await _walletKit.dispatchEnvelope(uri);
   }
 
-  /// Emit the `accountsChanged` event to notify the dApp of a change in the selected account.
+  /// FIX #5: emit accountsChanged for the `eip155` namespace (was `mina`).
   Future<void> emitAccountsChanged(String newAccount) async {
-    // Get all active sessions
     final sessions = _walletKit.sessions.getAll();
-    if (sessions.isEmpty) {
-      return;
-    }
-    // Update the namespace with the new account
-    for (var session in sessions) {
-      final topic = session.topic;
-      final minaNamespace = session.namespaces['mina'];
-      if (minaNamespace != null) {
-        // Emit the accountsChanged event for each supported chain
-        final supportedChains = minaNamespace.accounts
-            .map((account) =>
-                account.split(':')[1]) // Extract chain (e.g., mainnet, devnet)
-            .toSet()
-            .toList();
-        for (var chain in supportedChains) {
-          _walletKit.emitSessionEvent(
-            topic: topic,
-            chainId: 'mina:$chain',
-            event: SessionEventParams(
-              name: 'accountsChanged',
-              data: ['mina:$chain:$newAccount'],
-            ),
-          );
-        }
-      }
-    }
-  }
+    if (sessions.isEmpty) return;
 
-  /// Emit the `chainChanged` event to notify the dApp of a change in the selected chain.
-  Future<void> emitChainChanged(String newChainId) async {
-    final sessions = _walletKit.sessions.getAll();
-    if (sessions.isEmpty) {
-      return;
-    }
-    // Emit the chainChanged event for each session
-    for (var session in sessions) {
+    for (final session in sessions) {
       final topic = session.topic;
-      final minaNamespace = session.namespaces['mina'];
-      if (minaNamespace != null) {
+      final eip155Namespace = session.namespaces['eip155'];
+      if (eip155Namespace == null) continue;
+
+      final supportedChains = eip155Namespace.accounts
+          .map((account) => account.split(':')[1])
+          .toSet();
+
+      for (final chain in supportedChains) {
         _walletKit.emitSessionEvent(
           topic: topic,
-          chainId: newChainId,
+          chainId: '${EIP155WC.name}:$chain',
           event: SessionEventParams(
-            name: 'chainChanged',
-            data: newChainId,
+            name: 'accountsChanged',
+            data: ['${EIP155WC.name}:$chain:$newAccount'],
           ),
         );
       }
     }
   }
+
+  /// FIX #5: emit chainChanged for the `eip155` namespace (was `mina`).
+  Future<void> emitChainChanged(String newChainId) async {
+    final sessions = _walletKit.sessions.getAll();
+    if (sessions.isEmpty) return;
+
+    for (final session in sessions) {
+      final topic = session.topic;
+      if (!session.namespaces.containsKey('eip155')) continue;
+
+      _walletKit.emitSessionEvent(
+        topic: topic,
+        chainId: newChainId,
+        event: SessionEventParams(
+          name: 'chainChanged',
+          data: newChainId,
+        ),
+      );
+    }
+  }
 }
+
+// ---------------------------------------------------------------------------
+// Extracted dialog widget — keeps _onSessionProposal lean and testable
+// ---------------------------------------------------------------------------
+
+class _WCSessionProposalDialog extends StatelessWidget {
+  final PairingMetadata metadata;
+  final List<Widget> coinWidgets;
+  final AppLocalizations localization;
+  final VoidCallback onConfirm;
+  final VoidCallback onReject;
+
+  const _WCSessionProposalDialog({
+    required this.metadata,
+    required this.coinWidgets,
+    required this.localization,
+    required this.onConfirm,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SimpleDialog(
+      title: Column(
+        children: [
+          WCDappIcon(
+            iconUrl: metadata.icons.isNotEmpty ? metadata.icons[0] : null,
+            size: 100,
+          ),
+          const SizedBox(height: 8),
+          Text(metadata.name),
+        ],
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+      children: [
+        if (metadata.description.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(metadata.description),
+          ),
+        if (metadata.url.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text('${localization.connectedTo} ${metadata.url}'),
+          ),
+        if (coinWidgets.isNotEmpty) ...coinWidgets,
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                ),
+                onPressed: onConfirm,
+                child: Text(localization.confirm),
+              ),
+            ),
+            const SizedBox(width: 16.0),
+            Expanded(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                ),
+                onPressed: onReject,
+                child: Text(localization.reject),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Error codes & messages
+// ---------------------------------------------------------------------------
 
 class ErrorCodes {
   static const int userRejectedRequest = 1002;
@@ -705,43 +791,21 @@ class ErrorCodes {
 }
 
 const Map<int, Map<String, String>> errorMessages = {
-  ErrorCodes.userRejectedRequest: {
-    "message": "User rejected the request.",
-  },
+  ErrorCodes.userRejectedRequest: {'message': 'User rejected the request.'},
   ErrorCodes.userDisconnect: {
-    "message": "User disconnect, please connect first.",
+    'message': 'User disconnect, please connect first.'
   },
-  ErrorCodes.noWallet: {
-    "message": "Please create or restore wallet first.",
-  },
-  ErrorCodes.verifyFailed: {
-    "message": "Verify failed.",
-  },
-  ErrorCodes.invalidParams: {
-    "message": "Invalid method parameter(s).",
-  },
-  ErrorCodes.notSupportChain: {
-    "message": "Not support chain.",
-  },
-  ErrorCodes.addressNotExist: {
-    "message": "Address not exist.",
-  },
+  ErrorCodes.noWallet: {'message': 'Please create or restore wallet first.'},
+  ErrorCodes.verifyFailed: {'message': 'Verify failed.'},
+  ErrorCodes.invalidParams: {'message': 'Invalid method parameter(s).'},
+  ErrorCodes.notSupportChain: {'message': 'Not support chain.'},
+  ErrorCodes.addressNotExist: {'message': 'Address not exist.'},
   ErrorCodes.zkChainPending: {
-    "message": "Request already pending. Please wait.",
+    'message': 'Request already pending. Please wait.'
   },
-  ErrorCodes.unsupportMethod: {
-    "message": "Method not supported.",
-  },
-  ErrorCodes.internal: {
-    "message": "Transaction error.",
-  },
-  ErrorCodes.throwError: {
-    "message": fallbackMessage,
-  },
-  ErrorCodes.originDismatch: {
-    "message": "Origin dismatch.",
-  },
-  ErrorCodes.notFound: {
-    "message": "Not found.",
-  },
+  ErrorCodes.unsupportMethod: {'message': 'Method not supported.'},
+  ErrorCodes.internal: {'message': 'Transaction error.'},
+  ErrorCodes.throwError: {'message': fallbackMessage},
+  ErrorCodes.originDismatch: {'message': 'Origin dismatch.'},
+  ErrorCodes.notFound: {'message': 'Not found.'},
 };

@@ -1,12 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wc_dapp_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/web3dart.dart';
-import 'package:wallet_app/components/loader.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/crypto.dart';
@@ -42,41 +41,20 @@ class WcConnectorV1 {
     WCService.wcReconnectV1();
   }
 
-  _onSessionRequest(int id, WCPeerMeta peerMeta) {
+  void _onSessionRequest(int id, WCPeerMeta peerMeta) {
     showDialog(
       barrierDismissible: false,
       context: context,
       builder: (_) {
-        AppLocalizations localization = AppLocalizations.of(context)!;
+        final AppLocalizations localization = AppLocalizations.of(context)!;
         return SimpleDialog(
           title: Column(
             children: [
-              if (peerMeta.icons.isNotEmpty)
-                Container(
-                  height: 100.0,
-                  width: 100.0,
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: CachedNetworkImage(
-                    imageUrl: ipfsTohttp(peerMeta.icons.first),
-                    placeholder: (context, url) => const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: Loader(
-                            color: appPrimaryColor,
-                          ),
-                        )
-                      ],
-                    ),
-                    errorWidget: (context, url, error) => const Icon(
-                      Icons.error,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
+              WCDappIcon(
+                iconUrl: peerMeta.icons.isNotEmpty ? peerMeta.icons[0] : null,
+                size: 100,
+              ),
+              const SizedBox(height: 8),
               Text(peerMeta.name),
             ],
           ),
@@ -101,7 +79,7 @@ class WcConnectorV1 {
                     ),
                     onPressed: () async {
                       try {
-                        Coin? coin = await Navigator.push(
+                        final Coin? coin = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (ctx) => SelectBlockchain(
@@ -129,14 +107,10 @@ class WcConnectorV1 {
                             ),
                           );
                         }
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
+                        if (context.mounted) Navigator.pop(context);
                       } catch (e) {
                         wcClient.rejectSession();
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
+                        if (context.mounted) Navigator.pop(context);
                       }
                     },
                     child: Text(localization.confirm),
@@ -163,12 +137,12 @@ class WcConnectorV1 {
     );
   }
 
-  _onSessionError(dynamic message) {
+  void _onSessionError(dynamic message) {
     showDialog(
       barrierDismissible: false,
       context: context,
       builder: (_) {
-        AppLocalizations localization = AppLocalizations.of(context)!;
+        final AppLocalizations localization = AppLocalizations.of(context)!;
         return SimpleDialog(
           title: Text(localization.error),
           contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
@@ -183,9 +157,7 @@ class WcConnectorV1 {
                   style: TextButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                   ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.pop(context),
                   child: Text(localization.close),
                 ),
               ],
@@ -196,12 +168,12 @@ class WcConnectorV1 {
     );
   }
 
-  _onSessionClosed(int? code, String? reason) {
+  void _onSessionClosed(int? code, String? reason) {
     showDialog(
       barrierDismissible: false,
       context: context,
       builder: (_) {
-        AppLocalizations localization = AppLocalizations.of(context)!;
+        final AppLocalizations localization = AppLocalizations.of(context)!;
         return SimpleDialog(
           title: Text(localization.sessionEnded),
           contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
@@ -222,9 +194,7 @@ class WcConnectorV1 {
                   style: TextButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                   ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.pop(context),
                   child: Text(localization.close),
                 ),
               ],
@@ -235,27 +205,22 @@ class WcConnectorV1 {
     );
   }
 
-  _onSignTransaction(
+  void _onSignTransaction(
     int id,
     WCEthereumTransaction ethereumTransaction,
   ) {
-    AppLocalizations localization = AppLocalizations.of(context)!;
-
+    final AppLocalizations localization = AppLocalizations.of(context)!;
     _onTransaction(
       id: id,
       ethereumTransaction: ethereumTransaction,
       title: localization.signTransaction,
       onConfirm: () async {
         try {
-          EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
+          final EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String privateKey = response.privateKey!;
-
-          Web3Client web3client = Web3Client(
-            coin.rpc,
-            http.Client(),
-          );
+          final String privateKey = response.privateKey!;
+          final Web3Client web3client = Web3Client(coin.rpc, http.Client());
           final creds = EthPrivateKey.fromHex(privateKey);
           final tx = await web3client.signTransaction(
             creds,
@@ -264,17 +229,12 @@ class WcConnectorV1 {
           );
           wcClient.approveRequest<String>(
             id: id,
-            result: bytesToHex(
-              tx,
-              include0x: true,
-            ),
+            result: bytesToHex(tx, include0x: true),
           );
         } catch (e) {
           wcClient.rejectRequest(id: id);
         } finally {
-          if (context.mounted) {
-            Navigator.pop(context);
-          }
+          if (context.mounted) Navigator.pop(context);
         }
       },
       onReject: () {
@@ -284,31 +244,31 @@ class WcConnectorV1 {
     );
   }
 
-  _onSwitchNetwork(int id, int chainIdNew) async {
-    final currentChain = evmFromChainId(wcClient.chainId!);
-    final switchChain = evmFromChainId(chainIdNew);
-
+  void _onSwitchNetwork(int id, int chainIdNew) async {
     if (wcClient.chainId == chainIdNew) {
       wcClient.rejectRequest(id: id);
       return;
     }
 
-    if (switchChain == null) {
+    final currentChain = evmFromChainId(wcClient.chainId!);
+    final switchChain = evmFromChainId(chainIdNew);
+
+    if (currentChain == null || switchChain == null) {
       wcClient.rejectRequest(id: id);
       return;
     }
+
     switchEthereumChain(
       context: context,
-      currentChain: currentChain!,
+      currentChain: currentChain,
       switchChain: switchChain,
       onConfirm: () async {
         await wcClient.updateSession(chainId: chainIdNew);
         wcClient.approveRequest<void>(id: id, result: null);
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Changed network to $chainIdNew.'),
-        ));
-
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Changed network to $chainIdNew.')),
+        );
         Navigator.pop(context);
       },
       onReject: () async {
@@ -318,43 +278,34 @@ class WcConnectorV1 {
     );
   }
 
-  _onSendTransaction(
+  void _onSendTransaction(
     int id,
     WCEthereumTransaction ethereumTransaction,
   ) {
-    AppLocalizations localization = AppLocalizations.of(context)!;
+    final AppLocalizations localization = AppLocalizations.of(context)!;
     _onTransaction(
       id: id,
       ethereumTransaction: ethereumTransaction,
       title: localization.sendTransaction,
       onConfirm: () async {
         try {
-          EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
+          final EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
           final response = await coin.importData(walletData);
-          String privateKey = response.privateKey!;
-
-          Web3Client web3client = Web3Client(
-            coin.rpc,
-            http.Client(),
-          );
+          final String privateKey = response.privateKey!;
           final creds = EthPrivateKey.fromHex(privateKey);
+          final Web3Client web3client = Web3Client(coin.rpc, http.Client());
           final txhash = await web3client.sendTransaction(
             creds,
             wcEthTxToWeb3Tx(ethereumTransaction),
             chainId: wcClient.chainId,
           );
           debugPrint('txhash $txhash');
-          wcClient.approveRequest<String>(
-            id: id,
-            result: txhash,
-          );
+          wcClient.approveRequest<String>(id: id, result: txhash);
         } catch (e) {
           wcClient.rejectRequest(id: id);
         } finally {
-          if (context.mounted) {
-            Navigator.pop(context);
-          }
+          if (context.mounted) Navigator.pop(context);
         }
       },
       onReject: () {
@@ -364,15 +315,14 @@ class WcConnectorV1 {
     );
   }
 
-  _onTransaction({
+  void _onTransaction({
     required int id,
     required WCEthereumTransaction ethereumTransaction,
     required String title,
     required VoidCallback onConfirm,
     required VoidCallback onReject,
   }) async {
-    List icons = wcClient.remotePeerMeta!.icons;
-
+    final List icons = wcClient.remotePeerMeta!.icons;
     await signEVMTransaction(
       gasPriceInWei_: ethereumTransaction.gasPrice,
       to: ethereumTransaction.to,
@@ -380,7 +330,7 @@ class WcConnectorV1 {
       txData: ethereumTransaction.data,
       valueInWei_: ethereumTransaction.value,
       gasInWei_: ethereumTransaction.gas,
-      networkIcon: icons.isNotEmpty ? icons[0] : null,
+      networkIcon: icons.isNotEmpty ? icons[0] as String : null,
       context: context,
       symbol: evmFromChainId(wcClient.chainId!)?.getSymbol(),
       name: wcClient.remotePeerMeta!.name,
@@ -391,11 +341,11 @@ class WcConnectorV1 {
     );
   }
 
-  _onSign(
+  void _onSign(
     int id,
     WCEthereumSignMessage ethereumSignMessage,
   ) async {
-    List icon = wcClient.remotePeerMeta!.icons;
+    final List icon = wcClient.remotePeerMeta!.icons;
     String messageType = '';
     if (ethereumSignMessage.type == WCSignType.PERSONAL_MESSAGE) {
       messageType = personalSignKey;
@@ -409,16 +359,16 @@ class WcConnectorV1 {
       messageType: messageType,
       context: context,
       data: ethereumSignMessage.data,
-      networkIcon: icon.isNotEmpty ? icon[0] : null,
+      networkIcon: icon.isNotEmpty ? icon[0] as String : null,
       name: wcClient.remotePeerMeta?.name,
       onConfirm: () async {
-        EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
+        final EthereumCoin coin = evmFromChainId(wcClient.chainId!)!;
         final walletData = WalletService.getActiveKey(walletImportType)!.data;
         final response = await coin.importData(walletData);
-        String privateKey = response.privateKey!;
-
+        final String privateKey = response.privateKey!;
         late String signedDataHex;
         final credentials = EthPrivateKey.fromHex(privateKey);
+
         if (ethereumSignMessage.type == WCSignType.TYPED_MESSAGE) {
           signedDataHex = EthSigUtil.signTypedData(
             privateKey: privateKey,
@@ -426,37 +376,29 @@ class WcConnectorV1 {
             version: TypedDataVersion.V4,
           );
         } else if (ethereumSignMessage.type == WCSignType.PERSONAL_MESSAGE) {
-          Uint8List signedData = credentials.signPersonalMessageToUint8List(
-            txDataToUintList(
-              ethereumSignMessage.data!,
-            ),
+          final Uint8List signedData =
+              credentials.signPersonalMessageToUint8List(
+            txDataToUintList(ethereumSignMessage.data!),
           );
           signedDataHex = bytesToHex(signedData, include0x: true);
         } else if (ethereumSignMessage.type == WCSignType.MESSAGE) {
           try {
             signedDataHex = EthSigUtil.signMessage(
               privateKey: privateKey,
-              message: txDataToUintList(
-                ethereumSignMessage.data!,
-              ),
+              message: txDataToUintList(ethereumSignMessage.data!),
             );
           } catch (e) {
-            Uint8List signedData = credentials.signPersonalMessageToUint8List(
-              txDataToUintList(
-                ethereumSignMessage.data!,
-              ),
+            final Uint8List signedData =
+                credentials.signPersonalMessageToUint8List(
+              txDataToUintList(ethereumSignMessage.data!),
             );
             signedDataHex = bytesToHex(signedData, include0x: true);
           }
         }
+
         debugPrint('SIGNED $signedDataHex');
-        wcClient.approveRequest<String>(
-          id: id,
-          result: signedDataHex,
-        );
-        if (context.mounted) {
-          Navigator.pop(context);
-        }
+        wcClient.approveRequest<String>(id: id, result: signedDataHex);
+        if (context.mounted) Navigator.pop(context);
       },
       onReject: () {
         wcClient.rejectRequest(id: id);

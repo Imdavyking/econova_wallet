@@ -1,27 +1,25 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:wallet_app/components/loader.dart';
+// wallet_connect_preview_v1.dart
+import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/wc_dapp_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:wallet_connect_dart_v2/wallet_connect_dart_v2.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import '../coins/ethereum_coin.dart';
 import '../service/wallet_connect_service.dart';
 import '../utils/get_token_image.dart';
-import '../utils/rpc_urls.dart';
 
 class RemotePeerMeta {
   final String name;
   final String url;
   final List<String> icons;
 
-  RemotePeerMeta({
+  const RemotePeerMeta({
     required this.name,
     required this.url,
     required this.icons,
   });
-
-  // Add a factory constructor to create an instance from a Map if needed
 
   factory RemotePeerMeta.fromWCPeerData(WCPeerMeta metadata) {
     return RemotePeerMeta(
@@ -47,7 +45,7 @@ class WalletConnectData {
   final String address;
   final WCSessionAddr session;
 
-  WalletConnectData({
+  const WalletConnectData({
     required this.remotePeerMeta,
     required this.date,
     required this.chainId,
@@ -70,10 +68,7 @@ class WalletConnectData {
 class WalletConnectPreviewV1 extends StatefulWidget {
   final WalletConnectData data;
 
-  const WalletConnectPreviewV1({
-    super.key,
-    required this.data,
-  });
+  const WalletConnectPreviewV1({super.key, required this.data});
 
   @override
   State<WalletConnectPreviewV1> createState() => _WalletConnectPreviewV1State();
@@ -92,132 +87,23 @@ class _WalletConnectPreviewV1State extends State<WalletConnectPreviewV1> {
 
   @override
   Widget build(BuildContext context) {
-    AppLocalizations localization = AppLocalizations.of(context)!;
-    EthereumCoin? ethCoin = evmFromChainId(widget.data.chainId);
+    final AppLocalizations localization = AppLocalizations.of(context)!;
+    final EthereumCoin? ethCoin = evmFromChainId(widget.data.chainId);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localization.connectionDetails),
-      ),
+      appBar: AppBar(title: Text(localization.connectionDetails)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Column(
             children: [
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          if (icons.isNotEmpty)
-                            Container(
-                              width: 50.0,
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: CachedNetworkImage(
-                                imageUrl: ipfsTohttp(
-                                  icons[0],
-                                ),
-                                placeholder: (context, url) => const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: Loader(
-                                        color: appPrimaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(
-                                  Icons.error,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            )
-                          else
-                            const SizedBox(
-                              height: 50.0,
-                              width: 50.0,
-                            ),
-                          if (icons.isNotEmpty)
-                            const SizedBox(
-                              width: 10,
-                            ),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.data.remotePeerMeta.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  widget.data.remotePeerMeta.url,
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 15,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+              DappInfoCard(
+                name: widget.data.remotePeerMeta.name,
+                url: widget.data.remotePeerMeta.url,
+                iconUrl: icons.isNotEmpty ? icons[0] : null,
               ),
-              const SizedBox(
-                height: 10,
-              ),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Connected',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            '${trnDate.day} ${months[trnDate.month - 1]}, ${trnDate.hour}:${trnDate.minute}',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
+              const SizedBox(height: 10),
+              ConnectedAtCard(trnDate: trnDate),
+              const SizedBox(height: 10),
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -226,13 +112,8 @@ class _WalletConnectPreviewV1State extends State<WalletConnectPreviewV1> {
                   padding: const EdgeInsets.all(20.0),
                   child: Row(
                     children: [
-                      if (ethCoin != null)
-                        GetTokenImage(
-                          currCoin: ethCoin,
-                        ),
-                      const SizedBox(
-                        width: 20,
-                      ),
+                      if (ethCoin != null) GetTokenImage(currCoin: ethCoin),
+                      const SizedBox(width: 20),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -260,13 +141,9 @@ class _WalletConnectPreviewV1State extends State<WalletConnectPreviewV1> {
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 10,
-              ),
+              const SizedBox(height: 10),
               InkWell(
-                onTap: () async {
-                  await WCService.removeSessionV1(widget.data.session);
-                },
+                onTap: () => WCService.removeSessionV1(widget.data.session),
                 child: const Text(
                   'Disconnect',
                   style: TextStyle(
@@ -278,6 +155,89 @@ class _WalletConnectPreviewV1State extends State<WalletConnectPreviewV1> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared sub-widgets for preview screens
+// ---------------------------------------------------------------------------
+
+class DappInfoCard extends StatelessWidget {
+  final String name;
+  final String url;
+  final String? iconUrl;
+
+  const DappInfoCard({super.key, 
+    required this.name,
+    required this.url,
+    this.iconUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          children: [
+            WCDappIcon(iconUrl: iconUrl, size: 50),
+            if (iconUrl != null) const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    url,
+                    style: const TextStyle(color: Colors.grey, fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ConnectedAtCard extends StatelessWidget {
+  final DateTime trnDate;
+  const ConnectedAtCard({required this.trnDate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Connected',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              '${trnDate.day} ${months[trnDate.month - 1]}, '
+              '${trnDate.hour}:${trnDate.minute.toString().padLeft(2, '0')}',
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ],
         ),
       ),
     );
