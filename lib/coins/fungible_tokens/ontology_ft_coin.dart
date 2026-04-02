@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wallet_app/coins/ontology_coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
-import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/app_config.dart';
 
 class OntologyFungibleCoin extends OntologyCoin implements FTExplorer {

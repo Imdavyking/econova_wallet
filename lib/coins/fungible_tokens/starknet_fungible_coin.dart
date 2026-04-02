@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
-import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/app_config.dart';
 
 class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
