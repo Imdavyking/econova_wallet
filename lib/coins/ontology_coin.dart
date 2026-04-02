@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/ecc/curves/prime256v1.dart';
+import 'package:wallet_app/coins/fungible_tokens/ontology_ft_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import '../interface/coin.dart';
 import '../main.dart';
@@ -268,6 +269,8 @@ class OntologyCoin extends Coin {
   }
 
   @override
+  List<Coin> get networkTokens => getOntologyFungibleCoins();
+  @override
   Future<double> getTransactionFee(String amount, String to) async => 0.01;
 
   @override
@@ -407,22 +410,6 @@ List<OntologyCoin> getOntologyBlockChains() {
         contractAddress: '0000000000000000000000000000000000000001',
         caipReference: '2',
       ),
-      OntologyCoin(
-        name: 'Ontology Gas (Testnet)',
-        symbol: 'ONG',
-        default_: 'ONG',
-        blockExplorer:
-            'https://explorer.ont.io/testnet/tx/$blockExplorerPlaceholder',
-        image: 'assets/ong.png',
-        rpcUrl: 'http://polaris1.ont.io:20336',
-        geckoID: 'ong',
-        rampID: '',
-        payScheme: 'ontology',
-        isTestnet_: true,
-        coinDecimals: 9,
-        contractAddress: '0000000000000000000000000000000000000002',
-        caipReference: '2', // ONG contract
-      ),
     ];
   }
 
@@ -440,22 +427,6 @@ List<OntologyCoin> getOntologyBlockChains() {
       coinDecimals: 0,
       isTestnet_: false,
       contractAddress: '0000000000000000000000000000000000000001',
-      caipReference: '1',
-    ),
-    OntologyCoin(
-      name: 'Ontology Gas',
-      symbol: 'ONG',
-      default_: 'ONG',
-      blockExplorer: 'https://explorer.ont.io/tx/$blockExplorerPlaceholder',
-      image: 'assets/ong.png',
-      rpcUrl: 'http://dappnode1.ont.io:20336',
-      geckoID: 'ong',
-      rampID: '',
-      payScheme: 'ontology',
-      isTestnet_: false,
-      coinDecimals: 9,
-      contractAddress:
-          '0000000000000000000000000000000000000002', // ONG contract
       caipReference: '1',
     ),
   ];
