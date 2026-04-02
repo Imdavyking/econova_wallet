@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:bs58check/bs58check.dart' hide getAddress;
 import 'package:hex/hex.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -1177,6 +1178,97 @@ class SolanaCoin extends Coin {
     }
 
     return publicKey.toBase58();
+  }
+
+  /// Decodes a compact-u16 (Solana's variable-length encoding).
+  /// Returns (value, bytesConsumed).
+  static (int, int) _compactU16(Uint8List b, int offset) {
+    int result = 0, shift = 0, read = 0;
+    while (true) {
+      final byte = b[offset + read++];
+      result |= (byte & 0x7F) << shift;
+      if ((byte & 0x80) == 0) break;
+      shift += 7;
+    }
+    return (result, read);
+  }
+
+  /// Extracts (feePayer, transferRecipient?) from a serialized Solana tx.
+  /// Works for both legacy and versioned (v0) transactions.
+  static (String? from, String? to) extractFromTo(Uint8List txBytes) {
+    try {
+      int cursor = 0;
+
+      // ── 1. Skip signatures ─────────────────────────────────────────────────
+      // Versioned tx starts with 0x80|version prefix before the sig count.
+      // Legacy tx starts directly with the sig count.
+      final firstByte = txBytes[cursor];
+      if (firstByte & 0x80 != 0) cursor++; // skip version prefix byte
+
+      final sigCount = txBytes[cursor++];
+      cursor += sigCount * 64; // each signature is 64 bytes
+
+      // ── 2. Parse message header (3 bytes) ──────────────────────────────────
+      cursor += 3;
+
+      // ── 3. Decode account key count (compact-u16) ─────────────────────────
+      final (accountCount, accountCountLen) = _compactU16(txBytes, cursor);
+      cursor += accountCountLen;
+
+      if (accountCount == 0) return (null, null);
+
+      // ── 4. Read all 32-byte public keys ────────────────────────────────────
+      final pubkeys = <String>[];
+      for (int i = 0; i < accountCount; i++) {
+        final keyBytes = txBytes.sublist(cursor, cursor + 32);
+        pubkeys.add(base58.encode(keyBytes));
+        cursor += 32;
+      }
+
+      // Account[0] is always the fee-payer / primary signer → "from"
+      final from = pubkeys[0];
+
+      // ── 5. Skip recent blockhash (32 bytes) ────────────────────────────────
+      cursor += 32;
+
+      // ── 6. Scan instructions for a SOL transfer ────────────────────────────
+      // System Program: 11111111111111111111111111111111
+      const systemProgram = '11111111111111111111111111111111';
+
+      final (ixCount, ixCountLen) = _compactU16(txBytes, cursor);
+      cursor += ixCountLen;
+
+      String? to;
+      for (int i = 0; i < ixCount; i++) {
+        final programIndex = txBytes[cursor++];
+
+        final (acctCount, acctCountLen) = _compactU16(txBytes, cursor);
+        cursor += acctCountLen;
+        final ixAccounts = txBytes.sublist(cursor, cursor + acctCount);
+        cursor += acctCount;
+
+        final (dataLen, dataLenLen) = _compactU16(txBytes, cursor);
+        cursor += dataLenLen;
+        final data = txBytes.sublist(cursor, cursor + dataLen);
+        cursor += dataLen;
+
+        // System Program transfer discriminator = [2, 0, 0, 0]
+        if (pubkeys[programIndex] == systemProgram &&
+            data.length >= 4 &&
+            data[0] == 2 &&
+            data[1] == 0 &&
+            data[2] == 0 &&
+            data[3] == 0 &&
+            acctCount >= 2) {
+          to = pubkeys[ixAccounts[1]];
+          break;
+        }
+      }
+
+      return (from, to);
+    } catch (_) {
+      return (null, null);
+    }
   }
 
   solana.SolanaClient getProxy() {

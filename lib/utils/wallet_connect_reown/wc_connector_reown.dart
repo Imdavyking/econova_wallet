@@ -527,14 +527,16 @@ class WCConnectorReown {
 
             // Decode for fee/simulation display
             final txBytes = base58.decode(txBase58);
+            final (fromAddr, toAddr) = SolanaCoin.extractFromTo(txBytes);
+
             final feeMessageB64 = base64Encode(txBytes);
             final fee = await coin.getFeeForMessage(feeMessageB64);
             if (!_context.mounted) return;
             await signTransactionUI(
               // Reuse the EVM sign sheet — swap for a Solana-specific one if you have it
               gasPriceInWei_: null,
-              to: null,
-              from: '',
+              from: fromAddr ?? '',
+              to: toAddr,
               txData: txBase58,
               valueInWei_: null,
               gasInWei_: fee.toString(),
@@ -588,6 +590,7 @@ class WCConnectorReown {
                 : '';
             final coin = getSolanaBlockChains().first;
             final txBytes = base58.decode(txBase58);
+            final (fromAddr, toAddr) = SolanaCoin.extractFromTo(txBytes);
             final feeMessageB64 = base64Encode(txBytes);
             final fee = await coin.getFeeForMessage(feeMessageB64);
 
@@ -595,8 +598,8 @@ class WCConnectorReown {
 
             await signTransactionUI(
               gasPriceInWei_: null,
-              to: null,
-              from: '',
+              from: fromAddr ?? '',
+              to: toAddr,
               txData: txBase58,
               valueInWei_: null,
               gasInWei_: fee.toString(),

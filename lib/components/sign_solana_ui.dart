@@ -18,6 +18,8 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 // ignore: implementation_imports
 import 'package:solana/src/encoder/instruction.dart' as encoder;
 
+/// Holds the result of a Solana transaction simulation: the estimated fee
+/// (in SOL) and a human-readable list of balance changes / actions.
 class SolanaSimuRes {
   final double fee;
   final List<String> result;
@@ -28,6 +30,26 @@ class SolanaSimuRes {
   });
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/// Base fee per signature, in lamports.
+const int _lamportsPerSignature = 5000;
+
+// ─── Simulation ───────────────────────────────────────────────────────────────
+
+/// Simulates a legacy Solana transaction and returns the estimated fee and a
+/// list of human-readable balance-change descriptions.
+///
+/// Known fixes vs. the original implementation:
+///  1. Fee: was `0.000005 / pow(10, solDecimals)` (double-divides by 1 SOL).
+///     Now: `signerCount * _lamportsPerSignature / pow(10, solDecimals)`.
+///  2. SOL balance: `getBalance` returns `Future<int>` — the original cast it
+///     directly to `int`, silently storing the Future object reference. Now
+///     awaited before entering the `putIfAbsent` call.
+///  3. Signer count: the original incremented a counter for every signer key
+///     across every instruction, causing duplicate-counting for keys that
+///     appear in multiple instructions. Now tracked as a `Set<String>` of
+///     unique pubkeys.
 Future<SolanaSimuRes> dappSimulateTrx(
   SolanaTransactionLegacy solanaWeb3Res,
   solana.Ed25519HDKeyPair solanaKeyPair,
@@ -36,161 +58,153 @@ Future<SolanaSimuRes> dappSimulateTrx(
   int solDecimals,
 ) async {
   final blockHash = solanaWeb3Res.recentBlockhash;
-  final instructions = solanaWeb3Res.instructions!;
-  int signers = 0;
-  int totalSolDiff = 0;
-  List<String> simulationAction = [];
-  Map<String, int> tokenBalances = {};
+  final instructions = solanaWeb3Res.instructions ?? [];
+
+  // Fix #3 — unique signer pubkeys, not a raw increment per instruction-key.
+  final signerPubkeys = <String>{};
+  int totalLamportsDiff = 0;
+  final List<String> simulationActions = [];
+  final Map<String, int> tokenBalances = {};
 
   for (final instruct in instructions) {
     final keys = instruct.keys!;
-    List<encoder.Instruction> instructionsList = [];
-    List<String> accountsPub = [];
-    List<AccountMeta> accounts = [];
+    final List<encoder.Instruction> encodedInstructions = [];
+    final List<String> accountPubkeys = [];
+    final List<AccountMeta> accountMetas = [];
 
     for (final key in keys) {
-      final pubKeyStr = key.pubkey;
-      if (key.isSigner) signers++;
-      accountsPub.add(pubKeyStr);
-      final pubKey = solana.Ed25519HDPublicKey.fromBase58(pubKeyStr);
-
-      accounts.add(
-        key.isWritable
-            ? AccountMeta(
-                pubKey: pubKey,
-                isSigner: key.isSigner,
-                isWriteable: true,
-              )
-            : AccountMeta(
-                pubKey: pubKey,
-                isSigner: key.isSigner,
-                isWriteable: false,
-              ),
+      if (key.isSigner) signerPubkeys.add(key.pubkey); // Fix #3
+      accountPubkeys.add(key.pubkey);
+      final pubKey = solana.Ed25519HDPublicKey.fromBase58(key.pubkey);
+      accountMetas.add(
+        AccountMeta(
+          pubKey: pubKey,
+          isSigner: key.isSigner,
+          isWriteable: key.isWritable,
+        ),
       );
     }
 
-    final instructData = instruct.data!.data!;
     final programId = instruct.programId;
-
-    instructionsList.add(
+    encodedInstructions.add(
       encoder.Instruction(
         programId: solana.Ed25519HDPublicKey.fromBase58(programId),
-        accounts: accounts,
+        accounts: accountMetas,
         data: ByteArray.fromBase58(
-          base58.encode(
-            Uint8List.fromList(instructData),
-          ),
+          base58.encode(Uint8List.fromList(instruct.data!.data!)),
         ),
       ),
     );
 
-    final message = solana.Message(
-      instructions: instructionsList,
-    );
-
-    final compiledMessage = message.compile(
+    final compiledMessage =
+        solana.Message(instructions: encodedInstructions).compile(
       recentBlockhash: blockHash,
       feePayer: solanaKeyPair.publicKey,
     );
 
-    final encodedMessage = compiledMessage.toByteArray().toList();
-
     final fees = await coin.getProxy().rpcClient.getFeeForMessage(
-          base64.encode(encodedMessage),
+          base64.encode(compiledMessage.toByteArray().toList()),
           commitment: solana.Commitment.processed,
         );
 
     try {
       final tx = await solanaKeyPair.signMessage(
         recentBlockhash: blockHash,
-        message: solana.Message(instructions: instructionsList),
+        message: solana.Message(instructions: encodedInstructions),
       );
       final simResult = await coin.getProxy().rpcClient.simulateTransaction(
             tx.encode(),
             commitment: solana.Commitment.processed,
             accounts: SimulateTransactionAccounts(
               encoding: Encoding.base58,
-              addresses: accountsPub,
+              addresses: accountPubkeys,
             ),
           );
 
-      final result = simResult.value;
+      final value = simResult.value;
+      if (value.err != null) throw Exception(value.err.toString());
 
-      if (result.err != null) throw Exception(result.err.toString());
+      final accountsResult = value.accounts;
+      if (accountsResult == null || accountsResult.isEmpty) continue;
 
-      final accountsResult = result.accounts;
-      if (accountsResult != null && accountsResult.isNotEmpty) {
-        int index = -1;
-        for (final account in accountsResult) {
-          index++;
-          if (account.data is BinaryAccountData) {
-            final accountData = account.data as BinaryAccountData;
+      for (int i = 0; i < accountsResult.length; i++) {
+        final account = accountsResult[i];
+        if (account.data is! BinaryAccountData) continue;
+        final accountData = account.data as BinaryAccountData;
 
-            if (solana.TokenProgram.programId == account.owner) {
-              if (accountData.data.length != 165) continue;
+        if (solana.TokenProgram.programId == account.owner) {
+          if (accountData.data.length != 165) continue;
 
-              final tokenInfo = SolTokenInfo.decode(account);
+          final tokenInfo = SolTokenInfo.decode(account);
+          if (tokenInfo.authority != solanaKeyPair.publicKey) continue;
 
-              if (tokenInfo.authority != solanaKeyPair.publicKey) continue;
-
-              final key = '${tokenInfo.authority}${tokenInfo.mint}';
-
-              final tokenAmt = await coin.getProxy().getTokenBalance(
-                    owner: tokenInfo.authority,
-                    mint: tokenInfo.mint,
-                    commitment: Commitment.processed,
-                  );
-
-              tokenBalances.putIfAbsent(key, () => int.parse(tokenAmt.amount));
-
-              final currentBalance = tokenBalances[key]!;
-              final diff = tokenInfo.balance - currentBalance;
-              final balanceDiff = diff / pow(10, tokenAmt.decimals);
-
-              if (balanceDiff != 0) {
-                simulationAction.add(
-                  '${balanceDiff > 0 ? '+' : ''}$balanceDiff ${tokenInfo.mint.toBase58()}',
+          final cacheKey = '${tokenInfo.authority}${tokenInfo.mint}';
+          if (!tokenBalances.containsKey(cacheKey)) {
+            final tokenAmt = await coin.getProxy().getTokenBalance(
+                  owner: tokenInfo.authority,
+                  mint: tokenInfo.mint,
+                  commitment: Commitment.processed,
                 );
-              } else if (tokenInfo.delegateAmt != 0) {
-                simulationAction.add(
-                  'Approve ${tokenInfo.delegateAmt / pow(10, tokenAmt.decimals)} ${tokenInfo.mint} to ${tokenInfo.delegate}',
-                );
-              }
-            } else if (solana.SystemProgram.programId == account.owner) {
-              if (accountsPub[index] != solanaKeyPair.address) continue;
-
-              final key = '${solanaKeyPair.address}${account.owner}';
-
-              tokenBalances.putIfAbsent(
-                  key,
-                  () => coin.getProxy().rpcClient.getBalance(
-                        solanaKeyPair.address,
-                        commitment: solana.Commitment.processed,
-                      ) as int);
-
-              final getBalance = tokenBalances[key]!;
-
-              totalSolDiff += account.lamports - getBalance + fees!;
-            }
+            tokenBalances[cacheKey] = int.parse(tokenAmt.amount);
           }
+
+          final tokenAmt = await coin.getProxy().getTokenBalance(
+                owner: tokenInfo.authority,
+                mint: tokenInfo.mint,
+                commitment: Commitment.processed,
+              );
+          final diff = (tokenInfo.balance - tokenBalances[cacheKey]!) /
+              pow(10, tokenAmt.decimals);
+
+          if (diff != 0) {
+            simulationActions.add(
+              '${diff > 0 ? '+' : ''}$diff ${tokenInfo.mint.toBase58()}',
+            );
+          } else if (tokenInfo.delegateAmt != 0) {
+            simulationActions.add(
+              'Approve ${tokenInfo.delegateAmt / pow(10, tokenAmt.decimals)}'
+              ' ${tokenInfo.mint} to ${tokenInfo.delegate}',
+            );
+          }
+        } else if (solana.SystemProgram.programId == account.owner) {
+          if (accountPubkeys[i] != solanaKeyPair.address) continue;
+
+          final balanceCacheKey = '${solanaKeyPair.address}${account.owner}';
+
+          if (!tokenBalances.containsKey(balanceCacheKey)) {
+            // Fix #2 — await the Future before storing in the map.
+            final currentLamports = await coin.getProxy().rpcClient.getBalance(
+                  solanaKeyPair.address,
+                  commitment: solana.Commitment.processed,
+                );
+            tokenBalances[balanceCacheKey] = currentLamports.value;
+          }
+
+          totalLamportsDiff +=
+              account.lamports - tokenBalances[balanceCacheKey]! + (fees ?? 0);
         }
       }
     } catch (e, stack) {
       if (kDebugMode) {
-        print('Simulation error: $e');
-        print(stack);
+        debugPrint('Simulation error: $e');
+        debugPrint(stack.toString());
       }
     }
   }
 
-  final balanceDiff = totalSolDiff / pow(10, solDecimals);
-  if (balanceDiff != 0) {
-    simulationAction.add('${balanceDiff > 0 ? '+' : ''}$balanceDiff $symbol');
+  final solDiff = totalLamportsDiff / pow(10, solDecimals);
+  if (solDiff != 0) {
+    simulationActions.add('${solDiff > 0 ? '+' : ''}$solDiff $symbol');
   }
 
-  final txFee = 0.000005 / pow(10, solDecimals);
-  return SolanaSimuRes(fee: signers * txFee, result: simulationAction);
+  // Fix #1 — fee is lamports-per-signature × unique-signers, converted to SOL.
+  final fee =
+      signerPubkeys.length * _lamportsPerSignature / pow(10, solDecimals);
+
+  return SolanaSimuRes(fee: fee, result: simulationActions);
 }
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
 
 Widget buildSignTransactionUI({
   required BuildContext context,
@@ -208,16 +222,12 @@ Widget buildSignTransactionUI({
 
   return Column(
     children: [
-      // Header
-      _buildHeader(context, localization, onReject),
-      // Tab Bar
-      _buildTabBar(),
-      // Tab View
+      _Header(localization: localization, onReject: onReject),
+      _tabBar(),
       Expanded(
         child: TabBarView(
           children: [
-            _buildDetailsTab(
-              context: context,
+            _DetailsTab(
               from: from,
               networkIcon: networkIcon,
               name: name,
@@ -238,188 +248,223 @@ Widget buildSignTransactionUI({
               onReject: onReject,
               localization: localization,
             ),
-            _buildRawTab(txData ?? '0x'),
+            _RawTab(txData: txData ?? ''),
           ],
         ),
-      )
+      ),
     ],
   );
 }
 
-Widget _buildHeader(BuildContext context, AppLocalizations localization,
-    VoidCallback onReject) {
-  return Container(
-    alignment: Alignment.center,
-    padding: const EdgeInsets.only(bottom: 8.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const SizedBox(width: 48), // Placeholder for close button space
-        Text(
-          localization.signTransaction,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+// ─── Private widgets ──────────────────────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  final AppLocalizations localization;
+  final VoidCallback onReject;
+
+  const _Header({required this.localization, required this.onReject});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const SizedBox(width: 48),
+          Text(
+            localization.signTransaction,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
-        ),
-        IconButton(
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              onReject();
-            }
-          },
-          icon: const Icon(Icons.close),
-        ),
-      ],
-    ),
-  );
+          IconButton(
+            onPressed: Navigator.canPop(context) ? onReject : null,
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-Widget _buildTabBar() {
-  return const SizedBox(
-    height: 50,
-    child: TabBar(
-      tabs: [
-        Tab(
-          icon: Text(
-            "Details",
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w500, color: orangTxt),
+Widget _tabBar() => const SizedBox(
+      height: 50,
+      child: TabBar(
+        tabs: [
+          Tab(
+            child: Text(
+              'Details',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: orangTxt,
+              ),
+            ),
           ),
-        ),
-        Tab(
-          icon: Text(
-            "Raw",
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.w500, color: orangTxt),
+          Tab(
+            child: Text(
+              'Raw',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: orangTxt,
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
 
-Widget _buildDetailsTab({
-  required BuildContext context,
-  required String from,
-  required String? networkIcon,
-  required String? name,
-  required String symbol,
-  required SolanaSimuRes simulationResult,
-  required ValueNotifier<bool> isSigning,
-  required VoidCallback onConfirm,
-  required VoidCallback onReject,
-  required AppLocalizations localization,
-}) {
-  print('resutl: ${simulationResult.result}');
-  return SingleChildScrollView(
-    child: Padding(
+class _DetailsTab extends StatelessWidget {
+  final String from;
+  final String? networkIcon;
+  final String? name;
+  final String symbol;
+  final SolanaSimuRes simulationResult;
+  final ValueNotifier<bool> isSigning;
+  final VoidCallback onConfirm;
+  final VoidCallback onReject;
+  final AppLocalizations localization;
+
+  const _DetailsTab({
+    required this.from,
+    required this.networkIcon,
+    required this.name,
+    required this.symbol,
+    required this.simulationResult,
+    required this.isSigning,
+    required this.onConfirm,
+    required this.onReject,
+    required this.localization,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (networkIcon != null)
-            Container(
+          if (networkIcon != null) ...[
+            SizedBox(
               height: 50,
               width: 50,
-              padding: const EdgeInsets.only(bottom: 8),
               child: CachedNetworkImage(
-                imageUrl: ipfsTohttp(networkIcon),
+                imageUrl: ipfsTohttp(networkIcon!),
                 placeholder: (_, __) => const Loader(color: appPrimaryColor),
                 errorWidget: (_, __, ___) =>
                     const Icon(Icons.error, color: Colors.red),
               ),
             ),
-          if (name != null)
-            Text(name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.normal, fontSize: 16)),
-          const SizedBox(height: 12),
-          Text(localization.from,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          Text(from, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+          ],
+          if (name != null) ...[
+            Text(name!, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+          ],
+          _LabelValue(label: localization.from, value: from),
           const SizedBox(height: 16),
-          ...simulationResult.result.map((action) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(localization.action,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text(action, style: const TextStyle(fontSize: 16)),
-                  ],
-                ),
-              )),
+          ...simulationResult.result.map(
+            (action) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _LabelValue(label: localization.action, value: action),
+            ),
+          ),
           const SizedBox(height: 16),
-          Text(localization.transactionFee,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          Text('${simulationResult.fee} $symbol',
-              style: const TextStyle(fontSize: 16)),
+          _LabelValue(
+            label: localization.transactionFee,
+            value: '${simulationResult.fee} $symbol',
+          ),
           const SizedBox(height: 20),
           ValueListenableBuilder<bool>(
             valueListenable: isSigning,
-            builder: (_, signing, __) {
-              if (signing) {
-                return const Center(child: Loader());
-              }
-              return Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onConfirm,
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        backgroundColor: appBackgroundblue,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15)),
-                      ),
-                      child: Text(
-                        localization.confirm,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.0,
-                        ),
-                      ),
-                    ),
+            builder: (_, signing, __) => signing
+                ? const Center(child: Loader())
+                : _ActionButtons(
+                    onConfirm: onConfirm,
+                    onReject: onReject,
+                    localization: localization,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextButton(
-                      onPressed: onReject,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        backgroundColor: appBackgroundblue,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15)),
-                      ),
-                      child: Text(
-                        localization.reject,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.0,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-Widget _buildRawTab(String txData) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(25),
-    child: Text(txData),
-  );
+class _LabelValue extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _LabelValue({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(fontSize: 16)),
+      ],
+    );
+  }
+}
+
+class _ActionButtons extends StatelessWidget {
+  final VoidCallback onConfirm;
+  final VoidCallback onReject;
+  final AppLocalizations localization;
+
+  const _ActionButtons({
+    required this.onConfirm,
+    required this.onReject,
+    required this.localization,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonStyle = ElevatedButton.styleFrom(
+      foregroundColor: Colors.black,
+      backgroundColor: appBackgroundblue,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    );
+    const labelStyle = TextStyle(
+      fontWeight: FontWeight.bold,
+      fontSize: 18.0,
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: onConfirm,
+            style: buttonStyle,
+            child: Text(localization.confirm, style: labelStyle),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: onReject,
+            style: buttonStyle,
+            child: Text(localization.reject, style: labelStyle),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RawTab extends StatelessWidget {
+  final String txData;
+
+  const _RawTab({required this.txData});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(25),
+      child: SelectableText(txData),
+    );
+  }
 }
