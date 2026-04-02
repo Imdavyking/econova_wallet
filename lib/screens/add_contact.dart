@@ -188,6 +188,11 @@ class _AddContactState extends State<AddContact> {
                       builder: (_, ctrl, __) {
                         final addr = ctrl.text.trim();
                         if (addr.isEmpty) return const SizedBox.shrink();
+                        try {
+                          _coin.validateAddress(addr);
+                        } catch (e) {
+                          return const SizedBox.shrink();
+                        }
                         final identicon =
                             _coin.getExplorerIdenticon(addr, size: 56);
                         if (identicon == null) return const SizedBox.shrink();

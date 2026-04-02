@@ -114,13 +114,16 @@ class _SettingsState extends State<Settings>
                       // ── Account ───────────────────────────────────────────
                       _SectionHeader(label: localization.account),
                       const SizedBox(height: 10),
-                      Card(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(15)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                          child: UserDetailsPlaceHolder(textSize: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: Card(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(15)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                            child: UserDetailsPlaceHolder(textSize: 18),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
