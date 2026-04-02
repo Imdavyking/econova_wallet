@@ -19,6 +19,7 @@ import 'package:multiversx_sdk/multiversx.dart' as multiversx;
 class ESDTCoin extends MultiversxCoin implements FTExplorer {
   String identifier;
   int mintDecimals;
+
   ESDTCoin({
     required super.blockExplorer,
     required super.symbol,
@@ -34,6 +35,31 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
           rampID: '',
           payScheme: '',
         );
+
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory ESDTCoin.fromParent({
+    required MultiversxCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String identifier,
+    required int mintDecimals,
+  }) =>
+      ESDTCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        rpc: parent.rpc,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        identifier: identifier,
+        mintDecimals: mintDecimals,
+      );
 
   @override
   Widget? getNFTPage() => null;
@@ -181,67 +207,48 @@ class ESDTCoin extends MultiversxCoin implements FTExplorer {
 }
 
 List<ESDTCoin> getESDTCoins() {
-  List<ESDTCoin> blockChains = [];
-  if (enableTestNet) {
-    blockChains.addAll([]);
-  } else {
-    blockChains.addAll([
-      ESDTCoin(
-        name: 'AshSwap',
-        geckoID: "ashswap",
-        symbol: 'ASH',
-        default_: 'EGLD',
-        blockExplorer:
-            'https://explorer.multiversx.com/transactions/$blockExplorerPlaceholder',
-        image: 'assets/ashswap.png',
-        rpc: 'https://gateway.multiversx.com/',
-        identifier: 'ASH-a642d1',
-        mintDecimals: 18,
-        caipReference: '1',
-      ),
-      ESDTCoin(
-        name: 'WrappedEGLD',
-        symbol: 'WEGLD',
-        default_: 'EGLD',
-        blockExplorer:
-            'https://explorer.multiversx.com/transactions/$blockExplorerPlaceholder',
-        image: 'assets/wEGLD.png',
-        rpc: 'https://gateway.multiversx.com/',
-        identifier: 'WEGLD-bd4d79',
-        mintDecimals: 18,
-        geckoID: "wrapped-elrond",
-        caipReference: '1',
-      ),
-      ESDTCoin(
-        name: 'USDC',
-        symbol: 'USDC',
-        default_: 'EGLD',
-        blockExplorer:
-            'https://explorer.multiversx.com/transactions/$blockExplorerPlaceholder',
-        image: 'assets/wusd.png',
-        rpc: 'https://gateway.multiversx.com/',
-        identifier: 'USDC-c76f1f',
-        mintDecimals: 6,
-        geckoID: 'usd-coin',
-        caipReference: '1',
-      ),
-      ESDTCoin(
-        name: 'ZoidPay',
-        symbol: 'ZPAY',
-        default_: 'EGLD',
-        blockExplorer:
-            'https://explorer.multiversx.com/transactions/$blockExplorerPlaceholder',
-        image: 'assets/zpay.png',
-        rpc: 'https://gateway.multiversx.com/',
-        identifier: 'ZPAY-247875',
-        mintDecimals: 18,
-        geckoID: "zoid-pay",
-        caipReference: '1',
-      ),
-    ]);
-  }
+  if (enableTestNet) return [];
 
-  return blockChains;
+  final parent = getChains<MultiversxCoin>().first;
+
+  return [
+    ESDTCoin.fromParent(
+      parent: parent,
+      name: 'AshSwap',
+      symbol: 'ASH',
+      image: 'assets/ashswap.png',
+      geckoID: 'ashswap',
+      identifier: 'ASH-a642d1',
+      mintDecimals: 18,
+    ),
+    ESDTCoin.fromParent(
+      parent: parent,
+      name: 'WrappedEGLD',
+      symbol: 'WEGLD',
+      image: 'assets/wEGLD.png',
+      geckoID: 'wrapped-elrond',
+      identifier: 'WEGLD-bd4d79',
+      mintDecimals: 18,
+    ),
+    ESDTCoin.fromParent(
+      parent: parent,
+      name: 'USDC',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      identifier: 'USDC-c76f1f',
+      mintDecimals: 6,
+    ),
+    ESDTCoin.fromParent(
+      parent: parent,
+      name: 'ZoidPay',
+      symbol: 'ZPAY',
+      image: 'assets/zpay.png',
+      geckoID: 'zoid-pay',
+      identifier: 'ZPAY-247875',
+      mintDecimals: 18,
+    ),
+  ];
 }
 
 class _TrxCoinParams {

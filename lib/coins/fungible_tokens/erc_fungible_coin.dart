@@ -43,6 +43,31 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
   @override
   int decimals() => mintDecimals;
 
+  factory ERCFungibleCoin.fromParent({
+    required EthereumCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String contractAddress,
+    required int mintDecimals,
+  }) =>
+      ERCFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        rpc: parent.rpc,
+        chainId: parent.chainId,
+        coinType: parent.coinType,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        contractAddress_: contractAddress,
+        mintDecimals: mintDecimals,
+      );
+
   ERCFungibleCoin({
     required super.blockExplorer,
     required super.chainId,
@@ -493,66 +518,58 @@ class ERCFungibleCoin extends EthereumCoin implements FTExplorer {
 }
 
 List<ERCFungibleCoin> getERC20Coins() {
-  List<ERCFungibleCoin> blockChains = [];
+  EthereumCoin parent(int chainId) =>
+      getEVMBlockchains().firstWhere((c) => c.chainId == chainId);
+
+  final List<ERCFungibleCoin> blockChains;
+
   if (enableTestNet) {
-    blockChains.addAll([
-      ERCFungibleCoin(
-        contractAddress_: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    final sepolia = parent(11155111);
+    blockChains = [
+      ERCFungibleCoin.fromParent(
+        parent: sepolia,
         name: 'USD Coin',
         symbol: 'USDC',
-        mintDecimals: 6,
-        rpc: 'https://sepolia.infura.io/v3/$infuraApiKey',
-        chainId: 11155111,
-        blockExplorer:
-            'https://sepolia.etherscan.io/tx/$blockExplorerPlaceholder',
-        default_: 'ETH',
         image: 'assets/wusd.png',
-        coinType: 60,
         geckoID: 'usd-coin',
+        contractAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+        mintDecimals: 6,
       ),
-    ]);
+    ];
   } else {
-    blockChains.addAll([
-      ERCFungibleCoin(
-        contractAddress_: '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+    final bsc = parent(56);
+    final base = parent(8453);
+    final eth = parent(1);
+
+    blockChains = [
+      ERCFungibleCoin.fromParent(
+        parent: bsc,
         name: 'BUSD Token',
-        symbol: "BUSD",
-        mintDecimals: 18,
-        rpc: 'https://bsc-dataseed.binance.org/',
-        chainId: 56,
-        blockExplorer: 'https://bscscan.com/tx/$blockExplorerPlaceholder',
-        default_: 'BNB',
+        symbol: 'BUSD',
         image: 'assets/busd.png',
-        coinType: 60,
-        geckoID: "binance-usd",
+        geckoID: 'binance-usd',
+        contractAddress: '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+        mintDecimals: 18,
       ),
-      ERCFungibleCoin(
-        contractAddress_: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      ERCFungibleCoin.fromParent(
+        parent: base,
         name: 'USD Coin',
         symbol: 'USDC',
-        mintDecimals: 6,
-        rpc: 'https://mainnet.base.org',
-        chainId: 8453,
-        blockExplorer: 'https://explorer.base.org/tx/$blockExplorerPlaceholder',
-        default_: 'ETH',
         image: 'assets/wusd.png',
-        coinType: 60,
         geckoID: 'usd-coin',
+        contractAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        mintDecimals: 6,
       ),
-      ERCFungibleCoin(
-        contractAddress_: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      ERCFungibleCoin.fromParent(
+        parent: eth,
         name: 'USD Coin',
         symbol: 'USDC',
-        mintDecimals: 6,
-        rpc: 'https://mainnet.infura.io/v3/$infuraApiKey',
-        chainId: 1,
-        blockExplorer: 'https://etherscan.io/tx/$blockExplorerPlaceholder',
-        default_: 'ETH',
         image: 'assets/wusd.png',
-        coinType: 60,
         geckoID: 'usd-coin',
+        contractAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        mintDecimals: 6,
       ),
-    ]);
+    ];
   }
 
   final raw = pref.get(ERCFungibleCoin._tokenMapKey) as String?;

@@ -6,6 +6,7 @@ import 'package:wallet_app/utils/app_config.dart';
 
 class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
   int mintDecimals;
+
   StarknetFungibleCoin({
     required super.blockExplorer,
     required super.symbol,
@@ -26,6 +27,39 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
           rampID: '',
           payScheme: '',
         );
+
+  /// Inherits all network infrastructure from [parent] — only pass
+  /// token-specific fields. Use [blockExplorerOverride] when a token uses a
+  /// different explorer than the parent chain (e.g. Starkscan vs Voyager).
+  factory StarknetFungibleCoin.fromParent({
+    required StarknetCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String tokenContractAddress,
+    required int mintDecimals,
+    String? blockExplorerOverride,
+  }) =>
+      StarknetFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: blockExplorerOverride ?? parent.blockExplorer,
+        api: parent.api,
+        classHash: parent.classHash,
+        tokenClassHash: parent.tokenClassHash,
+        factoryAddress: parent.factoryAddress,
+        multiCallAddress: parent.multiCallAddress,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        useStarkToken: false, // always false for fungible tokens
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        tokenContractAddress: tokenContractAddress,
+        mintDecimals: mintDecimals,
+      );
 
   @override
   String contractExplorer() {
@@ -54,81 +88,43 @@ class StarknetFungibleCoin extends StarknetCoin implements FTExplorer {
 }
 
 List<StarknetFungibleCoin> getStarknetFungibleCoins() {
-  List<StarknetFungibleCoin> blockChains = [];
+  final parent = getChains<StarknetCoin>().first;
+
   if (enableTestNet) {
-    blockChains.addAll([
-      StarknetFungibleCoin(
-        multiCallAddress:
-            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer:
-            'https://sepolia.voyager.online/tx/$blockExplorerPlaceholder',
-        api:
-            "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
-        classHash:
-            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: StarknetMainAddress.ethAddress,
-        symbol: 'ETH (STRK)',
+    return [
+      StarknetFungibleCoin.fromParent(
+        parent: parent,
         name: 'Ethereum (STRK)',
-        default_: 'STRK',
-        image: 'assets/ethereum_logo.png',
-        geckoID: "ethereum",
-        useStarkToken: false,
-        tokenClassHash:
-            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
-        factoryAddress:
-            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
-        mintDecimals: 18,
-        caipReference: 'SN_SEPOLIA',
-      ),
-    ]);
-  } else {
-    blockChains.addAll([
-      StarknetFungibleCoin(
-        multiCallAddress:
-            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer: 'https://voyager.online/tx/$blockExplorerPlaceholder',
-        api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
-        classHash:
-            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: StarknetMainAddress.ethAddress,
         symbol: 'ETH (STRK)',
-        name: 'Ethereum (STRK)',
-        default_: 'STRK',
         image: 'assets/ethereum_logo.png',
-        geckoID: "ethereum",
-        useStarkToken: false,
-        tokenClassHash:
-            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
-        factoryAddress:
-            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
+        geckoID: 'ethereum',
+        tokenContractAddress: StarknetMainAddress.ethAddress,
         mintDecimals: 18,
-        caipReference: 'SN_MAIN',
       ),
-      StarknetFungibleCoin(
-        name: 'USDC',
-        symbol: 'USDC',
-        image: 'assets/wusd.png',
-        geckoID: 'usd-coin',
-        multiCallAddress:
-            '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225',
-        blockExplorer: 'https://starkscan.co/tx/$blockExplorerPlaceholder',
-        api:
-            "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/$alchemyStarknetApiKey",
-        classHash:
-            '0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564',
-        tokenContractAddress: StarknetMainAddress.usdcAddress,
-        default_: 'STRK',
-        useStarkToken: false,
-        tokenClassHash:
-            '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17',
-        factoryAddress:
-            '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc',
-        mintDecimals: 6,
-        caipReference: 'SN_MAIN',
-      ),
-    ]);
+    ];
   }
 
-  return blockChains;
+  return [
+    StarknetFungibleCoin.fromParent(
+      parent: parent,
+      name: 'Ethereum (STRK)',
+      symbol: 'ETH (STRK)',
+      image: 'assets/ethereum_logo.png',
+      geckoID: 'ethereum',
+      tokenContractAddress: StarknetMainAddress.ethAddress,
+      mintDecimals: 18,
+      // ETH(STRK) uses voyager — same as parent, no override needed
+    ),
+    StarknetFungibleCoin.fromParent(
+      parent: parent,
+      name: 'USDC',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      tokenContractAddress: StarknetMainAddress.usdcAddress,
+      mintDecimals: 6,
+      blockExplorerOverride:
+          'https://starkscan.co/tx/$blockExplorerPlaceholder',
+    ),
+  ];
 }

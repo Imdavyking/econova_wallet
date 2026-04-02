@@ -34,6 +34,38 @@ class CosmosFungibleCoin extends CosmosCoin implements FTExplorer {
   /// If null, falls back to the parent chain lookup.
   final String? badgeImageOverride;
 
+  factory CosmosFungibleCoin.fromParent({
+    required CosmosCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String denom,
+    required int mintDecimals,
+  }) =>
+      CosmosFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        lcdUrl: parent.lcdUrl,
+        grpcUrl: parent.grpcUrl,
+        chainId: parent.chainId,
+        bech32Hrp: parent.bech32Hrp,
+        path: parent.path,
+        grpcPort: parent.grpcPort,
+        pubKeyTypeUrl: parent.pubKeyTypeUrl,
+        payScheme: parent.payScheme,
+        feeDenom: parent.denom, // native denom pays fees
+        badgeImageOverride: parent.image,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        denom: denom,
+        mintDecimals: mintDecimals,
+      );
+
   CosmosFungibleCoin({
     required super.blockExplorer,
     required super.symbol,
@@ -249,178 +281,88 @@ double _defaultFeeForDenom(String feeDenom) {
 // ── Token registry ────────────────────────────────────────────────────────────
 
 List<CosmosFungibleCoin> getCosmosFungibleCoins() {
-  List<CosmosFungibleCoin> coins = [];
+  CosmosCoin parent(String chainId) =>
+      getCosmosBlockChains().firstWhere((c) => c.chainId == chainId);
 
   if (enableTestNet) {
-    coins.addAll([
-      // Injective testnet USDT
-      CosmosFungibleCoin(
+    final inj = parent('injective-888');
+    return [
+      CosmosFungibleCoin.fromParent(
+        parent: inj,
         name: 'Tether USD (Injective Testnet)',
         symbol: 'USDT',
-        default_: 'INJ',
         image: 'assets/usdt.png',
         geckoID: 'tether',
         denom: 'peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5',
         mintDecimals: 6,
-        feeDenom: 'inj',
-        blockExplorer:
-            'https://testnet.explorer.injective.network/transaction/$blockExplorerPlaceholder',
-        lcdUrl: 'https://testnet.sentry.lcd.injective.network',
-        grpcUrl: 'testnet.sentry.chain.grpc.injective.network',
-        chainId: 'injective-888',
-        bech32Hrp: 'inj',
-        path: "m/44'/60'/0'/0/0",
-        grpcPort: 443,
-        pubKeyTypeUrl: '/injective.crypto.v1beta1.ethsecp256k1.PubKey',
-        payScheme: 'nativeinjective',
-        badgeImageOverride: 'assets/injective.png',
       ),
-    ]);
-  } else {
-    coins.addAll([
-      // ── Injective ─────────────────────────────────────────────────────────
-
-      CosmosFungibleCoin(
-        name: 'Tether USD (Injective)',
-        symbol: 'USDT',
-        default_: 'INJ',
-        image: 'assets/usdt.png',
-        geckoID: 'tether',
-        denom: 'peggy0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        mintDecimals: 6,
-        feeDenom: 'inj',
-        blockExplorer:
-            'https://explorer.injective.network/transaction/$blockExplorerPlaceholder',
-        lcdUrl: 'https://sentry.lcd.injective.network',
-        grpcUrl: 'sentry.chain.grpc.injective.network',
-        chainId: 'injective-1',
-        bech32Hrp: 'inj',
-        path: "m/44'/60'/0'/0/0",
-        grpcPort: 443,
-        pubKeyTypeUrl: '/injective.crypto.v1beta1.ethsecp256k1.PubKey',
-        payScheme: 'nativeinjective',
-        badgeImageOverride: 'assets/injective.png',
-      ),
-
-      CosmosFungibleCoin(
-        name: 'USD Coin (Injective)',
-        symbol: 'USDC',
-        default_: 'INJ',
-        image: 'assets/wusd.png',
-        geckoID: 'usd-coin',
-        denom: 'peggy0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        mintDecimals: 6,
-        feeDenom: 'inj',
-        blockExplorer:
-            'https://explorer.injective.network/transaction/$blockExplorerPlaceholder',
-        lcdUrl: 'https://sentry.lcd.injective.network',
-        grpcUrl: 'sentry.chain.grpc.injective.network',
-        chainId: 'injective-1',
-        bech32Hrp: 'inj',
-        path: "m/44'/60'/0'/0/0",
-        grpcPort: 443,
-        pubKeyTypeUrl: '/injective.crypto.v1beta1.ethsecp256k1.PubKey',
-        payScheme: 'nativeinjective',
-        badgeImageOverride: 'assets/injective.png',
-      ),
-
-      CosmosFungibleCoin(
-        name: 'Wrapped Ether (Injective)',
-        symbol: 'WETH',
-        default_: 'INJ',
-        image: 'assets/ethereum_logo.png',
-        geckoID: 'weth',
-        denom: 'peggy0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        mintDecimals: 18,
-        feeDenom: 'inj',
-        blockExplorer:
-            'https://explorer.injective.network/transaction/$blockExplorerPlaceholder',
-        lcdUrl: 'https://sentry.lcd.injective.network',
-        grpcUrl: 'sentry.chain.grpc.injective.network',
-        chainId: 'injective-1',
-        bech32Hrp: 'inj',
-        path: "m/44'/60'/0'/0/0",
-        grpcPort: 443,
-        pubKeyTypeUrl: '/injective.crypto.v1beta1.ethsecp256k1.PubKey',
-        payScheme: 'nativeinjective',
-        badgeImageOverride: 'assets/injective.png',
-      ),
-
-      // ── Osmosis ───────────────────────────────────────────────────────────
-
-      CosmosFungibleCoin(
-        name: 'USDC (Osmosis IBC)',
-        symbol: 'USDC',
-        default_: 'OSMO',
-        image: 'assets/wusd.png',
-        geckoID: 'usd-coin',
-        // IBC denom for USDC on Osmosis
-        denom:
-            'ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA84C',
-        mintDecimals: 6,
-        feeDenom: 'uosmo',
-        blockExplorer:
-            'https://www.mintscan.io/osmosis/tx/$blockExplorerPlaceholder',
-        lcdUrl: 'https://lcd.osmosis.zone',
-        grpcUrl: 'grpc.osmosis.zone',
-        chainId: 'osmosis-1',
-        bech32Hrp: 'osmo',
-        path: "m/44'/118'/0'/0/0",
-        grpcPort: 9090,
-        pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
-        payScheme: 'osmosis',
-        badgeImageOverride: 'assets/osmosis.png',
-      ),
-
-      CosmosFungibleCoin(
-        name: 'USDT (Osmosis IBC)',
-        symbol: 'USDT',
-        default_: 'OSMO',
-        image: 'assets/usdt.png',
-        geckoID: 'tether',
-        denom:
-            'ibc/4ABBEF4C8926DDDB320AE5188CFD63267ABBCEFC0583E4AE05D6E5AA2401DDAB',
-        mintDecimals: 6,
-        feeDenom: 'uosmo',
-        blockExplorer:
-            'https://www.mintscan.io/osmosis/tx/$blockExplorerPlaceholder',
-        lcdUrl: 'https://lcd.osmosis.zone',
-        grpcUrl: 'grpc.osmosis.zone',
-        chainId: 'osmosis-1',
-        bech32Hrp: 'osmo',
-        path: "m/44'/118'/0'/0/0",
-        grpcPort: 9090,
-        pubKeyTypeUrl: '/cosmos.crypto.secp256k1.PubKey',
-        payScheme: 'osmosis',
-        badgeImageOverride: 'assets/osmosis.png',
-      ),
-
-      // ── Evmos ─────────────────────────────────────────────────────────────
-
-      CosmosFungibleCoin(
-        name: 'USDC (Evmos IBC)',
-        symbol: 'USDC',
-        default_: 'EVMOS',
-        image: 'assets/wusd.png',
-        geckoID: 'usd-coin',
-        denom:
-            'ibc/7F00F3EDDD85D9C99C0A96D42C4ABF09B5FDBEFB46B09B85FF8A0A2EFC6B2F86',
-        mintDecimals: 6,
-        feeDenom: 'aevmos',
-        blockExplorer:
-            'https://www.mintscan.io/evmos/tx/$blockExplorerPlaceholder',
-        lcdUrl: 'https://rest.evmos.lava.build',
-        grpcUrl: 'grpc.evmos.lava.build',
-        chainId: 'evmos_9001-2',
-        bech32Hrp: 'evmos',
-        path: "m/44'/60'/0'/0/0",
-        grpcPort: 443,
-        pubKeyTypeUrl: '/ethermint.crypto.v1.ethsecp256k1.PubKey',
-        payScheme: 'evmos',
-        badgeImageOverride: 'assets/evmos.png',
-      ),
-    ]);
+    ];
   }
 
-  return coins;
+  final inj = parent('injective-1');
+  final osmo = parent('osmosis-1');
+  final evmos = parent('evmos_9001-2');
+
+  return [
+    // ── Injective ─────────────────────────────────────────────────────────
+    CosmosFungibleCoin.fromParent(
+      parent: inj,
+      name: 'Tether USD (Injective)',
+      symbol: 'USDT',
+      image: 'assets/usdt.png',
+      geckoID: 'tether',
+      denom: 'peggy0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      mintDecimals: 6,
+    ),
+    CosmosFungibleCoin.fromParent(
+      parent: inj,
+      name: 'USD Coin (Injective)',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      denom: 'peggy0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      mintDecimals: 6,
+    ),
+    CosmosFungibleCoin.fromParent(
+      parent: inj,
+      name: 'Wrapped Ether (Injective)',
+      symbol: 'WETH',
+      image: 'assets/ethereum_logo.png',
+      geckoID: 'weth',
+      denom: 'peggy0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      mintDecimals: 18,
+    ),
+    // ── Osmosis ───────────────────────────────────────────────────────────
+    CosmosFungibleCoin.fromParent(
+      parent: osmo,
+      name: 'USDC (Osmosis IBC)',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      denom:
+          'ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA84C',
+      mintDecimals: 6,
+    ),
+    CosmosFungibleCoin.fromParent(
+      parent: osmo,
+      name: 'USDT (Osmosis IBC)',
+      symbol: 'USDT',
+      image: 'assets/usdt.png',
+      geckoID: 'tether',
+      denom:
+          'ibc/4ABBEF4C8926DDDB320AE5188CFD63267ABBCEFC0583E4AE05D6E5AA2401DDAB',
+      mintDecimals: 6,
+    ),
+    // ── Evmos ─────────────────────────────────────────────────────────────
+    CosmosFungibleCoin.fromParent(
+      parent: evmos,
+      name: 'USDC (Evmos IBC)',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      denom:
+          'ibc/7F00F3EDDD85D9C99C0A96D42C4ABF09B5FDBEFB46B09B85FF8A0A2EFC6B2F86',
+      mintDecimals: 6,
+    ),
+  ];
 }

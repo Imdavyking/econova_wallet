@@ -33,6 +33,32 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
           payScheme: '',
         );
 
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory NearFungibleCoin.fromParent({
+    required NearCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String contractID,
+    required int mintDecimals,
+  }) =>
+      NearFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        api: parent.api,
+        blockExplorer: parent.blockExplorer,
+        suffix: parent.suffix,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        contractID: contractID,
+        mintDecimals: mintDecimals,
+      );
+
   factory NearFungibleCoin.fromJson(Map<String, dynamic> json) {
     return NearFungibleCoin(
       api: json['api'],
@@ -238,108 +264,70 @@ class NearFungibleCoin extends NearCoin implements FTExplorer {
 }
 
 List<NearFungibleCoin> walletNearCoin() {
-  List<NearFungibleCoin> blockChains = [];
-  if (enableTestNet) {
-    blockChains.add(NearFungibleCoin(
-      name: 'PRIME (Testnet)',
-      symbol: 'PRM',
-      default_: 'NEAR',
-      blockExplorer:
-          'https://testnet.nearblocks.io/txns/$blockExplorerPlaceholder',
-      image: 'assets/logo.png',
-      api: 'https://rpc.testnet.near.org',
-      contractID: 'primewallet.testnet',
-      suffix: '.testnet',
-      mintDecimals: 9,
-      geckoID: '',
-      caipReference: 'testnet',
-    ));
-  } else {
-    blockChains.addAll([
-      NearFungibleCoin(
-        name: 'PRIME',
-        symbol: 'PRM',
-        default_: 'NEAR',
-        blockExplorer: 'https://nearblocks.io/txns/$blockExplorerPlaceholder',
-        image: 'assets/logo.png',
-        api: 'https://rpc.mainnet.near.org',
-        contractID: 'primewallet.near',
-        suffix: '.near',
-        mintDecimals: 9,
-        geckoID: '',
-        caipReference: 'mainnet',
-      ),
-    ]);
-  }
+  final parent = getChains<NearCoin>().first;
 
-  return blockChains;
+  return [
+    NearFungibleCoin.fromParent(
+      parent: parent,
+      name: enableTestNet ? 'PRIME (Testnet)' : 'PRIME',
+      symbol: 'PRM',
+      image: 'assets/logo.png',
+      geckoID: '',
+      contractID: enableTestNet ? 'primewallet.testnet' : 'primewallet.near',
+      mintDecimals: 9,
+    ),
+  ];
 }
 
 List<NearFungibleCoin> getNearFungibles() {
-  List<NearFungibleCoin> blockChains = [];
+  final parent = getChains<NearCoin>().first;
+
+  final List<NearFungibleCoin> blockChains;
+
   if (enableTestNet) {
-    blockChains.addAll(
-      [
-        NearFungibleCoin(
-          name: 'USDC (Testnet)',
-          symbol: 'USDC',
-          default_: 'NEAR',
-          blockExplorer:
-              'https://testnet.nearblocks.io/txns/$blockExplorerPlaceholder',
-          image: 'assets/wusd.png',
-          api: 'https://rpc.testnet.near.org',
-          contractID:
-              '3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af',
-          suffix: '.testnet',
-          mintDecimals: 6,
-          geckoID: 'usd-coin',
-          caipReference: 'testnet',
-        ),
-      ],
-    );
+    blockChains = [
+      NearFungibleCoin.fromParent(
+        parent: parent,
+        name: 'USDC (Testnet)',
+        symbol: 'USDC',
+        image: 'assets/wusd.png',
+        geckoID: 'usd-coin',
+        contractID:
+            '3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af',
+        mintDecimals: 6,
+      ),
+    ];
   } else {
-    blockChains.addAll([
-      NearFungibleCoin(
+    blockChains = [
+      NearFungibleCoin.fromParent(
+        parent: parent,
         name: 'USDC',
         symbol: 'USDC',
-        default_: 'NEAR',
-        blockExplorer: 'https://nearblocks.io/txns/$blockExplorerPlaceholder',
         image: 'assets/wusd.png',
-        api: 'https://rpc.mainnet.near.org',
+        geckoID: 'usd-coin',
         contractID:
             '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1',
-        suffix: '.near',
         mintDecimals: 6,
-        geckoID: 'usd-coin',
-        caipReference: 'mainnet',
       ),
-      NearFungibleCoin(
+      NearFungibleCoin.fromParent(
+        parent: parent,
         name: 'Tether USD',
         symbol: 'USDT',
-        default_: 'NEAR',
-        blockExplorer: 'https://nearblocks.io/txns/$blockExplorerPlaceholder',
         image: 'assets/usdt.png',
-        api: 'https://rpc.mainnet.near.org',
-        contractID: 'usdt.tether-token.near',
-        suffix: '.near',
-        mintDecimals: 6,
         geckoID: 'tether',
-        caipReference: 'mainnet',
+        contractID: 'usdt.tether-token.near',
+        mintDecimals: 6,
       ),
-      NearFungibleCoin(
+      NearFungibleCoin.fromParent(
+        parent: parent,
         name: 'SWEAT',
         symbol: 'SWEAT',
-        default_: 'NEAR',
-        blockExplorer: 'https://nearblocks.io/txns/$blockExplorerPlaceholder',
         image: 'assets/sweat.png',
-        api: 'https://rpc.mainnet.near.org',
-        contractID: 'token.sweat',
-        suffix: '.near',
-        mintDecimals: 18,
         geckoID: 'sweatcoin',
-        caipReference: 'mainnet',
+        contractID: 'token.sweat',
+        mintDecimals: 18,
       ),
-    ]);
+    ];
   }
 
   blockChains.addAll(walletNearCoin());

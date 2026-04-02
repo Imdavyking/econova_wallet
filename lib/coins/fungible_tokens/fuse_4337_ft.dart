@@ -8,20 +8,51 @@ import 'package:wallet_app/utils/app_config.dart';
 
 class FuseFungibleCoin extends FuseCoin implements FTExplorer {
   int mintDecimals;
-  FuseFungibleCoin(
-      {required super.blockExplorer,
-      required super.symbol,
-      required super.default_,
-      required super.image,
-      required super.coinType,
-      required super.rpc,
-      required super.chainId,
-      required super.name,
-      required super.geckoID,
-      required super.rampID,
-      required super.contractAddress,
-      required this.mintDecimals,
-      required super.payScheme});
+
+  FuseFungibleCoin._({
+    required super.blockExplorer,
+    required super.symbol,
+    required super.default_,
+    required super.image,
+    required super.coinType,
+    required super.rpc,
+    required super.chainId,
+    required super.name,
+    required super.geckoID,
+    required super.rampID,
+    required super.contractAddress,
+    required super.payScheme,
+    required this.mintDecimals,
+  });
+
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory FuseFungibleCoin.fromParent({
+    required FuseCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String contractAddress,
+    required int mintDecimals,
+  }) =>
+      FuseFungibleCoin._(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        rpc: parent.rpc,
+        chainId: parent.chainId,
+        coinType: parent.coinType,
+        payScheme: parent.payScheme,
+        rampID: parent.rampID,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        contractAddress: contractAddress,
+        mintDecimals: mintDecimals,
+      );
+
   @override
   String tokenAddress() => contractAddress;
 
@@ -33,78 +64,53 @@ class FuseFungibleCoin extends FuseCoin implements FTExplorer {
 
   @override
   String? get badgeImage => getFUSEBlockchains().first.image;
+
   @override
-  String contractExplorer() {
-    return getExplorer().replaceFirst(
-      '/tx/$blockExplorerPlaceholder',
-      '/token/${tokenAddress()}',
-    );
-  }
+  String contractExplorer() => getExplorer().replaceFirst(
+        '/tx/$blockExplorerPlaceholder',
+        '/token/${tokenAddress()}',
+      );
 
   @override
   Widget? getStakingPage() => null;
 
   @override
-  Future<String?> stakeToken(String amount) async {
-    return null;
-  }
+  Future<String?> stakeToken(String amount) async => null;
 
   @override
-  Future<String?> unstakeToken(String amount) async {
-    return null;
-  }
+  Future<String?> unstakeToken(String amount) async => null;
 }
 
 List<FuseFungibleCoin> getFUSEFTBlockchains() {
-  List<FuseFungibleCoin> blockChains = [];
+  final parent = getFUSEBlockchains().first;
 
-  blockChains.addAll([
-    FuseFungibleCoin(
+  return [
+    FuseFungibleCoin.fromParent(
+      parent: parent,
       name: 'sFUSE',
-      rpc: 'https://rpc.fuse.io',
-      chainId: 122,
-      blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
       symbol: 'sFUSE',
-      default_: 'FUSE',
       image: 'assets/sfuse.png',
-      coinType: 60,
-      geckoID: "liquid-staked-fuse",
-      payScheme: 'fuse',
-      rampID: '',
+      geckoID: 'liquid-staked-fuse',
       contractAddress: '0xb1DD0B683d9A56525cC096fbF5eec6E60FE79871',
       mintDecimals: 18,
     ),
-    FuseFungibleCoin(
+    FuseFungibleCoin.fromParent(
+      parent: parent,
       name: 'USDC',
       symbol: 'USDC',
       image: 'assets/wusd.png',
-      mintDecimals: 6,
       geckoID: 'usd-coin',
-      rpc: 'https://rpc.fuse.io',
-      chainId: 122,
-      blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
-      default_: 'FUSE',
-      coinType: 60,
-      payScheme: '',
-      rampID: '',
       contractAddress: '0x620fd5fa44BE6af63715Ef4E65DDFA0387aD13F5',
+      mintDecimals: 6,
     ),
-    FuseFungibleCoin(
+    FuseFungibleCoin.fromParent(
+      parent: parent,
       name: 'VoltToken',
       symbol: 'VOLT',
       image: 'assets/volt_token.png',
-      mintDecimals: 18,
       geckoID: 'fusefi',
-      rpc: 'https://rpc.fuse.io',
-      chainId: 122,
-      blockExplorer: 'https://explorer.fuse.io/tx/$blockExplorerPlaceholder',
-      default_: 'FUSE',
-      coinType: 60,
-      payScheme: '',
-      rampID: '',
       contractAddress: '0x34Ef2Cc892a88415e9f02b91BfA9c91fC0bE6bD4',
+      mintDecimals: 18,
     ),
-  ]);
-
-  return blockChains;
+  ];
 }

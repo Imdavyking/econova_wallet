@@ -41,6 +41,36 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     required this.mintDecimals,
   });
 
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory SIP010Coin.fromParent({
+    required StacksCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String contractAddress,
+    required String contractName,
+    required int mintDecimals,
+  }) =>
+      SIP010Coin(
+        // ── inherited from parent ──────────────────────────
+        isTestnet: parent.isTestnet,
+        blockExplorer: parent.blockExplorer,
+        derivationPath: parent.derivationPath,
+        default_: parent.default_,
+        rampID: parent.rampID,
+        payScheme: parent.payScheme,
+        caipReference: parent.caipReference,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        contractAddress: contractAddress,
+        contractName: contractName,
+        mintDecimals: mintDecimals,
+      );
+
   // ─── FTExplorer ─────────────────────────────────────────────────────────────
 
   @override
@@ -51,6 +81,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 
   @override
   String tokenAddress() => '$contractAddress.$contractName';
+
   @override
   Widget? getGoalPage() {
     if (contractName == 'usdcx') return USDCxGoalsPage(coin: this);
@@ -75,9 +106,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 
   // ─── x402 support ───────────────────────────────────────────────────────────
 
-  /// SIP-010 tokens use a contract call to `transfer`, not a simple STX
-  /// transfer. Mirrors wrapAxiosWithPayment's makeContractCall path.
-  /// Calls encodePayload from StacksCoin (public, not file-private).
   @override
   Future<String?> signX402Payment(
     X402PaymentOption option, {
@@ -106,7 +134,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
         senderAddress: accountData.address,
       );
 
-      // encodePayload is public in StacksCoin — accessible across files
       return encodePayload(
         version: version,
         option: option,
@@ -118,8 +145,6 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
     }
   }
 
-  /// Builds and signs a SIP-010 `transfer` contract call.
-  /// Returns hex WITHOUT 0x prefix — matches wrapAxiosWithPayment.
   Future<String> buildSip010X402TransferHex({
     required X402PaymentOption option,
     required Uint8List privBytes,
@@ -168,7 +193,7 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
       payload: payload,
     );
 
-    return HEX.encode(txBytes); // no 0x prefix
+    return HEX.encode(txBytes);
   }
 
   // ─── Serialization ───────────────────────────────────────────────────────────
@@ -316,62 +341,43 @@ class SIP010Coin extends StacksCoin implements FTExplorer {
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 List<SIP010Coin> getSIP010Coins() {
+  final parent = getStacksBlockchains().first;
+
   if (enableTestNet) {
     return [
-      SIP010Coin(
+      SIP010Coin.fromParent(
+        parent: parent,
         name: 'USDCX',
         symbol: 'USDCX',
-        default_: 'STX',
-        isTestnet: true,
-        blockExplorer:
-            'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=testnet',
         image: 'assets/wusd.png',
-        derivationPath: "m/44'/5757'/0'/0/0",
         geckoID: 'usd-coin',
-        rampID: '',
-        payScheme: 'stacks',
         contractAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
         contractName: 'usdcx',
         mintDecimals: 6,
-        caipReference: '2147483648',
       ),
     ];
   }
 
   return [
-    SIP010Coin(
+    SIP010Coin.fromParent(
+      parent: parent,
       name: 'USDCX',
       symbol: 'USDCX',
-      default_: 'STX',
-      isTestnet: false,
-      blockExplorer:
-          'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
       image: 'assets/wusd.png',
-      derivationPath: "m/44'/5757'/0'/0/0",
       geckoID: 'usd-coin',
-      rampID: '',
-      payScheme: 'stacks',
       contractAddress: 'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE',
       contractName: 'usdcx',
       mintDecimals: 6,
-      caipReference: '1',
     ),
-    SIP010Coin(
+    SIP010Coin.fromParent(
+      parent: parent,
       name: 'sBTC',
       symbol: 'sBTC',
-      default_: 'STX',
-      isTestnet: false,
-      blockExplorer:
-          'https://explorer.hiro.so/txid/$blockExplorerPlaceholder?chain=mainnet',
       image: 'assets/sbtc.webp',
-      derivationPath: "m/44'/5757'/0'/0/0",
       geckoID: 'bitcoin',
-      rampID: '',
-      payScheme: 'stacks',
       contractAddress: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4',
       contractName: 'sbtc-token',
       mintDecimals: 8,
-      caipReference: '1',
     ),
   ];
 }

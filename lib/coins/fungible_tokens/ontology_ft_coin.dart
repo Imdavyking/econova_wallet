@@ -5,7 +5,7 @@ import 'package:wallet_app/main.dart';
 import 'package:wallet_app/utils/app_config.dart';
 
 class OntologyFungibleCoin extends OntologyCoin implements FTExplorer {
-  OntologyFungibleCoin({
+  OntologyFungibleCoin._({
     required super.blockExplorer,
     required super.rpcUrl,
     required super.symbol,
@@ -21,7 +21,35 @@ class OntologyFungibleCoin extends OntologyCoin implements FTExplorer {
     required super.caipReference,
   });
 
-  /// Badge shows the parent ONT chain logo (same pattern as ERC/SPL).
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory OntologyFungibleCoin.fromParent({
+    required OntologyCoin parent,
+    required String symbol,
+    required String default_,
+    required String name,
+    required String image,
+    required String geckoID,
+    required String contractAddress,
+    required int coinDecimals,
+  }) =>
+      OntologyFungibleCoin._(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        rpcUrl: parent.rpcUrl,
+        isTestnet_: parent.isTestnet_,
+        caipReference: parent.caipReference,
+        payScheme: parent.payScheme,
+        rampID: parent.rampID,
+        // ── token-specific ─────────────────────────────────
+        symbol: symbol,
+        default_: default_,
+        name: name,
+        image: image,
+        geckoID: geckoID,
+        contractAddress: contractAddress,
+        coinDecimals: coinDecimals,
+      );
+
   @override
   String? get badgeImage => getChains<OntologyCoin>().first.image;
 
@@ -35,50 +63,26 @@ class OntologyFungibleCoin extends OntologyCoin implements FTExplorer {
       );
 
   @override
-  String savedTransKey() =>
-      'ontologyFungibleTransfers${contractAddress}$rpcUrl';
+  String savedTransKey() => 'ontologyFungibleTransfers$contractAddress$rpcUrl';
 
   @override
   Widget? getNFTPage() => null;
 }
 
 List<OntologyFungibleCoin> getOntologyFungibleCoins() {
-  if (enableTestNet) {
-    return [
-      OntologyFungibleCoin(
-        name: 'Ontology Gas (Testnet)',
-        symbol: 'ONG',
-        default_: 'ONG',
-        blockExplorer:
-            'https://explorer.ont.io/testnet/tx/$blockExplorerPlaceholder',
-        image: 'assets/ong.png',
-        rpcUrl: 'http://polaris1.ont.io:20336',
-        geckoID: 'ong',
-        rampID: '',
-        payScheme: 'ontology',
-        isTestnet_: true,
-        coinDecimals: 9,
-        contractAddress: '0000000000000000000000000000000000000002',
-        caipReference: '2',
-      ),
-    ];
-  }
+  // Single source of truth — grab the already-constructed parent
+  final parent = getOntologyBlockChains().first;
 
   return [
-    OntologyFungibleCoin(
-      name: 'Ontology Gas',
+    OntologyFungibleCoin.fromParent(
+      parent: parent,
+      name: enableTestNet ? 'Ontology Gas (Testnet)' : 'Ontology Gas',
       symbol: 'ONG',
       default_: 'ONG',
-      blockExplorer: 'https://explorer.ont.io/tx/$blockExplorerPlaceholder',
       image: 'assets/ong.png',
-      rpcUrl: 'http://dappnode1.ont.io:20336',
       geckoID: 'ong',
-      rampID: '',
-      payScheme: 'ontology',
-      isTestnet_: false,
-      coinDecimals: 9,
       contractAddress: '0000000000000000000000000000000000000002',
-      caipReference: '1',
+      coinDecimals: 9,
     ),
   ];
 }

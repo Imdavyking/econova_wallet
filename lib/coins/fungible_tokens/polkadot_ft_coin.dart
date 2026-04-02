@@ -12,9 +12,6 @@ import '../../utils/app_config.dart';
 import '../polkadot_coin.dart';
 
 /// Storage prefix for Assets.Account double map.
-/// Key layout: xxh128('Assets') + xxh128('Account')
-///           + blake2_128_concat(u32 assetId LE)
-///           + blake2_128_concat(accountId 32 bytes)
 final _assetsAccount = '0x${xxhashAsHex('Assets')}${xxhashAsHex('Account')}';
 
 class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
@@ -42,6 +39,39 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
           coinDecimals: mintDecimals,
           rampID: '',
         );
+
+  /// Inherits chain-level fields (ss58, path, payScheme, caipReference,
+  /// default_) from [parent]. Pass [api] and [blockExplorer] explicitly since
+  /// Asset Hub uses different endpoints than the relay chain.
+  factory PolkadotFungibleCoin.fromParent({
+    required PolkadotCoin parent,
+    required String api,
+    required String blockExplorer,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required int assetId,
+    required int mintDecimals,
+  }) =>
+      PolkadotFungibleCoin(
+        // ── inherited from relay-chain parent ─────────────
+        ss58Prefix: parent.ss58Prefix,
+        path: parent.path,
+        payScheme: parent.payScheme,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        // ── Asset Hub specific ─────────────────────────────
+        api: api,
+        blockExplorer: blockExplorer,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        assetId: assetId,
+        mintDecimals: mintDecimals,
+      );
 
   factory PolkadotFungibleCoin.fromJson(Map<String, dynamic> json) {
     return PolkadotFungibleCoin(
@@ -116,7 +146,6 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
 
     final decodedAddr = decodeDOTAddress(address);
 
-    // assetId encoded as u32 little-endian (4 bytes) for the storage key
     final assetIdBytes = Uint8List(4);
     ByteData.view(assetIdBytes.buffer).setUint32(0, assetId, Endian.little);
 
@@ -144,7 +173,6 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
     String storageData = (result as String).replaceFirst('0x', '');
     if (storageData.isEmpty) return 0;
 
-    // AssetAccount layout: balance (u128 = 16 bytes = 32 hex chars) first
     final input = Input.fromHex(storageData.substring(0, 32));
     final BigInt balance = U128Codec.codec.decode(input);
     final base = BigInt.from(10);
@@ -186,7 +214,6 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
     final decoded = MetadataDecoder.instance.decode(metaData!['result']);
     final chainInfo = await compute(decodeMetadataCompute, decoded);
 
-    // Only this changes vs native transfer
     final transferArgument = MapEntry(
       'Assets',
       MapEntry(
@@ -215,67 +242,53 @@ class PolkadotFungibleCoin extends PolkadotCoin implements FTExplorer {
 // ── Token registry ────────────────────────────────────────────────────────────
 
 List<PolkadotFungibleCoin> getPolkadotFungibleCoins() {
-  List<PolkadotFungibleCoin> coins = [];
+  // Relay chain parent — supplies ss58Prefix, path, payScheme, caipRef, default_
+  final relayParent = getPolkadoBlockChains().first;
 
   if (enableTestNet) {
-    // Asset Hub Westend doesn't have standard USDT/USDC,
-    // but the structure is ready for any asset deployed there.
-    coins.addAll([
-      PolkadotFungibleCoin(
+    return [
+      PolkadotFungibleCoin.fromParent(
+        parent: relayParent,
+        api: 'https://westend-asset-hub-rpc.polkadot.io',
+        blockExplorer:
+            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
         name: 'USDC (Devnet)',
         symbol: 'USDC',
-        default_: 'WND',
         image: 'assets/wusd.png',
         geckoID: 'usd-coin',
         assetId: 31337,
         mintDecimals: 6,
-        api: 'https://westend-asset-hub-rpc.polkadot.io',
-        blockExplorer:
-            'https://assethub-westend.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        ss58Prefix: 42,
-        path: "m/44'/354'/0'/0'/0'",
-        payScheme: '',
-        //TODO://check this
-        caipReference: 'e143f23803ac50e8f6f8e62695d1ce9e',
       ),
-    ]);
-  } else {
-    // Polkadot Asset Hub mainnet
-    coins.addAll([
-      PolkadotFungibleCoin(
-        name: 'Tether USD',
-        symbol: 'USDT',
-        default_: 'DOT',
-        image: 'assets/usdt.png',
-        geckoID: 'tether',
-        assetId: 1984,
-        mintDecimals: 6,
-        api: 'https://asset-hub-polkadot-rpc.dwellir.com',
-        blockExplorer:
-            'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        ss58Prefix: 0,
-        path: "m/44'/354'/0'/0'/0'",
-        payScheme: 'polkadot',
-        caipReference: '68d56f15f85d3136970ec16946040bc1',
-      ),
-      PolkadotFungibleCoin(
-        name: 'USD Coin',
-        symbol: 'USDC',
-        default_: 'DOT',
-        image: 'assets/wusd.png',
-        geckoID: 'usd-coin',
-        assetId: 1337,
-        mintDecimals: 6,
-        api: 'https://asset-hub-polkadot-rpc.dwellir.com',
-        blockExplorer:
-            'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder',
-        ss58Prefix: 0,
-        path: "m/44'/354'/0'/0'/0'",
-        payScheme: 'polkadot',
-        caipReference: '68d56f15f85d3136970ec16946040bc1',
-      ),
-    ]);
+    ];
   }
 
-  return coins;
+  // Mainnet Asset Hub — shared by all tokens below
+  const assetHubApi = 'https://asset-hub-polkadot-rpc.dwellir.com';
+  const assetHubExplorer =
+      'https://assethub-polkadot.subscan.io/extrinsic/$blockExplorerPlaceholder';
+
+  return [
+    PolkadotFungibleCoin.fromParent(
+      parent: relayParent,
+      api: assetHubApi,
+      blockExplorer: assetHubExplorer,
+      name: 'Tether USD',
+      symbol: 'USDT',
+      image: 'assets/usdt.png',
+      geckoID: 'tether',
+      assetId: 1984,
+      mintDecimals: 6,
+    ),
+    PolkadotFungibleCoin.fromParent(
+      parent: relayParent,
+      api: assetHubApi,
+      blockExplorer: assetHubExplorer,
+      name: 'USD Coin',
+      symbol: 'USDC',
+      image: 'assets/wusd.png',
+      geckoID: 'usd-coin',
+      assetId: 1337,
+      mintDecimals: 6,
+    ),
+  ];
 }

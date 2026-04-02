@@ -30,6 +30,31 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
           payScheme: '',
         );
 
+  /// Inherits all network config from [parent] — only pass token-specific fields.
+  factory TonFungibleCoin.fromParent({
+    required TonCoin parent,
+    required String name,
+    required String symbol,
+    required String image,
+    required String geckoID,
+    required String tokenID,
+    required int mintDecimals,
+  }) =>
+      TonFungibleCoin(
+        // ── inherited from parent ──────────────────────────
+        blockExplorer: parent.blockExplorer,
+        api: parent.api,
+        caipReference: parent.caipReference,
+        default_: parent.default_,
+        // ── token-specific ─────────────────────────────────
+        name: name,
+        symbol: symbol,
+        image: image,
+        geckoID: geckoID,
+        tokenID: tokenID,
+        mintDecimals: mintDecimals,
+      );
+
   factory TonFungibleCoin.fromJson(Map<String, dynamic> json) {
     return TonFungibleCoin(
       api: json['api'],
@@ -47,6 +72,7 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
 
   @override
   String? get badgeImage => getChains<TonCoin>().first.image;
+
   @override
   String savedTransKey() => '$tokenID$api FTDetails';
 
@@ -152,7 +178,6 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       bounceableAddress: true,
     );
 
-    /// Create JettonMinter with owner and content
     final minter = JettonMinter.create(
       owner: ownerWallet,
       state: MinterWalletState(
@@ -166,19 +191,15 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
       ),
     );
 
-    /// Define the address to which tokens will be minted
     final addressToMint = TonAddress(
       tonDetails.address,
       forceWorkchain: 0,
     );
 
-    /// Define amounts
     final amount = TonHelper.toNano("0.5");
     final forwardAmount = TonHelper.toNano("0.3");
     final totalAmount = TonHelper.toNano("0.4");
     final jettonAmountForMint = BigInt.parse("1${"0" * 15}");
-
-    /// Mint tokens
 
     await minter.sendOperation(
       signerParams: VersionedTransferParams(privateKey: privateKey),
@@ -265,52 +286,40 @@ class TonFungibleCoin extends TonCoin implements FTExplorer {
 }
 
 List<TonFungibleCoin> getTonFungibleCoins() {
-  List<TonFungibleCoin> blockChains = [];
+  final parent = getChains<TonCoin>().first;
 
   if (enableTestNet) {
-    blockChains.addAll([
-      TonFungibleCoin(
-        blockExplorer:
-            'https://testnet.tonscan.org/tx/$blockExplorerPlaceholder',
+    return [
+      TonFungibleCoin.fromParent(
+        parent: parent,
         name: 'AIOTX (Testnet)',
         symbol: 'AIOTX',
-        default_: 'TON',
         image: 'assets/logo.png',
-        api: 'https://testnet.toncenter.com/api/v2/jsonRPC',
         geckoID: '',
-        mintDecimals: 9,
         tokenID: 'EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to',
-        caipReference: 'testnet',
-      ),
-    ]);
-  } else {
-    blockChains.addAll([
-      TonFungibleCoin(
-        blockExplorer: 'https://tonscan.org/tx/$blockExplorerPlaceholder',
-        symbol: 'NOT',
-        name: 'Notcoin',
-        default_: 'TON',
-        image: 'assets/notcoin.webp',
-        api: 'https://toncenter.com/api/v2/jsonRPC',
-        geckoID: 'notcoin',
         mintDecimals: 9,
-        tokenID: 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT',
-        caipReference: 'mainnet',
       ),
-      TonFungibleCoin(
-        blockExplorer: 'https://tonscan.org/tx/$blockExplorerPlaceholder',
-        name: 'Tether USD',
-        symbol: 'USDT',
-        default_: 'TON',
-        image: 'assets/usdt.png',
-        api: 'https://toncenter.com/api/v2/jsonRPC',
-        geckoID: 'tether',
-        mintDecimals: 6,
-        tokenID: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
-        caipReference: 'mainnet',
-      ),
-    ]);
+    ];
   }
 
-  return blockChains;
+  return [
+    TonFungibleCoin.fromParent(
+      parent: parent,
+      name: 'Notcoin',
+      symbol: 'NOT',
+      image: 'assets/notcoin.webp',
+      geckoID: 'notcoin',
+      tokenID: 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT',
+      mintDecimals: 9,
+    ),
+    TonFungibleCoin.fromParent(
+      parent: parent,
+      name: 'Tether USD',
+      symbol: 'USDT',
+      image: 'assets/usdt.png',
+      geckoID: 'tether',
+      tokenID: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      mintDecimals: 6,
+    ),
+  ];
 }
