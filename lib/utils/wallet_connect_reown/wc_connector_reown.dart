@@ -142,8 +142,6 @@ class WCConnectorReown {
     if (event == null) return;
 
     final method = event.method;
-    // event.params is {"params": [...], "scheme": "..."} in Reown link-mode
-    final params = event.params as Map<String, dynamic>;
     final topic = event.topic;
     PairingMetadata? dAppMetadata;
     final session = walletKit.sessions.get(topic);
@@ -155,6 +153,25 @@ class WCConnectorReown {
 
     final sessionChainId = event.chainId.split(':').last;
     final int? chainId = int.tryParse(sessionChainId);
+
+    // ── Normalise params ────────────────────────────────────────────────────
+    // Relay mode  → event.params is the raw List  e.g. ["0xmsg", "0xaddr"]
+    // Link-mode   → event.params is a Map         e.g. {"params": [...], "scheme": "..."}
+    final dynamic rawParams = event.params;
+    final List<dynamic> paramsList;
+    final String? scheme;
+
+    if (rawParams is Map<String, dynamic>) {
+      paramsList = rawParams['params'] as List<dynamic>? ?? [];
+      scheme = rawParams['scheme'] as String?;
+    } else if (rawParams is List<dynamic>) {
+      paramsList = rawParams;
+      scheme = null;
+    } else {
+      onHandleErrorReject(event, ErrorCodes.invalidParams);
+      return;
+    }
+    // ───────────────────────────────────────────────────────────────────────
 
     switch (method) {
       case 'personal_sign':
@@ -177,7 +194,7 @@ class WCConnectorReown {
             signType = WCSignType.TYPED_MESSAGE_V4;
           }
 
-          final requestParams = (params['params'] as List).cast<String>();
+          final requestParams = paramsList.cast<String>();
           // personal_sign: [message, address]; eth_sign: [address, message]
           final message = (signType == WCSignType.PERSONAL_MESSAGE)
               ? requestParams[0]
@@ -241,8 +258,7 @@ class WCConnectorReown {
                     result: signedDataHex,
                   ),
                 );
-                // FIX #4: params is a non-nullable Map, no ? needed
-                handleRedirect(params['scheme'] as String?);
+                handleRedirect(scheme);
                 if (_context.mounted) Navigator.pop(_context);
               } catch (e) {
                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
@@ -264,9 +280,8 @@ class WCConnectorReown {
             break;
           }
           final AppLocalizations localization = AppLocalizations.of(_context)!;
-          // FIX #3: transaction is the first element of params["params"] list
           final ethereumTransaction = WCEthereumTransaction.fromJson(
-            (params['params'] as List).first as Map<String, dynamic>,
+            paramsList.first as Map<String, dynamic>,
           );
           _onTransaction(
             session: session,
@@ -296,7 +311,7 @@ class WCConnectorReown {
                     result: tx,
                   ),
                 );
-                handleRedirect(params['scheme'] as String?);
+                handleRedirect(scheme);
               } catch (e) {
                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
               } finally {
@@ -314,14 +329,12 @@ class WCConnectorReown {
       case 'eth_sendTransaction':
         {
           if (chainId == null) {
-            // FIX #8: guard against null chainId instead of force-unwrapping
             onHandleErrorReject(event, ErrorCodes.invalidParams);
             break;
           }
           final AppLocalizations localization = AppLocalizations.of(_context)!;
-          // FIX #3: transaction is the first element of params["params"] list
           final ethereumTransaction = WCEthereumTransaction.fromJson(
-            (params['params'] as List).first as Map<String, dynamic>,
+            paramsList.first as Map<String, dynamic>,
           );
           _onTransaction(
             session: session,
@@ -351,7 +364,7 @@ class WCConnectorReown {
                     result: txhash,
                   ),
                 );
-                handleRedirect(params['scheme'] as String?);
+                handleRedirect(scheme);
               } catch (e) {
                 onHandleErrorReject(event, ErrorCodes.userRejectedRequest);
               } finally {
@@ -367,12 +380,10 @@ class WCConnectorReown {
         }
         break;
 
-      // FIX #7: handle wallet_switchEthereumChain (declared in namespace but was missing)
       case 'wallet_switchEthereumChain':
         {
           try {
-            final switchParams =
-                (params['params'] as List).first as Map<String, dynamic>;
+            final switchParams = paramsList.first as Map<String, dynamic>;
             final hexChainId = switchParams['chainId'] as String;
             final newChainId = int.parse(
               hexChainId.replaceFirst('0x', ''),
@@ -400,7 +411,7 @@ class WCConnectorReown {
                     result: null,
                   ),
                 );
-                handleRedirect(params['scheme'] as String?);
+                handleRedirect(scheme);
                 if (_context.mounted) Navigator.pop(_context);
               },
               onReject: () {
@@ -414,20 +425,16 @@ class WCConnectorReown {
         }
         break;
 
-      // wallet_addEthereumChain: approve silently if the chain is known,
-      // otherwise reject as unsupported.
       case 'wallet_addEthereumChain':
         {
           try {
-            final addParams =
-                (params['params'] as List).first as Map<String, dynamic>;
+            final addParams = paramsList.first as Map<String, dynamic>;
             final hexChainId = addParams['chainId'] as String;
             final newChainId = int.parse(
               hexChainId.replaceFirst('0x', ''),
               radix: 16,
             );
             if (evmFromChainId(newChainId) != null) {
-              // Chain already supported — return null (success per EIP-3085)
               await _walletKit.respondSessionRequest(
                 topic: event.topic,
                 response: JsonRpcResponse(
@@ -436,7 +443,7 @@ class WCConnectorReown {
                   result: null,
                 ),
               );
-              handleRedirect(params['scheme'] as String?);
+              handleRedirect(scheme);
             } else {
               onHandleErrorReject(event, ErrorCodes.notSupportChain);
             }
