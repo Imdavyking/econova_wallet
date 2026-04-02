@@ -82,6 +82,7 @@ class FuseFungibleCoin extends FuseCoin implements FTExplorer {
 }
 
 List<FuseFungibleCoin> getFUSEFTBlockchains() {
+  if (enableTestNet) return [];
   final parent = getFUSEBlockchains().first;
 
   return [
