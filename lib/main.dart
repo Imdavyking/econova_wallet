@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/coins/aptos_coin.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/ontology_ft_coin.dart';
 import 'package:wallet_app/coins/legacy_utxo_coin.dart';
 import 'package:wallet_app/coins/nano_coin.dart';
 import 'package:wallet_app/coins/tezos_coin.dart';
@@ -113,6 +114,7 @@ List<T> getChains<T extends Coin>() {
     ...getTronFungibleCoins(),
     ...getNearFungibles(),
     ...getPolkadotFungibleCoins(),
+    ...getOntologyFungibleCoins(),
     ...getSIP010Coins(),
     ...getERC20Coins(),
     ...getFUSEFTBlockchains(),
