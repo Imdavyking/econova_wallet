@@ -323,28 +323,43 @@ class _ContactAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        coin != null
-            ? coin!.getIdenticon(contact.address, size: 36)
-            : const CircleAvatar(
-                radius: 18,
-                child: Icon(Icons.person, size: 18),
+    final identicon = coin?.getIdenticon(contact.address, size: 36);
+
+    // identicon exists → show it with chain badge
+    // no identicon but chainImage exists → full chain image as avatar
+    // neither → generic icon
+    if (identicon != null) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          identicon,
+          if (chainImage != null)
+            Positioned(
+              bottom: -2,
+              right: -2,
+              child: CircleAvatar(
+                radius: 8,
+                backgroundImage: AssetImage(chainImage!),
               ),
-        if (chainImage != null)
-          Positioned(
-            bottom: -2,
-            right: -2,
-            child: CircleAvatar(
-              radius: 8,
-              backgroundImage: AssetImage(chainImage!),
             ),
-          ),
-      ],
+        ],
+      );
+    }
+
+    if (chainImage != null) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundImage: AssetImage(chainImage!),
+      );
+    }
+
+    return const CircleAvatar(
+      radius: 18,
+      child: Icon(Icons.person, size: 18),
     );
   }
 }
+
 // ── Swipe background ──────────────────────────────────────────────────────────
 
 class _SwipeBackground extends StatelessWidget {

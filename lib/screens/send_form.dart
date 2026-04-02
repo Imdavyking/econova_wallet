@@ -169,7 +169,8 @@ class _SendFormState extends State<SendForm> {
                             padding: const EdgeInsets.only(top: 12),
                             child: Row(
                               children: [
-                                _coin.getIdenticon(addr, size: 36),
+                                _coin.getIdenticon(addr, size: 36) ??
+                                    Container(),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: contact != null
