@@ -219,19 +219,19 @@ class _WalletConnectState extends State<WalletConnect> {
                             children: [
                               TextFormField(
                                 controller: wcUriCntrl,
-                                decoration: InputDecoration(
-                                  label: Text(localization.enterCode),
-                                  focusedBorder: const OutlineInputBorder(
+                                decoration: const InputDecoration(
+                                  label: Text('Enter url or code'),
+                                  focusedBorder: OutlineInputBorder(
                                     borderRadius:
                                         BorderRadius.all(Radius.circular(10.0)),
                                     borderSide: BorderSide.none,
                                   ),
-                                  border: const OutlineInputBorder(
+                                  border: OutlineInputBorder(
                                     borderRadius:
                                         BorderRadius.all(Radius.circular(10.0)),
                                     borderSide: BorderSide.none,
                                   ),
-                                  enabledBorder: const OutlineInputBorder(
+                                  enabledBorder: OutlineInputBorder(
                                     borderRadius:
                                         BorderRadius.all(Radius.circular(10.0)),
                                     borderSide: BorderSide.none,
@@ -259,7 +259,7 @@ class _WalletConnectState extends State<WalletConnect> {
                         });
                       },
                       child: Text(
-                        localization.connectViACode,
+                        'Connect via url/code',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
