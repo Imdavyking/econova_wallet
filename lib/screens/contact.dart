@@ -217,7 +217,9 @@ class _ContactTile extends StatelessWidget {
   String? _chainImage() {
     try {
       return supportedChains
-          .firstWhere((c) => c.caip2ChainId == contact.caip2ChainId)
+          .firstWhere((c) =>
+              c.caip2ChainId == contact.caip2ChainId &&
+              c.tokenAddress() == null)
           .getImage();
     } catch (_) {
       return null;
