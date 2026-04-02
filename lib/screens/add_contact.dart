@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 
+import '../interface/coin.dart';
 import '../service/contact_service.dart';
 import '../utils/app_config.dart';
 import '../utils/qr_scan_view.dart';
@@ -21,6 +22,11 @@ class _AddContactState extends State<AddContact> {
   late final TextEditingController _addressCtrl;
   late final TextEditingController _memoCtrl;
 
+  /// Resolved once from [ContactParams.caip2ChainId] — may be null if the
+  /// chain is not in [supportedChains] (e.g. a newly added chain not yet in
+  /// the build). All coin-dependent features degrade gracefully when null.
+  late final Coin? _coin;
+
   bool _saving = false;
 
   @override
@@ -29,6 +35,9 @@ class _AddContactState extends State<AddContact> {
     _nameCtrl = TextEditingController(text: widget.params.name);
     _addressCtrl = TextEditingController(text: widget.params.address);
     _memoCtrl = TextEditingController(text: widget.params.memo ?? '');
+
+    // Resolve coin from CAIP-2 chain ID
+    _coin = _resolveCoin(widget.params.caip2ChainId);
   }
 
   @override
@@ -39,25 +48,40 @@ class _AddContactState extends State<AddContact> {
     super.dispose();
   }
 
+  // ── Coin resolution ───────────────────────────────────────────────────────
+
+  static Coin? _resolveCoin(String caip2ChainId) {
+    try {
+      return supportedChains.firstWhere(
+        (c) => c.caip2ChainId == caip2ChainId && c.tokenAddress() == null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Validation ────────────────────────────────────────────────────────────
 
-  /// Returns an error string or null if valid.
   String? _validate() {
     final name = _nameCtrl.text.trim();
     final address = _addressCtrl.text.trim();
+    final l = AppLocalizations.of(context)!;
 
     if (name.isEmpty || address.isEmpty) {
-      return AppLocalizations.of(context)!.enterNameAndAddress;
+      return l.enterNameAndAddress;
     }
 
     if (!RegExp(r'^[a-zA-Z0-9_ ]+$').hasMatch(name)) {
-      return AppLocalizations.of(context)!.validContactName;
+      return l.validContactName;
     }
 
-    try {
-      widget.params.coin.validateAddress(address);
-    } catch (_) {
-      return AppLocalizations.of(context)!.invalidAddress;
+    // Validate address if we could resolve the coin; skip if unknown chain
+    if (_coin != null) {
+      try {
+        _coin!.validateAddress(address);
+      } catch (_) {
+        return l.invalidAddress;
+      }
     }
 
     return null;
@@ -120,7 +144,11 @@ class _AddContactState extends State<AddContact> {
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations.of(context)!;
-    final requiresMemo = widget.params.coin.requireMemo();
+
+    // AppBar title: use resolved coin name, fall back to raw CAIP-2
+    final chainLabel =
+        _coin?.getName().split('(')[0].trim() ?? widget.params.caip2ChainId;
+    final requiresMemo = _coin?.requireMemo() ?? false;
 
     return PopScope(
       canPop: false,
@@ -131,7 +159,7 @@ class _AddContactState extends State<AddContact> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('${widget.params.coin.getName()} Contact'),
+          title: Text('$chainLabel Contact'),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
