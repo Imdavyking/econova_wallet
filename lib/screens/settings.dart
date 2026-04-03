@@ -73,8 +73,11 @@ class _SettingsState extends State<Settings>
   }
 
   Future<bool> _checkDeadSwitch() async {
-    final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
-    return compute(validateMnemonic, mnemonic);
+    if (WalletService.isBip39PhraseOrSeedHexKey()) {
+      final mnemonic = WalletService.getActiveKey(walletImportType)!.data;
+      return compute(validateMnemonic, mnemonic);
+    }
+    return false;
   }
 
   Future<bool> _checkDmsUser() async {
