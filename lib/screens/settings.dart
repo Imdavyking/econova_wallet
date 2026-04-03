@@ -21,6 +21,7 @@ import 'package:wallet_app/screens/unlock_with_biometrics.dart';
 import 'package:wallet_app/screens/all_wallets.dart';
 import 'package:wallet_app/screens/wallet_connect.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
+import 'package:wallet_app/utils/github_identicon.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -488,37 +489,32 @@ class _SettingsState extends State<Settings>
                                 children: [
                                   if (_isValidUrl(telegramLink)) ...[
                                     _SocialIcon(
-                                      icon: FontAwesomeIcons.telegram,
-                                      url: telegramLink,
-                                    ),
+                                        icon: FontAwesomeIcons.telegram,
+                                        url: telegramLink),
                                     const SizedBox(width: 20),
                                   ],
                                   if (_isValidUrl(twitterLink)) ...[
                                     _SocialIcon(
-                                      icon: FontAwesomeIcons.twitter,
-                                      url: twitterLink,
-                                    ),
+                                        icon: FontAwesomeIcons.twitter,
+                                        url: twitterLink),
                                     const SizedBox(width: 20),
                                   ],
                                   if (_isValidUrl(mediumLink)) ...[
                                     _SocialIcon(
-                                      icon: FontAwesomeIcons.medium,
-                                      url: mediumLink,
-                                    ),
+                                        icon: FontAwesomeIcons.medium,
+                                        url: mediumLink),
                                     const SizedBox(width: 20),
                                   ],
                                   if (_isValidUrl(discordLink)) ...[
                                     _SocialIcon(
-                                      icon: FontAwesomeIcons.discord,
-                                      url: discordLink,
-                                    ),
+                                        icon: FontAwesomeIcons.discord,
+                                        url: discordLink),
                                     const SizedBox(width: 20),
                                   ],
                                   if (_isValidUrl(instagramLink))
                                     _SocialIcon(
-                                      icon: FontAwesomeIcons.instagram,
-                                      url: instagramLink,
-                                    ),
+                                        icon: FontAwesomeIcons.instagram,
+                                        url: instagramLink),
                                 ],
                               ),
                             ],
@@ -527,16 +523,45 @@ class _SettingsState extends State<Settings>
                       ),
                       const SizedBox(height: 20),
 
-                      // ── App version ───────────────────────────────────────
+// ── Footer ─────────────────────────────────────────────
                       FutureBuilder<PackageInfo>(
                         future: _packageInfoFuture,
                         builder: (_, snapshot) {
-                          if (!snapshot.hasData) return const SizedBox.shrink();
-                          final info = snapshot.data!;
-                          return Text(
-                            '${info.appName} v${info.version} (${info.buildNumber})',
-                            style: const TextStyle(
-                                fontSize: 16, color: Colors.grey),
+                          return Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () => launchPageUrl(
+                                  context: context,
+                                  url: 'https://github.com/$ownerGithubName',
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    GitHubIdenticon(
+                                        userId: ownerGithubId, size: 28),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Made by $ownerGithubName',
+                                      style: TextStyle(
+                                          fontSize: 13, color: Colors.grey),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(FontAwesomeIcons.github,
+                                        size: 13, color: Colors.grey),
+                                  ],
+                                ),
+                              ),
+                              if (snapshot.hasData) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${snapshot.data!.appName} v${snapshot.data!.version} (${snapshot.data!.buildNumber})',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                            ],
                           );
                         },
                       ),
