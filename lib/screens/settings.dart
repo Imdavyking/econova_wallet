@@ -411,40 +411,42 @@ class _SettingsState extends State<Settings>
                       const SizedBox(height: 20),
 
                       // ── Network ───────────────────────────────────────────
-                      _SectionHeader(label: 'Network'),
-                      const SizedBox(height: 10),
-                      Card(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(15)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                          child: ValueListenableBuilder<bool>(
-                            valueListenable: testNetNotifier,
-                            builder: (_, isTestNet, __) {
-                              debugPrint('enableTestNet = $enableTestNet');
-                              return _SettingsRow(
-                                icon: _CircleIcon(
-                                  color: isTestNet
-                                      ? Color.fromARGB(255, 255, 149, 0)
-                                      : Color.fromARGB(255, 50, 185, 55),
-                                  icon: FontAwesomeIcons.networkWired,
-                                ),
-                                label: isTestNet ? 'Testnet' : 'Mainnet',
-                                trailing: Transform.scale(
-                                  scale: 0.9,
-                                  child: Switch(
-                                    value: isTestNet,
-                                    activeColor: appBackgroundblue,
-                                    onChanged: _onTestNetToggle,
+                      if (kDebugMode) ...[
+                        _SectionHeader(label: 'Network'),
+                        const SizedBox(height: 10),
+                        Card(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(15)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                            child: ValueListenableBuilder<bool>(
+                              valueListenable: testNetNotifier,
+                              builder: (_, isTestNet, __) {
+                                debugPrint('enableTestNet = $enableTestNet');
+                                return _SettingsRow(
+                                  icon: _CircleIcon(
+                                    color: isTestNet
+                                        ? Color.fromARGB(255, 255, 149, 0)
+                                        : Color.fromARGB(255, 50, 185, 55),
+                                    icon: FontAwesomeIcons.networkWired,
                                   ),
-                                ),
-                              );
-                            },
+                                  label: isTestNet ? 'Testnet' : 'Mainnet',
+                                  trailing: Transform.scale(
+                                    scale: 0.9,
+                                    child: Switch(
+                                      value: isTestNet,
+                                      activeColor: appBackgroundblue,
+                                      onChanged: _onTestNetToggle,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
+                        const SizedBox(height: 10),
+                      ],
 
                       // ── Web ───────────────────────────────────────────────
                       _SectionHeader(label: localization.web),
