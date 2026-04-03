@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
-import '../utils/rpc_urls.dart';
 
 // ── Data class — replaces the loose Map ──────────────────────────────────────
 
