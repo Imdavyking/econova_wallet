@@ -94,7 +94,7 @@ class _CsvView extends StatelessWidget {
     final colCount = headers.length;
 
     // Fixed column width; horizontal scroll handles overflow.
-    const colWidth = 140.0;
+    const colWidth = 200.0;
 
     final headerBg = Theme.of(context).colorScheme.surface;
     final borderColor = Theme.of(context).dividerColor;
@@ -108,6 +108,7 @@ class _CsvView extends StatelessWidget {
       Color? bg,
     }) =>
         Container(
+          height: double.infinity,
           width: colWidth,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
@@ -119,8 +120,6 @@ class _CsvView extends StatelessWidget {
           ),
           child: Text(
             text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               fontWeight: isHeader ? FontWeight.w700 : FontWeight.normal,
@@ -139,10 +138,12 @@ class _CsvView extends StatelessWidget {
             children: [
               // Header row — sticky via CustomScrollView is overkill here;
               // a plain Row at the top is sufficient.
-              Row(
-                children: headers
-                    .map((h) => cell(h, isHeader: true, bg: headerBg))
-                    .toList(),
+              IntrinsicHeight(
+                child: Row(
+                  children: headers
+                      .map((h) => cell(h, isHeader: true, bg: headerBg))
+                      .toList(),
+                ),
               ),
               Expanded(
                 child: ListView.builder(
@@ -150,12 +151,14 @@ class _CsvView extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final row = dataRows[i];
                     final bg = i.isEven ? altRowBg : altRowBg2;
-                    return Row(
-                      children: List.generate(
-                        colCount,
-                        (j) => cell(
-                          j < row.length ? row[j].toString() : '',
-                          bg: bg,
+                    return IntrinsicHeight(
+                      child: Row(
+                        children: List.generate(
+                          colCount,
+                          (j) => cell(
+                            j < row.length ? row[j].toString() : '',
+                            bg: bg,
+                          ),
                         ),
                       ),
                     );
