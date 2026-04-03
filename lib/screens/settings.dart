@@ -63,19 +63,20 @@ class _SettingsState extends State<Settings>
   Future<String?> _fetchGithubUsername() async {
     const url = 'https://api.github.com/user/$ownerGithubId';
 
+    final cached = pref.get(url);
+    if (cached is String) return cached;
+
     try {
-      if (pref.containsKey(url)) {
-        return pref.get(url) as String;
-      }
-      final response = await http.get(
-        Uri.parse(url),
-      );
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final username = jsonDecode(response.body)['login'] as String?;
-        pref.put(url, username);
+        if (username != null) await pref.put(url, username);
         return username;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to fetch GitHub username: $e');
+    }
+
     return null;
   }
 
