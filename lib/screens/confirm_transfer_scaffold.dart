@@ -117,11 +117,11 @@ class _ConfirmTransferScaffoldState extends State<ConfirmTransferScaffold> {
   Future<void> _submit() async {
     if (_isSending) return;
     if (!await authenticate(context)) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       _showError(AppLocalizations.of(context)!.authFailed);
       return;
     }
-    if (!context.mounted) return;
+    if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     setState(() => _isSending = true);
 
@@ -133,12 +133,12 @@ class _ConfirmTransferScaffoldState extends State<ConfirmTransferScaffold> {
         await widget.onSuccess!(txHash: result.txHash);
       }
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.trxSent)),
       );
       setState(() => _isSending = false);
-      if (context.mounted && Navigator.canPop(context)) {
+      if (mounted && Navigator.canPop(context)) {
         int count = 0;
         Navigator.popUntil(context, (_) => count++ == 3);
       }

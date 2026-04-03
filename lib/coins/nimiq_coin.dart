@@ -174,8 +174,10 @@ class NimiqCoin extends Coin {
       signature: signature,
     );
 
-    final txHash =
-        await _rpc('sendRawTransaction', [HEX.encode(rawTx)]) as String;
+    final txHash = await _rpc('sendRawTransaction', [
+      {'rawTransaction': HEX.encode(rawTx)},
+    ]) as String;
+
     return (txHash: txHash, txRaw: HEX.encode(rawTx));
   }
 
@@ -494,17 +496,16 @@ class _NimiqTx {
   }) {
     assert(publicKey.length == 32);
     assert(signature.length == 64);
-    const proofLen = 1 + 32 + 1 + 64; // 98
 
-    final proof = Uint8List(proofLen)
+    final proof = Uint8List(1 + 32 + 1 + 64)
       ..[0] = 0x00 // KeyType::Ed25519
       ..setRange(1, 33, publicKey)
-      ..[33] = 0x00 // empty Blake2bMerklePath
+      ..[33] = 0x00 // empty merkle path
       ..setRange(34, 98, signature);
 
     final buf = BytesBuilder(copy: false);
     buf.add(txBody);
-    _u16(buf, proofLen);
+    // ❌ Remove: _u16(buf, proofLen);  — no length prefix on the wire
     buf.add(proof);
     return buf.toBytes();
   }
