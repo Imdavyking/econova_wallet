@@ -82,11 +82,9 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
           width: 40,
           height: 40,
           child: ClipOval(
-            child: LoopingBoringAvatar(
-              duration: const Duration(seconds: 5),
+            child: BoringAvatar(
               name: name,
               type: BoringAvatarType.beam,
-              size: 40,
             ),
           ),
         ),
