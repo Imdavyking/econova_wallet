@@ -114,6 +114,7 @@ class _SettingsState extends State<Settings>
                       // ── Account ───────────────────────────────────────────
                       _SectionHeader(label: localization.account),
                       const SizedBox(height: 10),
+
                       SizedBox(
                         width: double.infinity,
                         child: Card(
