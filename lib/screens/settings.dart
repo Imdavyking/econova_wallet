@@ -1,8 +1,8 @@
 // ignore_for_file: prefer_const_constructors, library_private_types_in_public_api
 
 import 'dart:convert';
-
 import 'package:bip39/bip39.dart';
+import 'package:http/http.dart' as http;
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/components/user_details_placeholder.dart';
@@ -49,13 +49,27 @@ class _SettingsState extends State<Settings>
   late final Future<bool> _deadSwitchFuture;
   late final Future<bool> _dmsUserFuture;
   late final Future<PackageInfo> _packageInfoFuture;
+  late final Future<String?> _githubUsernameFuture;
 
   @override
   void initState() {
     super.initState();
     _deadSwitchFuture = _checkDeadSwitch();
     _dmsUserFuture = _checkDmsUser();
+    _githubUsernameFuture = _fetchGithubUsername();
     _packageInfoFuture = PackageInfo.fromPlatform();
+  }
+
+  Future<String?> _fetchGithubUsername() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/user/$ownerGithubId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['login'] as String?;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<bool> _checkDeadSwitch() async {
@@ -524,15 +538,21 @@ class _SettingsState extends State<Settings>
                       const SizedBox(height: 20),
 
 // ── Footer ─────────────────────────────────────────────
-                      FutureBuilder<PackageInfo>(
-                        future: _packageInfoFuture,
+                      // ── Footer ─────────────────────────────────────────────
+                      FutureBuilder<List<Object?>>(
+                        future: Future.wait(
+                            [_packageInfoFuture, _githubUsernameFuture]),
                         builder: (_, snapshot) {
+                          final info = snapshot.data?[0] as PackageInfo?;
+                          final username = snapshot.data?[1] as String?;
+                          final displayName = username ?? '#$ownerGithubId';
+
                           return Column(
                             children: [
                               GestureDetector(
                                 onTap: () => launchPageUrl(
                                   context: context,
-                                  url: 'https://github.com/$ownerGithubName',
+                                  url: 'https://github.com/$displayName',
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -541,7 +561,7 @@ class _SettingsState extends State<Settings>
                                         userId: ownerGithubId, size: 28),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Made by $ownerGithubName',
+                                      'Made by $displayName',
                                       style: TextStyle(
                                           fontSize: 13, color: Colors.grey),
                                     ),
@@ -551,10 +571,10 @@ class _SettingsState extends State<Settings>
                                   ],
                                 ),
                               ),
-                              if (snapshot.hasData) ...[
+                              if (info != null) ...[
                                 const SizedBox(height: 6),
                                 Text(
-                                  '${snapshot.data!.appName} v${snapshot.data!.version} (${snapshot.data!.buildNumber})',
+                                  '${info.appName} v${info.version} (${info.buildNumber})',
                                   style: const TextStyle(
                                       fontSize: 12, color: Colors.grey),
                                   textAlign: TextAlign.center,
