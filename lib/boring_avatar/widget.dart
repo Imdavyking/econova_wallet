@@ -12,13 +12,13 @@ class LoopingBoringAvatar extends StatefulWidget {
   final BoringAvatarType type;
   final Duration duration;
   final double size;
-  final ShapeBorder shapeBorder;
+  final ShapeBorder? shapeBorder;
 
   const LoopingBoringAvatar({
     super.key,
     required this.name,
     required this.type,
-    required this.shapeBorder,
+    this.shapeBorder,
     this.duration = const Duration(seconds: 5),
     this.size = 40,
   });
@@ -53,8 +53,8 @@ class _LoopingBoringAvatarState extends State<LoopingBoringAvatar> {
       name: _currentName, // toggles between name ↔ name_2
       duration: widget.duration,
       type: widget.type,
-      curve: Curves.easeInOut, 
-      shape: widget.shapeBorder,// smoother than the default linear
+      curve: Curves.easeInOut,
+      shape: widget.shapeBorder, // smoother than the default linear
     );
   }
 }

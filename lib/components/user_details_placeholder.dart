@@ -81,11 +81,12 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
         SizedBox(
           width: 40,
           height: 40,
-          child: BoringAvatar(
-            name: name,
-            type: BoringAvatarType.beam,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // ← adjust to taste
+          child: ClipOval(
+            child: LoopingBoringAvatar(
+              duration: const Duration(seconds: 5),
+              name: name,
+              type: BoringAvatarType.beam,
+              size: 40,
             ),
           ),
         ),
