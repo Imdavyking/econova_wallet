@@ -191,10 +191,7 @@ class NimiqCoin extends Coin {
   @override
   Future<String> addressExplorer() async {
     final address = await getAddress();
-    return blockExplorer.replaceFirst(
-      '/transactions/$blockExplorerPlaceholder',
-      '/address/$address',
-    );
+    return blockExplorer.replaceFirst(blockExplorerPlaceholder, address);
   }
 
   // ── Serialization ────────────────────────────────────────────────────────
@@ -257,13 +254,12 @@ List<NimiqCoin> getNimiqBlockchains() {
   if (enableTestNet) {
     return [
       NimiqCoin(
-        blockExplorer:
-            'https://test.nimiqscan.io/transactions/$blockExplorerPlaceholder',
+        blockExplorer: 'https://test.nimiq.watch/#$blockExplorerPlaceholder',
         symbol: 'NIM',
         name: 'Nimiq (Testnet)',
         default_: 'NIM',
         image: 'assets/nimiq.png',
-        rpcUrl: 'https://rpc.nimiqwatch.com',
+        rpcUrl: 'https://rpc.testnet.nimiqwatch.com/',
         network: NimiqNetwork.testnet,
         caipReference: 'testnet',
       ),
@@ -271,8 +267,7 @@ List<NimiqCoin> getNimiqBlockchains() {
   }
   return [
     NimiqCoin(
-      blockExplorer:
-          'https://nimiqscan.io/transactions/$blockExplorerPlaceholder',
+      blockExplorer: 'https://nimiq.watch/#$blockExplorerPlaceholder',
       symbol: 'NIM',
       name: 'Nimiq',
       default_: 'NIM',
