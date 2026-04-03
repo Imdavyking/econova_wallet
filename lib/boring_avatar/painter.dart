@@ -57,14 +57,12 @@ abstract class BoringAvatarPainter {
       double scale = 1,
       double translateX = 0,
       double translateY = 0}) {
-       
-       
     final transform = Matrix4.identity()
-      ..translateByDouble(cX(translateX), cY(translateY), 0.0, 1.0)
-      ..translateByDouble(size.width / 2, size.height / 2, 0.0, 1.0)
+      ..translate(cX(translateX), cY(translateY), 0.0)
+      ..translate(size.width / 2, size.height / 2, 0.0)
       ..rotateZ(rotate * (pi / 180))
-      ..translateByDouble(-size.width / 2, -size.height / 2, 0.0, 1.0)
-      ..scaleByDouble(scale, scale, scale, 1.0);
+      ..translate(-size.width / 2, -size.height / 2, 0.0)
+      ..scale(scale, scale, scale);
     return transform;
   }
 

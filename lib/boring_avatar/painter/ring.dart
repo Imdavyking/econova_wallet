@@ -127,8 +127,7 @@ class AvatarRingPainter extends BoringAvatarPainter {
     int i = 0;
     final scaleX = size.width / boxSize;
     final scaleY = size.height / boxSize;
-    final resizeTransform = Matrix4.identity()
-      ..scaleByDouble(scaleX, scaleY, scaleX, 1.0);
+    final resizeTransform = Matrix4.identity()..scale(scaleX, scaleY, scaleX);
 
     for (var path in _avatarRingPathList) {
       final color = properties.colorList[i++];

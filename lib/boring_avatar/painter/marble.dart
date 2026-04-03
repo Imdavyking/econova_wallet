@@ -193,12 +193,12 @@ class AvatarMarblePainter extends BoringAvatarPainter {
     final scaleX = size.width / boxSize;
     final scaleY = size.height / boxSize;
     final path1Transform = Matrix4.identity()
-      ..scaleByDouble(scaleX, scaleY, scaleX, 1.0)
-      ..translateByDouble(p.element1TranslateX, p.element1TranslateY, 0.0, 1.0)
-      ..translateByDouble(boxSize / 2, boxSize / 2, 0.0, 1.0)
+      ..scale(scaleX, scaleY, scaleX)
+      ..translate(p.element1TranslateX, p.element1TranslateY, 0.0)
+      ..translate(boxSize / 2, boxSize / 2, 0.0)
       ..rotateZ(p.element1Rotate * (pi / 180))
-      ..translateByDouble(-boxSize / 2, -boxSize / 2, 0.0, 1.0)
-      ..scaleByDouble(p.element1Scale, p.element1Scale, p.element1Scale, 1.0);
+      ..translate(-boxSize / 2, -boxSize / 2, 0.0)
+      ..scale(p.element1Scale, p.element1Scale, p.element1Scale);
 
     final path1 = _marblePath1.transform(path1Transform.storage);
     Paint paintFill1 = Paint()
@@ -215,12 +215,12 @@ class AvatarMarblePainter extends BoringAvatarPainter {
       ..maskFilter = blur;
 
     final path2Transform = Matrix4.identity()
-      ..scaleByDouble(scaleX, scaleY, scaleX, 1.0)
-      ..translateByDouble(p.element2TranslateX, p.element2TranslateY, 0.0, 1.0)
-      ..translateByDouble(boxSize / 2, boxSize / 2, 0.0, 1.0)
+      ..scale(scaleX, scaleY, scaleX)
+      ..translate(p.element2TranslateX, p.element2TranslateY, 0.0)
+      ..translate(boxSize / 2, boxSize / 2, 0.0)
       ..rotateZ(p.element2Rotate * (pi / 180))
-      ..translateByDouble(-boxSize / 2, -boxSize / 2, 0.0, 1.0)
-      ..scaleByDouble(p.element2Scale, p.element2Scale, p.element2Scale, 1.0);
+      ..translate(-boxSize / 2, -boxSize / 2, 0.0)
+      ..scale(p.element2Scale, p.element2Scale, p.element2Scale);
 
     final path2 = _marblePath2.transform(path2Transform.storage);
     canvas.drawPath(path2, paintFill2);
