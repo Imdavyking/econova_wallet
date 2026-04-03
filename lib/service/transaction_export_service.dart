@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wallet_app/screens/csv_viewer.dart';
 import 'package:wallet_app/screens/navigator_service.dart';
 import 'package:wallet_app/screens/pdf_viewer.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
@@ -370,11 +371,17 @@ class TransactionExportService {
     final fileName =
         '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.csv';
 
-    await _shareFile(
-      content: csv,
-      fileName: fileName,
-      mimeType: 'text/csv',
-      subject: '$tokenSymbol Transaction History — EcoNova',
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsString(csv);
+
+    NavigationService.navigatorKey.currentState!.push(
+      MaterialPageRoute(
+        builder: (_) => FileViewerScreen(
+          path: file.path,
+          title: '$tokenSymbol Transactions',
+        ),
+      ),
     );
   }
 
@@ -564,7 +571,7 @@ class _TransactionExportSheetState extends State<TransactionExportSheet> {
           );
           break;
       }
-      if (mounted && format != ExportFormat.pdf) Navigator.pop(context);
+      if (mounted && format == ExportFormat.txt) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
