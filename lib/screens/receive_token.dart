@@ -143,6 +143,9 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                       return ValueListenableBuilder<ReceivePayParams>(
                         valueListenable: _receiveParams,
                         builder: (context, params, _) {
+                          final address = params.requestUrl ?? _userAddress;
+                          final identicon = _coin.getExplorerIdenticon(address);
+
                           return Column(
                             children: [
                               // QR code
@@ -158,38 +161,30 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                       alignment: Alignment.center,
                                       children: [
                                         QrImageView(
-                                          data:
-                                              params.requestUrl ?? _userAddress,
+                                          data: address,
                                           size: size,
-                                          gapless:
-                                              false, // false leaves a quiet zone so center stays clear
-                                          errorCorrectionLevel: QrErrorCorrectLevel
-                                              .H, // H gives more redundancy to survive the center cutout
+                                          gapless: false,
+                                          errorCorrectionLevel:
+                                              QrErrorCorrectLevel.H,
                                         ),
-                                        Container(
-                                          width: size * 0.22,
-                                          height: size * 0.22,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
+                                        if (identicon != null)
+                                          Container(
+                                            width: size * 0.22,
+                                            height: size * 0.22,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            padding: const EdgeInsets.all(4),
+                                            child: identicon,
                                           ),
-                                          padding: const EdgeInsets.all(4),
-                                          child: _coin.getExplorerIdenticon(
-                                                params.requestUrl ??
-                                                    _userAddress,
-                                              ) ??
-                                              Image(
-                                                image: AssetImage(
-                                                  _coin.getImage(),
-                                                ),
-                                              ),
-                                        ),
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 40),
                               // Tappable address card
                               GestureDetector(
