@@ -176,8 +176,14 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                           ),
                                           padding: const EdgeInsets.all(4),
                                           child: _coin.getExplorerIdenticon(
-                                            params.requestUrl ?? _userAddress,
-                                          ), // anything here — identicon, logo, icon
+                                                params.requestUrl ??
+                                                    _userAddress,
+                                              ) ??
+                                              Image(
+                                                image: AssetImage(
+                                                  _coin.getImage(),
+                                                ),
+                                              ),
                                         ),
                                       ],
                                     ),
