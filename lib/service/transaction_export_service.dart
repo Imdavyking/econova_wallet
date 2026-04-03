@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wallet_app/screens/navigator_service.dart';
+import 'package:wallet_app/screens/pdf_viewer.dart';
 import 'package:wallet_app/utils/wallet_transaction.dart';
 import 'package:pdf/pdf.dart';
 import '../utils/format_money.dart';
@@ -295,9 +297,14 @@ class TransactionExportService {
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(bytes);
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'application/pdf')],
-      subject: '$tokenSymbol Transaction History — EcoNova',
+    Navigator.push(
+      NavigationService.navigatorKey.currentContext!,
+      MaterialPageRoute(
+        builder: (_) => PdfViewerScreen(
+          path: file.path,
+          title: '$tokenSymbol Transactions',
+        ),
+      ),
     );
   }
   // ── CSV ──────────────────────────────────────────────────────────────────
