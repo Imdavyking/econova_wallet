@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:wallet_app/boring_avatar/painter.dart';
+import 'package:wallet_app/boring_avatar/widget.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -71,9 +75,28 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
     final name =
         info.name.isEmpty ? AppLocalizations.of(context)!.user : info.name;
 
-    return Text(
-      name,
-      style: TextStyle(fontSize: widget.textSize),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: LoopingBoringAvatar(
+            duration: const Duration(seconds: 5),
+            name: name,
+            type: BoringAvatarType.beam,
+            size: 40,
+            shapeBorder: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // ← adjust to taste
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          name,
+          style: TextStyle(fontSize: widget.textSize),
+        ),
+      ],
     );
   }
 }

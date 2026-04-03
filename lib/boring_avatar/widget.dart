@@ -1,9 +1,63 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import './painter/cross.dart';
 import './palette.dart';
 import 'painter.dart';
 import 'inherited.dart';
+
+class LoopingBoringAvatar extends StatefulWidget {
+  final String name;
+  final BoringAvatarType type;
+  final Duration duration;
+  final double size;
+  final ShapeBorder shapeBorder;
+
+  const LoopingBoringAvatar({
+    super.key,
+    required this.name,
+    required this.type,
+    required this.shapeBorder,
+    this.duration = const Duration(seconds: 5),
+    this.size = 40,
+  });
+
+  @override
+  State<LoopingBoringAvatar> createState() => _LoopingBoringAvatarState();
+}
+
+class _LoopingBoringAvatarState extends State<LoopingBoringAvatar> {
+  late Timer _timer;
+  bool _flipped = false;
+
+  String get _currentName => _flipped ? '${widget.name}_2' : widget.name;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(widget.duration, (_) {
+      if (mounted) setState(() => _flipped = !_flipped);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBoringAvatar(
+      name: _currentName, // toggles between name ↔ name_2
+      duration: widget.duration,
+      type: widget.type,
+      curve: Curves.easeInOut, 
+      shape: widget.shapeBorder,// smoother than the default linear
+    );
+  }
+}
 
 class BoringAvatarCanvas extends StatelessWidget {
   final BoringAvatarData avatarData;
