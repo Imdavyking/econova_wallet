@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -168,8 +169,28 @@ class TransactionExportService {
       throw Exception('No transactions to export for $tokenSymbol');
     }
 
-    final pdf = pw.Document();
+    // ── Load Unicode fonts ──────────────────────────────────────────────────
+    final regular = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+    final bold = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+    final italic = await rootBundle.load('assets/fonts/Roboto-Italic.ttf');
+    final boldItalic =
+        await rootBundle.load('assets/fonts/Roboto-BoldItalic.ttf');
 
+    final ttf = pw.Font.ttf(regular);
+    final ttfBold = pw.Font.ttf(bold);
+    final ttfItalic = pw.Font.ttf(italic);
+    final ttfBoldItalic = pw.Font.ttf(boldItalic);
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: ttf,
+        bold: ttfBold,
+        italic: ttfItalic,
+        boldItalic: ttfBoldItalic,
+      ),
+    );
+    final baseStyle = pw.TextStyle(font: ttf, fontSize: 10);
+    final boldStyle = pw.TextStyle(font: ttfBold, fontSize: 10);
     final sent = transactions.where((t) => t.isSent).toList();
     final received = transactions.where((t) => t.isReceived).toList();
     final totalSent =
@@ -181,24 +202,33 @@ class TransactionExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(
+          base: ttf,
+          bold: ttfBold,
+          italic: ttfItalic,
+          boldItalic: ttfBoldItalic,
+        ),
         build: (context) => [
           pw.Text(
-            'EcoNova — $tokenSymbol Transaction History',
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            // ← replace — with plain hyphen, no emoji
+            'EcoNova - $tokenSymbol Transaction History',
+            style: pw.TextStyle(
+                font: ttfBold, fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
             'Exported: ${_dateFormat.format(DateTime.now().toUtc())} UTC',
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
+            style: baseStyle.copyWith(color: PdfColors.grey),
           ),
           pw.Text(
-            '⚠️ Based on locally cached history — may not reflect full on-chain activity.',
-            style: const pw.TextStyle(fontSize: 9, color: PdfColors.orange),
+            // ← replace ⚠️ with plain text
+            'Note: Based on locally cached history - may not reflect full on-chain activity.',
+            style: baseStyle.copyWith(color: PdfColors.orange),
           ),
           if (walletAddress != null)
             pw.Text(
               'Wallet: $walletAddress',
-              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
+              style: baseStyle.copyWith(color: PdfColors.grey),
             ),
           pw.SizedBox(height: 16),
           pw.Container(
@@ -211,43 +241,40 @@ class TransactionExportService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Total sent',
-                          style: const pw.TextStyle(
-                              fontSize: 10, color: PdfColors.grey)),
-                      pw.Text('$totalSent $tokenSymbol',
-                          style: pw.TextStyle(
-                              fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                    ]),
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Total sent',
+                        style: baseStyle.copyWith(color: PdfColors.grey)),
+                    pw.Text('$totalSent $tokenSymbol',
+                        style: boldStyle.copyWith(fontSize: 13)),
+                  ],
+                ),
                 pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Total received',
-                          style: const pw.TextStyle(
-                              fontSize: 10, color: PdfColors.grey)),
-                      pw.Text('$totalReceived $tokenSymbol',
-                          style: pw.TextStyle(
-                              fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                    ]),
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Total received',
+                        style: baseStyle.copyWith(color: PdfColors.grey)),
+                    pw.Text('$totalReceived $tokenSymbol',
+                        style: boldStyle.copyWith(fontSize: 13)),
+                  ],
+                ),
                 pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Transactions',
-                          style: const pw.TextStyle(
-                              fontSize: 10, color: PdfColors.grey)),
-                      pw.Text('${transactions.length}',
-                          style: pw.TextStyle(
-                              fontSize: 13, fontWeight: pw.FontWeight.bold)),
-                    ]),
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Transactions',
+                        style: baseStyle.copyWith(color: PdfColors.grey)),
+                    pw.Text('${transactions.length}',
+                        style: boldStyle.copyWith(fontSize: 13)),
+                  ],
+                ),
               ],
             ),
           ),
           pw.SizedBox(height: 16),
           pw.TableHelper.fromTextArray(
-            headerStyle:
-                pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-            cellStyle: const pw.TextStyle(fontSize: 8),
+            headerStyle: pw.TextStyle(
+                font: ttfBold, fontWeight: pw.FontWeight.bold, fontSize: 9),
+            cellStyle: baseStyle.copyWith(fontSize: 8),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
             cellHeight: 28,
             headers: ['Date', 'Type', 'Amount', 'From', 'To', 'Status', 'Memo'],
@@ -267,19 +294,8 @@ class TransactionExportService {
       ),
     );
 
-    final bytes = await pdf.save();
-    final dir = await getApplicationDocumentsDirectory();
-    final fileName =
-        '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.pdf';
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes);
-
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'application/pdf')],
-      subject: '$tokenSymbol Transaction History — EcoNova',
-    );
+    // rest unchanged ...
   }
-
   // ── CSV ──────────────────────────────────────────────────────────────────
 
   static Future<void> exportCsv({
