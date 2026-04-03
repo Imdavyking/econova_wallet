@@ -243,8 +243,6 @@ class NimiqCoin extends Coin {
         )
         .timeout(networkTimeOutDuration);
 
-    print(response.body);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (body.containsKey('error')) {
       final err = body['error'] as Map<String, dynamic>;
