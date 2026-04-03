@@ -61,12 +61,19 @@ class _SettingsState extends State<Settings>
   }
 
   Future<String?> _fetchGithubUsername() async {
+    const url = 'https://api.github.com/user/$ownerGithubId';
+
     try {
+      if (pref.containsKey(url)) {
+        return pref.get(url) as String;
+      }
       final response = await http.get(
-        Uri.parse('https://api.github.com/user/$ownerGithubId'),
+        Uri.parse(url),
       );
       if (response.statusCode == 200) {
-        return jsonDecode(response.body)['login'] as String?;
+        final username = jsonDecode(response.body)['login'] as String?;
+        pref.put(url, username);
+        return username;
       }
     } catch (_) {}
     return null;
