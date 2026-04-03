@@ -155,9 +155,8 @@ class NimiqCoin extends Coin {
 
     final senderBytes = NimiqAddress.decode(senderAddress);
     final recipientBytes = NimiqAddress.decode(to);
-
-    final txBody = _NimiqTx.buildBody(
-      sender: senderBytes,
+    final signingContent = _NimiqTx.buildSigningContent(
+      senderAddress: senderBytes,
       recipient: recipientBytes,
       valueLuna: luna,
       feeLuna: feeInLuna,
@@ -166,17 +165,20 @@ class NimiqCoin extends Coin {
       memo: memo,
     );
 
-    final signature = _nimiqSign(privateKeyBytes, txBody);
+    final signature = _nimiqSign(privateKeyBytes, signingContent);
 
-    final rawTx = _NimiqTx.appendProof(
-      txBody: txBody,
-      publicKey: publicKeyBytes,
+    final rawTx = _NimiqTx.buildWireTx(
+      publicKey: publicKeyBytes, // 32B pubkey goes here
+      recipient: recipientBytes,
+      valueLuna: luna,
+      feeLuna: feeInLuna,
+      validityStartHeight: currentHeight,
+      networkId: network.id,
       signature: signature,
     );
 
-    final txHash = await _rpc('sendRawTransaction', [
-      {'rawTransaction': HEX.encode(rawTx)},
-    ]) as String;
+    final txHash =
+        await _rpc('sendRawTransaction', [HEX.encode(rawTx)]) as String;
 
     return (txHash: txHash, txRaw: HEX.encode(rawTx));
   }
@@ -240,6 +242,8 @@ class NimiqCoin extends Coin {
           }),
         )
         .timeout(networkTimeOutDuration);
+
+    print(response.body);
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (body.containsKey('error')) {
@@ -438,24 +442,10 @@ class _NimiqTx {
 
   static const int _maxMemoBytes = 64;
 
-  /// Serialises the transaction body (the data that is signed).
-  ///
-  /// Albatross basic-transaction layout:
-  ///   u8   network_id
-  ///   u8   flags = 0  (basic)
-  ///   20B  sender_address
-  ///   u8   sender_type = 0  (Basic)
-  ///   u16  sender_data_len = 0
-  ///   20B  recipient_address
-  ///   u8   recipient_type = 0  (Basic)
-  ///   u16  recipient_data_len
-  ///   NB   recipient_data  (optional memo)
-  ///   u64  value  (Luna, LE)
-  ///   u64  fee    (Luna, LE)
-  ///   u32  validity_start_height  (LE)
-  static Uint8List buildBody({
-    required Uint8List sender,
-    required Uint8List recipient,
+  /// What gets SIGNED — big-endian, includes sender address (not pubkey)
+  static Uint8List buildSigningContent({
+    required Uint8List senderAddress, // 20 bytes
+    required Uint8List recipient, // 20 bytes
     required int valueLuna,
     required int feeLuna,
     required int validityStartHeight,
@@ -467,65 +457,57 @@ class _NimiqTx {
         : Uint8List(0);
 
     final buf = BytesBuilder(copy: false);
-    buf.addByte(networkId);
-    buf.addByte(0); // flags = 0
-    buf.add(sender); // 20 bytes
+    _u16be(buf, memoBytes.length); // sender_data_len (BE)
+    buf.add(senderAddress); // 20B sender address
     buf.addByte(0); // sender_type = Basic
-    _u16(buf, 0); // no sender data
-    buf.add(recipient); // 20 bytes
+    buf.add(recipient); // 20B recipient address
     buf.addByte(0); // recipient_type = Basic
-    _u16(buf, memoBytes.length);
-    buf.add(memoBytes);
-    _u64(buf, valueLuna);
-    _u64(buf, feeLuna);
-    _u32(buf, validityStartHeight);
+    _u64be(buf, valueLuna);
+    _u64be(buf, feeLuna);
+    _u32be(buf, validityStartHeight);
+    buf.addByte(0); // flags
+    buf.addByte(networkId);
+    buf.add(memoBytes); // sender_data (empty here)
     return buf.toBytes();
   }
 
-  /// Appends the single-signer Ed25519 proof to the signed body.
-  ///
-  /// Proof (98 bytes):
-  ///   u8   key_type = 0  (Ed25519)
-  ///   32B  public_key
-  ///   u8   merkle_path_count = 0  (no path)
-  ///   64B  signature
-  static Uint8List appendProof({
-    required Uint8List txBody,
-    required Uint8List publicKey,
-    required Uint8List signature,
+  /// Wire format sent to sendRawTransaction
+  static Uint8List buildWireTx({
+    required Uint8List publicKey, // 32 bytes!
+    required Uint8List recipient, // 20 bytes
+    required int valueLuna,
+    required int feeLuna,
+    required int validityStartHeight,
+    required int networkId,
+    required Uint8List signature, // 64 bytes
   }) {
-    assert(publicKey.length == 32);
-    assert(signature.length == 64);
-
-    final proof = Uint8List(1 + 32 + 1 + 64)
-      ..[0] = 0x00 // KeyType::Ed25519
-      ..setRange(1, 33, publicKey)
-      ..[33] = 0x00 // empty merkle path
-      ..setRange(34, 98, signature);
-
     final buf = BytesBuilder(copy: false);
-    buf.add(txBody);
-    // ❌ Remove: _u16(buf, proofLen);  — no length prefix on the wire
-    buf.add(proof);
+    buf.addByte(0); // flags = 0
+    buf.addByte(0); // sender_type = Basic
+    buf.add(publicKey); // 32B public key
+    buf.add(recipient); // 20B recipient
+    _u64be(buf, valueLuna);
+    _u64be(buf, feeLuna);
+    _u32be(buf, validityStartHeight);
+    buf.addByte(networkId);
+    buf.add(signature); // 64B signature
     return buf.toBytes();
   }
 
-  // ── little-endian helpers ────────────────────────────────────────────────
-
-  static void _u16(BytesBuilder b, int v) {
-    b.addByte(v & 0xFF);
+  static void _u16be(BytesBuilder b, int v) {
     b.addByte((v >> 8) & 0xFF);
+    b.addByte(v & 0xFF);
   }
 
-  static void _u32(BytesBuilder b, int v) {
-    b.addByte(v & 0xFF);
-    b.addByte((v >> 8) & 0xFF);
-    b.addByte((v >> 16) & 0xFF);
+  static void _u32be(BytesBuilder b, int v) {
     b.addByte((v >> 24) & 0xFF);
+    b.addByte((v >> 16) & 0xFF);
+    b.addByte((v >> 8) & 0xFF);
+    b.addByte(v & 0xFF);
   }
 
-  static void _u64(BytesBuilder b, int v) {
-    _u32(b, v & 0xFFFFFFFF);
-    _u32(b, (v >> 32) & 0xFFFFFFFF);
+  static void _u64be(BytesBuilder b, int v) {
+    _u32be(b, (v >> 32) & 0xFFFFFFFF);
+    _u32be(b, v & 0xFFFFFFFF);
   }
 }
