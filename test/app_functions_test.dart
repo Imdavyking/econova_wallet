@@ -7,6 +7,7 @@ import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
+import 'package:wallet_app/coins/nimiq_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
@@ -40,7 +41,8 @@ void main() async {
     'Cardano (Preprod)':
         'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
     'ALGO': 'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q',
-    'Nimiq': 'NQ59 S95X 7XVU KXU6 K05T 3PG4 YJX3 GDTQ 51X3',// i get NQ479MQATDGX8R2DLEELUX3M89H2FQTH43VQ (wrong)
+    'Nimiq':
+        'NQ59 S95X 7XVU KXU6 K05T 3PG4 YJX3 GDTQ 51X3', // i get NQ479MQATDGX8R2DLEELUX3M89H2FQTH43VQ (wrong)
     'APT': '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
     'ATOM': 'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7',
     'BCH': 'qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf',
@@ -874,6 +876,8 @@ void main() async {
     const nameKeyed = {
       'Cardano',
       'Cardano (Preprod)',
+      'Nimiq',
+      'Nimiq (Testnet)',
       'Bitcoin',
       'Bitcoin (SegWit)',
       'Bitcoin (Legacy)',
