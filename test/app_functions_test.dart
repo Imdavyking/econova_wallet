@@ -41,8 +41,7 @@ void main() async {
     'Cardano (Preprod)':
         'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
     'ALGO': 'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q',
-    'Nimiq':
-        'NQ59 S95X 7XVU KXU6 K05T 3PG4 YJX3 GDTQ 51X3', // i get NQ479MQATDGX8R2DLEELUX3M89H2FQTH43VQ (wrong)
+    'Nimiq': 'NQ59S95X7XVUKXU6K05T3PG4YJX3GDTQ51X3',
     'APT': '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
     'ATOM': 'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7',
     'BCH': 'qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf',
@@ -95,6 +94,7 @@ void main() async {
   const mnemonic2Addresses = {
     'ZIL': 'zil13y8306gm62960vwyglgfxa0nctms4jy2jskgxz',
     'ONT': 'Ae2rsN6dbMKoYHNGuHq1ZbrrKzYaztMVuc',
+    'Nimiq': 'NQ42LKD2A8T7U256T79M8L0FMSRME9L51Q8R',
     'STRK':
         '0x03f1ccede682fa33fa5ead53468026175250073a0ca434794aad1b358d1b35e1',
     'ICP': 'b4cd4b814a425b8644e81e4161af24315a20dbe14adf2e77f80fd9a5dc51f1f9',

@@ -336,7 +336,10 @@ class NimiqAddress {
   static String encode(List<int> addressBytes) {
     assert(addressBytes.length == 20, 'Nimiq address must be 20 bytes');
     final base32 = _toBase32(Uint8List.fromList(addressBytes));
-    final check = (98 - _ibanMod97('NQ00$base32')).toString().padLeft(2, '0');
+
+    // IBAN: move country+check to end, then compute mod-97
+    final check = (98 - _ibanMod97('${base32}NQ00')).toString().padLeft(2, '0');
+
     return 'NQ$check$base32';
   }
 
@@ -350,7 +353,9 @@ class NimiqAddress {
     }
     final checkDigits = clean.substring(2, 4);
     final base32 = clean.substring(4);
-    if (_ibanMod97('NQ$checkDigits$base32') != 1) {
+
+    // IBAN: base32 + country + check digits at end
+    if (_ibanMod97('${base32}NQ$checkDigits') != 1) {
       throw FormatException('Invalid Nimiq address checksum: $address');
     }
     return _fromBase32(base32);
