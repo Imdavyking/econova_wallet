@@ -40,6 +40,7 @@ class _ReceiveTokenState extends State<ReceiveToken> {
   // ← cached once — not recreated on every build
   late final Future<String> _addressFuture;
   String _userAddress = '';
+  final size = 250.0;
 
   late Coin _coin;
 
@@ -153,11 +154,32 @@ class _ReceiveTokenState extends State<ReceiveToken> {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10)),
                                   child: Center(
-                                    child: QrImageView(
-                                      padding: const EdgeInsets.all(10),
-                                      data: params.requestUrl ?? _userAddress,
-                                      version: QrVersions.auto,
-                                      size: 250,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        QrImageView(
+                                          data:
+                                              params.requestUrl ?? _userAddress,
+                                          size: size,
+                                          gapless:
+                                              false, // false leaves a quiet zone so center stays clear
+                                          errorCorrectionLevel: QrErrorCorrectLevel
+                                              .H, // H gives more redundancy to survive the center cutout
+                                        ),
+                                        Container(
+                                          width: size * 0.22,
+                                          height: size * 0.22,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          padding: const EdgeInsets.all(4),
+                                          child: _coin.getExplorerIdenticon(
+                                            params.requestUrl ?? _userAddress,
+                                          ), // anything here — identicon, logo, icon
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),

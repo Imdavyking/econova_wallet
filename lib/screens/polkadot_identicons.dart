@@ -250,8 +250,8 @@ class _PolkadotPainter extends CustomPainter {
   const _PolkadotPainter({required this.colors, required this.size});
 
   @override
-  void paint(Canvas canvas, Size _) {
-    final s = size;
+  void paint(Canvas canvas, Size canvasSize) {
+    final s = math.min(canvasSize.width, canvasSize.height);
     final c = s / 2;
 
     // r = ring radius (center → outer dot center)
