@@ -273,14 +273,39 @@ class TransactionExportService {
             cellStyle: baseStyle.copyWith(fontSize: 8),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
             cellHeight: 28,
-            headers: ['Date', 'Type', 'Amount', 'From', 'To', 'Status', 'Memo'],
+            // ── Give Tx hash more room, shrink less important columns ──
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2.5), // Tx hash — wider
+              1: const pw.FlexColumnWidth(1.5), // Date
+              2: const pw.FlexColumnWidth(1.0), // Type
+              3: const pw.FlexColumnWidth(1.2), // Amount
+              4: const pw.FlexColumnWidth(1.5), // From
+              5: const pw.FlexColumnWidth(1.5), // To
+              6: const pw.FlexColumnWidth(1.0), // Status
+              7: const pw.FlexColumnWidth(1.0), // Memo
+            },
+            // ── Allow cells to grow vertically for wrapping ──
+            cellAlignments: {
+              0: pw.Alignment.topLeft,
+            },
+            headers: [
+              'Tx',
+              'Date',
+              'Type',
+              'Amount',
+              'From',
+              'To',
+              'Status',
+              'Memo'
+            ],
             data: transactions
                 .map((tx) => [
+                      tx.hash,
                       _dateFormat.format(tx.timestamp.toUtc()),
                       tx.isSent ? 'SENT' : 'RECEIVED',
                       '${tx.amount} ${tx.symbol}',
-                      _ellipsis(tx.from),
-                      _ellipsis(tx.to),
+                      tx.from,
+                      tx.to,
                       _statusLabel(tx.status),
                       tx.memo ?? '',
                     ])
@@ -452,10 +477,6 @@ class TransactionExportService {
         return 'Failed';
     }
   }
-
-  static String _ellipsis(String str) => str.length > 12
-      ? '${str.substring(0, 6)}...${str.substring(str.length - 4)}'
-      : str;
 
   static String shortDate(DateTime dt) => _shortDate.format(dt);
 }
