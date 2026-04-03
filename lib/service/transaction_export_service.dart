@@ -296,8 +296,6 @@ class TransactionExportService {
         '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.pdf';
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(bytes);
-    print(NavigationService.navigatorKey.currentContext);
-    print('ok');
     NavigationService.navigatorKey.currentState!.push(
       MaterialPageRoute(
         builder: (_) => PdfViewerScreen(
