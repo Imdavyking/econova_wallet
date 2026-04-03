@@ -6,6 +6,7 @@ import 'package:wallet_app/components/loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
 
@@ -90,7 +91,7 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
         ),
         const SizedBox(width: 8),
         Text(
-          name,
+          ellipsify(str: name, maxLength: 34),
           style: TextStyle(fontSize: widget.textSize),
         ),
       ],
