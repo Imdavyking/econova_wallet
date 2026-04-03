@@ -40,6 +40,7 @@ void main() async {
     'Cardano (Preprod)':
         'addr_test1qq4jrrcfzylccwgqu3su865es52jkf7yzrdu9cw3z84nycnn3zz9lvqj7vs95tej896xkekzkufhpuk64ja7pga2g8ksdf8km4',
     'ALGO': 'XTNEJTKVSDVMMRR6JZ7P2M2JMOHIUXU2CQAPL6WGEXNJ2L2HUBGW2OVQ6Q',
+    'Nimiq': 'NQ59 S95X 7XVU KXU6 K05T 3PG4 YJX3 GDTQ 51X3',
     'APT': '0xbfef909638ef90885158fdab9f56e216fd811fe25b32ead0bc2a272d66522bb0',
     'ATOM': 'cosmos15yk64u7zc9g9k2yr2wmzeva5qgwxps6yxj00e7',
     'BCH': 'qzpsvg9z6mk3ttd9vmss3rwfdgfd0r7wcuwtmlaskf',

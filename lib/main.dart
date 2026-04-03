@@ -25,6 +25,7 @@ import 'package:wallet_app/coins/fungible_tokens/spl_token_coin.dart';
 import 'package:wallet_app/coins/fuse_4337_coin.dart';
 import 'package:wallet_app/coins/segwit_coin.dart';
 import 'package:wallet_app/coins/stack_coin.dart';
+import 'package:wallet_app/coins/nimiq_coin.dart';
 import 'package:wallet_app/coins/icp_coin.dart';
 import 'package:wallet_app/coins/icon_coin.dart';
 import 'package:wallet_app/coins/starknet_coin.dart';
@@ -80,6 +81,7 @@ late String nightly;
 late String webNotifer;
 List<T> getChains<T extends Coin>() {
   List<Coin> all = [
+    ...getNimiqBlockchains(),
     ...getNanoBlockChains(),
     ...getWavesBlockChains(),
     ...getOntologyBlockChains(),

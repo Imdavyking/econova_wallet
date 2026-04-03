@@ -1,4 +1,5 @@
 const coinGeckoIDs = [
+  'nimiq-2',
   'starknet',
   'icon',
   'nano',
