@@ -170,27 +170,17 @@ class TransactionExportService {
     }
 
     // ── Load Unicode fonts ──────────────────────────────────────────────────
-    final regular = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
-    final bold = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
-    final italic = await rootBundle.load('assets/fonts/Roboto-Italic.ttf');
-    final boldItalic =
-        await rootBundle.load('assets/fonts/Roboto-BoldItalic.ttf');
-
-    final ttf = pw.Font.ttf(regular);
-    final ttfBold = pw.Font.ttf(bold);
-    final ttfItalic = pw.Font.ttf(italic);
-    final ttfBoldItalic = pw.Font.ttf(boldItalic);
 
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
-        base: ttf,
-        bold: ttfBold,
-        italic: ttfItalic,
-        boldItalic: ttfBoldItalic,
+        base: AppFonts.regular,
+        bold: AppFonts.bold,
+        italic: AppFonts.italic,
+        boldItalic: AppFonts.boldItalic,
       ),
     );
-    final baseStyle = pw.TextStyle(font: ttf, fontSize: 10);
-    final boldStyle = pw.TextStyle(font: ttfBold, fontSize: 10);
+    final baseStyle = pw.TextStyle(font: AppFonts.regular, fontSize: 10);
+    final boldStyle = pw.TextStyle(font: AppFonts.bold, fontSize: 10);
     final sent = transactions.where((t) => t.isSent).toList();
     final received = transactions.where((t) => t.isReceived).toList();
     final totalSent =
@@ -203,17 +193,19 @@ class TransactionExportService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         theme: pw.ThemeData.withFont(
-          base: ttf,
-          bold: ttfBold,
-          italic: ttfItalic,
-          boldItalic: ttfBoldItalic,
+          base: AppFonts.regular,
+          bold: AppFonts.bold,
+          italic: AppFonts.italic,
+          boldItalic: AppFonts.boldItalic,
         ),
         build: (context) => [
           pw.Text(
             // ← replace — with plain hyphen, no emoji
             'EcoNova - $tokenSymbol Transaction History',
             style: pw.TextStyle(
-                font: ttfBold, fontSize: 18, fontWeight: pw.FontWeight.bold),
+                font: AppFonts.bold,
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
@@ -273,7 +265,9 @@ class TransactionExportService {
           pw.SizedBox(height: 16),
           pw.TableHelper.fromTextArray(
             headerStyle: pw.TextStyle(
-                font: ttfBold, fontWeight: pw.FontWeight.bold, fontSize: 9),
+                font: AppFonts.bold,
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 9),
             cellStyle: baseStyle.copyWith(fontSize: 8),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
             cellHeight: 28,
@@ -294,7 +288,17 @@ class TransactionExportService {
       ),
     );
 
-    // rest unchanged ...
+    final bytes = await pdf.save();
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName =
+        '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.pdf';
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(bytes);
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/pdf')],
+      subject: '$tokenSymbol Transaction History — EcoNova',
+    );
   }
   // ── CSV ──────────────────────────────────────────────────────────────────
 
@@ -990,5 +994,24 @@ class _ExportButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// fonts.dart
+
+class AppFonts {
+  static late pw.Font regular;
+  static late pw.Font bold;
+  static late pw.Font italic;
+  static late pw.Font boldItalic;
+
+  static Future<void> load() async {
+    regular =
+        pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Regular.ttf'));
+    bold = pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
+    italic =
+        pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Italic.ttf'));
+    boldItalic = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Roboto-BoldItalic.ttf'));
   }
 }

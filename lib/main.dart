@@ -36,6 +36,7 @@ import 'package:wallet_app/coins/xrp_coin.dart';
 import 'package:wallet_app/coins/tron_coin.dart';
 import 'package:wallet_app/coins/filecoin_coin.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
+import 'package:wallet_app/service/transaction_export_service.dart';
 import 'package:wallet_app/wordlist.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../service/wallet_service.dart';
@@ -169,7 +170,7 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
+  await AppFonts.load();
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();
