@@ -96,7 +96,7 @@ class NimiqCoin extends Coin {
     required String bip39PhraseOrSeedHex,
   }) =>
       Coin.fromBip39PhraseOrSeedCached(
-        cacheKey: 'nimiqDetails${walletImportType.name}',
+        cacheKey: 'nimiqDetailsv1${walletImportType.name}',
         bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
         derive: () => compute(
           calculateNimiqKey,
@@ -294,7 +294,7 @@ class NimiqDeriveArgs {
 /// Top-level function — must stay top-level so [compute] can spawn it.
 Future<Map<String, dynamic>> calculateNimiqKey(NimiqDeriveArgs args) async {
   // BIP-44 coin type 242 for Nimiq
-  const path = "m/44'/242'/0'/0'/0'";
+  const path = "m/44'/242'/0'/0'";
   final masterKey = await ED25519_HD_KEY.derivePath(path, args.seedRoot.seed);
   final seedBytes = Uint8List.fromList(masterKey.key);
 
