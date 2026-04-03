@@ -96,7 +96,7 @@ class NimiqCoin extends Coin {
     required String bip39PhraseOrSeedHex,
   }) =>
       Coin.fromBip39PhraseOrSeedCached(
-        cacheKey: 'nimiqDetailsv12${walletImportType.name}',
+        cacheKey: 'nimiqDetailsv122${walletImportType.name}',
         bip39PhraseOrSeedHex: bip39PhraseOrSeedHex,
         derive: () => compute(
           calculateNimiqKey,
