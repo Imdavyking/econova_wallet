@@ -340,9 +340,10 @@ class TransactionExportService {
     if (transactions.isEmpty) {
       throw Exception('No transactions to export for $tokenSymbol');
     }
-
     final rows = <List<dynamic>>[
       [
+        'Tx Hash', // ← moved to front
+        'Explorer',
         'Date (UTC)',
         'Type',
         'Amount',
@@ -351,10 +352,10 @@ class TransactionExportService {
         'To',
         'Status',
         'Memo',
-        'Tx Hash',
-        'Explorer',
       ],
       ...transactions.map((tx) => [
+            tx.hash, // ← first
+            tx.explorerUrl,
             _dateFormat.format(tx.timestamp.toUtc()),
             tx.isSent ? 'SENT' : 'RECEIVED',
             tx.amount,
@@ -363,11 +364,8 @@ class TransactionExportService {
             tx.to,
             _statusLabel(tx.status),
             tx.memo ?? '',
-            tx.hash,
-            tx.explorerUrl,
           ]),
     ];
-
     final csv = const ListToCsvConverter().convert(rows);
     final fileName =
         '${tokenSymbol}_transactions_${_fileDate.format(DateTime.now())}.csv';
@@ -406,6 +404,8 @@ class TransactionExportService {
     for (final tx in transactions) {
       final arrow = tx.isSent ? '↑ SENT' : '↓ RECEIVED';
       buffer.writeln('$arrow  ${tx.amount} ${tx.symbol}');
+      buffer.writeln('  Hash:    ${tx.hash}'); // ← moved up
+      buffer.writeln('  Explorer: ${tx.explorerUrl}'); // ← moved up
       buffer.writeln(
           '  Date:    ${_dateFormat.format(tx.timestamp.toUtc())} UTC');
       buffer.writeln('  Status:  ${_statusLabel(tx.status)}');
@@ -414,11 +414,8 @@ class TransactionExportService {
       if (tx.memo != null && tx.memo!.isNotEmpty) {
         buffer.writeln('  Memo:    ${tx.memo}');
       }
-      buffer.writeln('  Hash:    ${tx.hash}');
-      buffer.writeln('  Explorer: ${tx.explorerUrl}');
       buffer.writeln('───────────────────────────────────────────');
     }
-
     final sent = transactions.where((t) => t.isSent).toList();
     final received = transactions.where((t) => t.isReceived).toList();
     final totalSent =
