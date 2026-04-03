@@ -16,7 +16,6 @@ const walletURL = 'https://econova.vercel.app';
 const walletIconURL = '$walletURL/img/logo.png';
 const blockExplorerPlaceholder = '{{TransactionHash}}';
 const ownerGithubId = 63329343;
-const ownerGithubName = 'Imdavyking';
 
 final base64Logo = base64Encode(logoBytes.buffer.asUint8List());
 
