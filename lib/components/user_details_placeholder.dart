@@ -91,10 +91,6 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
           ),
         ),
         const SizedBox(width: 8),
-        GitHubIdenticon(
-          userId: 134228839,
-          size: 40,
-        ),
         Text(
           ellipsify(str: name, maxLength: 34),
           style: TextStyle(fontSize: widget.textSize),
