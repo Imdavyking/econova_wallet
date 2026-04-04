@@ -1,259 +1,307 @@
-# 🌿 EcoNova Wallet
+**🌿 EcoNova Wallet**
 
-**EcoNova** is an AI-powered multi-chain mobile wallet.
-Instead of navigating complex crypto interfaces, you just talk to it —
-EcoNova handles the fragmentation of crypto through a single
-natural language interface.
+*One Wallet. Every Chain. One Conversation.*
 
-> One wallet. Every chain. One conversation.
+> EcoNova is an AI-powered multi-chain mobile wallet --- built for
+> **Starknet first** and extended across 30+ blockchains. Instead of
+> navigating complex crypto interfaces, you just talk to it.
 
----
+**🔴 The Problem**
 
-## 🔴 The Problem
+Crypto in 2026 is still hard. Not because the technology isn\'t ready
+--- because the interface never caught up.
 
-Crypto in 2026 is still hard. Not because the technology isn't ready —
-because the **interface** never caught up.
+A typical user wanting to save stablecoins and earn yield on Starknet
+needs to:
 
-A typical user wanting to save stablecoins and earn yield needs to:
+1.  Find a compatible wallet
 
-1. Find a compatible wallet
-2. Bridge assets through separate protocols
-3. Navigate unfamiliar DeFi interfaces
-4. Confirm transactions they don’t fully understand
-5. Track activity across multiple explorers
-6. Repeat everything on mobile — often with limited support
+2.  Bridge assets through separate protocols
 
-This is the everyday reality. Not just for beginners — for experienced users.
+3.  Navigate unfamiliar DeFi interfaces
 
-**The result:** most people don’t fully use DeFi.
-Not because it’s bad — but because the friction is too high.
+4.  Confirm transactions they don\'t fully understand
 
-EcoNova removes that friction entirely. You open the app, say what you want,
-and it happens.
+5.  Track activity across multiple explorers
 
-No chain-switching. No ABI reading. No address copying.
+6.  Repeat everything on mobile --- often with limited support
 
----
+This is the everyday reality. Not just for beginners --- for experienced
+users.
 
-## 🤖 AI-First Design
+EcoNova removes that friction entirely. You open the app, say what you
+want, and it happens. No chain-switching. No ABI reading. No address
+copying.
 
-EcoNova’s core is a conversational AI agent that understands your intent
-and executes on-chain actions autonomously:
+**🤖 AI-First Design**
 
-- _"Send 10 tokens to Alice"_
-- _"Send $10 worth of crypto to Mum"_ ← fetches live price & calculates
-- _"Save 5 USDC to my holiday fund"_
-- _"Show my savings goals"_
-- _"Withdraw all from my savings"_
-- _"What’s my BTC balance?"_
-- _"Send 0.0001 BTC to bc1q..."_
-- _"Swap $20 ETH to USDC"_
-- _"Pay for this API"_
+EcoNova\'s core is a conversational AI agent that understands your
+intent and executes on-chain actions autonomously:
+
+-   \"Send 10 STRK to Alice\"
+
+-   \"Send \$10 worth of crypto to Mum\" --- fetches live price &
+    calculates
+
+-   \"Save 5 USDC to my holiday fund\"
+
+-   \"Show my savings goals\"
+
+-   \"Withdraw all from my savings\"
+
+-   \"What\'s my BTC balance?\"
+
+-   \"Swap \$20 ETH to USDC\"
+
+-   \"Pay for this API\"
 
 **No addresses. No gas confusion. No chain switching. No complexity.**
 
----
+**🎙️ Voice Recognition**
 
-### 🎙️ Voice Recognition
+Use your voice for hands-free commands on mobile. Execute wallet actions
+like \"Send 10 STRK to 0x\...\", \"Swap ETH to USDC\", or \"Show my
+transaction history\" --- completely hands-free.
 
-Use your voice for hands-free commands on mobile.
+**👥 Saved Contacts**
 
----
+Save trusted people once --- send funds using names instead of
+addresses. Commands like \"Send \$20 ETH to Wisdom\" or \"Send STRK to
+Mom\" just work.
 
-### 👥 Saved Contacts
+**🚀 Core Features**
 
-Save trusted people once — send funds using names instead of addresses.
+**📬 Multi-Network Wallet & Balance Display**
 
----
+View and manage your wallet across 30+ supported blockchains from a
+single unified interface. No more switching between MetaMask, Phantom,
+or Argent X.
 
-## 💵 Savings Goals
+**💸 Token Transfers & Swaps**
 
-EcoNova includes a built-in savings system powered by smart contracts.
+Send, receive, and swap tokens easily --- via a traditional UI or
+natural language commands. Supports all major token standards: ERC20,
+TRC20, SPL, NEP-141, ESDT, and more.
 
-Users can:
+**📈 Portfolio Overview**
 
-- Create named savings goals
-- Deposit stablecoins incrementally
-- Withdraw anytime — no lockups or penalties
+Track your total holdings across all assets and networks in real-time
+with a unified portfolio dashboard.
 
-Features:
+**📜 Transaction History**
 
-- Progress tracking per goal
-- Transaction history for auditability
-- Local persistence tied to user accounts
+Review past transactions on Starknet and all other supported chains in
+one place.
 
----
+**⛓️ Staking**
 
-## ₿ Native Bitcoin Support
+Stake your tokens and earn rewards through integrated staking protocols
+directly from the wallet.
+
+**🌐 Domain Name Resolution**
+
+Replace long, complex addresses with simple, memorable names like
+fricoben.stark, vitalik.eth, or foundation.sol --- making transactions
+easier and reducing errors.
+
+**🐸 Meme Coin Deployment**
+
+Deploy your own meme token on Starknet in minutes --- no coding
+required.
+
+**💧 Liquidity Management**
+
+Add or remove liquidity and manage DeFi pools effortlessly.
+
+**📚 Blockchain Documentation Search**
+
+Instantly search Starknet documentation and developer references from
+within the app.
+
+**🧭 dApp Browser --- Multi-Chain**
+
+Access and interact with dApps directly with injected providers for
+every major ecosystem:
+
+  ----------------------------------- -----------------------------------
+  **Chain**                           **Compatibility**
+
+  EVM                                 MetaMask-compatible
+
+  Solana                              Phantom-compatible
+
+  Starknet                            Argent / Braavos
+
+  NEAR                                Wallet selector compatible
+
+  MultiversX                          Multiple ecosystems
+  ----------------------------------- -----------------------------------
+
+**💵 Savings Goals**
+
+A built-in savings system powered by smart contracts. Users can create
+named savings goals, deposit stablecoins incrementally, and withdraw
+anytime --- no lockups or penalties.
+
+**⚡ Autonomous Payments**
+
+EcoNova supports automated payments for APIs and services --- handles
+paywalled endpoints, multi-token support, and automatic retry. The
+wallet can fund actions without manual intervention.
+
+**₿ Native Bitcoin Support**
 
 EcoNova supports native Bitcoin operations derived from the same seed:
 
-| Type            | Format                | Capability        |
-| --------------- | --------------------- | ----------------- |
-| P2WPKH (SegWit) | `bc1q...` / `tb1q...` | ✅ Send + Receive |
-| P2TR (Taproot)  | `bc1p...` / `tb1p...` | ✅ Receive        |
+  ----------------------- ----------------------- -----------------------
+  **Type**                **Format**              **Capability**
 
-- Native SegWit transactions
-- Taproot support for modern Bitcoin usage
-- Fully self-contained signing implementation
+  P2WPKH (SegWit)         bc1q\... / tb1q\...     Send + Receive
 
----
+  P2TR (Taproot)          bc1p\... / tb1p\...     Receive
+  ----------------------- ----------------------- -----------------------
 
-## 🔗 dApp Browser — Multi-Chain
+**🔐 Security**
 
-EcoNova includes a powerful in-app browser with injected providers:
+**Seed Security --- SLIP39**
 
-| Chain    | Compatibility              |
-| -------- | -------------------------- |
-| EVM      | MetaMask-compatible        |
-| Solana   | Phantom-compatible         |
-| Starknet | Argent / Braavos           |
-| NEAR     | Wallet selector compatible |
-| Others   | Multiple ecosystems        |
+EcoNova includes advanced seed protection using SLIP39: split seed into
+multiple shares (K-of-N), human-readable word lists, optional passphrase
+protection, and cross-compatibility with hardware wallets.
 
-Open any dApp — it just works.
+**💀 Dead Man\'s Switch**
 
----
+A built-in inheritance mechanism for your wallet with time-locked
+activation, encrypted share distribution, automatic delivery to a
+trusted beneficiary, and forward secrecy via periodic updates.
 
-## ⚡ Autonomous Payments
+**🔒 Native Cryptography --- Pure Dart**
 
-EcoNova supports automated payments for APIs and services.
+All cryptography implemented from scratch and runs identically across
+all platforms:
 
-- Handles paywalled endpoints
-- Multi-token support
-- Automatic retry and execution
+-   ECIES (secp256k1)
 
-The wallet can fund actions without manual intervention.
+-   AES-256-GCM
 
----
+-   HMAC-SHA256
 
-## 🔐 Seed Security — SLIP39
+-   HKDF
 
-EcoNova includes advanced seed protection using SLIP39:
+-   Shamir Secret Sharing
 
-- Split seed into multiple shares (K-of-N)
-- Human-readable word lists
-- Optional passphrase protection
-- Cross-compatible with hardware wallets
+-   SLIP39 encoding
 
----
+**🌐 Supported Blockchains**
 
-## 💀 Dead Man’s Switch
+EcoNova brings true multichain magic to your fingertips --- built
+Starknet-first and extended across 30+ networks:
 
-A built-in inheritance mechanism for your wallet.
+-   **🌀 Starknet --- Native L2, zero-knowledge security, blazing
+    performance (PRIMARY)**
 
-### Features:
+-   🔥 EVM Chains --- Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum,
+    Optimism, Base (\~15 networks)
 
-- Time-locked activation
-- Encrypted share distribution
-- Automatic delivery to a trusted beneficiary
-- Forward secrecy via periodic updates
+-   ⚡ Solana --- Speed meets scalability with SPL token support
 
----
+-   🌍 MultiversX (Elrond) --- Next-gen scalable blockchain
 
-## 🔒 Native Cryptography — Pure Dart
+-   📡 TON --- Telegram-native blockchain
 
-All cryptography is implemented from scratch:
+-   🪙 TRON --- TRC token support
 
-- ECIES (secp256k1)
-- AES-256-GCM
-- HMAC-SHA256
-- HKDF
-- Shamir Secret Sharing
-- SLIP39 encoding
+-   🌉 NEAR --- NEP-141 fungible token support
 
-Runs identically across all platforms.
+-   💧 Cosmos --- IBC universe, multiple Cosmos chains
 
----
+-   🪐 Polkadot & Kusama --- DOT & KSM parachain ecosystem
 
-## 🗝️ Wallet Import Formats
+-   ✨ Sui & Aptos --- Move-based L1 chains
 
-EcoNova supports:
+-   🌕 Harmony, IOTEX, Zilliqa, Stellar, Filecoin --- Extended chain
+    support
 
-| Format         | Example              |
-| -------------- | -------------------- |
-| BIP39 mnemonic | `abandon ability...` |
-| Raw seed hex   | `7e9f86...`          |
-| Keystore JSON  | `{ "version": 3 }`   |
+-   🔗 Ronin --- Web3 gaming
 
-All formats normalize into a unified internal representation.
+-   💼 XRP --- Ripple ecosystem
 
----
+**🗝️ Wallet Import Formats**
 
-## 🌐 Multi-Chain Support
+  ----------------------------------- -----------------------------------
+  **Format**                          **Example**
 
-EcoNova supports:
+  BIP39 mnemonic                      abandon ability\...
 
-- Bitcoin
-- Ethereum & EVM chains
-- Solana
-- NEAR
-- TON
-- TRON
-- Cosmos ecosystem
-- Polkadot ecosystem
-- And many more
+  Raw seed hex                        7e9f86\...
 
-> All chains. One wallet.
+  Keystore JSON                       { \"version\": 3 }
+  ----------------------------------- -----------------------------------
 
----
+**🛠 Getting Started**
 
-## 🚀 Features
+7.  Clone the repository:
 
-- Multi-chain asset management
-- AI-powered natural language interface
-- Voice commands
-- Savings goals
-- Transaction history
-- Contacts system
-- dApp browser
-- Autonomous payments
-- Seed splitting (SLIP39)
-- Dead man’s switch
-- Native cryptographic stack
+> git clone https://github.com/Imdavyking/econova_wallet
 
----
+8.  Install dependencies:
 
-## 🛠 Getting Started
+> flutter pub get
 
-```bash
-git clone https://github.com/Imdavyking/econova_wallet
-cd econova_wallet
-flutter pub get
-cp .env.example .env
-flutter run
-```
+9.  Configure environment --- copy .env.example to .env and add your
+    OPENAI_API_KEY.
 
----
+10. Ensure correct Flutter version:
 
-## 🔐 Secrets Management
+> Flutter 3.24.1 • Dart 3.5.1
 
-Use secure storage for API keys. Never commit `.env`.
+11. Run the app:
 
----
+> flutter run
 
-## 📈 Market Opportunity
+**📈 Market Opportunity**
 
-| Segment                | Opportunity                   |
-| ---------------------- | ----------------------------- |
-| Crypto wallets         | $48B market by 2030           |
-| Multi-chain ecosystems | Rapidly growing fragmentation |
-| AI-powered UX          | Early-stage advantage         |
-| Bitcoin adoption       | Increasing global demand      |
-| Security solutions     | High-value differentiation    |
+The combination of Starknet\'s growth, multi-chain fragmentation, and
+increasing demand for simpler crypto tools makes EcoNova a
+high-potential product.
 
----
+  ----------------------------------- -----------------------------------
+  **Segment**                         **Opportunity**
 
-## 🤝 Contributing
+  Crypto Wallets                      \$48B market by 2030
 
-Open issues, submit PRs, and help improve EcoNova.
+  Starknet Ecosystem                  First-mover advantage in L2-native
+                                      UX
 
----
+  AI-Powered Interfaces               Early-stage, high-demand UX
+                                      differentiator
 
-## 🌿 Vision
+  Multi-Chain Integration             Solving wallet fragmentation
+                                      problem
 
-Crypto has a fragmentation problem. EcoNova solves it with one sentence:
+  Bitcoin Adoption                    Increasing global demand
+
+  Security Solutions                  High-value differentiation
+
+  Retail Onboarding                   Growing demand for simplified
+                                      crypto apps
+  ----------------------------------- -----------------------------------
+
+**🌿 Vision**
 
 **One wallet. Every chain. One conversation.**
 
----
+Crypto has a fragmentation problem. EcoNova solves it --- built
+Starknet-first, extended everywhere, powered by AI.
+
+**🤝 Contributing & Feedback**
+
+We welcome contributions from developers, designers, and crypto
+enthusiasts!
+
+-   Found a bug? Open an issue on GitHub
+
+-   Have a suggestion? Submit a PR
+
+-   Want to help prioritize voice control, multi-chain support, or AI
+    improvements? Share your feedback!
