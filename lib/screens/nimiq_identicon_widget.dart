@@ -38,41 +38,54 @@ class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
     final svg = _composeSvg(_cachedSprite!, options);
 
     // Debug: print the final composed SVG
-    debugPrint('composed SVG:\n$svg');
+    _printFull('composed SVG:\n$svg');
 
     setState(() => _svgData = svg);
   }
 
+  void _printFull(String text) {
+    const chunkSize = 800;
+    for (int i = 0; i < text.length; i += chunkSize) {
+      debugPrint(text.substring(
+          i, i + chunkSize > text.length ? text.length : i + chunkSize));
+    }
+  }
+
   String _composeSvg(String sprite, NimiqIconOptions o) {
-    // IDs in the SVG are 1-based and zero-padded: face_01, face_02, …
+    final doc = XmlDocument.parse(sprite); // parse once
+
     String id(String prefix, int zeroBasedIndex) {
       final n = (zeroBasedIndex + 1).toString().padLeft(2, '0');
       return '${prefix}_$n';
     }
 
     String getSymbol(String symbolId) {
-      final doc = XmlDocument.parse(sprite);
       final matches = doc
           .findAllElements('symbol')
           .where((e) => e.getAttribute('id') == symbolId)
           .toList();
-
-      if (matches.isEmpty) {
-        throw StateError('Symbol "$symbolId" not found in sprite.');
-      }
-
-      final content = matches.first.children.map((c) => c.toXmlString()).join();
-      return content.replaceAll(
-          'currentColor', o.accentColor); // ← this is the real fix
+      if (matches.isEmpty) throw StateError('Symbol "$symbolId" not found.');
+      return matches.first.children
+          .map((c) => c.toXmlString())
+          .join()
+          .replaceAll(
+              'currentColor', o.bodyColor); // currentColor = body, NOT accent
     }
+
+    const shadow =
+        'M119.21,80a39.46,39.46,0,0,1-67.13,28.13c10.36,2.33,36,3,49.82-14.28,10.39-12.47,8.31-33.23,4.16-43.26A39.35,39.35,0,0,1,119.21,80Z';
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
-  <circle cx="80" cy="80" r="80" fill="${o.backgroundColor}"/>
-  <g fill="${o.bodyColor}">${getSymbol(id('face', o.face))}</g>
-  <g fill="${o.bodyColor}">${getSymbol(id('top', o.top))}</g>
-  <g fill="${o.bodyColor}">${getSymbol(id('side', o.side))}</g>
-  <g fill="${o.bodyColor}">${getSymbol(id('bottom', o.bottom))}</g>
+  <g color="${o.bodyColor}" fill="${o.accentColor}">
+    <circle cx="80" cy="80" r="80" fill="${o.backgroundColor}"/>
+    <circle cx="80" cy="80" r="40" fill="${o.bodyColor}"/>
+    <g opacity=".1" fill="#010101"><path d="$shadow"/></g>
+    ${getSymbol(id('top', o.top))}
+    ${getSymbol(id('side', o.side))}
+    ${getSymbol(id('face', o.face))}
+    ${getSymbol(id('bottom', o.bottom))}
+  </g>
 </svg>''';
   }
 
