@@ -159,6 +159,15 @@ const supportedCurrencyKey = 'supportedCurrencies';
 const defaultCurrencyKey = 'defaultCurrency';
 const deadSwitchSaveKey = '9c840bf-95d0-8331-8148-eded0b9';
 const secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
+// Test
+const testMnemonic2 =
+    'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
+const testMnemonic1 =
+    'test test test test test test test test test test test junk'; // do not use it in production
+const bip39SeedHex1 =
+    '9dfc3c64c2f8bede1533b6a79f8570e5943e0b8fd1cf77107adf7b72cef42185d564a3aee24cab43f80e3c4538087d70fc824eabbad596a23c97b6ee8322ccc0';
+const bip39SeedHex2 =
+    '7e9f86e818b5b872612d4efe76b8c4232cede988846533e10d883e661217d2766ec04e05e3a4585eceacbf7e6f29a5bf7481f03c94e54a553602ac8d003889f2';
 
 // ── Sign types ────────────────────────────────────────────────────────────────
 

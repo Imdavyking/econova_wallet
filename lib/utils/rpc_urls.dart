@@ -327,7 +327,7 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
   final String? savedCryptoPrice = pref.get(coinGeckoCryptoPriceKey);
   final DateTime now = DateTime.now();
   final int secondsSinceLastFetch =
-      now.difference(MyApp.lastcoinGeckoData).inSeconds;
+      now.difference(MyApp.lastCoinGeckoData).inSeconds;
   final bool useCached = secondsSinceLastFetch < secondsToResendRequest;
 
   final String defaultCurrency = pref.get(defaultCurrencyKey) ?? 'usd';
@@ -376,7 +376,7 @@ Future<CryptoPrice> getCryptoPrice({bool useCache = false}) async {
     }
 
     MyApp.getCoinGeckoData = false;
-    MyApp.lastcoinGeckoData = now;
+    MyApp.lastCoinGeckoData = now;
     await pref.put(
       coinGeckoCryptoPriceKey,
       json.encode({'data': response.body}),
