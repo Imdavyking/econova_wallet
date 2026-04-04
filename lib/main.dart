@@ -194,11 +194,11 @@ void main() async {
   const secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
 
   const FlutterSecureStorage secureStorage = FlutterSecureStorage();
-  var containsEncryptionKey =
+  final containsEncryptionKey =
       await secureStorage.containsKey(key: secureEncryptionKey);
 
   if (!containsEncryptionKey) {
-    var key = Hive.generateSecureKey();
+    final key = Hive.generateSecureKey();
     await secureStorage.write(
       key: secureEncryptionKey,
       value: base64UrlEncode(key),
@@ -207,7 +207,7 @@ void main() async {
 
   final result = await secureStorage.read(key: secureEncryptionKey);
 
-  var encryptionKey = base64Url.decode(result!);
+  final encryptionKey = base64Url.decode(result!);
   pref = await Hive.openBox(
     secureStorageKey,
     encryptionCipher: HiveAesCipher(encryptionKey),
