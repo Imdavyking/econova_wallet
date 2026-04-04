@@ -7,7 +7,6 @@ import 'package:slip39/slip39.dart';
 import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/ethereum_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
-import 'package:wallet_app/coins/nimiq_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
