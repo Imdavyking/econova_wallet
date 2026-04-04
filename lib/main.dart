@@ -79,6 +79,7 @@ late String trustWalletProvider;
 late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
+late String nimiqSpriteSvg;
 List<T> getChains<T extends Coin>() {
   List<Coin> all = [
     ...getNimiqBlockchains(),
@@ -220,6 +221,7 @@ void main() async {
     rootBundle.loadString('js/web_notification.js'),
     rootBundle.loadString('json/currency_symbol.json'),
     rootBundle.loadString('json/currencies.json'),
+    rootBundle.loadString('assets/identicons.min.svg')
   ]);
   trustWalletProvider = futures[0];
   leatherWalletProvider = futures[1];
@@ -227,6 +229,7 @@ void main() async {
   webNotifer = futures[3];
   currencyJson = futures[4];
   currencyJsonSearch = futures[5];
+  nimiqSpriteSvg = futures[6];
   if (WalletService.isBip39PhraseOrSeedHexKey()) {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');

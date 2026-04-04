@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/model/seed_phrase_root.dart';
@@ -29,35 +29,21 @@ class WalletImportService {
     return 'Wallet ${count + 1}';
   }
 
-  /// Validates → deduplicates → seeds → sets active key → imports all chains.
-  ///
-  /// Returns [WalletImportResult.ok()] on success or a typed error.
   static Future<WalletImportResult> importFromMnemonic({
     required String mnemonicOrBip39SeedHex,
     required String walletName,
   }) async {
     try {
-      // 1. BIP-39 validation (off main thread)
-      final isValid =
-          await compute(bip39.validateMnemonic, mnemonicOrBip39SeedHex);
-
-      if (!isValid) {
-        mnemonicOrBip39SeedHex = strip0x(mnemonicOrBip39SeedHex);
+      final normalized = await _normalize(mnemonicOrBip39SeedHex);
+      if (normalized == null) {
+        return WalletImportResult.fail(WalletImportError.invalidMnemonic);
       }
 
-      Uint8List seed = Uint8List.fromList([]);
-      if (!isValid) {
-        seed = HEX.decode(mnemonicOrBip39SeedHex) as Uint8List;
-        if (seed.isEmpty) {
-          return WalletImportResult.fail(WalletImportError.invalidMnemonic);
-        }
-      }
-
-      // 2. Duplicate check
       final existing =
           WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex);
-      final phraseData = BIP39PhraseOrSeedHEXParams(
-          data: mnemonicOrBip39SeedHex, name: walletName);
+      final phraseData =
+          BIP39PhraseOrSeedHEXParams(data: normalized, name: walletName);
+
       if (existing
           .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
         return WalletImportResult.fail(WalletImportError.duplicate);
@@ -67,11 +53,30 @@ class WalletImportService {
       await WalletService.setActiveKey(
           WalletType.bip39PhraseOrSeedHex, phraseData);
       await importAllKeys(phraseData.data);
+
+      return WalletImportResult.ok();
     } catch (e, st) {
       debugPrint('WalletImportService error: $e\n$st');
       return WalletImportResult.fail(WalletImportError.unknown);
     }
+  }
 
-    return WalletImportResult.ok();
+  /// Returns the canonical form of the input (mnemonic or seed hex),
+  /// or null if the input is neither valid.
+  static Future<String?> _normalize(String input) async {
+    final trimmed = input.trim();
+
+    // Try mnemonic first
+    final isMnemonic = await compute(bip39.validateMnemonic, trimmed);
+    if (isMnemonic) return trimmed;
+
+    // Try raw hex seed
+    final hex = strip0x(trimmed);
+    try {
+      final seed = HEX.decode(hex) as Uint8List;
+      if (seed.length == 64) return hex; // BIP-39 seeds are 64 bytes
+    } catch (_) {}
+
+    return null;
   }
 }

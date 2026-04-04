@@ -1,579 +1,441 @@
 import 'package:bs58check/bs58check.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:hex/hex.dart';
+import 'package:pinput/pinput.dart';
+import 'package:screenshot_callback/screenshot_callback.dart';
+import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/interface/coin.dart';
+import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/wallet.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/app_config.dart';
 import 'package:wallet_app/utils/get_token_image.dart';
+import 'package:wallet_app/utils/is_hex_without_prefix.dart';
+import 'package:wallet_app/utils/qr_scan_view.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:hex/hex.dart';
-import 'package:pinput/pinput.dart';
-import 'package:screenshot_callback/screenshot_callback.dart';
-import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:web3dart/crypto.dart';
-import '../components/loader.dart';
-import '../interface/keystore.dart';
+
 import '../main.dart';
-import '../utils/is_hex_without_prefix.dart';
-import '../utils/qr_scan_view.dart';
+
+enum _ImportMode { privateKey, keystore }
 
 class EnterPrivateKey extends StatefulWidget {
   final Coin coin;
-  const EnterPrivateKey({
-    super.key,
-    required this.coin,
-  });
+  const EnterPrivateKey({super.key, required this.coin});
+
   @override
   State<EnterPrivateKey> createState() => _EnterPrivateKeyState();
 }
 
 class _EnterPrivateKeyState extends State<EnterPrivateKey>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
-  final privateKeyCntrl = TextEditingController();
-  final keyStoreCntrl = TextEditingController();
-  final walletNameController = TextEditingController();
-  final passwordController = TextEditingController();
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool isLoading = false;
-  late TabController importMode;
-  ValueNotifier<bool> isPrivateKeyMode = ValueNotifier(true);
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  // ── Controllers ────────────────────────────────────────────────────────────
 
-  // disallow screenshots
-  ScreenshotCallback screenshotCallback = ScreenshotCallback();
-  bool invisiblePrivateKey = false;
-  bool securitydialogOpen = false;
-  late Coin coin;
+  final _privateKeyCtrl = TextEditingController();
+  final _keystoreCtrl = TextEditingController();
+  final _walletNameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  late final TabController _tabCtrl;
+  final _screenshotCallback = ScreenshotCallback();
 
-  late AppLocalizations localization;
-  int totalTabs = 1;
+  // ── State ──────────────────────────────────────────────────────────────────
 
-  int boolToInt(bool value) {
-    return value ? 1 : 0;
-  }
+  _ImportMode _mode = _ImportMode.privateKey;
+  bool _isLoading = false;
+  bool _isObscured = false;
+  bool _securityDialogOpen = false;
+
+  late AppLocalizations _loc;
+
+  bool get _supportsKeystore => widget.coin.supportKeystore;
+  TextEditingController get _activeCtrl =>
+      _mode == _ImportMode.privateKey ? _privateKeyCtrl : _keystoreCtrl;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    screenshotCallback.addListener(() {
-      showDialogWithMessage(
-        context: context,
-        message: localization.youCantScreenshot,
-      );
-    });
-    WidgetsBinding.instance.addObserver(this);
-    disEnableScreenShot();
-    coin = widget.coin;
-    // convert bool to int
-
-    totalTabs += boolToInt(coin.supportKeystore);
-
-    importMode = TabController(
-      length: totalTabs,
+    _tabCtrl = TabController(
+      length: _supportsKeystore ? 2 : 1,
       vsync: this,
-    );
+    )..addListener(() {
+        setState(() {
+          _mode = _tabCtrl.index == 0
+              ? _ImportMode.privateKey
+              : _ImportMode.keystore;
+        });
+      });
+
+    disEnableScreenShot();
+    WidgetsBinding.instance.addObserver(this);
+    _screenshotCallback.addListener(_onScreenshot);
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    _privateKeyCtrl.dispose();
+    _keystoreCtrl.dispose();
+    _walletNameCtrl.dispose();
+    _passwordCtrl.dispose();
+    _screenshotCallback.dispose();
+    enableScreenShot();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
-    switch (state) {
-      case AppLifecycleState.resumed:
-        if (invisiblePrivateKey) {
-          invisiblePrivateKey = false;
-          if (await authenticate(context)) {
-            await disEnableScreenShot();
-            setState(() {
-              securitydialogOpen = false;
-            });
-          } else {
-            SystemNavigator.pop();
-          }
-        }
-        break;
-      case AppLifecycleState.paused:
-        if (!securitydialogOpen) {
-          setState(() {
-            invisiblePrivateKey = true;
-            securitydialogOpen = true;
-          });
-        }
-        break;
-      default:
-        break;
+    if (state == AppLifecycleState.paused && !_securityDialogOpen) {
+      setState(() {
+        _isObscured = true;
+        _securityDialogOpen = true;
+      });
+    } else if (state == AppLifecycleState.resumed && _isObscured) {
+      _isObscured = false;
+      if (await authenticate(context)) {
+        await disEnableScreenShot();
+        setState(() => _securityDialogOpen = false);
+      } else {
+        SystemNavigator.pop();
+      }
     }
   }
 
-  @override
-  void dispose() {
-    enableScreenShot();
-    WidgetsBinding.instance.removeObserver(this);
-    privateKeyCntrl.dispose();
-    walletNameController.dispose();
-    super.dispose();
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  void _onScreenshot() =>
+      showDialogWithMessage(context: context, message: _loc.youCantScreenshot);
+
+  Future<void> _onScanQr() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const QRScanView()),
+    );
+    if (result != null) _activeCtrl.setText(result);
   }
+
+  Future<void> _onPaste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null) _activeCtrl.setText(data!.text!);
+  }
+
+  Future<void> _onConfirm() async {
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    final walletName = _walletNameCtrl.text.trim();
+    final privateKey = _privateKeyCtrl.text.trim();
+    final keystore = _keystoreCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
+
+    if (!_validate(walletName, privateKey, keystore)) return;
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final resolvedKey = _mode == _ImportMode.privateKey
+          ? _resolvePrivateKey(privateKey)
+          : await _resolveKeystore(keystore, password);
+
+      final existing = WalletService.getActiveKeys(WalletType.privateKey);
+      final entry = PrivateKeyParams(
+        data: resolvedKey,
+        name: walletName,
+        defaultCoin: widget.coin.getDefault(),
+        coinName: widget.coin.getName(),
+      );
+
+      if (existing.any((k) => k == entry)) {
+        _showError(_loc.walletAlreadyImported);
+        return;
+      }
+
+      await WalletService.setActiveKey(WalletType.privateKey, entry);
+      await widget.coin.importData(resolvedKey);
+      await pref.put(currentUserWalletNameKey, walletName);
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Wallet()),
+          (_) => false,
+        );
+      }
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('$e\n$st');
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  bool _validate(String walletName, String privateKey, String keystore) {
+    if (walletName.isEmpty) return _showError(_loc.enterName);
+    if (_mode == _ImportMode.privateKey && privateKey.isEmpty) {
+      return _showError(_loc.enterPrivateKey);
+    }
+    if (_mode == _ImportMode.keystore && keystore.isEmpty) {
+      return _showError(_loc.enterKeystore);
+    }
+    return true;
+  }
+
+  /// Returns false after showing error — used for early returns.
+  bool _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: Colors.red,
+      content: Text(message, style: const TextStyle(color: Colors.white)),
+    ));
+    return false;
+  }
+
+  String _resolvePrivateKey(String raw) {
+    var key = strip0x(raw).split(':').last;
+    if (isHEXstrip0x(key)) {
+      final bytes = HEX.decode(key) as Uint8List;
+      if (bytes.length != 32) throw Exception(_loc.invalidPrivateKey);
+      return key;
+    }
+    final decoded = base58.decode(key);
+    if (decoded.length < 32) throw Exception(_loc.invalidPrivateKey);
+    return HEX.encode(decoded.sublist(0, 32));
+  }
+
+  Future<String> _resolveKeystore(String keystore, String password) async {
+    final bytes = await compute(
+      KeyStore.fromKeystore,
+      KeyStoreParams(keystore: keystore, password: password),
+    );
+    return HEX.encode(bytes);
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    localization = AppLocalizations.of(context)!;
+    _loc = AppLocalizations.of(context)!;
+
+    if (_securityDialogOpen) return const Scaffold(body: SizedBox.shrink());
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Restore ${coin.getName()}',
-        ),
+        title: Text('Restore ${widget.coin.getName()}'),
         actions: [
           IconButton(
-            onPressed: () async {
-              String? seedPhrase = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (ctx) => const QRScanView(),
-                ),
-              );
-              if (seedPhrase == null) return;
-              final currentContrl =
-                  isPrivateKeyMode.value ? privateKeyCntrl : keyStoreCntrl;
-              currentContrl.setText(seedPhrase);
-            },
-            icon: const Icon(
-              Icons.qr_code_scanner,
-            ),
-          )
+            onPressed: _onScanQr,
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
         ],
       ),
-      key: _scaffoldKey,
-      body: securitydialogOpen
-          ? Container()
-          : SafeArea(
-              child: SingleChildScrollView(
-                child: Container(
-                  color: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(25),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        GetTokenImage(
-                          currCoin: coin,
-                          radius: 30,
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        TextFormField(
-                          controller: walletNameController,
-                          keyboardType: TextInputType.visiblePassword,
-                          decoration: InputDecoration(
-                            hintText: localization.name,
-                            focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            border: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                                borderSide: BorderSide.none), // you
-                            filled: true,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        if (totalTabs > 1)
-                          DefaultTabController(
-                            length: totalTabs,
-                            child: Column(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(22),
-                                    color:
-                                        const Color.fromRGBO(0, 80, 209, 0.1),
-                                  ),
-                                  child: TabBar(
-                                    onTap: (value) {
-                                      isPrivateKeyMode.value =
-                                          importMode.index == 0;
-                                    },
-                                    controller: importMode,
-                                    splashBorderRadius:
-                                        BorderRadius.circular(22),
-                                    labelColor: Colors.black,
-                                    unselectedLabelColor: appBackgroundblue,
-                                    indicatorSize: TabBarIndicatorSize.tab,
-                                    indicator: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(22),
-                                      color: appBackgroundblue,
-                                    ),
-                                    tabs: const [
-                                      Tab(
-                                        child: Align(
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            "PrivateKey",
-                                          ),
-                                        ),
-                                      ),
-                                      Tab(
-                                        child: Align(
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            "KeyStore JSON",
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 30,
-                                  child: TabBarView(children: [
-                                    Icon(
-                                      Icons.apps,
-                                      color: Colors.transparent,
-                                    ),
-                                    Icon(
-                                      Icons.movie,
-                                      color: Colors.transparent,
-                                    ),
-                                  ]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Stack(
-                          children: [
-                            ValueListenableBuilder(
-                              valueListenable: isPrivateKeyMode,
-                              builder: (context, value, child) {
-                                final currentContrl = isPrivateKeyMode.value
-                                    ? privateKeyCntrl
-                                    : keyStoreCntrl;
-                                return TextFormField(
-                                  maxLines: 3,
-                                  controller: currentContrl,
-                                  keyboardType: TextInputType.visiblePassword,
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.only(
-                                      top: 100,
-                                      left: 12,
-                                      right: 12,
-                                    ),
-                                    hintText: isPrivateKeyMode.value
-                                        ? localization.enterPrivateKey
-                                        : localization.enterKeystore,
-                                    focusedBorder: const OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(10.0)),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    border: const OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(10.0)),
-                                        borderSide: BorderSide.none),
-                                    enabledBorder: const OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(10.0)),
-                                      borderSide: BorderSide.none,
-                                    ), // you
-                                    filled: true,
-                                  ),
-                                );
-                              },
-                            ),
-                            Positioned(
-                              right: 10,
-                              top: 10,
-                              child: InkWell(
-                                onTap: () async {
-                                  ClipboardData? cdata =
-                                      await Clipboard.getData(
-                                          Clipboard.kTextPlain);
-                                  if (cdata == null) return;
-                                  if (cdata.text == null) return;
-                                  final currentContrl = isPrivateKeyMode.value
-                                      ? privateKeyCntrl
-                                      : keyStoreCntrl;
-
-                                  currentContrl.setText(cdata.text!);
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .scaffoldBackgroundColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      localization.paste,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        ValueListenableBuilder(
-                          valueListenable: isPrivateKeyMode,
-                          builder: (context, value, child) {
-                            if (isPrivateKeyMode.value) {
-                              return Container();
-                            }
-                            if (!coin.supportKeystore) return Container();
-                            return Column(
-                              children: [
-                                TextFormField(
-                                  controller: passwordController,
-                                  keyboardType: TextInputType.visiblePassword,
-                                  decoration: InputDecoration(
-                                    hintText: localization.enterPassword,
-                                    focusedBorder: const OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(10.0)),
-                                        borderSide: BorderSide.none),
-                                    border: const OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(10.0)),
-                                        borderSide: BorderSide.none),
-                                    enabledBorder: const OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(10.0)),
-                                        borderSide: BorderSide.none), // you
-                                    filled: true,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                  (states) => appBackgroundblue),
-                              shape: WidgetStateProperty.resolveWith(
-                                (states) => RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            onPressed: () async {
-                              FocusManager.instance.primaryFocus?.unfocus();
-                              ScaffoldMessenger.of(context)
-                                  .hideCurrentSnackBar();
-
-                              String privateKey = privateKeyCntrl.text.trim();
-
-                              final String password =
-                                  passwordController.text.trim();
-                              final String keyStore = keyStoreCntrl.text.trim();
-
-                              String cryptoWallName =
-                                  walletNameController.text.trim();
-
-                              final privateKMod = isPrivateKeyMode.value;
-
-                              if (cryptoWallName.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.enterName,
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                                return;
-                              } else if (privateKMod && privateKey.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.enterPrivateKey,
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                                return;
-                              } else if (!privateKMod && keyStore.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.red,
-                                    content: Text(
-                                      localization.enterKeystore,
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (isLoading) return;
-                              setState(() {
-                                isLoading = true;
-                              });
-                              try {
-                                if (!privateKMod) {
-                                  final params = KeyStoreParams(
-                                    keystore: keyStore,
-                                    password: password,
-                                  );
-                                  final privateBytes = await compute(
-                                    KeyStore.fromKeystore,
-                                    params,
-                                  );
-
-                                  privateKey = HEX.encode(privateBytes);
-                                } else {
-                                  privateKey = strip0x(privateKey);
-
-                                  privateKey = privateKey.split(':').last;
-
-                                  Uint8List privKeyBytes;
-
-                                  if (isHEXstrip0x(privateKey)) {
-                                    privKeyBytes =
-                                        HEX.decode(privateKey) as Uint8List;
-                                  } else {
-                                    final privatePubKey =
-                                        base58.decode(privateKey);
-                                    privKeyBytes = privatePubKey.sublist(0, 32);
-                                    privateKey = HEX.encode(privKeyBytes);
-                                  }
-
-                                  const byteLength = 32;
-                                  if (privKeyBytes.length != byteLength) {
-                                    throw Exception(
-                                      localization.invalidPrivateKey,
-                                    );
-                                  }
-                                }
-                                final privKeyList = WalletService.getActiveKeys(
-                                  WalletType.privateKey,
-                                );
-                                final privatKey = PrivateKeyParams(
-                                  data: privateKey,
-                                  name: cryptoWallName,
-                                  defaultCoin: coin.getDefault(),
-                                  coinName: coin.getName(),
-                                );
-
-                                for (final privKey in privKeyList) {
-                                  if (privKey == privatKey) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.red,
-                                          content: Text(
-                                            localization.walletAlreadyImported,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    setState(() {
-                                      isLoading = false;
-                                    });
-                                    return;
-                                  }
-                                }
-
-                                await WalletService.setActiveKey(
-                                  WalletType.privateKey,
-                                  privatKey,
-                                );
-
-                                await coin.importData(privateKey);
-
-                                await pref.put(
-                                  currentUserWalletNameKey,
-                                  cryptoWallName,
-                                );
-
-                                if (context.mounted) {
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (ctx) => const Wallet(),
-                                    ),
-                                    (r) => false,
-                                  );
-                                }
-
-                                setState(() {
-                                  isLoading = false;
-                                });
-                              } catch (e, sk) {
-                                if (kDebugMode) {
-                                  print(e);
-                                  print(sk);
-                                }
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: Colors.red,
-                                      content: Text(
-                                        e.toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white),
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                setState(() {
-                                  isLoading = false;
-                                });
-                                return;
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(15),
-                              child: isLoading
-                                  ? const Loader(
-                                      color: Colors.black,
-                                    )
-                                  : Text(
-                                      localization.confirm,
-                                      style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(25),
+          child: Column(
+            children: [
+              GetTokenImage(currCoin: widget.coin, radius: 30),
+              const SizedBox(height: 20),
+              _NameField(controller: _walletNameCtrl),
+              const SizedBox(height: 20),
+              if (_supportsKeystore) ...[
+                _ModeTabBar(controller: _tabCtrl),
+                const SizedBox(height: 20),
+              ],
+              _InputField(
+                controller: _activeCtrl,
+                hint: _mode == _ImportMode.privateKey
+                    ? _loc.enterPrivateKey
+                    : _loc.enterKeystore,
+                onPaste: _onPaste,
               ),
-            ),
+              const SizedBox(height: 20),
+              if (_mode == _ImportMode.keystore) ...[
+                _PasswordField(controller: _passwordCtrl),
+                const SizedBox(height: 20),
+              ],
+              _ConfirmButton(
+                isLoading: _isLoading,
+                label: _loc.confirm,
+                onPressed: _onConfirm,
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
+
+// ── Sub-widgets ───────────────────────────────────────────────────────────────
+
+class _NameField extends StatelessWidget {
+  final TextEditingController controller;
+  const _NameField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.text,
+      decoration: InputDecoration(
+        hintText: AppLocalizations.of(context)!.name,
+        border: _border,
+        enabledBorder: _border,
+        focusedBorder: _border,
+        filled: true,
+      ),
+    );
+  }
+}
+
+class _ModeTabBar extends StatelessWidget {
+  final TabController controller;
+  const _ModeTabBar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: const Color.fromRGBO(0, 80, 209, 0.1),
+      ),
+      child: TabBar(
+        controller: controller,
+        splashBorderRadius: BorderRadius.circular(22),
+        labelColor: Colors.black,
+        unselectedLabelColor: appBackgroundblue,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: appBackgroundblue,
+        ),
+        tabs: const [
+          Tab(text: 'Private Key'),
+          Tab(text: 'KeyStore JSON'),
+        ],
+      ),
+    );
+  }
+}
+
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final VoidCallback onPaste;
+
+  const _InputField({
+    required this.controller,
+    required this.hint,
+    required this.onPaste,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        TextFormField(
+          maxLines: 3,
+          controller: controller,
+          keyboardType: TextInputType.visiblePassword,
+          decoration: InputDecoration(
+            contentPadding:
+                const EdgeInsets.only(top: 100, left: 12, right: 12),
+            hintText: hint,
+            border: _border,
+            enabledBorder: _border,
+            focusedBorder: _border,
+            filled: true,
+          ),
+        ),
+        Positioned(
+          right: 10,
+          top: 10,
+          child: InkWell(
+            onTap: onPaste,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Text(AppLocalizations.of(context)!.paste),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  const _PasswordField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.visiblePassword,
+      decoration: InputDecoration(
+        hintText: AppLocalizations.of(context)!.enterPassword,
+        border: _border,
+        enabledBorder: _border,
+        focusedBorder: _border,
+        filled: true,
+      ),
+    );
+  }
+}
+
+class _ConfirmButton extends StatelessWidget {
+  final bool isLoading;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _ConfirmButton({
+    required this.isLoading,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: appBackgroundblue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.all(15),
+        ),
+        onPressed: isLoading ? null : onPressed,
+        child: isLoading
+            ? const Loader(color: Colors.black)
+            : Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+const _border = OutlineInputBorder(
+  borderRadius: BorderRadius.all(Radius.circular(10)),
+  borderSide: BorderSide.none,
+);
