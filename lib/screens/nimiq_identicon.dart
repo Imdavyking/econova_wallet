@@ -1,6 +1,7 @@
 // nimiq_identicon.dart
 
 import 'package:flutter/material.dart';
+import 'package:wallet_app/coins/nimiq_coin.dart';
 
 class NimiqIdenticon {
   // 10 body/accent colors
@@ -68,7 +69,8 @@ class NimiqIdenticon {
   }
 
   static NimiqIconOptions fromAddress(String address) {
-    final hash = makeHash(address);
+    final hash =
+        makeHash(NimiqCoin.formatAddressGroups(address.split(' ').join('')));
     debugPrint('nimiq hash for "$address": $hash'); // ← add this
 
     int bodyIdx = int.parse(hash[0]);

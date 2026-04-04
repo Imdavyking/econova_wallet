@@ -179,8 +179,6 @@ class NimiqCoin extends Coin {
       signature: signature,
     );
 
-    print(HEX.encode(rawTx));
-
     final txHash =
         await _rpc('sendRawTransaction', [HEX.encode(rawTx)]) as String;
 
@@ -190,12 +188,12 @@ class NimiqCoin extends Coin {
   @override
   Widget getExplorerIdenticon(String address, {double size = 40}) {
     return NimiqIdenticonWidget(
-      address: formatAddressGroups(address),
+      address: address,
       size: 48,
     );
   }
 
-  String formatAddressGroups(String address, {int groupSize = 4}) {
+  static String formatAddressGroups(String address, {int groupSize = 4}) {
     final clean = address.replaceAll(RegExp(r'\s+'), ''); // remove spaces
 
     final buffer = StringBuffer();
@@ -267,8 +265,6 @@ class NimiqCoin extends Coin {
           }),
         )
         .timeout(networkTimeOutDuration);
-
-    print('body res: ${response.body}');
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (body.containsKey('error')) {
