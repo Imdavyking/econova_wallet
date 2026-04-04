@@ -191,8 +191,6 @@ void main() async {
     );
   };
 
-  const secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
-
   const FlutterSecureStorage secureStorage = FlutterSecureStorage();
   final containsEncryptionKey =
       await secureStorage.containsKey(key: secureEncryptionKey);

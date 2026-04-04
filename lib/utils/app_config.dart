@@ -159,6 +159,7 @@ const appUnlockTime = 'applockksksietimeal382';
 const supportedCurrencyKey = 'supportedCurrencies';
 const defaultCurrencyKey = 'defaultCurrency';
 const deadSwitchSaveKey = '9c840bf-95d0-8331-8148-eded0b9';
+const secureEncryptionKey = 'b6f71-9b6df9-0abc-4463-a623-43eaf2';
 
 // ── Sign types ────────────────────────────────────────────────────────────────
 
