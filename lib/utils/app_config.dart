@@ -73,15 +73,14 @@ String get openRouterApiKey => dotenv.env['OPENROUTER_API_KEY'] ?? '';
 
 // ── External links ────────────────────────────────────────────────────────────
 
-const fiatDexProviderUrl = 'https://buy.moonpay.com/?currencyCode=stx';
+const fiatDexProviderUrl = 'https://paxful.com/';
 const walletDexProviderUrl =
-    'https://app.alexlab.co/swap?base=token-wstx&quote=token-wusdc';
-const stakeDexProviderUrl = 'https://app.alexlab.co/stake';
-
+    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
+const stakeDexProviderUrl =
+    'https://app.ekubo.org/?inputCurrency=USDC&outputCurrency=ETH&amount=-1';
 // dapp links
-const blogUrl = 'https://www.stacks.co/blog';
-const marketPlaceUrl = 'https://gamma.io/';
-const stacksMarketUrl = 'http://localhost:3000/api/market';
+const blogUrl = "https://www.starknet.io/blog/";
+const marketPlaceUrl = 'https://unframed.co/';
 
 // social media
 const telegramLink = '';
