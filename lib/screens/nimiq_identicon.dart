@@ -69,8 +69,7 @@ class NimiqIdenticon {
   }
 
   static NimiqIconOptions fromAddress(String address) {
-    final hash =
-        makeHash(NimiqCoin.formatAddressGroups(address.split(' ').join('')));
+    final hash = makeHash(NimiqCoin.formatAddressGroups(address));
     debugPrint('nimiq hash for "$address": $hash'); // ← add this
 
     int bodyIdx = int.parse(hash[0]);
