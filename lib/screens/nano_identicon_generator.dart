@@ -1,18 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 // Dart port of https://github.com/appditto/natricon (MIT License)
-//
-// Algorithm (from the Go server source):
-//   1. SHA-256 the address → 64-char hex hash
-//   2. Slice the hash into entropy windows to seed independent MT19937 PRNGs
-//   3. Use those PRNGs to pick body color, hair color, body/hair/mouth/eye assets
-//   4. Assemble the SVG layers with color substitutions
-//
-// Asset files must be bundled at  assets/natricon/<type>/<file>.svg
-// (matching the folder layout from server/assets/illustrations/).
-//
-// Dependencies (pubspec.yaml):
-//   crypto: ^3.0.0       # for SHA-256
-//   flutter_svg: ^2.0.0  # to render the assembled SVG
 
 import 'dart:convert';
 import 'dart:math' as math;
@@ -22,8 +9,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+/// The seed used by the official natricon.com server.
+/// Matches NATRICON_SEED env default in server/main.go.
+const String kNatriconSeed = '1234567890';
+
 // ── MT19937 (32-bit Mersenne Twister) ────────────────────────────────────────
-// Direct port of server/rand/mt19937.go
 
 class _MT19937 {
   static const int _n = 624;
@@ -32,11 +22,10 @@ class _MT19937 {
   static const int _upperMask = 0x80000000;
   static const int _lowerMask = 0x7fffffff;
 
-  final List<int> _mt = List.filled(_n, 0); // uint32 stored as int
+  final List<int> _mt = List.filled(_n, 0);
   int _mti = _n + 1;
 
   void seed(int s) {
-    // s is treated as uint32
     s = s & 0xFFFFFFFF;
     _mt[0] = s;
     for (_mti = 1; _mti < _n; _mti++) {
@@ -51,10 +40,8 @@ class _MT19937 {
   int uint32() {
     int y;
     const mag01 = [0, _matrixA];
-
     if (_mti >= _n) {
       if (_mti == _n + 1) seed(5489);
-
       int kk;
       for (kk = 0; kk < _n - _m; kk++) {
         y = (_mt[kk] & _upperMask) | (_mt[kk + 1] & _lowerMask);
@@ -68,7 +55,6 @@ class _MT19937 {
       _mt[_n - 1] = _mt[_m - 1] ^ (y >> 1) ^ mag01[y & 1];
       _mti = 0;
     }
-
     y = _mt[_mti++];
     y ^= (y >> 11);
     y ^= (y << 7) & 0x9D2C5680;
@@ -77,15 +63,12 @@ class _MT19937 {
     return y & 0xFFFFFFFF;
   }
 
-  /// Generates a random int in [0, n) using Lemire's method.
-  /// Matches Go's Int31n exactly.
   int int31n(int n) {
     assert(n > 0);
     int v = uint32();
-    int prod = v * n; // may overflow int64 in theory but Dart uses 64-bit ints
+    int prod = v * n;
     int low = prod & 0xFFFFFFFF;
     if (low < n) {
-      // thresh = (2^32 - n) % n  →  (-n as uint32) % n
       int thresh = ((-n) & 0xFFFFFFFF) % n;
       while (low < thresh) {
         v = uint32();
@@ -98,7 +81,6 @@ class _MT19937 {
 }
 
 // ── Color math ────────────────────────────────────────────────────────────────
-// Port of server/color/color.go
 
 const double _redPB = 0.241;
 const double _greenPB = 0.691;
@@ -113,7 +95,6 @@ class _RGB {
 
   double get perceivedBrightness => perceivedBrightness255 / 255 * 100;
 
-  // Nudge to match Go's byte(x + 1/512) truncation
   static const double _delta = 1 / 512.0;
 
   String toHtml() {
@@ -146,14 +127,6 @@ class _RGB {
     h *= 60;
     if (h < 0) h += 360;
     return _HSB(h, s, v);
-  }
-
-  static _RGB fromHtml(String hex) {
-    if (hex.startsWith('#')) hex = hex.substring(1);
-    int r = int.parse(hex.substring(0, 2), radix: 16);
-    int g = int.parse(hex.substring(2, 4), radix: 16);
-    int b = int.parse(hex.substring(4, 6), radix: 16);
-    return _RGB(r.toDouble(), g.toDouble(), b.toDouble());
   }
 }
 
@@ -191,7 +164,6 @@ class _HSB {
 }
 
 // ── Color picker ──────────────────────────────────────────────────────────────
-// Port of server/image/color_picker.go
 
 const double _minPB = 18.0;
 const double _maxPB = 95.0;
@@ -209,21 +181,15 @@ const int _lightDarkSwitch = 30;
 const double _hairBrightDynMax = 90.0;
 const double _hairSatDynMin = 10.0;
 
-/// Seed an MT19937 from a hex substring (parsed as int64, lower 32 bits used).
-int _parseSeed(String hexStr) {
-  return int.parse(hexStr, radix: 16) & 0xFFFFFFFF;
-}
+int _parseSeed(String hexStr) => int.parse(hexStr, radix: 16) & 0xFFFFFFFF;
 
 _RGB _getBodyColor(String entropy16) {
-  // R
   final r = _MT19937()..seed(_parseSeed(entropy16.substring(0, 4)));
   double R = r.int31n(255 * 1000) / 1000.0;
 
-  // G
   final rG = _MT19937()..seed(_parseSeed(entropy16.substring(4, 8)));
   double G = rG.int31n(255 * 1000) / 1000.0;
 
-  // B — constrained so perceived brightness stays in [_minPB, _maxPB]
   double lowerBound = math.max(
           math.sqrt(math.max(
               (_minPB255 * _minPB255 - _redPB * R * R - _greenPB * G * G) /
@@ -238,6 +204,7 @@ _RGB _getBodyColor(String entropy16) {
               0.0)),
           255.0) *
       1000;
+
   final rB = _MT19937()..seed(_parseSeed(entropy16.substring(8, 12)));
   double B =
       (rB.int31n((upperBound - lowerBound).toInt()) + lowerBound) / 1000.0;
@@ -249,7 +216,6 @@ _RGB _getHairColor(
     _RGB body, String hEntropy, String sEntropy, String bEntropy) {
   final hsb = body.toHSB();
 
-  // Hue: shift body hue by 180 ± BodyHairHueDist
   final rH = _MT19937()..seed(_parseSeed(hEntropy));
   double lowerH = hsb.h - 180 - _bodyHairHueDist;
   double upperH = hsb.h - 180 + _bodyHairHueDist;
@@ -258,22 +224,18 @@ _RGB _getHairColor(
           1000.0;
   if (H < 0) H += 360;
 
-  // Saturation
   final rS = _MT19937()..seed(_parseSeed(sEntropy));
   int lowerSBound = math.max(_minTotalSat - hsb.s * 100.0, 0.0).toInt() * 1000;
   double S =
       (rS.int31n(100 * 1000 - lowerSBound) + lowerSBound) / (100.0 * 1000.0);
 
-  // Brightness
   final rB = _MT19937()..seed(_parseSeed(bEntropy));
-  double upperBBound = _hairBrightDynMax;
-  if (S * 100 > _hairSatDynMin) upperBBound = 100.0;
+  double upperBBound = (S * 100 > _hairSatDynMin) ? 100.0 : _hairBrightDynMax;
   double lowerBBound = math.min(
       math.max(_minTotalBrightness - hsb.b * 100.0, _minHairBrightness),
       upperBBound);
-  upperBBound *= 1000;
-  lowerBBound *= 1000;
-  double B = (rB.int31n((upperBBound - lowerBBound).toInt()) + lowerBBound) /
+  double B = (rB.int31n(((upperBBound - lowerBBound) * 1000).toInt()) +
+          lowerBBound * 1000) /
       (100.0 * 1000.0);
 
   return _HSB(H, S, B).toRGB();
@@ -306,12 +268,12 @@ class _Asset {
   final String fileName;
   final _IllType type;
   final _Sex sex;
-  final bool bodyColored; // replace #00FFFF with body color
-  final bool hairColored; // replace #FF0000 with hair color
-  final bool lightOnly; // only usable when brightness >= _lightDarkSwitch
-  final bool darkColored; // swap black→white when dark background
-  final bool darkBWColored; // swap white→grey when dark background
-  final bool blk299; // dynamic opacity for fill-opacity="0.299"
+  final bool bodyColored;
+  final bool hairColored;
+  final bool lightOnly;
+  final bool darkColored;
+  final bool darkBWColored;
+  final bool blk299;
   String svgContents;
 
   _Asset({
@@ -326,12 +288,6 @@ class _Asset {
     this.blk299 = false,
     this.svgContents = '',
   });
-
-  /// Parse numeric prefix from filename, e.g. "14_f.svg" → 14
-  int get numericId {
-    final part = fileName.split('_').first.split('.').first;
-    return int.tryParse(part) ?? 0;
-  }
 }
 
 // ── Asset manager ─────────────────────────────────────────────────────────────
@@ -409,18 +365,11 @@ class NatriconParts {
 }
 
 // ── Nano address → public key ─────────────────────────────────────────────────
-// Nano addresses encode a 32-byte ed25519 public key in a custom base32 alphabet.
-// Format: (nano_|xrb_) + 60 chars → 4 padding bits + 256 key bits + 40 checksum bits
-//
-// This matches what the Go server does via utils.AddressToPub(address).
 
 const _nanoAlphabet = '13456789abcdefghijkmnopqrstuwxyz';
 
-/// Converts a nano/xrb address to its 64-char lowercase hex public key string.
-/// Returns null if the address is malformed.
 String? nanoAddressToPubKeyHex(String address) {
   try {
-    // Strip prefix
     String body;
     if (address.startsWith('nano_')) {
       body = address.substring(5);
@@ -431,7 +380,6 @@ String? nanoAddressToPubKeyHex(String address) {
     }
     if (body.length != 60) return null;
 
-    // Decode base32 → bits (5 bits per char, 300 bits total)
     final bits = <int>[];
     for (final ch in body.toLowerCase().split('')) {
       final val = _nanoAlphabet.indexOf(ch);
@@ -440,16 +388,10 @@ String? nanoAddressToPubKeyHex(String address) {
         bits.add((val >> i) & 1);
       }
     }
-    // bits[0..3]   = 4 padding bits (ignored)
-    // bits[4..259] = 256-bit public key
-    // bits[260..299] = 40-bit checksum (ignored here)
 
-    // Extract 32 bytes of public key from bits[4..259]
     final pubKeyBytes = List<int>.filled(32, 0);
     for (int i = 0; i < 256; i++) {
-      if (bits[4 + i] == 1) {
-        pubKeyBytes[i >> 3] |= (0x80 >> (i & 7));
-      }
+      if (bits[4 + i] == 1) pubKeyBytes[i >> 3] |= (0x80 >> (i & 7));
     }
 
     return pubKeyBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -463,19 +405,10 @@ String? nanoAddressToPubKeyHex(String address) {
 class NatriconGenerator {
   final _AssetManager _assets;
 
-  /// The seed appended to the pubkey before hashing.
-  /// The official natricon.com server uses a secret seed — set this if you
-  /// are running your own natricon-compatible server with a known seed.
-  /// Leave empty ('') for a seed-free implementation.
-  final String seed;
+  NatriconGenerator._(this._assets);
 
-  NatriconGenerator._(this._assets, {this.seed = '123456789'});
-
-  /// Load all assets from the Flutter asset bundle.
-  /// Call once at startup and cache the result.
   static Future<NatriconGenerator> load({
     String assetBasePath = 'assets/natricon',
-    String seed = '',
   }) async {
     final bodies = await _loadDir(assetBasePath, 'body', bodyColored: true);
     final bodyOutlines = await _loadDir(assetBasePath, 'body-outline');
@@ -488,18 +421,16 @@ class NatriconGenerator {
     final mouthOutlines = await _loadDir(assetBasePath, 'mouth-outline');
     final eyes = await _loadDir(assetBasePath, 'eyes');
 
-    return NatriconGenerator._(
-        _AssetManager(
-          bodies: bodies,
-          bodyOutlines: bodyOutlines,
-          hairFronts: hairFronts,
-          hairBacks: hairBacks,
-          hairOutlines: hairOutlines,
-          mouths: mouths,
-          mouthOutlines: mouthOutlines,
-          eyes: eyes,
-        ),
-        seed: seed);
+    return NatriconGenerator._(_AssetManager(
+      bodies: bodies,
+      bodyOutlines: bodyOutlines,
+      hairFronts: hairFronts,
+      hairBacks: hairBacks,
+      hairOutlines: hairOutlines,
+      mouths: mouths,
+      mouthOutlines: mouthOutlines,
+      eyes: eyes,
+    ));
   }
 
   static Future<List<_Asset>> _loadDir(
@@ -508,16 +439,14 @@ class NatriconGenerator {
     bool bodyColored = false,
     bool hairColored = false,
   }) async {
-    // Use Flutter's AssetManifest to discover SVG files — no manifest.txt needed.
     final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
     final prefix = '$base/$folder/';
     final fileNames = assetManifest
         .listAssets()
         .where((k) => k.startsWith(prefix) && k.endsWith('.svg'))
-        .map((k) =>
-            k.substring(prefix.length)) // strip path prefix → bare filename
+        .map((k) => k.substring(prefix.length))
         .toList()
-      ..sort(); // deterministic order matching the Go server's filepath.Walk sort
+      ..sort();
 
     assert(fileNames.isNotEmpty,
         'No SVG assets found under $prefix — check pubspec.yaml flutter.assets');
@@ -526,23 +455,17 @@ class NatriconGenerator {
     final assets = <_Asset>[];
 
     for (final name in fileNames) {
-      final sex = _sexFromName(name);
-      final lightOnly = _lightOnlyFromName(name);
-      final darkColored = name.contains('_lod_b') && !name.contains('_lod_bw');
-      final darkBWColored = name.contains('_lod_bw');
-      final blk299 = name.contains('_blk29');
-
       final contents = await rootBundle.loadString('$prefix$name');
       assets.add(_Asset(
         fileName: name,
         type: illType,
-        sex: sex,
+        sex: _sexFromName(name),
         bodyColored: bodyColored,
         hairColored: hairColored,
-        lightOnly: lightOnly,
-        darkColored: darkColored,
-        darkBWColored: darkBWColored,
-        blk299: blk299,
+        lightOnly: _lightOnlyFromName(name),
+        darkColored: name.contains('_lod_b') && !name.contains('_lod_bw'),
+        darkBWColored: name.contains('_lod_bw'),
+        blk299: name.contains('_blk29'),
         svgContents: contents,
       ));
     }
@@ -578,64 +501,52 @@ class NatriconGenerator {
     return _Sex.neutral;
   }
 
-  static bool _lightOnlyFromName(String name) {
-    // From load_files.go: lightOnly = true unless name has _lod or _ld
-    return !name.contains('_lod') && !name.contains('_ld');
-  }
+  static bool _lightOnlyFromName(String name) =>
+      !name.contains('_lod') && !name.contains('_ld');
 
-  // ── Generate from address ────────────────────────────────────────────────
+  // ── Generate ──────────────────────────────────────────────────────────────
 
-  /// Returns the assembled SVG string for a given Nano address.
-  String generateSvg(String address) {
-    final parts = _partsForAddress(address);
-    return _assembleSvg(parts);
-  }
+  String generateSvg(String address) => _assembleSvg(_partsForAddress(address));
 
   NatriconParts _partsForAddress(String address) {
-    // Match server: address → pubkey hex → SHA256(pubkey_hex + seed)
-    // See server/controller/natricon.go: utils.PKSha256(utils.AddressToPub(address), seed)
     final pubKeyHex = nanoAddressToPubKeyHex(address);
     assert(pubKeyHex != null, 'Invalid nano address: $address');
-    final input = utf8.encode((pubKeyHex ?? address) + seed);
-    final hashBytes = sha256.convert(input).bytes;
+
+    // server/controller/natricon.go: utils.PKSha256(utils.AddressToPub(address), seed)
+    final inputStr = (pubKeyHex ?? address) + kNatriconSeed;
+    final hashBytes = sha256.convert(utf8.encode(inputStr)).bytes;
     final hash =
         hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
     return _partsForHash(hash);
   }
 
   NatriconParts _partsForHash(String hash) {
     assert(hash.length == 64);
 
-    // ── Colors ──
     final bodyColor = _getBodyColor(hash.substring(0, 16));
     final hairColor = _getHairColor(
       bodyColor,
-      hash.substring(16, 26), // hue entropy (10 chars)
-      hash.substring(26, 30), // sat entropy  (4 chars)
-      hash.substring(30, 34), // brightness entropy (4 chars)
+      hash.substring(16, 26),
+      hash.substring(26, 30),
+      hash.substring(30, 34),
     );
 
-    // ── Body asset ──
-    final bodyAsset = _selectAsset(_assets.bodies, hash.substring(34, 40));
+    final bodyAsset = _selectFrom(_assets.bodies, hash.substring(34, 40));
 
-    // ── Hair asset (sex-aware) ──
     final hairOptions = _assets.hairsForSex(bodyAsset.sex);
     final hairAsset = _selectFrom(hairOptions, hash.substring(40, 46));
 
-    // ── Companion assets ──
     final hairBackAsset = _matchByName(_assets.hairBacks, hairAsset.fileName);
     final bodyOutlineAsset =
         _matchByName(_assets.bodyOutlines, bodyAsset.fileName);
     final hairOutlineAsset =
         _matchByName(_assets.hairOutlines, hairAsset.fileName);
 
-    // ── Sex propagation (body → hair → mouth) ──
     _Sex targetSex = _Sex.neutral;
     if (bodyAsset.sex != _Sex.neutral) {
       targetSex = bodyAsset.sex;
-    } else if (hairAsset.sex != _Sex.neutral) {
-      targetSex = hairAsset.sex;
-    }
+    } else if (hairAsset.sex != _Sex.neutral) targetSex = hairAsset.sex;
 
     final brightness = bodyColor.perceivedBrightness;
     final mouthOptions = _assets.mouthsForSex(targetSex, brightness);
@@ -664,13 +575,9 @@ class NatriconGenerator {
     );
   }
 
-  _Asset _selectAsset(List<_Asset> list, String entropy) =>
-      _selectFrom(list, entropy);
-
   _Asset _selectFrom(List<_Asset> list, String entropy) {
     final rng = _MT19937()..seed(_parseSeed(entropy));
-    final idx = rng.int31n(list.length);
-    return list[idx];
+    return list[rng.int31n(list.length)];
   }
 
   _Asset? _matchByName(List<_Asset> list, String fileName) {
@@ -681,7 +588,6 @@ class NatriconGenerator {
   }
 
   // ── SVG assembly ──────────────────────────────────────────────────────────
-  // Port of server/image/assemble.go  (CombineSVG)
 
   static const String _bodySwatch = '#00FFFF';
   static const String _hairSwatch = '#FF0000';
@@ -691,86 +597,69 @@ class NatriconGenerator {
   static const String _lodBwReplacement = '#9CA2AF';
 
   String _assembleSvg(NatriconParts p) {
-    final int pb = p.bodyColor.perceivedBrightness.toInt();
-    final bool isDark = pb < _lightDarkSwitch;
-    final double shadow = _targetOpacity(p.bodyColor);
-    final double shadowHair = _targetOpacity(p.hairColor);
-    final double blk29 = _blk29Opacity(p.bodyColor);
+    final bool isDark =
+        p.bodyColor.perceivedBrightness.toInt() < _lightDarkSwitch;
     final String bodyHex = p.bodyColor.toHtml();
     final String hairHex = p.hairColor.toHtml();
-    final String opacityStr = shadow.toStringAsFixed(6);
-    final String opacityHairStr = shadowHair.toStringAsFixed(6);
-    final String blk29Str = blk29.toStringAsFixed(6);
+    final String opacityStr = _targetOpacity(p.bodyColor).toStringAsFixed(6);
+    final String opacityHairStr =
+        _targetOpacity(p.hairColor).toStringAsFixed(6);
+    final String blk29Str = _blk29Opacity(p.bodyColor).toStringAsFixed(6);
 
-    final buf = StringBuffer();
-    buf.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">');
-
-    // Layer order matches CombineSVG:
-    // bodyOutline → mouthOutline → hairOutline → backHair →
-    // body → hair → mouth → eye → badge (not handled here)
-
-    void writeGroup(String id, String inner) {
-      buf.write('<g id="$id">$inner</g>');
-    }
-
-    String _inner(String raw) {
-      // Strip outer <svg ...>...</svg> wrapper
+    String inner(String raw) {
       final start = raw.indexOf('>') + 1;
       final end = raw.lastIndexOf('</svg>');
       if (start <= 0 || end <= start) return raw;
       return raw.substring(start, end);
     }
 
-    // Body outline
+    final buf = StringBuffer();
+    buf.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">');
+
+    void group(String id, String content) =>
+        buf.write('<g id="$id">$content</g>');
+
     if (p.bodyOutlineAsset != null) {
-      writeGroup('bodyOutline', _inner(p.bodyOutlineAsset!.svgContents));
+      group('bodyOutline', inner(p.bodyOutlineAsset!.svgContents));
     }
-
-    // Mouth outline
     if (p.mouthOutlineAsset != null) {
-      writeGroup('mouthOutline', _inner(p.mouthOutlineAsset!.svgContents));
+      group('mouthOutline', inner(p.mouthOutlineAsset!.svgContents));
     }
-
-    // Hair outline
     if (p.hairOutlineAsset != null) {
-      writeGroup('hairOutline', _inner(p.hairOutlineAsset!.svgContents));
+      group('hairOutline', inner(p.hairOutlineAsset!.svgContents));
     }
 
-    // Back hair
     if (p.hairBackAsset != null) {
-      String doc = _inner(p.hairBackAsset!.svgContents);
+      String doc = inner(p.hairBackAsset!.svgContents);
       if (p.hairAsset.hairColored) {
         doc = doc.replaceAll(_hairSwatch, hairHex);
         doc = doc.replaceAll(
             _shadowPlaceholder, 'fill-opacity="$opacityHairStr"');
       }
-      writeGroup('backhair', doc);
+      group('backhair', doc);
     }
 
-    // Body
     {
-      String doc = _inner(p.bodyAsset.svgContents);
+      String doc = inner(p.bodyAsset.svgContents);
       if (p.bodyAsset.bodyColored) {
         doc = doc.replaceAll(_bodySwatch, bodyHex);
         doc = doc.replaceAll(_shadowPlaceholder, 'fill-opacity="$opacityStr"');
       }
-      writeGroup('body', doc);
+      group('body', doc);
     }
 
-    // Hair front
     {
-      String doc = _inner(p.hairAsset.svgContents);
+      String doc = inner(p.hairAsset.svgContents);
       if (p.hairAsset.hairColored) {
         doc = doc.replaceAll(_hairSwatch, hairHex);
         doc = doc.replaceAll(
             _shadowPlaceholder, 'fill-opacity="$opacityHairStr"');
       }
-      writeGroup('hair', doc);
+      group('hair', doc);
     }
 
-    // Mouth
     {
-      String doc = _inner(p.mouthAsset.svgContents);
+      String doc = inner(p.mouthAsset.svgContents);
       if (p.hairAsset.hairColored) {
         doc = doc.replaceAll(_mouthHairSwatch, hairHex);
         doc = doc.replaceAll(
@@ -784,12 +673,11 @@ class NatriconGenerator {
       } else if (!isDark && p.mouthAsset.blk299) {
         doc = doc.replaceAll(_blk299Placeholder, 'fill-opacity="$blk29Str"');
       }
-      writeGroup('mouth', doc);
+      group('mouth', doc);
     }
 
-    // Eyes
     {
-      String doc = _inner(p.eyeAsset.svgContents);
+      String doc = inner(p.eyeAsset.svgContents);
       if (isDark && p.eyeAsset.darkBWColored) {
         doc = doc.replaceAll('white', _lodBwReplacement);
       }
@@ -798,7 +686,7 @@ class NatriconGenerator {
       } else if (!isDark && p.eyeAsset.blk299) {
         doc = doc.replaceAll(_blk299Placeholder, 'fill-opacity="$blk29Str"');
       }
-      writeGroup('eye', doc);
+      group('eye', doc);
     }
 
     buf.write('</svg>');
@@ -808,13 +696,6 @@ class NatriconGenerator {
 
 // ── Flutter widget ────────────────────────────────────────────────────────────
 
-/// Displays a Natricon for a given Nano address.
-///
-/// Usage:
-///   final generator = await NatriconGenerator.load();
-///   NatriconWidget(address: 'nano_1abc...', generator: generator, size: 64)
-///
-/// Or use the lazy-loading constructor which handles the future internally.
 class NatriconWidget extends StatelessWidget {
   final String address;
   final double size;
@@ -826,8 +707,6 @@ class NatriconWidget extends StatelessWidget {
     this.generator,
     super.key,
   });
-
-  // ── Lazy singleton ───────────────────────────────────────────────────────
 
   static NatriconGenerator? _cached;
   static Future<NatriconGenerator>? _loadFuture;
@@ -857,8 +736,6 @@ class NatriconWidget extends StatelessWidget {
       future: _ensureLoaded(),
       builder: (_, snap) {
         if (snap.hasError) {
-          debugPrint(
-              '[NatriconWidget] Error: ${snap.error}\n${snap.stackTrace}');
           return SizedBox(
             width: size,
             height: size,
@@ -878,8 +755,6 @@ class NatriconWidget extends StatelessWidget {
     );
   }
 
-  Widget _render(NatriconGenerator gen) {
-    final svg = gen.generateSvg(address);
-    return SvgPicture.string(svg, width: size, height: size);
-  }
+  Widget _render(NatriconGenerator gen) =>
+      SvgPicture.string(gen.generateSvg(address), width: size, height: size);
 }
