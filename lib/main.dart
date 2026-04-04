@@ -163,16 +163,19 @@ const bip39SeedHex2 =
     '7e9f86e818b5b872612d4efe76b8c4232cede988846533e10d883e661217d2766ec04e05e3a4585eceacbf7e6f29a5bf7481f03c94e54a553602ac8d003889f2';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterDownloader.initialize();
-  await Hive.initFlutter();
-  await dotenv.load();
+  await Future.wait([
+    FlutterDownloader.initialize(),
+    Hive.initFlutter(),
+    dotenv.load(),
+    AppFonts.load()
+  ]);
   FocusManager.instance.primaryFocus?.unfocus();
   // make app always in portrait mode
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  await AppFonts.load();
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (kReleaseMode) {
       return Container();
@@ -210,13 +213,22 @@ void main() async {
     encryptionCipher: HiveAesCipher(encryptionKey),
   );
   walletImportType = WalletService.getType();
-  trustWalletProvider = await rootBundle.loadString('js/trust.min.js');
-  leatherWalletProvider = await rootBundle.loadString('js/leather.stx.min.js');
-  nightly = await rootBundle.loadString('js/nightly.min.js');
-  webNotifer = await rootBundle.loadString('js/web_notification.js');
-  currencyJson = await rootBundle.loadString('json/currency_symbol.json');
-  currencyJsonSearch = await rootBundle.loadString('json/currencies.json');
+
   await WebNotificationPermissionDb.loadSavedPermissions();
+  final futures = await Future.wait([
+    rootBundle.loadString('js/trust.min.js'),
+    rootBundle.loadString('js/leather.stx.min.js'),
+    rootBundle.loadString('js/nightly.min.js'),
+    rootBundle.loadString('js/web_notification.js'),
+    rootBundle.loadString('json/currency_symbol.json'),
+    rootBundle.loadString('json/currencies.json'),
+  ]);
+  trustWalletProvider = futures[0];
+  leatherWalletProvider = futures[1];
+  nightly = futures[2];
+  webNotifer = futures[3];
+  currencyJson = futures[4];
+  currencyJsonSearch = futures[5];
   if (WalletService.isBip39PhraseOrSeedHexKey()) {
     await reInstianteSeedRoot();
     debugPrint('Reinstantiated seed root');
