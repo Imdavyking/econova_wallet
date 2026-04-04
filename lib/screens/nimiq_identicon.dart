@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
-
 // nimiq_identicon.dart
 
 class NimiqIdenticon {
