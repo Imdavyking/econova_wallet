@@ -6,7 +6,6 @@ import 'package:wallet_app/components/loader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:wallet_app/screens/nano_identicon_generator.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
 import '../main.dart';
 import '../utils/app_config.dart';
@@ -80,10 +79,6 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        NatriconWidget(
-          address:
-              'nano_33irdhma4h59muwm9zeqhqg6km9j684agbhzyr3o5ggzqgmknk4z1kqm6j7q',
-        ),
         SizedBox(
           width: 40,
           height: 40,

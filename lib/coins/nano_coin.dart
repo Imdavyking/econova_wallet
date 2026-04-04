@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:nanodart/nanodart.dart';
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:hex/hex.dart';
@@ -14,6 +15,7 @@ import '../model/seed_phrase_root.dart';
 import '../service/wallet_service.dart';
 import '../utils/app_config.dart';
 import '../utils/rpc_urls.dart';
+import 'package:wallet_app/screens/nano_identicon_generator.dart';
 import 'package:wallet_app/fetchers/nano_trx_fetcher.dart';
 
 // 1 NANO / 1 BAN = 10^30 raw (both use the same raw unit)
@@ -318,6 +320,11 @@ class NanoBaseCoin extends Coin {
     } catch (e, sk) {
       debugPrint('receivePending error: $e $sk');
     }
+  }
+
+  @override
+  Widget getExplorerIdenticon(String address, {double size = 40}) {
+    return NatriconWidget(address: address);
   }
 
   // ── Transfer ──────────────────────────────────────────────────────────────

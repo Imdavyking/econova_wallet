@@ -19,6 +19,7 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 // ── MT19937 (32-bit Mersenne Twister) ────────────────────────────────────────
@@ -447,31 +448,31 @@ class NatriconGenerator {
     bool bodyColored = false,
     bool hairColored = false,
   }) async {
-    // Flutter asset bundles require an AssetManifest — list known files
-    // via AssetManifest.json (flutter 3.7+) or iterate from your pubspec.
-    // Alternatively, embed a simple text manifest at assets/natricon/<folder>/manifest.txt
-    // listing one filename per line.
-    //
-    // Here we load the manifest file and use it to discover SVG files.
-    final manifestKey = '$base/$folder/manifest.txt';
-    final manifestData = await rootBundle.loadString(manifestKey);
-    final fileNames = manifestData
-        .split('\n')
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty && l.endsWith('.svg'))
+    // Use Flutter's AssetManifest to discover SVG files — no manifest.txt needed.
+    final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final prefix = '$base/$folder/';
+    final fileNames = assetManifest
+        .listAssets()
+        .where((k) => k.startsWith(prefix) && k.endsWith('.svg'))
+        .map((k) =>
+            k.substring(prefix.length)) // strip path prefix → bare filename
         .toList()
-      ..sort(); // ensure deterministic order
+      ..sort(); // deterministic order matching the Go server's filepath.Walk sort
 
+    assert(fileNames.isNotEmpty,
+        'No SVG assets found under $prefix — check pubspec.yaml flutter.assets');
+
+    final illType = _illTypeForFolder(folder);
     final assets = <_Asset>[];
+
     for (final name in fileNames) {
-      final illType = _illTypeForFolder(folder);
       final sex = _sexFromName(name);
       final lightOnly = _lightOnlyFromName(name);
       final darkColored = name.contains('_lod_b') && !name.contains('_lod_bw');
       final darkBWColored = name.contains('_lod_bw');
       final blk299 = name.contains('_blk29');
 
-      final contents = await rootBundle.loadString('$base/$folder/$name');
+      final contents = await rootBundle.loadString('$prefix$name');
       assets.add(_Asset(
         fileName: name,
         type: illType,
@@ -773,6 +774,10 @@ class NatriconWidget extends StatelessWidget {
       _cached = g;
       _loadFuture = null;
       return g;
+    }).catchError((Object e, StackTrace st) {
+      _loadFuture = null;
+      debugPrint('[NatriconWidget] Failed to load assets: $e\n$st');
+      throw e;
     });
     return _loadFuture!;
   }
@@ -787,6 +792,15 @@ class NatriconWidget extends StatelessWidget {
     return FutureBuilder<NatriconGenerator>(
       future: _ensureLoaded(),
       builder: (_, snap) {
+        if (snap.hasError) {
+          debugPrint(
+              '[NatriconWidget] Error: ${snap.error}\n${snap.stackTrace}');
+          return SizedBox(
+            width: size,
+            height: size,
+            child: const Center(child: Icon(Icons.broken_image, size: 24)),
+          );
+        }
         if (!snap.hasData) {
           return SizedBox(
             width: size,
