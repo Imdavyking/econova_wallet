@@ -59,7 +59,9 @@ class NimiqIdenticon {
 
     // padEnd to 13 with repeated char
     String padChar = reversed[5];
-    while (result.length < 13) result += padChar;
+    while (result.length < 13) {
+      result += padChar;
+    }
     return result.substring(0, result.length > 13 ? 13 : result.length);
   }
 
