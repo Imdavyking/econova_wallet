@@ -177,6 +177,8 @@ class NimiqCoin extends Coin {
       signature: signature,
     );
 
+    print(HEX.encode(rawTx));
+
     final txHash =
         await _rpc('sendRawTransaction', [HEX.encode(rawTx)]) as String;
 
@@ -242,6 +244,8 @@ class NimiqCoin extends Coin {
           }),
         )
         .timeout(networkTimeOutDuration);
+
+    print('body res: ${response.body}');
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (body.containsKey('error')) {
@@ -442,8 +446,8 @@ class _NimiqTx {
 
   /// What gets SIGNED — big-endian, includes sender address (not pubkey)
   static Uint8List buildSigningContent({
-    required Uint8List senderAddress, // 20 bytes
-    required Uint8List recipient, // 20 bytes
+    required Uint8List senderAddress,
+    required Uint8List recipient,
     required int valueLuna,
     required int feeLuna,
     required int validityStartHeight,
@@ -455,17 +459,18 @@ class _NimiqTx {
         : Uint8List(0);
 
     final buf = BytesBuilder(copy: false);
-    _u16be(buf, memoBytes.length); // sender_data_len (BE)
+    _u16be(buf, 0); // sender_data_len
     buf.add(senderAddress); // 20B sender address
-    buf.addByte(0); // sender_type = Basic
-    buf.add(recipient); // 20B recipient address
-    buf.addByte(0); // recipient_type = Basic
+    buf.addByte(0); // sender_type
+    buf.add(recipient); // 20B recipient
+    buf.addByte(0); // recipient_type
     _u64be(buf, valueLuna);
     _u64be(buf, feeLuna);
     _u32be(buf, validityStartHeight);
-    buf.addByte(0); // flags
-    buf.addByte(networkId);
-    buf.add(memoBytes); // sender_data (empty here)
+    buf.addByte(networkId); // ✅ network_id FIRST
+    buf.addByte(0); // ✅ flags SECOND
+    buf.addByte(memoBytes.length); // recipient_data_len
+    buf.add(memoBytes);
     return buf.toBytes();
   }
 
