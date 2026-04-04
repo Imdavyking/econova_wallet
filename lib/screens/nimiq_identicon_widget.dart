@@ -20,7 +20,7 @@ class NimiqIdenticonWidget extends StatefulWidget {
 
 class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
   String? _svgData;
-
+  static String? _cachedSprite; // shared across all instances
   @override
   void initState() {
     super.initState();
@@ -28,9 +28,18 @@ class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
   }
 
   Future<void> _buildSvg() async {
+    _cachedSprite ??= await rootBundle.loadString('assets/identicons.min.svg');
     final options = NimiqIdenticon.fromAddress(widget.address);
-    final sprite = await rootBundle.loadString('assets/identicons.min.svg');
-    final svg = _composeSvg(sprite, options);
+
+    // Debug: check if currentColor exists in the sprite at all
+    debugPrint(
+        'sprite has currentColor: ${_cachedSprite!.contains('currentColor')}');
+
+    final svg = _composeSvg(_cachedSprite!, options);
+
+    // Debug: print the final composed SVG
+    debugPrint('composed SVG:\n$svg');
+
     setState(() => _svgData = svg);
   }
 
@@ -49,30 +58,21 @@ class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
           .toList();
 
       if (matches.isEmpty) {
-        // Surface a useful error instead of a cryptic crash
-        throw StateError(
-          'Symbol "$symbolId" not found in sprite. '
-          'Available: ${doc.findAllElements('symbol').map((e) => e.getAttribute('id')).toList()}',
-        );
+        throw StateError('Symbol "$symbolId" not found in sprite.');
       }
-      return matches.first.children.map((c) => c.toXmlString()).join();
+
+      final content = matches.first.children.map((c) => c.toXmlString()).join();
+      return content.replaceAll(
+          'currentColor', o.accentColor); // ← this is the real fix
     }
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
   <circle cx="80" cy="80" r="80" fill="${o.backgroundColor}"/>
-  <g fill="${o.bodyColor}" color="${o.accentColor}">
-    ${getSymbol(id('face', o.face))}
-  </g>
-  <g fill="${o.bodyColor}" color="${o.accentColor}">
-    ${getSymbol(id('top', o.top))}
-  </g>
-  <g fill="${o.bodyColor}" color="${o.accentColor}">
-    ${getSymbol(id('side', o.side))}
-  </g>
-  <g fill="${o.bodyColor}" color="${o.accentColor}">
-    ${getSymbol(id('bottom', o.bottom))}
-  </g>
+  <g fill="${o.bodyColor}">${getSymbol(id('face', o.face))}</g>
+  <g fill="${o.bodyColor}">${getSymbol(id('top', o.top))}</g>
+  <g fill="${o.bodyColor}">${getSymbol(id('side', o.side))}</g>
+  <g fill="${o.bodyColor}">${getSymbol(id('bottom', o.bottom))}</g>
 </svg>''';
   }
 

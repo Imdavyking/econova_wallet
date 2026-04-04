@@ -1,5 +1,7 @@
 // nimiq_identicon.dart
 
+import 'package:flutter/material.dart';
+
 class NimiqIdenticon {
   // 10 body/accent colors
   static const List<String> COLORS = [
@@ -67,6 +69,7 @@ class NimiqIdenticon {
 
   static NimiqIconOptions fromAddress(String address) {
     final hash = makeHash(address);
+    debugPrint('nimiq hash for "$address": $hash'); // ← add this
 
     int bodyIdx = int.parse(hash[0]);
     int bgIdx = int.parse(hash[2]);
