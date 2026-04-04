@@ -80,10 +80,6 @@ class _UserDetailsPlaceHolderState extends State<UserDetailsPlaceHolder> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        NimiqIdenticonWidget(
-          address: 'NQ45 RGMN JG3R MQ4S TS19 M1YM 46KS Q7D2 15EE',
-          size: 48,
-        ),
         SizedBox(
           width: 40,
           height: 40,

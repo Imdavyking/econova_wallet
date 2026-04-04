@@ -30,7 +30,6 @@ class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
   Future<void> _buildSvg() async {
     final options = NimiqIdenticon.fromAddress(widget.address);
     final sprite = await rootBundle.loadString('assets/identicons.min.svg');
-    print(sprite);
     final svg = _composeSvg(sprite, options);
     setState(() => _svgData = svg);
   }

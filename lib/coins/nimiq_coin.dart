@@ -8,8 +8,10 @@ import 'package:cryptography/cryptography.dart' as crypto_pkg;
 import 'package:ed25519_edwards/ed25519_edwards.dart' as ed25519;
 import 'package:ed25519_hd_key/ed25519_hd_key.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
+import 'package:wallet_app/screens/nimiq_identicon_widget.dart';
 import '../fetchers/nimiq_trx_fetcher.dart';
 import '../interface/coin.dart';
 import '../main.dart';
@@ -185,6 +187,27 @@ class NimiqCoin extends Coin {
     return (txHash: txHash, txRaw: HEX.encode(rawTx));
   }
 
+  @override
+  Widget getExplorerIdenticon(String address, {double size = 40}) {
+    return NimiqIdenticonWidget(
+      address: formatAddressGroups(address),
+      size: 48,
+    );
+  }
+
+  String formatAddressGroups(String address, {int groupSize = 4}) {
+    final clean = address.replaceAll(RegExp(r'\s+'), ''); // remove spaces
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < clean.length; i++) {
+      if (i > 0 && i % groupSize == 0) {
+        buffer.write(' ');
+      }
+      buffer.write(clean[i]);
+    }
+
+    return buffer.toString();
+  }
   // ── Misc ─────────────────────────────────────────────────────────────────
 
   @override

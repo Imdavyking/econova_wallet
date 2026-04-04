@@ -1,53 +1,100 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
-class NimiqIdenticon {
-  // Counts must match what's actually in your SVG sprite
-  static const int FACE_COUNT = 21;
-  static const int TOP_COUNT = 21;
-  static const int SIDE_COUNT = 21;
-  static const int BOTTOM_COUNT = 21;
+// nimiq_identicon.dart
 
+class NimiqIdenticon {
+  // 10 body/accent colors
   static const List<String> COLORS = [
-    '#FC7D70',
-    '#FE8E51',
-    '#FFBE53',
-    '#F5CB40',
-    '#F5D764',
-    '#E8EE6F',
-    '#A4D96C',
-    '#62C873',
-    '#63D0A3',
-    '#63C7C7',
-    '#64B9E4',
-    '#628FE3',
-    '#8571E0',
-    '#A86FD5',
-    '#C569C5',
-    '#E36BAC',
-    '#F06890',
-    '#F5777E',
-    '#EEB09A',
-    '#D8C9A7',
-    '#FFFFFF',
+    '#FC8702',
+    '#D94432',
+    '#E9B213',
+    '#1A5493',
+    '#0582CA',
+    '#5961A8',
+    '#21BCA5',
+    '#FA7268',
+    '#88B04B',
+    '#795548',
   ];
 
-  static NimiqIconOptions fromAddress(String address) {
-    final bytes = utf8.encode(address);
-    final digest = sha256.convert(bytes);
-    // Use raw bytes as a stream of numbers — no digit-string tricks
-    final b = digest.bytes;
+  // 10 background colors (slightly different from body colors)
+  static const List<String> BACKGROUND_COLORS = [
+    '#FC8702',
+    '#D94432',
+    '#E9B213',
+    '#1F2348',
+    '#0582CA',
+    '#5F4B8B',
+    '#21BCA5',
+    '#FA7268',
+    '#88B04B',
+    '#795548',
+  ];
 
-    int pick(int byteIndex, int count) => b[byteIndex] % count;
+  static double _chaosHash(double x) {
+    double r = 1.0 / x;
+    for (int i = 0; i < 100; i++) {
+      r = (1 - r) * r * 3.569956786876;
+    }
+    return r;
+  }
+
+  /// Replicates Nimiq's `makeHash(address)` JS function exactly.
+  static String makeHash(String address) {
+    // Step 1: logistic map over char codes
+    double value = address.split('').map((c) => c.codeUnitAt(0) + 3.0).fold(
+          0.5,
+          (acc, charVal) => acc * (1 - acc) * _chaosHash(charVal),
+        );
+
+    // Step 2: reverse the decimal string
+    String reversed = value.toString().split('').reversed.join('');
+
+    // Step 3: replace the dot (index 5 of reversed) then substr(4,17), padEnd to 13
+    if (reversed.length <= 5) {
+      reversed = reversed.padRight(6, '0');
+    }
+    String dotReplaced = reversed.replaceFirst('.', reversed[5]);
+    String result = dotReplaced.length >= 21
+        ? dotReplaced.substring(4, 21)
+        : dotReplaced.substring(4);
+
+    // padEnd to 13 with repeated char
+    String padChar = reversed[5];
+    while (result.length < 13) result += padChar;
+    return result.substring(0, result.length > 13 ? 13 : result.length);
+  }
+
+  static NimiqIconOptions fromAddress(String address) {
+    final hash = makeHash(address);
+
+    int bodyIdx = int.parse(hash[0]);
+    int bgIdx = int.parse(hash[2]);
+    int accentIdx = int.parse(hash[11]);
+
+    // Ensure no color collisions (mirrors JS hashToIndices)
+    if (bodyIdx == bgIdx) {
+      bodyIdx = (bodyIdx + 1) % 10;
+    }
+    while (accentIdx == bodyIdx || accentIdx == bgIdx) {
+      accentIdx = (accentIdx + 1) % 10;
+    }
+
+    // Face = hash[3..4], Top = hash[5..6], Side = hash[7..8], Bottom = hash[9..10]
+    int face = int.parse(hash.substring(3, 5)) % 21;
+    int top = int.parse(hash.substring(5, 7)) % 21;
+    int side = int.parse(hash.substring(7, 9)) % 21;
+    int bottom = int.parse(hash.substring(9, 11)) % 21;
 
     return NimiqIconOptions(
-      face: pick(0, FACE_COUNT),
-      top: pick(1, TOP_COUNT),
-      side: pick(2, SIDE_COUNT),
-      bottom: pick(3, BOTTOM_COUNT),
-      bodyColor: COLORS[pick(4, COLORS.length)],
-      backgroundColor: COLORS[pick(5, COLORS.length)],
-      accentColor: COLORS[pick(6, COLORS.length)],
+      face: face,
+      top: top,
+      side: side,
+      bottom: bottom,
+      bodyColor: COLORS[bodyIdx],
+      backgroundColor: BACKGROUND_COLORS[bgIdx],
+      accentColor: COLORS[accentIdx],
     );
   }
 }
