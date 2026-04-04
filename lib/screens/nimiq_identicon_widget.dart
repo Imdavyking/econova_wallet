@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -31,24 +33,9 @@ class _NimiqIdenticonWidgetState extends State<NimiqIdenticonWidget> {
     _cachedSprite ??= await rootBundle.loadString('assets/identicons.min.svg');
     final options = NimiqIdenticon.fromAddress(widget.address);
 
-    // Debug: check if currentColor exists in the sprite at all
-    debugPrint(
-        'sprite has currentColor: ${_cachedSprite!.contains('currentColor')}');
-
     final svg = _composeSvg(_cachedSprite!, options);
 
-    // Debug: print the final composed SVG
-    _printFull('composed SVG:\n$svg');
-
     setState(() => _svgData = svg);
-  }
-
-  void _printFull(String text) {
-    const chunkSize = 800;
-    for (int i = 0; i < text.length; i += chunkSize) {
-      debugPrint(text.substring(
-          i, i + chunkSize > text.length ? text.length : i + chunkSize));
-    }
   }
 
   String _composeSvg(String sprite, NimiqIconOptions o) {

@@ -239,3 +239,11 @@ String generateSessionId([int length = 16]) {
 
   return (priv: privBytes, pub: pubBytes);
 }
+
+void printFull(String text) {
+  const chunkSize = 800;
+  for (int i = 0; i < text.length; i += chunkSize) {
+    debugPrint(text.substring(
+        i, i + chunkSize > text.length ? text.length : i + chunkSize));
+  }
+}
