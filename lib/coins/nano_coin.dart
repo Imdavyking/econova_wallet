@@ -322,11 +322,6 @@ class NanoBaseCoin extends Coin {
     }
   }
 
-  @override
-  Widget getExplorerIdenticon(String address, {double size = 40}) {
-    return NatriconWidget(address: address);
-  }
-
   // ── Transfer ──────────────────────────────────────────────────────────────
 
   @override

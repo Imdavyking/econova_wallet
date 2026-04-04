@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:wallet_app/coins/nimiq_coin.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/screens/nimiq_identicon.dart';
+// ignore: depend_on_referenced_packages
 import 'package:xml/xml.dart';
 
 class NimiqIdenticonWidget extends StatelessWidget {
