@@ -85,12 +85,12 @@ class _SecurityState extends State<Security> {
       if (_pinController.text.trim() == _pinController2.text.trim()) {
         await pref.put(userUnlockPasscodeKey, _pinController2.text.trim());
         if (widget.isChangingPin == true) {
-          if (context.mounted && Navigator.canPop(context)) {
+          if (mounted && Navigator.canPop(context)) {
             Navigator.pop(context);
           }
           return;
         }
-        if (!context.mounted) return;
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const MainScreen()),
