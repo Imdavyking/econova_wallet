@@ -235,6 +235,14 @@ flutter:
     - assets/sounds/speech_to_text_listening.m4r
     - assets/sounds/speech_to_text_cancel.m4r
     - assets/sounds/speech_to_text_stop.m4r
+    - assets/natricon/body/
+    - assets/natricon/body-outline/
+    - assets/natricon/hair-front/
+    - assets/natricon/hair-back/
+    - assets/natricon/hair-outline/
+    - assets/natricon/mouth/
+    - assets/natricon/mouth-outline/
+    - assets/natricon/eyes/
 
   fonts:
     - family: Roboto
