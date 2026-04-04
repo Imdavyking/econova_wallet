@@ -2,9 +2,36 @@
 
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:animated_splash_screen/animated_splash_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:flutter_gen/gen_l10n/app_localization.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:page_transition/page_transition.dart';
 import 'package:safe_device/safe_device.dart';
-import 'package:wallet_app/coins/aptos_coin.dart';
+import 'coins/aptos_coin.dart';
+import 'data_structures/trie.dart';
+import 'interface/coin.dart';
+import 'screens/main_screen.dart';
+import 'screens/navigator_service.dart';
+import 'screens/open_app_pin_failed.dart';
+import 'screens/security.dart';
+import 'screens/wallet.dart';
+import 'service/dead_man_switch_service.dart';
+import 'service/transaction_export_service.dart';
+import 'service/wallet_service.dart';
+import 'utils/app_config.dart';
+import 'utils/rpc_urls.dart';
+import 'utils/web_notifications.dart';
+import 'wordlist.dart';
 import 'package:wallet_app/coins/cardano_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/ontology_ft_coin.dart';
 import 'package:wallet_app/coins/legacy_utxo_coin.dart';
@@ -36,42 +63,18 @@ import 'package:wallet_app/coins/cosmos_coin.dart';
 import 'package:wallet_app/coins/xrp_coin.dart';
 import 'package:wallet_app/coins/tron_coin.dart';
 import 'package:wallet_app/coins/filecoin_coin.dart';
-import 'package:wallet_app/service/dead_man_switch_service.dart';
-import 'package:wallet_app/service/transaction_export_service.dart';
-import 'package:wallet_app/wordlist.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../service/wallet_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:animated_splash_screen/animated_splash_screen.dart';
-import 'package:wallet_app/screens/navigator_service.dart';
-import 'package:wallet_app/screens/open_app_pin_failed.dart';
-import 'package:wallet_app/screens/security.dart';
-import 'package:wallet_app/screens/wallet.dart';
-import 'package:wallet_app/utils/app_config.dart';
-import 'package:wallet_app/utils/rpc_urls.dart';
-import 'package:wallet_app/utils/web_notifications.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:flutter_gen/gen_l10n/app_localization.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:page_transition/page_transition.dart';
 import 'coins/evmhrp_coin.dart';
 import 'coins/multiversx_coin.dart';
 import 'coins/ronin_coin.dart';
 import 'coins/sui_coin.dart';
 import 'coins/ton_coin.dart';
 import 'coins/zilliqa_coin.dart';
-import 'data_structures/trie.dart';
-import 'interface/coin.dart';
-import 'screens/main_screen.dart';
 import '../coins/ethereum_coin.dart';
 import '../coins/near_coin.dart';
 import '../coins/solana_coin.dart';
 import '../coins/stellar_coin.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// ── Globals ───────────────────────────────────────────────────────────────────
 
 late String currencyJson;
 late String currencyJsonSearch;
@@ -80,6 +83,15 @@ late String leatherWalletProvider;
 late String nightly;
 late String webNotifer;
 late String nimiqSpriteSvg;
+late Box pref;
+late WalletType walletImportType;
+late ByteData logoBytes;
+
+final Map<String, Map<String, dynamic>> decodedCache = {};
+final mnemonicSuggester = Trie();
+
+// ── Chain registry ────────────────────────────────────────────────────────────
+
 List<T> getChains<T extends Coin>() {
   List<Coin> all = [
     ...getNimiqBlockchains(),
@@ -133,7 +145,7 @@ Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
   final coins = getChains<T>();
   final cryptoPrice = await getCryptoPrice(useCache: true);
 
-  final balances = await Future.wait(
+  final entries = await Future.wait(
     coins.map((coin) async {
       final balance = await coin.getBalance(true);
       final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
@@ -142,113 +154,22 @@ Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
     eagerError: false,
   );
 
-  balances.sort((a, b) => b.value.compareTo(a.value));
-
-  return balances.map((e) => e.key).toList();
+  return (entries..sort((a, b) => b.value.compareTo(a.value)))
+      .map((e) => e.key)
+      .toList();
 }
 
-late Box pref;
-final Map<String, Map<String, dynamic>> decodedCache = {};
-final mnemonicSuggester = Trie();
-late WalletType walletImportType;
-late ByteData logoBytes;
+// ── Entry point ───────────────────────────────────────────────────────────────
 
-// DO NOT USE (public)
-const testMnemonic2 =
-    'express crane road good warm suggest genre organ cradle tuition strike manual'; // do not use it in production
-const testMnemonic1 =
-    'test test test test test test test test test test test junk'; // do not use it in production
-const bip39SeedHex1 =
-    '9dfc3c64c2f8bede1533b6a79f8570e5943e0b8fd1cf77107adf7b72cef42185d564a3aee24cab43f80e3c4538087d70fc824eabbad596a23c97b6ee8322ccc0';
-const bip39SeedHex2 =
-    '7e9f86e818b5b872612d4efe76b8c4232cede988846533e10d883e661217d2766ec04e05e3a4585eceacbf7e6f29a5bf7481f03c94e54a553602ac8d003889f2';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Future.wait([
-    FlutterDownloader.initialize(),
-    Hive.initFlutter(),
-    dotenv.load(),
-    AppFonts.load()
-  ]);
-  FocusManager.instance.primaryFocus?.unfocus();
-  // make app always in portrait mode
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
 
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    if (kReleaseMode) {
-      return Container();
-    }
-    return Container(
-      color: Colors.red,
-      child: Center(
-        child: Text(
-          details.exceptionAsString(),
-          style: const TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  };
+  await _initCore();
+  await _initStorage();
+  await _loadAssets();
+  await _initChains();
+  await _initMisc();
 
-  const FlutterSecureStorage secureStorage = FlutterSecureStorage();
-  final containsEncryptionKey =
-      await secureStorage.containsKey(key: secureEncryptionKey);
-
-  if (!containsEncryptionKey) {
-    final key = Hive.generateSecureKey();
-    await secureStorage.write(
-      key: secureEncryptionKey,
-      value: base64UrlEncode(key),
-    );
-  }
-
-  final result = await secureStorage.read(key: secureEncryptionKey);
-
-  final encryptionKey = base64Url.decode(result!);
-  pref = await Hive.openBox(
-    secureStorageKey,
-    encryptionCipher: HiveAesCipher(encryptionKey),
-  );
-  walletImportType = WalletService.getType();
-
-  await WebNotificationPermissionDb.loadSavedPermissions();
-  final futures = await Future.wait([
-    rootBundle.loadString('js/trust.min.js'),
-    rootBundle.loadString('js/leather.stx.min.js'),
-    rootBundle.loadString('js/nightly.min.js'),
-    rootBundle.loadString('js/web_notification.js'),
-    rootBundle.loadString('json/currency_symbol.json'),
-    rootBundle.loadString('json/currencies.json'),
-    rootBundle.loadString('assets/identicons.min.svg')
-  ]);
-  trustWalletProvider = futures[0];
-  leatherWalletProvider = futures[1];
-  nightly = futures[2];
-  webNotifer = futures[3];
-  currencyJson = futures[4];
-  currencyJsonSearch = futures[5];
-  nimiqSpriteSvg = futures[6];
-  if (WalletService.isBip39PhraseOrSeedHexKey()) {
-    await reInstianteSeedRoot();
-    debugPrint('Reinstantiated seed root');
-  }
-  supportedChains = await getChainsSortedByBalance();
-  testNetNotifier.addListener(() async {
-    debugPrint('enableTestNet = $enableTestNet — reloading chains');
-    supportedChains = await getChainsSortedByBalance();
-  });
-
-  for (int i = 0; i < wordList.length; i++) {
-    mnemonicSuggester.insert(wordList[i]);
-  }
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
-  }
-  await DeadManSwitchService.checkOnAppOpen();
-  cacheSupportedCurrencies();
-  logoBytes = await rootBundle.load('assets/logo.png');
   runApp(ProviderScope(
     child: MyApp(
       userDarkMode: pref.get(darkModekey, defaultValue: true),
@@ -259,35 +180,137 @@ void main() async {
   ));
 }
 
-// Call this once at app startup or first launch
+Future<void> _initCore() async {
+  await Future.wait([
+    FlutterDownloader.initialize(),
+    Hive.initFlutter(),
+    dotenv.load(),
+    AppFonts.load(),
+  ]);
+
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  ErrorWidget.builder = (details) => kReleaseMode
+      ? const SizedBox.shrink()
+      : ColoredBox(
+          color: Colors.red,
+          child: Center(
+            child: Text(details.exceptionAsString(),
+                style: const TextStyle(color: Colors.white)),
+          ),
+        );
+}
+
+Future<void> _initStorage() async {
+  const secureStorage = FlutterSecureStorage();
+
+  if (!await secureStorage.containsKey(key: secureEncryptionKey)) {
+    await secureStorage.write(
+      key: secureEncryptionKey,
+      value: base64UrlEncode(Hive.generateSecureKey()),
+    );
+  }
+
+  final encryptionKeyB64 = await secureStorage.read(key: secureEncryptionKey);
+  pref = await Hive.openBox(
+    secureStorageKey,
+    encryptionCipher: HiveAesCipher(base64Url.decode(encryptionKeyB64!)),
+  );
+
+  walletImportType = WalletService.getType();
+  await WebNotificationPermissionDb.loadSavedPermissions();
+}
+
+Future<void> _loadAssets() async {
+  final results = await Future.wait([
+    rootBundle.loadString('js/trust.min.js'),
+    rootBundle.loadString('js/leather.stx.min.js'),
+    rootBundle.loadString('js/nightly.min.js'),
+    rootBundle.loadString('js/web_notification.js'),
+    rootBundle.loadString('json/currency_symbol.json'),
+    rootBundle.loadString('json/currencies.json'),
+    rootBundle.loadString('assets/identicons.min.svg'),
+    rootBundle.load('assets/logo.png'),
+  ]);
+
+  trustWalletProvider = results[0] as String;
+  leatherWalletProvider = results[1] as String;
+  nightly = results[2] as String;
+  webNotifer = results[3] as String;
+  currencyJson = results[4] as String;
+  currencyJsonSearch = results[5] as String;
+  nimiqSpriteSvg = results[6] as String;
+  logoBytes = results[7] as ByteData;
+}
+
+Future<void> _initChains() async {
+  if (WalletService.isBip39PhraseOrSeedHexKey()) {
+    await reInstianteSeedRoot();
+    debugPrint('Reinstantiated seed root');
+  }
+
+  supportedChains = await getChainsSortedByBalance();
+  testNetNotifier.addListener(() async {
+    debugPrint('enableTestNet = $enableTestNet — reloading chains');
+    supportedChains = await getChainsSortedByBalance();
+  });
+}
+
+Future<void> _initMisc() async {
+  for (final word in wordList) {
+    mnemonicSuggester.insert(word);
+  }
+
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
+  }
+
+  await DeadManSwitchService.checkOnAppOpen();
+  unawaited(cacheSupportedCurrencies()); // intentionally fire-and-forget
+}
+
 Future<void> cacheSupportedCurrencies() async {
-  if (pref.get(supportedCurrencyKey) != null) return; // already cached
-
-  final supported = jsonDecode(
-    (await http.get(Uri.parse(coinGeckoSupportedCurrencies))).body,
-  ) as List;
-
+  if (pref.get(supportedCurrencyKey) != null) return;
+  final response = await http.get(Uri.parse(coinGeckoSupportedCurrencies));
+  final supported = jsonDecode(response.body) as List;
   await pref.put(supportedCurrencyKey, supported.join(','));
 }
 
-int uint8ListToNumber(Uint8List bytes, {Endian endian = Endian.little}) {
-  if (endian == Endian.big) {
-    return bytes.fold(0, (result, byte) => (result << 8) + byte);
-  } else {
-    return bytes.reversed.fold(0, (result, byte) => (result << 8) + byte);
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+int uint8ListToNumber(Uint8List bytes, {Endian endian = Endian.little}) =>
+    endian == Endian.big
+        ? bytes.fold(0, (r, b) => (r << 8) + b)
+        : bytes.reversed.fold(0, (r, b) => (r << 8) + b);
+
+/// Returns true if the device is jailbroken or an emulator.
+/// Always returns false in debug mode.
+Future<bool> _detectDanger() async {
+  if (kDebugMode) return false;
+  try {
+    final jailbroken = await SafeDevice.isJailBroken;
+    final realDevice = await SafeDevice.isRealDevice;
+    return jailbroken || !realDevice;
+  } catch (_) {
+    return true; // assume dangerous on error
   }
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
+
 class MyApp extends StatefulWidget {
-  static ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-
+  static final themeNotifier = ValueNotifier(ThemeMode.dark);
   static bool getCoinGeckoData = true;
-  static DateTime lastcoinGeckoData = DateTime.now();
-
+  static DateTime lastCoinGeckoData =
+      DateTime.now(); // ← restored + fixed casing
   final bool userDarkMode;
   final Locale locale;
 
   const MyApp({super.key, required this.userDarkMode, required this.locale});
+
   static _MyAppState of(BuildContext context) =>
       context.findAncestorStateOfType<_MyAppState>()!;
 
@@ -299,42 +322,35 @@ class _MyAppState extends State<MyApp> {
   Locale? _locale;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
     _locale = widget.locale;
+    // Set theme from widget param once — not in build
+    MyApp.themeNotifier.value =
+        widget.userDarkMode ? ThemeMode.dark : ThemeMode.light;
   }
 
-  void setLocale(Locale value) {
-    setState(() {
-      _locale = value;
-    });
-  }
+  void setLocale(Locale value) => setState(() => _locale = value);
 
   @override
   Widget build(BuildContext context) {
-    MyApp.themeNotifier.value =
-        widget.userDarkMode ? ThemeMode.dark : ThemeMode.light;
-
-    return ValueListenableBuilder(
+    return ValueListenableBuilder<ThemeMode>(
       valueListenable: MyApp.themeNotifier,
-      builder: (_, ThemeMode currentMode, __) {
-        SystemChrome.setSystemUIOverlayStyle(
-          SystemUiOverlayStyle(
-            statusBarBrightness: currentMode == ThemeMode.light
-                ? Brightness.light
-                : Brightness.dark,
-            statusBarColor: Colors.black,
-          ),
-        );
+      builder: (_, mode, __) {
+        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+          statusBarBrightness:
+              mode == ThemeMode.light ? Brightness.light : Brightness.dark,
+          statusBarColor: Colors.black,
+        ));
         return MaterialApp(
-          navigatorKey: NavigationService.navigatorKey, // set property
+          navigatorKey: NavigationService.navigatorKey,
           debugShowCheckedModeBanner: false,
           locale: _locale,
           theme: darkTheme,
+          darkTheme: darkTheme,
+          themeMode: mode,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          darkTheme: darkTheme,
-          themeMode: currentMode,
           home: const MyHomePage(),
         );
       },
@@ -342,35 +358,11 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class MyHomePage extends StatefulWidget {
+// ── Home / Splash ─────────────────────────────────────────────────────────────
+
+class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-Future<bool> _detectDanger() async {
-  if (kDebugMode) {
-    return false;
-  }
-  bool isJailBroken = false;
-  bool isRealDevice = true;
-  try {
-    isJailBroken = await SafeDevice.isJailBroken;
-    isRealDevice = await SafeDevice.isRealDevice;
-  } catch (e) {
-    isJailBroken = true;
-  }
-  if (isJailBroken || !isRealDevice) {
-    if (kDebugMode) {
-      print('Device is jailbroken or not a real device');
-    }
-    return true;
-  }
-  return false;
-}
-
-class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -381,40 +373,37 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         disableNavigation: true,
         splash: 'assets/logo.png',
-        screenFunction: () async {
-          final bool hasWallet =
-              WalletService.getActiveKey(walletImportType) != null;
-
-          final bool hasPasscode = pref.get(userUnlockPasscodeKey) != null;
-          final int hasUnlockTime = pref.get(appUnlockTime, defaultValue: 1);
-          bool isAuthenticated = false;
-
-          if (hasUnlockTime > 1) {
-            return OpenAppPinFailed(remainSec: hasUnlockTime);
-          }
-
-          if (hasWallet) {
-            isAuthenticated = await authenticate(context);
-          }
-
-          bool isDangerous = await _detectDanger();
-
-          if (isDangerous) {
-            return const Text(
-              'Device is jailbroken or not real can not use app',
-            );
-          }
-
-          if (hasWallet && !isAuthenticated) return const OpenAppPinFailed();
-
-          if (hasWallet) return const Wallet();
-
-          if (hasPasscode) return const MainScreen();
-
-          return const Security();
-        },
+        screenFunction: _resolveStartScreen,
         pageTransitionType: PageTransitionType.rightToLeft,
       ),
     );
+  }
+
+  Future<Widget> _resolveStartScreen() async {
+    // 1. Enforce unlock timeout first — before anything else
+    final int unlockTime = pref.get(appUnlockTime, defaultValue: 1);
+    if (unlockTime > 1) return OpenAppPinFailed(remainSec: unlockTime);
+
+    // 2. Jailbreak / emulator check
+    if (await _detectDanger()) {
+      return const Center(
+        child: Text('Device is jailbroken or not real — cannot use app'),
+      );
+    }
+
+    final hasWallet = WalletService.getActiveKey(walletImportType) != null;
+    final hasPasscode = pref.get(userUnlockPasscodeKey) != null;
+
+    // 3. Authenticate if wallet exists
+    if (hasWallet) {
+      // Note: authenticate() needs a BuildContext — keep using navigatorKey
+      final authenticated =
+          await authenticate(NavigationService.navigatorKey.currentContext!);
+      if (!authenticated) return const OpenAppPinFailed();
+      return const Wallet();
+    }
+
+    if (hasPasscode) return const MainScreen();
+    return const Security();
   }
 }
