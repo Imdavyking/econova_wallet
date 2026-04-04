@@ -408,17 +408,75 @@ class NatriconParts {
   });
 }
 
+// ── Nano address → public key ─────────────────────────────────────────────────
+// Nano addresses encode a 32-byte ed25519 public key in a custom base32 alphabet.
+// Format: (nano_|xrb_) + 60 chars → 4 padding bits + 256 key bits + 40 checksum bits
+//
+// This matches what the Go server does via utils.AddressToPub(address).
+
+const _nanoAlphabet = '13456789abcdefghijkmnopqrstuwxyz';
+
+/// Converts a nano/xrb address to its 64-char lowercase hex public key string.
+/// Returns null if the address is malformed.
+String? nanoAddressToPubKeyHex(String address) {
+  try {
+    // Strip prefix
+    String body;
+    if (address.startsWith('nano_')) {
+      body = address.substring(5);
+    } else if (address.startsWith('xrb_')) {
+      body = address.substring(4);
+    } else {
+      return null;
+    }
+    if (body.length != 60) return null;
+
+    // Decode base32 → bits (5 bits per char, 300 bits total)
+    final bits = <int>[];
+    for (final ch in body.toLowerCase().split('')) {
+      final val = _nanoAlphabet.indexOf(ch);
+      if (val == -1) return null;
+      for (int i = 4; i >= 0; i--) {
+        bits.add((val >> i) & 1);
+      }
+    }
+    // bits[0..3]   = 4 padding bits (ignored)
+    // bits[4..259] = 256-bit public key
+    // bits[260..299] = 40-bit checksum (ignored here)
+
+    // Extract 32 bytes of public key from bits[4..259]
+    final pubKeyBytes = List<int>.filled(32, 0);
+    for (int i = 0; i < 256; i++) {
+      if (bits[4 + i] == 1) {
+        pubKeyBytes[i >> 3] |= (0x80 >> (i & 7));
+      }
+    }
+
+    return pubKeyBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  } catch (_) {
+    return null;
+  }
+}
+
 // ── Core generator ────────────────────────────────────────────────────────────
 
 class NatriconGenerator {
   final _AssetManager _assets;
 
-  NatriconGenerator._(this._assets);
+  /// The seed appended to the pubkey before hashing.
+  /// The official natricon.com server uses a secret seed — set this if you
+  /// are running your own natricon-compatible server with a known seed.
+  /// Leave empty ('') for a seed-free implementation.
+  final String seed;
+
+  NatriconGenerator._(this._assets, {this.seed = '123456789'});
 
   /// Load all assets from the Flutter asset bundle.
   /// Call once at startup and cache the result.
-  static Future<NatriconGenerator> load(
-      {String assetBasePath = 'assets/natricon'}) async {
+  static Future<NatriconGenerator> load({
+    String assetBasePath = 'assets/natricon',
+    String seed = '',
+  }) async {
     final bodies = await _loadDir(assetBasePath, 'body', bodyColored: true);
     final bodyOutlines = await _loadDir(assetBasePath, 'body-outline');
     final hairFronts =
@@ -430,16 +488,18 @@ class NatriconGenerator {
     final mouthOutlines = await _loadDir(assetBasePath, 'mouth-outline');
     final eyes = await _loadDir(assetBasePath, 'eyes');
 
-    return NatriconGenerator._(_AssetManager(
-      bodies: bodies,
-      bodyOutlines: bodyOutlines,
-      hairFronts: hairFronts,
-      hairBacks: hairBacks,
-      hairOutlines: hairOutlines,
-      mouths: mouths,
-      mouthOutlines: mouthOutlines,
-      eyes: eyes,
-    ));
+    return NatriconGenerator._(
+        _AssetManager(
+          bodies: bodies,
+          bodyOutlines: bodyOutlines,
+          hairFronts: hairFronts,
+          hairBacks: hairBacks,
+          hairOutlines: hairOutlines,
+          mouths: mouths,
+          mouthOutlines: mouthOutlines,
+          eyes: eyes,
+        ),
+        seed: seed);
   }
 
   static Future<List<_Asset>> _loadDir(
@@ -532,8 +592,12 @@ class NatriconGenerator {
   }
 
   NatriconParts _partsForAddress(String address) {
-    // SHA-256 the address → 64-char hex
-    final hashBytes = sha256.convert(utf8.encode(address)).bytes;
+    // Match server: address → pubkey hex → SHA256(pubkey_hex + seed)
+    // See server/controller/natricon.go: utils.PKSha256(utils.AddressToPub(address), seed)
+    final pubKeyHex = nanoAddressToPubKeyHex(address);
+    assert(pubKeyHex != null, 'Invalid nano address: $address');
+    final input = utf8.encode((pubKeyHex ?? address) + seed);
+    final hashBytes = sha256.convert(input).bytes;
     final hash =
         hashBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return _partsForHash(hash);
