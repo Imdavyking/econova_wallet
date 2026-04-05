@@ -17,7 +17,6 @@ import '../../utils/app_config.dart';
 class SplTokenCoin extends SolanaCoin implements FTExplorer {
   String mint;
   int mintDecimals;
-  int chainId;
 
   SplTokenCoin({
     required super.blockExplorer,
@@ -27,12 +26,12 @@ class SplTokenCoin extends SolanaCoin implements FTExplorer {
     required super.name,
     required super.rpc,
     required super.ws,
+    required super.chainId,
     required super.geckoID,
     required super.caipReference,
     required this.mint,
     required this.mintDecimals,
-    required this.chainId,
-  }) : super(rampID: '', payScheme: '', chainId: chainId);
+  }) : super(rampID: '', payScheme: '');
 
   /// Inherits all network config from [parent] — only pass token-specific fields.
   factory SplTokenCoin.fromParent({
