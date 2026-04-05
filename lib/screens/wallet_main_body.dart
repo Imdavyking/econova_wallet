@@ -84,6 +84,8 @@ class _WalletMainBodyState extends State<WalletMainBody>
                     supportedChains = await getChainsSortedByBalance();
                   },
                   child: UpgradeAlert(
+                    shouldPopScope: () => true,
+                    dialogStyle: UpgradeDialogStyle.cupertino,
                     upgrader: Upgrader(),
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
