@@ -201,14 +201,29 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
   String _resolvePrivateKey(String raw) {
     var key = strip0x(raw).split(':').last;
+
+    // raw hex path
     if (isHEXstrip0x(key)) {
       final bytes = HEX.decode(key) as Uint8List;
       if (bytes.length != 32) throw Exception(_loc.invalidPrivateKey);
       return key;
     }
+
     final decoded = base58.decode(key);
-    if (decoded.length < 32) throw Exception(_loc.invalidPrivateKey);
-    return HEX.encode(decoded.sublist(0, 32));
+
+    // Solana keypair: 64 bytes, private key is first 32
+    if (decoded.length == 64) {
+      return HEX.encode(decoded.sublist(0, 32));
+    }
+
+    // Bitcoin WIF: 33 bytes (uncompressed) or 34 bytes (compressed)
+    // first byte is version byte 0x80, skip it
+    if (decoded.length == 33 || decoded.length == 34) {
+      if (decoded[0] != 0x80) throw Exception(_loc.invalidPrivateKey);
+      return HEX.encode(decoded.sublist(1, 33));
+    }
+
+    throw Exception(_loc.invalidPrivateKey);
   }
 
   Future<String> _resolveKeystore(String keystore, String password) async {
