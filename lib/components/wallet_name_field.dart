@@ -53,8 +53,6 @@ class WalletNameFieldState extends State<WalletNameField> {
   void _validate() {
     final name = widget.controller.text.trim();
 
-    print('name $name');
-
     // 1. Empty → no error (handled on submit)
     if (name.isEmpty) {
       if (_errorText != null) {
@@ -84,8 +82,6 @@ class WalletNameFieldState extends State<WalletNameField> {
       }
       return;
     }
-
-    print('hello');
 
     // 4. SLOW PATH → Confirm with full scan
     final isDuplicate = WalletService.doesNameExist(name);
