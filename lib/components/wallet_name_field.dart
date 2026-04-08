@@ -45,6 +45,15 @@ class WalletNameFieldState extends State<WalletNameField> {
   }
 
   @override
+  void didUpdateWidget(WalletNameField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_validate);
+      widget.controller.addListener(_validate);
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller.removeListener(_validate);
     super.dispose();
