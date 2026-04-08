@@ -10,6 +10,7 @@ import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
+import 'package:wallet_app/utils/bloom_filter.dart';
 import 'package:wallet_app/utils/coingecko_ids.dart';
 import 'dart:convert';
 import 'package:wallet_app/eip/eip681.dart';
@@ -144,6 +145,29 @@ void main() async {
 
   tearDown(() async {
     await tearDownTestHive();
+  });
+
+  group('MurmurHashV3', () {
+    test('hello, seed 0', () {
+      expect(MurmurHash3.hash('hello', seed: 0), 613153351);
+    });
+    test('world, seed 1', () {
+      expect(MurmurHash3.hash('world', seed: 1), 1648897759);
+    });
+    test('Some Larger String!, seed 123', () {
+      expect(MurmurHash3.hash('Some Larger String!', seed: 123), 1044335896);
+    });
+
+    test('timestamp', () {
+      expect(
+          MurmurHash3.hash('2021-03-12T14:03:18.903Z-0000-00000000000000hi',
+              seed: 0),
+          3975858653);
+    });
+
+    test('emoji', () {
+      expect(MurmurHash3.hash('👌😂❤️🚀😍', seed: 0), 1935038234);
+    });
   });
 
   group('ECIES (secp256k1)', () {
