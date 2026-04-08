@@ -221,12 +221,7 @@ class WalletService {
   static bool doesNameExist(String name) {
     final normalized = name.toLowerCase().trim();
     if (normalized.isEmpty) return false;
-    for (final type in WalletType.values) {
-      if (getActiveKeys(type).any(
-        (k) => k.name.toLowerCase().trim() == normalized,
-      )) return true;
-    }
-    return false;
+    return WalletNameFilter.definitelyExists(normalized);
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
@@ -257,17 +252,24 @@ class WalletService {
 
 /// Probabilistic cross-type name uniqueness filter.
 /// Always confirm positives with [WalletService.doesNameExist].
+// ── WalletNameFilter ──────────────────────────────────────────────────────────
+
 class WalletNameFilter {
   WalletNameFilter._();
 
   static final BloomFilter _filter = BloomFilter();
+  // : exact set for O(1) confirmation; eliminates the JSON re-decode
+  static final Set<String> _names = {};
   static bool _seeded = false;
 
   static void _seed() {
     _filter.reset();
+    _names.clear(); //
     for (final type in WalletType.values) {
       for (final k in WalletService.getActiveKeys(type)) {
-        _filter.add(k.name.toLowerCase().trim());
+        final n = k.name.toLowerCase().trim();
+        _filter.add(n);
+        _names.add(n); //
       }
     }
     _seeded = true;
@@ -277,20 +279,26 @@ class WalletNameFilter {
     if (!_seeded) _seed();
   }
 
-  /// Returns true if the name is *definitely not* taken (fast reject).
-  /// Returns true (false positive possible) if it might be taken — always
-  /// confirm with [WalletService.doesNameExist].
   static bool mightExist(String name) {
     _ensureSeeded();
     return _filter.mightContain(name.toLowerCase().trim());
   }
 
-  /// Add a single name without a full re-seed. Call after inserting a wallet.
-  static void register(String name) {
+  // : exact O(1) check — replaces the linear scan in doesNameExist
+  static bool definitelyExists(String name) {
     _ensureSeeded();
-    _filter.add(name.toLowerCase().trim());
+    return _names.contains(name.toLowerCase().trim());
   }
 
-  /// Force full re-seed on next access (call after delete / rename).
-  static void invalidate() => _seeded = false;
+  static void register(String name) {
+    _ensureSeeded();
+    final n = name.toLowerCase().trim();
+    _filter.add(n);
+    _names.add(n); //
+  }
+
+  static void invalidate() {
+    _seeded = false;
+    _names.clear(); //
+  }
 }
