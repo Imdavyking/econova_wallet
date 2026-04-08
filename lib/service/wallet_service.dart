@@ -196,11 +196,7 @@ class WalletService {
     WalletNameFilter.invalidate(); // old name may linger; force re-seed
   }
 
-  // ── Type ──────────────────────────────────────────────────────────────────
 
-  /// Only call this when you need to switch active type WITHOUT changing the
-  /// active key (rare). Prefer [setActiveKey] which handles both.
-  static Future<void> setType(WalletType type) => _persistType(type);
 
   static WalletType getType() {
     final index = pref.get(_coinTypeIndexKey) ?? 0;
