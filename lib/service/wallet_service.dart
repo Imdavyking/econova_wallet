@@ -196,8 +196,6 @@ class WalletService {
     WalletNameFilter.invalidate(); // old name may linger; force re-seed
   }
 
-
-
   static WalletType getType() {
     final index = pref.get(_coinTypeIndexKey) ?? 0;
     return WalletType.values[index];
@@ -223,7 +221,6 @@ class WalletService {
   static bool doesNameExist(String name) {
     final normalized = name.toLowerCase().trim();
     if (normalized.isEmpty) return false;
-    if (!WalletNameFilter.mightExist(normalized)) return false;
     for (final type in WalletType.values) {
       if (getActiveKeys(type).any(
         (k) => k.name.toLowerCase().trim() == normalized,

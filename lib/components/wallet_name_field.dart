@@ -52,21 +52,45 @@ class WalletNameFieldState extends State<WalletNameField> {
 
   void _validate() {
     final name = widget.controller.text.trim();
-    String? error;
 
+    // 1. Empty → no error (handled on submit)
     if (name.isEmpty) {
-      error = null; // show nothing while empty; submit handler shows the error
-    } else {
-      final isSelf = widget.editingWallet != null &&
-          widget.editingWallet!.name.toLowerCase().trim() ==
-              name.toLowerCase().trim();
-
-      if (!isSelf && WalletService.doesNameExist(name)) {
-        error = 'A wallet named "$name" already exists';
+      if (_errorText != null) {
+        setState(() => _errorText = null);
       }
+      return;
     }
 
-    if (error != _errorText) setState(() => _errorText = error);
+    final normalized = name.toLowerCase();
+
+    // 2. Allow same name when editing
+    final isSelf = widget.editingWallet != null &&
+        widget.editingWallet!.name.toLowerCase().trim() == normalized;
+
+    if (isSelf) {
+      if (_errorText != null) {
+        setState(() => _errorText = null);
+      }
+      return;
+    }
+
+    // 3. FAST PATH → Bloom filter
+    if (!WalletNameFilter.mightExist(name)) {
+      // Definitely not taken
+      if (_errorText != null) {
+        setState(() => _errorText = null);
+      }
+      return;
+    }
+
+    // 4. SLOW PATH → Confirm with full scan
+    final isDuplicate = WalletService.doesNameExist(name);
+
+    final error = isDuplicate ? 'A wallet named "$name" already exists' : null;
+
+    if (error != _errorText) {
+      setState(() => _errorText = error);
+    }
   }
 
   /// Call from the submit handler to trigger visible validation even if the
