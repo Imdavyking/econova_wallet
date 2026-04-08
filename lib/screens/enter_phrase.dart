@@ -9,6 +9,7 @@ import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/components/loader.dart';
 import 'package:wallet_app/components/wallet_logo.dart';
 import 'package:wallet_app/components/mnemonic_text_field.dart';
+import 'package:wallet_app/components/wallet_name_field.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
 import 'package:wallet_app/screens/import_shamir_secret.dart';
 import 'package:wallet_app/screens/wallet.dart';
@@ -30,6 +31,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   // ── Controllers ────────────────────────────────────────────────────────────
   final _mnemonicController = TextEditingController();
   final _walletNameController = TextEditingController();
+  final _nameKey = GlobalKey<WalletNameFieldState>();
 
   // ── State ──────────────────────────────────────────────────────────────────
   bool _isLoading = false;
@@ -48,7 +50,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     disEnableScreenShot();
-
     _screenshotCallback.addListener(_onScreenshot);
 
     if (kDebugMode) {
@@ -57,10 +58,8 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     }
   }
 
-  void _onScreenshot() => showDialogWithMessage(
-        context: context,
-        message: _loc.youCantScreenshot,
-      );
+  void _onScreenshot() =>
+      showDialogWithMessage(context: context, message: _loc.youCantScreenshot);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -127,10 +126,11 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
     FocusManager.instance.primaryFocus?.unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    final mnemonics = _mnemonicController.text.trim().toLowerCase();
-    final walletName = _walletNameController.text.trim();
+    // WalletNameField handles empty + cross-type duplicate check.
+    if (!_nameKey.currentState!.validateOnSubmit()) return;
 
-    if (walletName.isEmpty || mnemonics.isEmpty) {
+    final mnemonics = _mnemonicController.text.trim().toLowerCase();
+    if (mnemonics.isEmpty) {
       _showError(_loc.enterName);
       return;
     }
@@ -139,7 +139,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
 
     final result = await WalletImportService.importFromMnemonic(
       mnemonicOrBip39SeedHex: mnemonics,
-      walletName: walletName,
+      walletName: _walletNameController.text.trim(),
     );
 
     if (!mounted) return;
@@ -150,7 +150,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
       return;
     }
 
-    await pref.put(currentUserWalletNameKey, walletName);
+    await pref.put(currentUserWalletNameKey, _walletNameController.text.trim());
 
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -162,12 +162,10 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.red,
-        content: Text(message, style: const TextStyle(color: Colors.white)),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: Colors.red,
+      content: Text(message, style: const TextStyle(color: Colors.white)),
+    ));
   }
 
   String _errorMessage(WalletImportError error) => switch (error) {
@@ -193,7 +191,7 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
         ],
       ),
       body: _securityOverlayVisible
-          ? const SizedBox.expand() // blank screen while locked
+          ? const SizedBox.expand()
           : SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(25),
@@ -202,12 +200,11 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                   children: [
                     const WalletLogo(),
                     const SizedBox(height: 20),
-
-                    // Wallet name
-                    _NameField(controller: _walletNameController, loc: _loc),
+                    WalletNameField(
+                      key: _nameKey,
+                      controller: _walletNameController,
+                    ),
                     const SizedBox(height: 20),
-
-                    // Mnemonic input
                     MnemonicTextField(
                       controller: _mnemonicController,
                       hintText: info,
@@ -230,16 +227,11 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
                       onPressed: _isLoading ? null : _onConfirm,
                     ),
                     const SizedBox(height: 20),
-                    // Shamir secret import
                     _OutlineButton(
                       label: _loc.importShamirSecret,
                       onPressed: _onImportShamir,
                     ),
                     const SizedBox(height: 20),
-
-                    // Confirm
-
-                    // Autocomplete suggestions
                   ],
                 ),
               ),
@@ -249,37 +241,6 @@ class _EnterPhraseState extends State<EnterPhrase> with WidgetsBindingObserver {
 }
 
 // ── Local sub-widgets ─────────────────────────────────────────────────────────
-
-class _NameField extends StatelessWidget {
-  final TextEditingController controller;
-  final AppLocalizations loc;
-
-  const _NameField({required this.controller, required this.loc});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.visiblePassword,
-      decoration: InputDecoration(
-        hintText: loc.name,
-        filled: true,
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-}
 
 class _OutlineButton extends StatelessWidget {
   final String label;

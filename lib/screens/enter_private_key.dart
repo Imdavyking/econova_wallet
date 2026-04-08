@@ -7,6 +7,7 @@ import 'package:hex/hex.dart';
 import 'package:pinput/pinput.dart';
 import 'package:screenshot_callback/screenshot_callback.dart';
 import 'package:wallet_app/components/loader.dart';
+import 'package:wallet_app/components/wallet_name_field.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/modals/dialog_utils.dart';
@@ -39,6 +40,7 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
   final _keystoreCtrl = TextEditingController();
   final _walletNameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _nameKey = GlobalKey<WalletNameFieldState>();
   late final TabController _tabCtrl;
   final _screenshotCallback = ScreenshotCallback();
 
@@ -130,12 +132,18 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    final walletName = _walletNameCtrl.text.trim();
+    // WalletNameField handles empty + duplicate checks across all wallet types.
+    if (!_nameKey.currentState!.validateOnSubmit()) return;
+
     final privateKey = _privateKeyCtrl.text.trim();
     final keystore = _keystoreCtrl.text.trim();
-    final password = _passwordCtrl.text.trim();
 
-    if (!_validate(walletName, privateKey, keystore)) return;
+    if (_mode == _ImportMode.privateKey && privateKey.isEmpty) {
+      return _showError(_loc.enterPrivateKey);
+    }
+    if (_mode == _ImportMode.keystore && keystore.isEmpty) {
+      return _showError(_loc.enterKeystore);
+    }
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
@@ -143,8 +151,9 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
     try {
       final resolvedKey = _mode == _ImportMode.privateKey
           ? _resolvePrivateKey(privateKey)
-          : await _resolveKeystore(keystore, password);
+          : await _resolveKeystore(keystore, _passwordCtrl.text.trim());
 
+      final walletName = _walletNameCtrl.text.trim();
       final existing = WalletService.getActiveKeys(WalletType.privateKey);
       final entry = PrivateKeyParams(
         data: resolvedKey,
@@ -158,6 +167,7 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
         return;
       }
 
+      // setActiveKey handles setType internally.
       await WalletService.setActiveKey(WalletType.privateKey, entry);
       await widget.coin.importData(resolvedKey);
       await pref.put(currentUserWalletNameKey, walletName);
@@ -179,30 +189,16 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  bool _validate(String walletName, String privateKey, String keystore) {
-    if (walletName.isEmpty) return _showError(_loc.enterName);
-    if (_mode == _ImportMode.privateKey && privateKey.isEmpty) {
-      return _showError(_loc.enterPrivateKey);
-    }
-    if (_mode == _ImportMode.keystore && keystore.isEmpty) {
-      return _showError(_loc.enterKeystore);
-    }
-    return true;
-  }
-
-  /// Returns false after showing error — used for early returns.
-  bool _showError(String message) {
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       backgroundColor: Colors.red,
       content: Text(message, style: const TextStyle(color: Colors.white)),
     ));
-    return false;
   }
 
   String _resolvePrivateKey(String raw) {
     var key = strip0x(raw).split(':').last;
 
-    // raw hex path
     if (isHEXstrip0x(key)) {
       final bytes = HEX.decode(key) as Uint8List;
       if (bytes.length != 32) throw Exception(_loc.invalidPrivateKey);
@@ -211,13 +207,10 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 
     final decoded = base58.decode(key);
 
-    // Solana keypair: 64 bytes, private key is first 32
     if (decoded.length == 64) {
       return HEX.encode(decoded.sublist(0, 32));
     }
 
-    // Bitcoin WIF: 33 bytes (uncompressed) or 34 bytes (compressed)
-    // first byte is version byte 0x80, skip it
     if (decoded.length == 33 || decoded.length == 34) {
       if (decoded[0] != 0x80) throw Exception(_loc.invalidPrivateKey);
       return HEX.encode(decoded.sublist(1, 33));
@@ -259,7 +252,8 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
             children: [
               GetTokenImage(currCoin: widget.coin, radius: 30),
               const SizedBox(height: 20),
-              _NameField(controller: _walletNameCtrl),
+              // Real-time cross-type duplicate check built in.
+              WalletNameField(key: _nameKey, controller: _walletNameCtrl),
               const SizedBox(height: 20),
               if (_supportsKeystore) ...[
                 _ModeTabBar(controller: _tabCtrl),
@@ -292,26 +286,6 @@ class _EnterPrivateKeyState extends State<EnterPrivateKey>
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
-
-class _NameField extends StatelessWidget {
-  final TextEditingController controller;
-  const _NameField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.text,
-      decoration: InputDecoration(
-        hintText: AppLocalizations.of(context)!.name,
-        border: _border,
-        enabledBorder: _border,
-        focusedBorder: _border,
-        filled: true,
-      ),
-    );
-  }
-}
 
 class _ModeTabBar extends StatelessWidget {
   final TabController controller;
