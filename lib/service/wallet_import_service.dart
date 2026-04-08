@@ -41,18 +41,20 @@ class WalletImportService {
 
       final existing =
           WalletService.getActiveKeys(WalletType.bip39PhraseOrSeedHex);
-      final phraseData =
+      final params =
           BIP39PhraseOrSeedHEXParams(data: normalized, name: walletName);
 
-      if (existing
-          .any((p) => p?.data.toLowerCase() == phraseData.data.toLowerCase())) {
+      if (existing.any(
+        (p) => p.data.toLowerCase() == params.data.toLowerCase(),
+      )) {
         return WalletImportResult.fail(WalletImportError.duplicate);
       }
 
-      seedPhraseRoot = await compute(seedFromMnemonic, phraseData.data);
-      await WalletService.setActiveKey(
-          WalletType.bip39PhraseOrSeedHex, phraseData);
-      await importAllKeys(phraseData.data);
+      seedPhraseRoot = await compute(seedFromMnemonic, params.data);
+
+      // setActiveKey handles setType internally — no separate call needed.
+      await WalletService.setActiveKey(WalletType.bip39PhraseOrSeedHex, params);
+      await importAllKeys(params.data);
 
       return WalletImportResult.ok();
     } catch (e, st) {
@@ -66,11 +68,8 @@ class WalletImportService {
   static Future<String?> _normalize(String input) async {
     final trimmed = input.trim();
 
-    // Try mnemonic first
-    final isMnemonic = await compute(bip39.validateMnemonic, trimmed);
-    if (isMnemonic) return trimmed;
+    if (await compute(bip39.validateMnemonic, trimmed)) return trimmed;
 
-    // Try raw hex seed
     final hex = strip0x(trimmed);
     try {
       final seed = HEX.decode(hex) as Uint8List;
