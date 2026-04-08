@@ -59,6 +59,8 @@ class WalletNameFieldState extends State<WalletNameField> {
     super.dispose();
   }
 
+  String? get _selfName => widget.editingWallet?.name.toLowerCase().trim();
+
   void _validate() {
     final name = widget.controller.text.trim();
 
@@ -72,14 +74,8 @@ class WalletNameFieldState extends State<WalletNameField> {
 
     final normalized = name.toLowerCase();
 
-    // 2. Allow same name when editing
-    final isSelf = widget.editingWallet != null &&
-        widget.editingWallet!.name.toLowerCase().trim() == normalized;
-
-    if (isSelf) {
-      if (_errorText != null) {
-        setState(() => _errorText = null);
-      }
+    if (normalized == _selfName) {
+      if (_errorText != null) setState(() => _errorText = null);
       return;
     }
 
