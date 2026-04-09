@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
+import 'package:privacy_screen/privacy_screen.dart';
 import 'package:sui/utils/sha.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
@@ -129,12 +130,21 @@ String decryptText(String encrypted, String password) {
 Future<void> enableScreenShot() async {
   if (Platform.isAndroid) {
     await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+  } else if (Platform.isIOS) {
+    await PrivacyScreen.instance.disable();
   }
 }
 
 Future<void> disEnableScreenShot() async {
   if (Platform.isAndroid) {
     await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+  } else if (Platform.isIOS) {
+    await PrivacyScreen.instance.enable(
+      iosOptions: const PrivacyIosOptions(enablePrivacy: true),
+      androidOptions: const PrivacyAndroidOptions(
+        enableSecure: false,
+      ), // Android handled separately
+    );
   }
 }
 
