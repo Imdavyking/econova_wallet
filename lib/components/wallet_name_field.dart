@@ -89,7 +89,7 @@ class WalletNameFieldState extends State<WalletNameField> {
     }
 
     // 4. SLOW PATH → Confirm with full scan
-    final isDuplicate = WalletService.doesNameExist(name);
+    final isDuplicate = WalletNameFilter.definitelyExists(name);
 
     final error = isDuplicate ? 'A wallet named "$name" already exists' : null;
 

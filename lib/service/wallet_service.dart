@@ -216,14 +216,6 @@ class WalletService {
     return coin.getDefault() == active.defaultCoin;
   }
 
-  /// Cross-type duplicate name check. Fast path via bloom filter,
-  /// confirmed by linear scan to eliminate false positives.
-  static bool doesNameExist(String name) {
-    final normalized = name.toLowerCase().trim();
-    if (normalized.isEmpty) return false;
-    return WalletNameFilter.definitelyExists(normalized);
-  }
-
   // ── Private helpers ───────────────────────────────────────────────────────
 
   static Future<void> _persistType(WalletType type) async {
