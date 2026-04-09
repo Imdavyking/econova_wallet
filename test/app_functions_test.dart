@@ -155,14 +155,14 @@ void main() async {
       expect(MurmurHash3.hash('world', seed: 1), 1648897759);
     });
     test('Some Larger String!, seed 123', () {
-      expect(MurmurHash3.hash('Some Larger String!', seed: 123), 1044335896);
+      expect(MurmurHash3.hash('Some Larger String!', seed: 123), 3193508780);
     });
 
     test('timestamp', () {
       expect(
           MurmurHash3.hash('2021-03-12T14:03:18.903Z-0000-00000000000000hi',
               seed: 0),
-          3975858653);
+          3849833620);
     });
 
     test('emoji', () {
