@@ -1,8 +1,8 @@
 import 'dart:convert';
+import 'package:wallet_app/data_structures/bloom_filter.dart';
 import 'package:wallet_app/extensions/first_or_null.dart';
 import 'package:wallet_app/interface/coin.dart';
 import 'package:wallet_app/main.dart';
-import 'package:wallet_app/utils/bloom_filter.dart';
 
 const _mnemonicListKey = 'mnemonics_List';
 const _currentMnemonicKey = 'mmemomic_mnemonic';

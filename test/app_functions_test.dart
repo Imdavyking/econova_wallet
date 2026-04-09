@@ -10,7 +10,7 @@ import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/interface/keystore.dart';
 import 'package:wallet_app/service/dead_man_switch_service.dart';
-import 'package:wallet_app/utils/bloom_filter.dart';
+import 'package:wallet_app/data_structures/bloom_filter.dart';
 import 'package:wallet_app/utils/coingecko_ids.dart';
 import 'dart:convert';
 import 'package:wallet_app/eip/eip681.dart';
