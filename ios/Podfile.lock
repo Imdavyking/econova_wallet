@@ -38,6 +38,8 @@ PODS:
     - Flutter
   - printing (1.0.0):
     - Flutter
+  - privacy_screen (0.0.1):
+    - Flutter
   - qr_code_scanner (0.2.0):
     - Flutter
     - MTBBarcodeScanner
@@ -91,6 +93,7 @@ DEPENDENCIES:
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - printing (from `.symlinks/plugins/printing/ios`)
+  - privacy_screen (from `.symlinks/plugins/privacy_screen/ios`)
   - qr_code_scanner (from `.symlinks/plugins/qr_code_scanner/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
   - safe_device (from `.symlinks/plugins/safe_device/ios`)
@@ -144,6 +147,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   printing:
     :path: ".symlinks/plugins/printing/ios"
+  privacy_screen:
+    :path: ".symlinks/plugins/privacy_screen/ios"
   qr_code_scanner:
     :path: ".symlinks/plugins/qr_code_scanner/ios"
   rive_common:
@@ -192,6 +197,7 @@ SPEC CHECKSUMS:
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 3787117e48f80715ff04a3830ca039283d6a4f29
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
+  privacy_screen: 3159a541f5d3a31bea916cfd4e58f9dc722b3fd4
   qr_code_scanner: d77f94ecc9abf96d9b9b8fc04ef13f611e5a147a
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
   safe_device: 205ad04de30f4512ca889418d4783e1b6fdf8cfe
