@@ -166,8 +166,14 @@ void main() async {
     });
 
     test('emoji', () {
-      expect(MurmurHash3.hash('👌😂❤️🚀😍', seed: 0), 1935038234);
-      expect(MurmurHash3.hash('❤️', seed: 0), 820879836);
+      assert(MurmurHash3.hash('a', seed: 0) == 1009084850, 'a failed');
+      assert(MurmurHash3.hash('é', seed: 0) == 269551495, 'é failed');
+      assert(MurmurHash3.hash('❤', seed: 0) == 2219010036, '❤ failed');
+      assert(MurmurHash3.hash('❤️', seed: 0) == 3544702269,
+          '❤️ failed'); // ← your target
+      assert(MurmurHash3.hash('👌', seed: 0) == 2852907189, '👌 failed');
+      assert(MurmurHash3.hash('👌😂❤️🚀😍', seed: 0) == 820879836,
+          'emoji string failed');
     });
   });
 

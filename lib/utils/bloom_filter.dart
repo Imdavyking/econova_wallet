@@ -33,7 +33,6 @@ class MurmurHash3 {
   static const int _c1 = 0xcc9e2d51;
   static const int _c2 = 0x1b873593;
 
-  /// Single 32-bit MurmurHash3 of [input] with optional [seed].
   static int hash(String input, {int seed = 0}) {
     final bytes = utf8.encode(input);
     final length = bytes.length;
@@ -48,29 +47,27 @@ class MurmurHash3 {
           ((bytes[i + 3] & 0xff) << 24);
 
       k1 = (k1 * _c1) & 0xFFFFFFFF;
-      k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF; // rotl32(k1, 15)
+      k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF;
       k1 = (k1 * _c2) & 0xFFFFFFFF;
 
       h1 ^= k1;
-      h1 = ((h1 << 13) | (h1 >> 19)) & 0xFFFFFFFF; // rotl32(h1, 13)
+      h1 = ((h1 << 13) | (h1 >> 19)) & 0xFFFFFFFF;
       h1 = ((h1 * 5) + 0xe6546b64) & 0xFFFFFFFF;
 
       i += 4;
     }
 
-    // Remaining bytes (tail)
+    // Remaining bytes (tail) — fixed: Dart 3 switch has no fall-through
     int k1 = 0;
-    switch (length & 3) {
-      case 3:
-        k1 ^= (bytes[i + 2] & 0xff) << 16;
-      case 2:
-        k1 ^= (bytes[i + 1] & 0xff) << 8;
-      case 1:
-        k1 ^= (bytes[i] & 0xff);
-        k1 = (k1 * _c1) & 0xFFFFFFFF;
-        k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF;
-        k1 = (k1 * _c2) & 0xFFFFFFFF;
-        h1 ^= k1;
+    final tail = length & 3;
+    if (tail >= 3) k1 ^= (bytes[i + 2] & 0xff) << 16;
+    if (tail >= 2) k1 ^= (bytes[i + 1] & 0xff) << 8;
+    if (tail >= 1) {
+      k1 ^= (bytes[i] & 0xff);
+      k1 = (k1 * _c1) & 0xFFFFFFFF;
+      k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF;
+      k1 = (k1 * _c2) & 0xFFFFFFFF;
+      h1 ^= k1;
     }
 
     // Finalisation mix
@@ -79,11 +76,9 @@ class MurmurHash3 {
     return h1;
   }
 
-  /// Derive [count] bloom-filter positions from a single pass over [input]
-  /// using double hashing: position_i = (h1 + i * h2) % size.
   static List<int> bloomPositions(String input, int count, int size) {
     final h1 = hash(input, seed: 0);
-    final h2 = hash(input, seed: h1); // second seed derived from first
+    final h2 = hash(input, seed: h1);
     return List.generate(
       count,
       (i) => ((h1 + i * h2) & 0x7FFFFFFF) % size,
