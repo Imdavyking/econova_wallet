@@ -167,6 +167,7 @@ void main() async {
 
     test('emoji', () {
       expect(MurmurHash3.hash('👌😂❤️🚀😍', seed: 0), 1935038234);
+      expect(MurmurHash3.hash('❤️', seed: 0), 820879836);
     });
   });
 
