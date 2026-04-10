@@ -141,7 +141,8 @@ List<T> getChains<T extends Coin>() {
 }
 
 List<T> getChainsSortedByName<T extends Coin>() {
-  return (getChains<T>()..sort((a, b) => b.getName().compareTo(a.getName())))
+  return (getChains<T>()
+        ..sort((a, b) => b.getSymbol().compareTo(a.getSymbol())))
       .map((e) => e)
       .toList();
 }
