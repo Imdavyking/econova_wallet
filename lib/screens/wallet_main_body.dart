@@ -81,7 +81,7 @@ class _WalletMainBodyState extends State<WalletMainBody>
 
                 return RefreshIndicator(
                   onRefresh: () async {
-                    supportedChains = await getChainsSortedByBalance();
+                    supportedChains = getChainsSortedByName();
                   },
                   child: UpgradeAlert(
                     shouldPopScope: () => true,

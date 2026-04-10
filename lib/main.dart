@@ -140,21 +140,9 @@ List<T> getChains<T extends Coin>() {
   return (T == Coin ? all : all.whereType<T>().toList()) as List<T>;
 }
 
-Future<List<T>> getChainsSortedByBalance<T extends Coin>() async {
-  final coins = getChains<T>();
-  final cryptoPrice = await getCryptoPrice(useCache: true);
-
-  final entries = await Future.wait(
-    coins.map((coin) async {
-      final balance = await coin.getBalance(true);
-      final price = cryptoPrice.getPrice(coin.getGeckoId()) ?? 0;
-      return MapEntry(coin, balance * price);
-    }),
-    eagerError: false,
-  );
-
-  return (entries..sort((a, b) => b.value.compareTo(a.value)))
-      .map((e) => e.key)
+List<T> getChainsSortedByName<T extends Coin>() {
+  return (getChains<T>()..sort((a, b) => b.getName().compareTo(a.getName())))
+      .map((e) => e)
       .toList();
 }
 
@@ -251,10 +239,10 @@ Future<void> _initChains() async {
     debugPrint('Reinstantiated seed root');
   }
 
-  supportedChains = await getChainsSortedByBalance();
+  supportedChains = getChainsSortedByName();
   testNetNotifier.addListener(() async {
     debugPrint('enableTestNet = $enableTestNet — reloading chains');
-    supportedChains = await getChainsSortedByBalance();
+    supportedChains = getChainsSortedByName();
   });
 }
 
