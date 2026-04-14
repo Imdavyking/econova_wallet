@@ -325,10 +325,7 @@ class FilecoinCoin extends Coin {
         }
         final payload = Leb128.encodeUnsigned(int.parse(raw));
         final bytes = [...protocolByte, ...payload];
-        if (kDebugMode) {
-          print(bytes);
-        }
-        return true;
+        return bytes.isNotEmpty;
       }
       return false;
     } catch (e) {
