@@ -315,8 +315,9 @@ class AIAgentService {
   // ── Text message ─────────────────────────────────────────────────────────────
 
   Future<Either<String, DashChatMessage>> sendTextMessage(
-    DashChatMessage chatMessage,
-  ) async {
+    DashChatMessage chatMessage, {
+    int retries = 3,
+  }) async {
     try {
       final ctx = _buildCoinContext();
       final botPrompt = _buildBotPrompt(
@@ -353,6 +354,19 @@ class AIAgentService {
     } on Exception catch (error, stackTrace) {
       debugPrint("sendTextMessage error: $error, stackTrace: $stackTrace");
 
+      // Retry on transient TLS/SSL errors
+      final isTlsError = error.toString().contains('SSL') ||
+          error.toString().contains('TLS') ||
+          error.toString().contains('BAD_RECORD_MAC') ||
+          error.toString().contains('Connection reset') ||
+          error.toString().contains('SocketException');
+
+      if (isTlsError && retries > 0) {
+        debugPrint('Retrying after TLS error ($retries retries left)...');
+        await Future.delayed(const Duration(seconds: 1));
+        return sendTextMessage(chatMessage, retries: retries - 1);
+      }
+
       if (error is OpenAIClientException) {
         await loadSavedMessages();
         return Left(error.message);
@@ -361,7 +375,6 @@ class AIAgentService {
       return const Left("Something went wrong. Try again Later.");
     }
   }
-
   // ── Image message ─────────────────────────────────────────────────────────────
 
   Future<Either<String, DashChatMessage>> sendImageMessage(

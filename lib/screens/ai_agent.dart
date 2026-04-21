@@ -69,6 +69,33 @@ class _AIAgent extends State<AIAgent>
     );
     loadHistory();
     _refreshCoinInfo();
+    AItools.generatedImageUrl.addListener(_onImageGenerated);
+  }
+
+  void _onImageGenerated() {
+    final url = AItools.generatedImageUrl.value;
+    if (url == null || !mounted) return;
+
+    setState(() {
+      messages.insert(
+        0,
+        ChatMessage(
+          user: Constants.ai,
+          createdAt: DateTime.now(),
+          text: '',
+          medias: [
+            ChatMedia(
+              url: url, // CDN URL — DashChat loads it directly
+              fileName: 'token_logo.png',
+              type: MediaType.image,
+            ),
+          ],
+        ),
+      );
+    });
+
+    // Reset so it doesn't re-fire on rebuild
+    AItools.generatedImageUrl.value = null;
   }
 
   /// Refreshes the address/symbol/image from the active coin.

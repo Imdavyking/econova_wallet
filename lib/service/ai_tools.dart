@@ -27,6 +27,7 @@ import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
   static Coin coin = getChains<StacksCoin>().first;
+  static final ValueNotifier<String?> generatedImageUrl = ValueNotifier(null);
 
   AItools();
 
@@ -777,6 +778,8 @@ class AItools {
             filename:
                 '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
           );
+
+          generatedImageUrl.value = url;
           service.dispose();
 
           return 'Image generated and uploaded. URL: $url';
@@ -1678,39 +1681,44 @@ class _GenerateMemeImageInput {
 }
 
 Future<Uint8List?> _generateImage(String prompt) async {
-  final res = await http.post(
-    Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-    headers: {
-      'Authorization': 'Bearer $openRouterApiKey',
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'model':
-          'google/gemini-2.5-flash-image-preview', // cheap + good for logos
-      'modalities': ['image', 'text'],
-      'messages': [
-        {
-          'role': 'user',
-          'content': prompt,
-        }
-      ],
-    }),
-  );
+  try {
+    final res = await http.post(
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $openRouterApiKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model':
+            'google/gemini-2.5-flash-image-preview', // cheap + good for logos
+        'modalities': ['image', 'text'],
+        'messages': [
+          {
+            'role': 'user',
+            'content': prompt,
+          }
+        ],
+      }),
+    );
 
-  if (res.statusCode != 200) return null;
+    if (res.statusCode != 200) return null;
 
-  final body = jsonDecode(res.body);
-  final content = body['choices'][0]['message']['content'] as List;
+    final body = jsonDecode(res.body);
+    final content = body['choices'][0]['message']['content'] as List;
 
-  // Find the image part in the content array
-  for (final part in content) {
-    if (part['type'] == 'image_url') {
-      final dataUrl = part['image_url']['url'] as String;
-      // Strip "data:image/png;base64," prefix
-      final base64Str = dataUrl.split(',').last;
-      return base64Decode(base64Str);
+    // Find the image part in the content array
+    for (final part in content) {
+      if (part['type'] == 'image_url') {
+        final dataUrl = part['image_url']['url'] as String;
+        // Strip "data:image/png;base64," prefix
+        final base64Str = dataUrl.split(',').last;
+        return base64Decode(base64Str);
+      }
     }
-  }
 
-  return null;
+    return null;
+  } catch (e) {
+    if (kDebugMode) print('Image generation failed: $e');
+    return null;
+  }
 }
