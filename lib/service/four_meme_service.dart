@@ -267,68 +267,44 @@ class FourMemeService {
   Future<String> _ensureToken() async {
     if (_accessToken != null) return _accessToken!;
 
-    // 1. Generate nonce
-    // NOTE: live endpoint is GET /public/user/login/nonce (gitbook docs show
-    // POST /private/user/nonce/generate which is an older path — try public first)
-    http.Response nonceRes = await http.get(
-      Uri.parse(
-          '$_baseUrl/v1/public/user/login/nonce?accountAddress=${_address.hexEip55}&networkCode=BSC'),
+    // Nonce
+    final nonceRes = await http.post(
+      Uri.parse('$_baseUrl/v1/private/user/nonce/generate'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'accountAddress': _address.hexEip55,
+        'verifyType': 'LOGIN',
+        'networkCode': 'BSC',
+      }),
     );
-    if (nonceRes.statusCode >= 400) {
-      // Fallback to gitbook-documented path
-      nonceRes = await http.post(
-        Uri.parse('$_baseUrl/v1/private/user/nonce/generate'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'accountAddress': _address.hexEip55,
-          'verifyType': 'LOGIN',
-          'networkCode': 'BSC',
-        }),
-      );
-    }
     _assertOk(nonceRes, 'nonce/generate');
-    final nonce = (jsonDecode(nonceRes.body)['data'] as String);
+    final nonce = jsonDecode(nonceRes.body)['data'] as String;
 
-    // 2. Sign "You are sign in Meme {nonce}" with personal_sign
+    // Sign + Login
     final message = 'You are sign in Meme $nonce';
     final signature = _personalSign(message);
 
-    // 3. Login → access token
-    // live agents use /public/user/login; gitbook docs show /private/user/login/dex
-    http.Response loginRes = await http.post(
-      Uri.parse('$_baseUrl/v1/public/user/login'),
+    final loginRes = await http.post(
+      Uri.parse('$_baseUrl/v1/private/user/login/dex'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'address': _address.hexEip55,
-        'networkCode': 'BSC',
-        'signature': signature,
+        'region': 'WEB',
+        'langType': 'EN',
+        'loginIp': '',
+        'inviteCode': '',
+        'verifyInfo': {
+          'address': _address.hexEip55,
+          'networkCode': 'BSC',
+          'signature': signature,
+          'verifyType': 'LOGIN',
+        },
+        'walletName': 'MetaMask',
       }),
     );
-    if (loginRes.statusCode >= 400) {
-      // Fallback to gitbook-documented path
-      loginRes = await http.post(
-        Uri.parse('$_baseUrl/v1/private/user/login/dex'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'region': 'WEB',
-          'langType': 'EN',
-          'loginIp': '',
-          'inviteCode': '',
-          'verifyInfo': {
-            'address': _address.hexEip55,
-            'networkCode': 'BSC',
-            'signature': signature,
-            'verifyType': 'LOGIN',
-          },
-          'walletName': 'EcoNova',
-        }),
-      );
-    }
     _assertOk(loginRes, 'login');
     _accessToken = jsonDecode(loginRes.body)['data'] as String;
     return _accessToken!;
   }
-
   // ── Image upload ────────────────────────────────────────────────────────────
 
   Future<String> uploadImage({
@@ -343,8 +319,7 @@ class FourMemeService {
 
       final request = http.MultipartRequest(
         'POST',
-        // live agents use /private/tool/upload; gitbook shows /private/token/upload
-        Uri.parse('$_baseUrl/v1/private/tool/upload'),
+        Uri.parse('$_baseUrl/v1/private/token/upload'),
       )
         ..headers['meme-web-access'] = token
         ..files.add(http.MultipartFile.fromBytes(

@@ -1,7 +1,6 @@
 import "dart:convert";
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
-import "package:wallet_app/coins/ethereum_coin.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
 import "package:wallet_app/coins/stack_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
@@ -789,6 +788,7 @@ class AItools {
                 '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
           );
 
+          generatedImageUrl.value = url;
           service.dispose();
 
           return 'Image generated and uploaded. URL: $url';
