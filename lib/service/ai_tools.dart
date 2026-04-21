@@ -760,19 +760,27 @@ class AItools {
       },
       func: (final _GenerateMemeImageInput input) async {
         try {
-          print('hello gettingg image');
           final imageBytes = await _generateImage(input.prompt);
-          print('doing gettingg image');
-          if (imageBytes == null) return 'Image generation failed.';
 
+          debugPrint(
+              'Generated image bytes length: ${imageBytes?.lengthInBytes}');
+
+          if (imageBytes == null) return 'Image generation failed.';
+          // 'data:image/png;base64,${base64Encode(imageBytes)}';
           // Upload directly to four.meme CDN
+          final chainCoin = evmFromChainId(56);
+          if (chainCoin == null) {
+            return 'FourMemeService is only supported on BNB chain for now. Please switch to BNB chain and try again.';
+          }
           final walletData = WalletService.getActiveKey(walletImportType)!.data;
-          final accountData = await coin.importData(walletData);
+          final accountData = await chainCoin.importData(walletData);
 
           final service = FourMemeService(
-            rpc: (coin as EthereumCoin).rpc,
+            rpc: chainCoin.rpc,
             privateKey: accountData.privateKey!,
           );
+
+          debugPrint('Initialized FourMemeService with RPC: ${chainCoin.rpc}');
 
           final url = await service.uploadImage(
             bytes: imageBytes,
@@ -781,7 +789,6 @@ class AItools {
                 '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
           );
 
-          generatedImageUrl.value = url;
           service.dispose();
 
           return 'Image generated and uploaded. URL: $url';
@@ -1708,10 +1715,30 @@ Future<Uint8List?> _generateImage(String prompt) async {
 
   final images = message['images'];
   if (images is List && images.isNotEmpty) {
-    final dataUrl = images[0] as String;
-    final base64Str = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
-    return base64Decode(base64Str);
-  }
+    final first = images[0];
 
+    String? dataUrl;
+    if (first is String) {
+      // Plain string (some models)
+      dataUrl = first;
+    } else if (first is Map) {
+      // {"type":"image_url","image_url":{"url":"data:..."}}
+      final imageUrl = first['image_url'];
+      if (imageUrl is Map) {
+        dataUrl = imageUrl['url'] as String?;
+      } else {
+        dataUrl = first['url'] as String?;
+      }
+    }
+
+    printFull(dataUrl ?? 'No data URL found in response');
+
+    if (dataUrl != null) {
+      final base64Str =
+          dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
+      print('ok gotten base64 string, length ${base64Str.length}');
+      return base64Decode(base64Str);
+    }
+  }
   return null;
 }

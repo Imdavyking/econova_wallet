@@ -336,26 +336,33 @@ class FourMemeService {
     required String contentType, // e.g. image/png
     required String filename,
   }) async {
-    final token = await _ensureToken();
+    try {
+      debugPrint(
+          'FourMemeService: uploading image ($filename, $contentType, ${bytes.length} bytes)');
+      final token = await _ensureToken();
 
-    final request = http.MultipartRequest(
-      'POST',
-      // live agents use /private/tool/upload; gitbook shows /private/token/upload
-      Uri.parse('$_baseUrl/v1/private/tool/upload'),
-    )
-      ..headers['meme-web-access'] = token
-      ..files.add(http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: filename,
-        // contentType: MediaType.parse(contentType),  // add mime pkg if needed
-      ));
+      final request = http.MultipartRequest(
+        'POST',
+        // live agents use /private/tool/upload; gitbook shows /private/token/upload
+        Uri.parse('$_baseUrl/v1/private/tool/upload'),
+      )
+        ..headers['meme-web-access'] = token
+        ..files.add(http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: filename,
+          // contentType: MediaType.parse(contentType),  // add mime pkg if needed
+        ));
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
-    _assertOk(res, 'tool/upload');
-    final url = jsonDecode(res.body)['data'] as String;
-    return url;
+      final streamed = await request.send();
+      final res = await http.Response.fromStream(streamed);
+      _assertOk(res, 'tool/upload');
+      final url = jsonDecode(res.body)['data'] as String;
+      return url;
+    } catch (e) {
+      debugPrint('FourMemeService: image upload failed: $e');
+      return '';
+    }
   }
 
   // ── Token creation ──────────────────────────────────────────────────────────
