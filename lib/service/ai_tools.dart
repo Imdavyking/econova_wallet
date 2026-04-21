@@ -1406,6 +1406,7 @@ class AItools {
       stakeTool,
       openDappBrowserTool,
       switchCoinTool,
+      generateMemeImageTool,
       unstakeTool,
       claimRewardsTool,
       stakeRewardsTool,
