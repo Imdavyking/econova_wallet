@@ -760,7 +760,9 @@ class AItools {
       },
       func: (final _GenerateMemeImageInput input) async {
         try {
+          print('hello gettingg image');
           final imageBytes = await _generateImage(input.prompt);
+          print('doing gettingg image');
           if (imageBytes == null) return 'Image generation failed.';
 
           // Upload directly to four.meme CDN
@@ -1681,44 +1683,35 @@ class _GenerateMemeImageInput {
 }
 
 Future<Uint8List?> _generateImage(String prompt) async {
-  try {
-    final res = await http.post(
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $openRouterApiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model':
-            'google/gemini-2.5-flash-image-preview', // cheap + good for logos
-        'modalities': ['image', 'text'],
-        'messages': [
-          {
-            'role': 'user',
-            'content': prompt,
-          }
-        ],
-      }),
-    );
+  final res = await http.post(
+    Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+    headers: {
+      'Authorization': 'Bearer $openRouterApiKey',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'model': 'sourceful/riverflow-v2-fast',
+      'modalities': ['image'], // image-only model, no text output
+      'messages': [
+        {'role': 'user', 'content': prompt},
+      ],
+    }),
+  );
 
-    if (res.statusCode != 200) return null;
-
-    final body = jsonDecode(res.body);
-    final content = body['choices'][0]['message']['content'] as List;
-
-    // Find the image part in the content array
-    for (final part in content) {
-      if (part['type'] == 'image_url') {
-        final dataUrl = part['image_url']['url'] as String;
-        // Strip "data:image/png;base64," prefix
-        final base64Str = dataUrl.split(',').last;
-        return base64Decode(base64Str);
-      }
-    }
-
-    return null;
-  } catch (e) {
-    if (kDebugMode) print('Image generation failed: $e');
+  if (res.statusCode != 200) {
+    debugPrint('Image gen failed: ${res.body}');
     return null;
   }
+
+  final body = jsonDecode(res.body);
+  final message = body['choices'][0]['message'];
+
+  final images = message['images'];
+  if (images is List && images.isNotEmpty) {
+    final dataUrl = images[0] as String;
+    final base64Str = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
+    return base64Decode(base64Str);
+  }
+
+  return null;
 }
