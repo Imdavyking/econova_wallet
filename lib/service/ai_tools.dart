@@ -1,6 +1,7 @@
 import "dart:convert";
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
+import "package:wallet_app/coins/ethereum_coin.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
 import "package:wallet_app/coins/stack_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
@@ -9,6 +10,7 @@ import "package:wallet_app/interface/user_quote.dart";
 import "package:wallet_app/main.dart";
 import "package:wallet_app/save_goal/usdcx_goal.dart";
 import "package:wallet_app/service/contact_service.dart";
+import "package:wallet_app/service/four_meme_service.dart";
 import "package:wallet_app/service/x402_service.dart";
 import "package:wallet_app/utils/ai_agent_utils.dart";
 import "package:wallet_app/utils/app_config.dart";
@@ -731,6 +733,59 @@ class AItools {
       getInputFromJson: _GetSwitchCoin.fromJson,
     );
 
+// New tool in ai_tools.dart
+
+    final generateMemeImageTool =
+        Tool.fromFunction<_GenerateMemeImageInput, String>(
+      name: 'CMD_generateMemeImage',
+      description: 'Generates a meme token logo using AI image generation. '
+          'Call this before CMD_deployMeme on BNB chain to get an imageUrl. '
+          'Returns a four.meme CDN image URL ready to pass to CMD_deployMeme.',
+      inputJsonSchema: const {
+        'type': 'object',
+        'properties': {
+          'prompt': {
+            'type': 'string',
+            'description': 'Image generation prompt. Be descriptive — e.g. '
+                '"a cartoon frog in a suit trading crypto on a laptop, '
+                'vibrant colors, meme style, white background"',
+          },
+          'tokenName': {
+            'type': 'string',
+            'description': 'Token name — used as filename hint',
+          },
+        },
+        'required': ['prompt', 'tokenName'],
+      },
+      func: (final _GenerateMemeImageInput input) async {
+        try {
+          final imageBytes = await _generateImage(input.prompt);
+          if (imageBytes == null) return 'Image generation failed.';
+
+          // Upload directly to four.meme CDN
+          final walletData = WalletService.getActiveKey(walletImportType)!.data;
+          final accountData = await coin.importData(walletData);
+
+          final service = FourMemeService(
+            rpc: (coin as EthereumCoin).rpc,
+            privateKey: accountData.privateKey!,
+          );
+
+          final url = await service.uploadImage(
+            bytes: imageBytes,
+            contentType: 'image/png',
+            filename:
+                '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
+          );
+          service.dispose();
+
+          return 'Image generated and uploaded. URL: $url';
+        } catch (e) {
+          return 'Image generation failed: $e';
+        }
+      },
+      getInputFromJson: _GenerateMemeImageInput.fromJson,
+    );
     // ── CMD_deployMeme ──────────────────────────────────────────────────────────
 
     final deployMeme = Tool.fromFunction<_GetDeployMemeInput, String>(
@@ -1608,4 +1663,53 @@ class _OpenDappBrowserInput {
   factory _OpenDappBrowserInput.fromJson(Map<String, dynamic> json) {
     return _OpenDappBrowserInput(url: json['url'] as String);
   }
+}
+
+class _GenerateMemeImageInput {
+  final String prompt;
+  final String tokenName;
+  _GenerateMemeImageInput({required this.prompt, required this.tokenName});
+  factory _GenerateMemeImageInput.fromJson(Map<String, dynamic> json) =>
+      _GenerateMemeImageInput(
+        prompt: json['prompt'] as String,
+        tokenName: json['tokenName'] as String,
+      );
+}
+
+Future<Uint8List?> _generateImage(String prompt) async {
+  final res = await http.post(
+    Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+    headers: {
+      'Authorization': 'Bearer $openRouterApiKey',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'model':
+          'google/gemini-2.5-flash-image-preview', // cheap + good for logos
+      'modalities': ['image', 'text'],
+      'messages': [
+        {
+          'role': 'user',
+          'content': prompt,
+        }
+      ],
+    }),
+  );
+
+  if (res.statusCode != 200) return null;
+
+  final body = jsonDecode(res.body);
+  final content = body['choices'][0]['message']['content'] as List;
+
+  // Find the image part in the content array
+  for (final part in content) {
+    if (part['type'] == 'image_url') {
+      final dataUrl = part['image_url']['url'] as String;
+      // Strip "data:image/png;base64," prefix
+      final base64Str = dataUrl.split(',').last;
+      return base64Decode(base64Str);
+    }
+  }
+
+  return null;
 }

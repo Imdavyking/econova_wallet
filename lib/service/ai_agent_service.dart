@@ -1,5 +1,6 @@
 import "dart:convert";
 import "dart:io";
+import "dart:typed_data";
 import "package:wallet_app/extensions/to_real_json_langchain.dart";
 import "package:wallet_app/interface/coin.dart";
 import "package:wallet_app/main.dart";
@@ -10,6 +11,7 @@ import "package:dash_chat_2/dash_chat_2.dart" as dash_chat;
 import "package:langchain/langchain.dart" as lang_chain;
 import "package:flutter/material.dart";
 import "package:langchain/langchain.dart";
+import "package:http/http.dart" as http;
 // ignore: depend_on_referenced_packages
 import "package:logger/logger.dart";
 import "package:langchain_openai/langchain_openai.dart";
@@ -285,6 +287,7 @@ class AIAgentService {
     await pref.delete(historyKey);
     await memory.clear();
   }
+
 
   static Future<List<ChatMessageWithDate>> loadSavedMessages() async {
     final historyList = pref.get(historyKey);
