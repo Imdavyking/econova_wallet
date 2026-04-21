@@ -1,6 +1,7 @@
 import "dart:convert";
 import 'package:http/http.dart' as http;
 import "package:flutter/foundation.dart";
+import "package:wallet_app/coins/ethereum_coin.dart";
 import "package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart";
 import "package:wallet_app/coins/stack_coin.dart";
 import "package:wallet_app/extensions/first_or_null.dart";
@@ -25,7 +26,7 @@ import './ai_agent_service.dart';
 import 'package:string_similarity/string_similarity.dart';
 
 class AItools {
-  static Coin coin = getChains<StacksCoin>().first;
+  static Coin coin = evmFromChainId(56) ?? getChains<EthereumCoin>().first;
   static final ValueNotifier<String?> generatedImageUrl = ValueNotifier(null);
 
   AItools();
@@ -1742,3 +1743,9 @@ Future<Uint8List?> _generateImage(String prompt) async {
   }
   return null;
 }
+
+
+// 1. Viral Kit generation — after deploying, the agent auto-generates a launch tweet, a short lore paragraph, and a DexScreener link, all formatted in the chat.
+// 2. Copy-trade tool — QRY_httpRequest + four.meme public API to watch newly created tokens and let the user say "snipe the next AI-labeled token under 5 minutes old".
+// 3. One-tap share — after token creation, show a share sheet with the logo, token address, and a pre-written tweet. This drives community voting score significantly.
+// The demo video should show the full 60-second flow: type idea → see AI think → image appears in chat → confirm dialog → tx hash → four.meme link. That's your winning moment.
