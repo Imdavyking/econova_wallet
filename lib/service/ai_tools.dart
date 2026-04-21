@@ -766,8 +766,7 @@ class AItools {
               'Generated image bytes length: ${imageBytes?.lengthInBytes}');
 
           if (imageBytes == null) return 'Image generation failed.';
-          // 'data:image/png;base64,${base64Encode(imageBytes)}';
-          // Upload directly to four.meme CDN
+
           final chainCoin = evmFromChainId(56);
           if (chainCoin == null) {
             return 'FourMemeService is only supported on BNB chain for now. Please switch to BNB chain and try again.';
