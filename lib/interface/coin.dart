@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:wallet_app/extensions/big_int_ext.dart';
 import 'package:wallet_app/extensions/first_or_null.dart';
@@ -267,6 +268,10 @@ abstract class Coin {
     required String name,
     required String symbol,
     required String initialSupply,
+    String description = '',
+    String? imageUrl,
+    Uint8List? imageBytes,
+    String label = 'Meme',
   }) async {
     return const DeployMeme(
       liquidityTx: null,

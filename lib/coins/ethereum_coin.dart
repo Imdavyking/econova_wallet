@@ -6,6 +6,7 @@ import 'package:hex/hex.dart';
 import 'package:pointycastle/pointycastle.dart';
 import 'package:wallet_app/model/token_approvals.dart';
 import 'package:wallet_app/screens/view_nft_screens.dart';
+import 'package:wallet_app/service/four_meme_service.dart';
 import 'package:wallet_app/utils/blockie_widget.dart';
 
 import '../extensions/big_int_ext.dart';
@@ -781,6 +782,70 @@ class EthereumCoin extends Coin {
       txHash: txHash,
       txRaw: HEX.encode(trans),
     );
+  }
+
+  // In EthereumCoin — add this override
+  @override
+  Future<DeployMeme> deployMemeCoin({
+    required String name,
+    required String symbol,
+    required String initialSupply,
+    String description = '',
+    String? imageUrl,
+    Uint8List? imageBytes,
+    String label = 'Meme',
+  }) async {
+    if (chainId == 56) {
+      return _deployFourMeme(
+        name: name,
+        symbol: symbol,
+        description: description,
+        imageUrl: imageUrl,
+        imageBytes: imageBytes,
+        label: label,
+      );
+    }
+    return const DeployMeme(
+      liquidityTx: null,
+      tokenAddress: null,
+      deployTokenTx: null,
+    );
+  }
+
+  Future<DeployMeme> _deployFourMeme({
+    required String name,
+    required String symbol,
+    required String description,
+    String? imageUrl,
+    Uint8List? imageBytes,
+    String label = 'Meme',
+  }) async {
+    final walletData = WalletService.getActiveKey(walletImportType)!.data;
+    final accountData = await importData(walletData);
+
+    final service = FourMemeService(
+      rpc: rpc,
+      privateKey: accountData.privateKey!,
+    );
+
+    try {
+      final result = await service.createToken(FourMemeConceptInput(
+        name: name,
+        shortName: symbol,
+        description: description,
+        label: label,
+        imageUrl: imageUrl,
+        imageBytes: imageBytes,
+      ));
+
+      return DeployMeme(
+        tokenAddress: result.tokenAddress,
+        deployTokenTx: result.txHash,
+        liquidityTx: null, // four.meme handles liquidity internally
+      );
+    } finally {
+      service.dispose();
+    }
   }
 
   @override

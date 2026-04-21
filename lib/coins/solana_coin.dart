@@ -808,6 +808,10 @@ class SolanaCoin extends Coin {
     required String name,
     required String symbol,
     required String initialSupply,
+    String description = '',
+    String? imageUrl,
+    Uint8List? imageBytes,
+    String label = 'Meme',
   }) async {
     const imageUrl =
         "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg";

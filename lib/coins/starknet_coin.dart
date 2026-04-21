@@ -1163,6 +1163,10 @@ class StarknetCoin extends Coin {
     required String name,
     required String symbol,
     required String initialSupply,
+    String description = '',
+    String? imageUrl,
+    Uint8List? imageBytes,
+    String label = 'Meme',
   }) async {
     final data = WalletService.getActiveKey(walletImportType)!.data;
     final response = await importData(data);

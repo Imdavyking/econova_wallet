@@ -751,6 +751,18 @@ class AItools {
             'type': 'string',
             'description': 'The initial supply of the meme token'
           },
+          'description': {
+            'type': 'string',
+            'description': 'AI-generated lore/description'
+          },
+          'imageUrl': {
+            'type': 'string',
+            'description': 'CDN URL of generated logo'
+          },
+          'label': {
+            'type': 'string',
+            'enum': ['Meme', 'AI', 'Defi', 'Games', 'Infra', 'Others'],
+          },
         },
         'required': ['name', 'symbol', 'initialSupply'],
       },
@@ -773,6 +785,9 @@ class AItools {
             name: name,
             symbol: symbol,
             initialSupply: initialSupply,
+            description: toolInput.description ?? '',
+            imageUrl: toolInput.imageUrl,
+            label: toolInput.label ?? 'Meme',
           );
 
           if (memeData.deployTokenTx == null || memeData.tokenAddress == null) {
@@ -1470,16 +1485,25 @@ class _GetDeployMemeInput {
   final String name;
   final String symbol;
   final String initialSupply;
+  final String description;
+  final String? imageUrl;
+  final String label;
   _GetDeployMemeInput({
     required this.name,
     required this.symbol,
     required this.initialSupply,
+    required this.description,
+    required this.label,
+    this.imageUrl,
   });
   factory _GetDeployMemeInput.fromJson(Map<String, dynamic> json) {
     return _GetDeployMemeInput(
       name: json['name'] as String,
       symbol: json['symbol'] as String,
       initialSupply: json['initialSupply'] as String,
+      description: json['description'] as String,
+      imageUrl: json['imageUrl'] as String?,
+      label: json['label'] as String,
     );
   }
 }
