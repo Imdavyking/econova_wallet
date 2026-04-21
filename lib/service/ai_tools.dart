@@ -1732,12 +1732,10 @@ Future<Uint8List?> _generateImage(String prompt) async {
       }
     }
 
-    printFull(dataUrl ?? 'No data URL found in response');
-
     if (dataUrl != null) {
       final base64Str =
           dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
-      print('ok gotten base64 string, length ${base64Str.length}');
+
       return base64Decode(base64Str);
     }
   }
