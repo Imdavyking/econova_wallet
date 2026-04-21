@@ -785,9 +785,9 @@ class AItools {
             name: name,
             symbol: symbol,
             initialSupply: initialSupply,
-            description: toolInput.description ?? '',
+            description: toolInput.description,
             imageUrl: toolInput.imageUrl,
-            label: toolInput.label ?? 'Meme',
+            label: toolInput.label,
           );
 
           if (memeData.deployTokenTx == null || memeData.tokenAddress == null) {
