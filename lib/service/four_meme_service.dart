@@ -319,6 +319,7 @@ class FourMemeService {
 
       final request = http.MultipartRequest(
         'POST',
+        // live agents use /private/tool/upload; gitbook shows /private/token/upload
         Uri.parse('$_baseUrl/v1/private/token/upload'),
       )
         ..headers['meme-web-access'] = token
