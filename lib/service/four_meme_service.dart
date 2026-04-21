@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 
@@ -326,8 +327,8 @@ class FourMemeService {
         ..files.add(http.MultipartFile.fromBytes(
           'file',
           bytes,
-          filename: filename,
-          // contentType: MediaType.parse(contentType),  // add mime pkg if needed
+          filename: '${DateTime.now().millisecondsSinceEpoch}_$filename',
+          contentType: MediaType.parse(contentType), // add mime pkg if needed
         ));
 
       final streamed = await request.send();

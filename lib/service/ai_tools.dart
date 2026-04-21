@@ -795,6 +795,12 @@ class AItools {
                 '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
           );
 
+          if (url.trim().isEmpty) {
+            return 'Image upload failed.';
+          }
+
+          debugPrint('Image uploaded to FourMeme CDN. URL: $url');
+
           generatedImageUrl.value = url;
           _lastGeneratedImageBytes = null;
           service.dispose();
