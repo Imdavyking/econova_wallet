@@ -881,23 +881,13 @@ class AItools {
             return '❌ Failed to deploy meme token.';
           }
 
-          if (memeData.liquidityTx == null) {
-            return '''
-⚠️ Liquidity addition failed, but meme token was deployed successfully!
-
-✅ Token Address: ${memeData.tokenAddress}
-🔗 Deploy Tx: ${memeData.deployTokenTx!}
-🔗 Explorer: ${coin.formatTxHash(memeData.deployTokenTx!)}
-''';
-          }
-
           final tokenAddress = memeData.tokenAddress!;
           final dexScreener = coin.getDexScreener(tokenAddress);
 
           return 'Deployed meme token $name ($symbol) supply $initialSupply. '
               'Token: $tokenAddress. '
-              'Liquidity tx: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. '
               'Deploy tx: ${memeData.deployTokenTx} ${coin.formatTxHash(memeData.deployTokenTx!)}. '
+              '${memeData.liquidityTx != null ? 'Liquidity tx: ${memeData.liquidityTx} ${coin.formatTxHash(memeData.liquidityTx!)}. ' : ''}'
               '${dexScreener ?? ''}';
         } catch (e) {
           if (kDebugMode) print(e);
