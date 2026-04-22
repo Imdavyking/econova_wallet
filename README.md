@@ -1,234 +1,187 @@
-# EcoNova Wallet
+# EcoNova Wallet × four.meme
 
-> **One wallet. Every chain. One conversation.**
+> **Describe a meme. Get a token. In one conversation.**
 
-EcoNova is an AI-powered multi-chain mobile wallet built **Starknet-first** and extended across 30+ blockchains. Instead of navigating complex crypto interfaces, you just talk to it — EcoNova understands your intent and executes on-chain actions autonomously.
+EcoNova is an AI-powered multichain mobile wallet with a built-in meme token launchpad. It integrates directly with [four.meme](https://four.meme) on BNB Chain — letting anyone go from idea to live token in under 60 seconds, just by talking.
 
-No chain-switching. No ABI reading. No address copying.
-
----
-
-## The Problem
-
-Crypto in 2026 is still hard. Not because the technology isn't ready — because the interface never caught up.
-
-A typical user wanting to save stablecoins and earn yield needs to:
-
-1. Find a compatible wallet
-2. Bridge assets through separate protocols
-3. Navigate unfamiliar DeFi interfaces
-4. Confirm transactions they don't fully understand
-5. Track activity across multiple explorers
-6. Repeat everything on mobile — often with limited support
-
-This is the everyday reality. Not just for beginners — for experienced users. Most people don't fully use DeFi, not because it's bad, but because the friction is too high.
-
-**EcoNova removes that friction entirely.**
+No code. No forms. No browser tabs. Just chat.
 
 ---
 
-## Why Starknet First
+## Hackathon Submission — BNB Chain × four.meme
 
-Starknet is one of the most promising ZK-rollup Layer 2s on Ethereum — offering zero-knowledge security, near-zero fees, and blazing performance. Yet it lacks user-friendly wallets that abstract away its complexity.
-
-EcoNova is purpose-built for that gap: a Starknet-native wallet that feels as simple as a chat app, backed by the full depth of Starknet's capabilities — staking, DeFi, meme coin deployment, domain resolution, and more.
-
----
-
-## AI-First Design
-
-EcoNova's core is a conversational AI agent that understands your intent and executes on-chain actions:
+### The Core Flow
 
 ```
-"Send 10 STRK to Alice"
-"Send $10 worth of crypto to Mum"       ← fetches live price & calculates
-"Save 5 USDC to my holiday fund"
-"Show my savings goals"
-"Withdraw all from my savings"
-"What's my BTC balance?"
-"Swap $20 ETH to USDC"
-"Stake 50 STRK"
-"Deploy a meme coin on Starknet"
+User: "launch a sleepy frog meme coin"
+
+EcoNova AI:
+  → Invents name, ticker, lore description
+  → Generates logo via AI image model
+  → Converts & uploads image to four.meme CDN
+  → Calls four.meme token/create API → gets createArg + signature
+  → Submits createToken(createArg, signature) on-chain via TokenManager2
+  → Returns token address, tx hash, DexScreener link
+  → Auto-generates a launch tweet
 ```
 
-The AI parses your command, resolves contacts and domain names, fetches live prices where needed, and submits the transaction — all in one step.
+One message. One token. On BNB Chain.
 
 ---
 
-## Features
+## What Was Built
 
-### 🎙️ Voice Recognition
-Hands-free wallet control on mobile. Execute transfers, swaps, and queries by speaking naturally.
+### 🤖 AI Meme Token Deployment
 
-### 👥 Saved Contacts
-Save trusted addresses once, send using names. *"Send $20 ETH to Wisdom"* or *"Send STRK to Mom"* — no address memorisation required.
+The AI agent handles the entire four.meme launch pipeline autonomously:
 
-### 💵 Savings Goals
-A built-in savings system powered by smart contracts. Create named goals, deposit stablecoins incrementally, and withdraw anytime — no lockups or penalties. Progress tracking and full transaction history included.
+- **Concept generation** — invents name, ticker (≤6 chars), lore, and label from any vague prompt
+- **AI image generation** — generates a meme logo via OpenRouter image models
+- **Format normalisation** — detects and converts WebP/JPEG/GIF → PNG before upload (four.meme only accepts PNG)
+- **CDN upload** — authenticates with four.meme, uploads to `static.four.meme` with correct MIME type
+- **API integration** — calls `POST /meme-api/v1/private/token/create` with full payload including `shortName`, `symbol` (trading pair), `raisedToken` config, and `raisedAmount`
+- **On-chain submission** — manually ABI-encodes `createToken(bytes,bytes)` calldata, signs, and broadcasts to TokenManager2 (`0x5c952063c7fc8610FFDB798152D69F0B9550762b`) on BSC mainnet
+- **Token address extraction** — polls receipt, finds `TokenCreate` event, reads token address from `topics[2]`
+- **Launch tweet** — auto-generates a formatted tweet with CA, symbol, and lore hook
 
-### 💸 Token Transfers & Swaps
-Send, receive, and swap tokens via natural language or traditional UI. Supports all major token standards across every supported chain.
+### 🖼️ AI Image Pipeline
 
-### 📈 Portfolio Overview
-Real-time unified view of all holdings across all assets and networks in one dashboard.
+- Calls OpenRouter image generation API (`sourceful/riverflow-v2-fast`)
+- Decodes base64 response, detects magic bytes to identify format
+- Converts any format → PNG using the `image` package
+- Uploads with correct `MediaType` header — resolves four.meme's internal format validator error
+- Caches generated bytes across retries so regeneration is skipped on upload failure
+- Timestamp-suffixed filenames prevent CDN deduplication collisions
 
-### ⛓️ Staking
-Stake tokens and earn rewards through integrated staking protocols directly from the wallet.
+### 🧠 Conversational Agent
 
-### 🌐 Domain Name Resolution
-Send to human-readable names instead of raw addresses — `fricoben.stark`, `vitalik.eth`, `foundation.sol` — across all supported naming services.
+Built on LangChain (Dart) with GPT-4o-mini via OpenRouter. The agent:
 
-### 🐸 Meme Coin Deployment
-Deploy your own token on Starknet in minutes. No coding required.
-
-### 💧 Liquidity Management
-Add or remove liquidity and manage DeFi positions effortlessly.
-
-### 🧭 dApp Browser
-
-Access any dApp directly inside EcoNova with injected wallet providers:
-
-| Chain    | Compatibility              |
-|----------|----------------------------|
-| Starknet | Argent / Braavos compatible |
-| EVM      | MetaMask compatible        |
-| Solana   | Phantom compatible         |
-| NEAR     | Wallet selector compatible |
-| MultiversX | Native provider          |
-
-### ⚡ Autonomous Payments
-Automated payments for APIs and paywalled services. Multi-token support, automatic retry, no manual intervention needed.
-
-### 📚 Documentation Search
-Search Starknet documentation and developer references from within the app.
-
-### 📜 Transaction History
-Full history across all chains in one place.
+- Follows a strict sequential tool-calling protocol (no parallel calls)
+- Resolves contacts, domain names, and token addresses from natural language
+- Confirms every destructive action with the user before executing
+- Reports exact error strings from tools — no softening or summarising
 
 ---
 
-## Bitcoin Support
+## Demo
 
-EcoNova derives native Bitcoin keys from the same seed — no separate wallet needed:
+**Prompt:** _"launch a meme coin about a frog that sleeps through every pump"_
 
-| Type            | Format                    | Capability        |
-|-----------------|---------------------------|-------------------|
-| P2WPKH (SegWit) | `bc1q...` / `tb1q...`    | Send + Receive    |
-| P2TR (Taproot)  | `bc1p...` / `tb1p...`    | Receive           |
+**EcoNova responds:**
 
----
+> I've come up with **SleepyFrog (SLEEP)** — _"The frog who naps through every pump and wakes up rich."_
+> Generating logo...
 
-## Security
+_(AI generates image → uploads to four.meme CDN → deploys token)_
 
-### SLIP39 Seed Splitting
-Split your seed into multiple shares (K-of-N threshold). Human-readable word lists, optional passphrase, and hardware wallet compatibility. Lose any subset of shares — your funds remain safe.
-
-### Dead Man's Switch
-A built-in inheritance mechanism. Set a time-lock, nominate a beneficiary, and distribute encrypted shares. If you go silent, your assets transfer automatically. Forward secrecy maintained via periodic updates.
-
-### Native Cryptography — Pure Dart
-All cryptographic primitives implemented from scratch, with no native dependencies:
-
-- ECIES (secp256k1)
-- AES-256-GCM
-- HMAC-SHA256
-- HKDF
-- Shamir Secret Sharing
-- SLIP39 encoding
-
-Runs identically on iOS, Android, and desktop.
+> 🚀 Token deployed: SleepyFrog (SLEEP)
+> 📍 Address: `0x0b4f5e...4444`
+> 🔗 Deploy tx: [BscScan](https://bscscan.com/tx/0x9c49...)
+> 📈 DexScreener: [View chart](https://dexscreener.com/bsc/0x0b4f5e...4444)
+>
+> _Tweet:_
+> 🚀 SleepyFrog ($SLEEP) is LIVE on BNB Chain!
+> The frog who naps through every pump and wakes up rich.
+> CA: 0x0b4f5e...4444
+> #BNBChain #FourMeme #SLEEP
 
 ---
 
-## Supported Chains
+## Technical Integration with four.meme
 
-EcoNova is built Starknet-first and extended across 30+ networks:
+| Step         | Endpoint / Contract                      | Notes                                               |
+| ------------ | ---------------------------------------- | --------------------------------------------------- |
+| Auth nonce   | `POST /v1/private/user/nonce/generate`   | EIP-191 personal sign                               |
+| Login        | `POST /v1/private/user/login/dex`        | Returns `meme-web-access` token                     |
+| Image upload | `POST /v1/private/token/upload`          | Multipart, `image/png` required                     |
+| Token create | `POST /v1/private/token/create`          | `symbol` = trading pair (BNB), `shortName` = ticker |
+| On-chain     | `TokenManager2.createToken(bytes,bytes)` | `0x5c952063c7fc8610FFDB798152D69F0B9550762b`        |
+| Receipt poll | `getTransactionReceipt`                  | Token address from `TokenCreate` event `topics[2]`  |
 
-| Category | Chains |
-|----------|--------|
-| **Starknet** | Native L2 — primary focus |
-| **EVM** | Ethereum, BNB Chain, Polygon, Avalanche, Arbitrum, Optimism, Base, and ~10 more |
-| **Move** | Aptos, Sui |
-| **Solana** | SPL token support included |
-| **Cosmos** | IBC universe, multiple Cosmos chains |
-| **Polkadot** | DOT, KSM, parachain ecosystem |
-| **TON** | Telegram-native blockchain |
-| **TRON** | TRC token support |
-| **NEAR** | NEP-141 fungible tokens |
-| **MultiversX** | EGLD and ESDT tokens |
-| **Bitcoin** | Native SegWit and Taproot |
-| **Others** | XRP, Stellar, Filecoin, Zilliqa, Harmony, IOTEX, Ronin, FUSE, Stacks, ICP, Algorand, Tezos, and more |
+Key API fields discovered through integration:
 
-**Token standards supported:** ERC20, TRC20, SPL, NEP-141, ESDT, SIP-010, FUSEFT, and all major fungible token formats.
+- `symbol` — trading pair currency (`BNB`), **not** the token ticker
+- `shortName` — the actual token ticker (e.g. `SLEEP`)
+- `raisedAmount` — must match `preSale`, even when both are `"0.0000"`
+- `raisedToken` — full BNB config object fetched from `/v1/public/config`
 
 ---
 
-## Wallet Import
+## Architecture
 
-| Format         | Example              |
-|----------------|----------------------|
-| BIP39 mnemonic | `abandon ability...` |
-| Raw seed hex   | `7e9f86...`          |
-| Keystore JSON  | `{ "version": 3 }`   |
-
-All formats normalise into a unified internal representation.
+```
+User message
+    │
+    ▼
+GPT-4o-mini (LangChain agent)
+    │
+    ├── CMD_generateMemeImage
+    │       │
+    │       ├── OpenRouter image API → raw bytes
+    │       ├── Magic byte detection (WebP/JPEG/PNG/GIF)
+    │       ├── image package → PNG conversion
+    │       └── four.meme CDN upload → imageUrl
+    │
+    └── CMD_deployMeme
+            │
+            ├── four.meme auth (nonce + EIP-191 sign)
+            ├── POST /token/create → createArg + signature
+            └── TokenManager2.createToken on BSC mainnet
+```
 
 ---
 
-## Getting Started
+## Other Features
+
+EcoNova is a full multichain wallet. The four.meme integration is built on top of a production-grade foundation:
+
+- **30+ supported chains** — EVM, Solana, Cosmos, Starknet, Polkadot, TON, TRON, Bitcoin, Stacks, and more
+- **Natural language transfers** — _"Send 10 BNB to Alice"_, _"Send $20 worth of USDC to Mum"_
+- **Token swaps** — quote and execute swaps via natural language
+- **Contact book** — send to names instead of addresses, with fuzzy matching
+- **Domain resolution** — `.bnb`, `.eth`, `.stark`, `.sol` and more
+- **Staking** — stake and unstake via chat
+- **dApp browser** — injected wallet provider for EVM, Solana, Starknet, NEAR, MultiversX
+- **WalletConnect** — V1, V2, and Reown support
+- **x402 autonomous payments** — pay paywalled APIs automatically when a 402 is returned
+- **USDCx savings goals** — named savings vaults on Stacks with progress tracking
+- **SLIP-39 seed splitting** — K-of-N threshold shares for secure backup
+- **Dead man's switch** — time-locked inheritance with encrypted share distribution
+- **Voice recognition** — hands-free wallet control
+- **Portfolio overview** — unified balance view across all chains
+
+---
+
+## Running Locally
 
 **Requirements:** Flutter 3.24.1 · Dart 3.5.1
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Imdavyking/econova_wallet
 cd econova_wallet
-
-# 2. Install dependencies
 flutter pub get
-
-# 3. Configure environment
 cp .env.example .env
-# Add your OPENAI_API_KEY to .env
-
-# 4. Run
+# Add your OpenRouter API key to .env
 flutter run
 ```
 
-> Never commit `.env`. Use secure storage for all API keys.
+---
+
+## Stack
+
+| Layer            | Technology                                  |
+| ---------------- | ------------------------------------------- |
+| Mobile framework | Flutter (Dart)                              |
+| AI agent         | LangChain Dart + GPT-4o-mini via OpenRouter |
+| Image generation | OpenRouter (`sourceful/riverflow-v2-fast`)  |
+| Image processing | `image` package (WebP → PNG conversion)     |
+| Blockchain       | web3dart (BSC mainnet, chainId 56)          |
+| Meme launchpad   | four.meme REST API + TokenManager2          |
+| Key management   | BIP39 / SLIP39, pure Dart cryptography      |
 
 ---
 
-## Market Opportunity
+## License
 
-| Segment | Opportunity |
-|---------|-------------|
-| Crypto wallets | $48B market by 2030 (up from $8.4B in 2022) |
-| Starknet ecosystem | First-mover advantage in L2-native UX |
-| AI-powered UX | Early-stage, high-demand differentiator |
-| Multi-chain integration | Solving wallet fragmentation |
-| Bitcoin adoption | Increasing global demand |
-| Security solutions | High-value differentiation |
-| Retail onboarding | Growing demand for simplified interfaces |
-
-The combination of Starknet's growth trajectory, multi-chain fragmentation, and the absence of truly simple crypto UX creates a clear opening. EcoNova is positioned at that intersection.
-
----
-
-## Contributing
-
-Contributions from developers, designers, and crypto enthusiasts are welcome.
-
-- Found a bug? [Open an issue](https://github.com/Imdavyking/econova_wallet/issues)
-- Have a feature idea? Submit a PR
-- Want to discuss roadmap priorities — voice control, new chains, AI improvements? Start a discussion
-
----
-
-## Vision
-
-Crypto has a fragmentation problem. Dozens of chains, dozens of wallets, and an interface that still assumes you know what a gas limit is.
-
-EcoNova solves it in one sentence:
-
-**One wallet. Every chain. One conversation.**
+MIT
