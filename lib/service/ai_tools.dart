@@ -808,7 +808,7 @@ class AItools {
           debugPrint('Image uploaded to FourMeme CDN. URL: $url');
 
           generatedImageUrl.value = url;
-          _lastGeneratedImageBytes = null;
+          // _lastGeneratedImageBytes = null;
           service.dispose();
 
           return 'Image generated and uploaded. URL: $url';
