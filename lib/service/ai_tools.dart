@@ -24,6 +24,7 @@ import "package:wallet_app/utils/stack_tx_utils.dart";
 import './ai_confirm_transaction.dart';
 import './ai_agent_service.dart';
 import 'package:string_similarity/string_similarity.dart';
+import 'package:image/image.dart' as img;
 
 class AItools {
   static Coin coin = evmFromChainId(56) ?? getChains<EthereumCoin>().first;
@@ -771,6 +772,9 @@ class AItools {
               'Generated image bytes length: ${imageBytes?.lengthInBytes}');
 
           if (imageBytes == null) return 'Image generation failed.';
+          debugPrint('Image bytes: ${imageBytes.length} bytes');
+          debugPrint(
+              'Magic bytes: ${imageBytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
 
           _lastGeneratedImageBytes = imageBytes;
 
@@ -788,8 +792,10 @@ class AItools {
 
           debugPrint('Initialized FourMemeService with RPC: ${chainCoin.rpc}');
 
+          final png = await _ensurePng(imageBytes);
+
           final url = await service.uploadImage(
-            bytes: imageBytes,
+            bytes: png!,
             contentType: 'image/png',
             filename:
                 '${input.tokenName.toLowerCase().replaceAll(' ', '_')}.png',
@@ -1755,8 +1761,19 @@ Future<Uint8List?> _generateImage(String prompt) async {
   return null;
 }
 
-
 // 1. Viral Kit generation — after deploying, the agent auto-generates a launch tweet, a short lore paragraph, and a DexScreener link, all formatted in the chat.
 // 2. Copy-trade tool — QRY_httpRequest + four.meme public API to watch newly created tokens and let the user say "snipe the next AI-labeled token under 5 minutes old".
 // 3. One-tap share — after token creation, show a share sheet with the logo, token address, and a pre-written tweet. This drives community voting score significantly.
 // The demo video should show the full 60-second flow: type idea → see AI think → image appears in chat → confirm dialog → tx hash → four.meme link. That's your winning moment.
+
+// After getting imageBytes, convert WebP/any format → PNG
+Future<Uint8List?> _ensurePng(Uint8List bytes) async {
+  try {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return null;
+    return Uint8List.fromList(img.encodePng(decoded));
+  } catch (e) {
+    debugPrint('Image conversion failed: $e');
+    return null;
+  }
+}

@@ -320,17 +320,16 @@ class FourMemeService {
 
       final request = http.MultipartRequest(
         'POST',
+        // live agents use /private/tool/upload; gitbook shows /private/token/upload
         Uri.parse('$_baseUrl/v1/private/token/upload'),
       )
         ..headers['meme-web-access'] = token
-        ..files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            bytes,
-            filename: '${DateTime.now().millisecondsSinceEpoch}_$filename',
-            contentType: MediaType.parse(contentType), // add mime pkg if needed
-          ),
-        );
+        ..files.add(http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: filename,
+          contentType: MediaType.parse(contentType), // add mime pkg if needed
+        ));
 
       final streamed = await request.send();
       final res = await http.Response.fromStream(streamed);
