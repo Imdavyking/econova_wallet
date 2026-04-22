@@ -820,6 +820,8 @@ class EthereumCoin extends Coin {
     Uint8List? imageBytes,
     String label = 'Meme',
   }) async {
+    debugPrint(
+        'Deploying four.meme token on BSC with name: $name, symbol: $symbol, imageUrl: $imageUrl');
     final walletData = WalletService.getActiveKey(walletImportType)!.data;
     final accountData = await importData(walletData);
 

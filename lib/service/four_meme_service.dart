@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 
@@ -366,6 +367,28 @@ class FourMemeService {
     // 2. Fetch platform raisedToken config (BNB) — uses public config endpoint
     final raisedToken = await _fetchRaisedTokenConfig();
 
+    final jsonData = jsonEncode({
+      'name': input.name,
+      'shortName': input.shortName, // token ticker e.g. SLEEP
+      'symbol': raisedToken[
+          'symbol'], // trading pair e.g. BNB ← this is what it wants
+      'desc': input.description,
+      'imgUrl': imgUrl,
+      'launchTime': DateTime.now().millisecondsSinceEpoch,
+      'label': _sanitizeLabel(input.label),
+      'lpTradingFee': 0.0025,
+      if (input.webUrl?.isNotEmpty == true) 'webUrl': input.webUrl,
+      if (input.twitterUrl?.isNotEmpty == true) 'twitterUrl': input.twitterUrl,
+      if (input.telegramUrl?.isNotEmpty == true)
+        'telegramUrl': input.telegramUrl,
+      'preSale': input.preSaleBnb.toStringAsFixed(4),
+      'raisedAmount': input.preSaleBnb.toStringAsFixed(4),
+      'onlyMPC': false,
+      'feePlan': input.antiSniperFee,
+      'raisedToken': raisedToken,
+    });
+    printFull(jsonData);
+
     // 3. Call create API
     final createRes = await http.post(
       Uri.parse('$_baseUrl/v1/private/token/create'),
@@ -373,24 +396,7 @@ class FourMemeService {
         'Content-Type': 'application/json',
         'meme-web-access': token,
       },
-      body: jsonEncode({
-        'name': input.name,
-        'shortName': input.shortName,
-        'desc': input.description,
-        'imgUrl': imgUrl,
-        'launchTime': DateTime.now().millisecondsSinceEpoch,
-        'label': _sanitizeLabel(input.label),
-        'lpTradingFee': 0.0025,
-        if (input.webUrl?.isNotEmpty == true) 'webUrl': input.webUrl,
-        if (input.twitterUrl?.isNotEmpty == true)
-          'twitterUrl': input.twitterUrl,
-        if (input.telegramUrl?.isNotEmpty == true)
-          'telegramUrl': input.telegramUrl,
-        'preSale': input.preSaleBnb.toStringAsFixed(4),
-        'onlyMPC': false,
-        'feePlan': input.antiSniperFee,
-        'raisedToken': raisedToken,
-      }),
+      body: jsonData,
     );
     _assertOk(createRes, 'token/create');
 
