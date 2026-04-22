@@ -403,7 +403,10 @@ class FourMemeService {
     final createData =
         jsonDecode(createRes.body)['data'] as Map<String, dynamic>;
     final createArgHex = createData['createArg'] as String;
+
+    debugPrint('Received createArg from API: $createArgHex');
     final signatureHex = createData['signature'] as String;
+    debugPrint('Received signature from API: $signatureHex');
 
     // 4. Submit on-chain
     final txHash = await _submitOnChain(

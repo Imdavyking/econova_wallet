@@ -29,7 +29,6 @@ import 'package:image/image.dart' as img;
 class AItools {
   static Coin coin = evmFromChainId(56) ?? getChains<EthereumCoin>().first;
   static final ValueNotifier<String?> generatedImageUrl = ValueNotifier(null);
-  static Uint8List? _lastGeneratedImageBytes; // ← add this
 
   AItools();
 
@@ -765,8 +764,7 @@ class AItools {
           // const demoUrl = 'https://static.four.meme/market/422skNHLEIdvo.png';
           // generatedImageUrl.value = demoUrl;
           // return 'Image generated and uploaded. URL: $demoUrl';
-          final imageBytes =
-              _lastGeneratedImageBytes ?? await _generateImage(input.prompt);
+          final imageBytes = await _generateImage(input.prompt);
 
           debugPrint(
               'Generated image bytes length: ${imageBytes?.lengthInBytes}');
@@ -775,8 +773,6 @@ class AItools {
           debugPrint('Image bytes: ${imageBytes.length} bytes');
           debugPrint(
               'Magic bytes: ${imageBytes.take(8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
-
-          _lastGeneratedImageBytes = imageBytes;
 
           final chainCoin = evmFromChainId(56);
           if (chainCoin == null) {
@@ -808,7 +804,7 @@ class AItools {
           debugPrint('Image uploaded to FourMeme CDN. URL: $url');
 
           generatedImageUrl.value = url;
-          // _lastGeneratedImageBytes = null;
+
           service.dispose();
 
           return 'Image generated and uploaded. URL: $url';
