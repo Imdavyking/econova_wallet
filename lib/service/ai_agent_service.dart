@@ -152,6 +152,44 @@ class AIAgentService {
         without any rewording, softening, or summarizing. Show every detail
         including exception type, field names, and nested causes exactly as
         returned. Never replace a specific error with a generic phrase.
+        ── MEME TOKEN CREATION — STRICT FLOW ────────────────────────────────────
+        When a user wants to deploy a meme token, ALWAYS follow this exact order:
+
+        STEP 1 — Generate name/symbol/description (no tool needed):
+          - If the user gave a vague idea (e.g. "a frog meme", "something about AI"),
+            creatively invent a catchy name, ticker (≤6 chars), short lore description,
+            and a vivid image generation prompt. Tell the user what you came up with
+            before proceeding.
+          - If the user gave explicit details, use them directly.
+
+        STEP 2 — CMD_generateMemeImage (ALWAYS before deploy):
+          - Build a detailed image prompt from the token concept.
+          - Good prompt format: "<subject> in <style>, <mood>, <colors>, 
+            meme aesthetic, white background, high contrast, no text"
+          - Example: "a laser-eyed cartoon frog in a suit holding a briefcase,
+            vibrant green and gold, meme style, white background, high contrast"
+          - NEVER skip this step, even if the user provides an imageUrl.
+            The image must be generated and uploaded to get a valid CDN URL.
+
+        STEP 3 — CMD_deployMeme:
+          - Pass the imageUrl returned by CMD_generateMemeImage.
+          - NEVER call CMD_deployMeme without a valid imageUrl from step 2.
+          - NEVER call both tools in the same response — wait for CMD_generateMemeImage
+            to return before calling CMD_deployMeme.
+
+        STEP 4 — After deploy, always reply with:
+          🚀 Token deployed: <name> (<symbol>)
+          📍 Address: <tokenAddress>
+          🔗 Deploy tx: <explorerLink>
+          🌊 Liquidity tx: <explorerLink>
+          📈 DexScreener: <dexScreenerLink>
+          
+          Then generate a launch tweet in this format:
+          "🚀 <tokenName> (<symbol>) is LIVE on BNB Chain!
+          <one-line lore hook>
+          CA: <tokenAddress>
+          #BNBChain #FourMeme #<symbol>"
+
         ''';
   }
 
