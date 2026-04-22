@@ -29,6 +29,9 @@ import 'package:image/image.dart' as img;
 class AItools {
   static Coin coin = evmFromChainId(56) ?? getChains<EthereumCoin>().first;
   static final ValueNotifier<String?> generatedImageUrl = ValueNotifier(null);
+  static final ValueNotifier<String?> pendingTweet = ValueNotifier(null);
+  static String? lastMemeTweet;
+  static String? lastMemeImageUrl;
 
   AItools();
 
@@ -879,6 +882,15 @@ class AItools {
 
           final tokenAddress = memeData.tokenAddress!;
           final dexScreener = coin.getDexScreener(tokenAddress);
+
+          final tweet = '🚀 $name (\$$symbol) is LIVE on BNB Chain!\n'
+              '${toolInput.description}\n'
+              'CA: $tokenAddress\n'
+              '#BNBChain #FourMeme #$symbol';
+
+          AItools.lastMemeTweet = tweet;
+          AItools.lastMemeImageUrl =
+              toolInput.imageUrl ?? generatedImageUrl.value;
 
           return 'Deployed meme token $name ($symbol) supply $initialSupply. '
               'Token: $tokenAddress. '

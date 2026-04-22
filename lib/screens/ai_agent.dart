@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wallet_app/components/testnet_banner.dart';
 import 'package:wallet_app/extensions/build_context_extension.dart';
 import 'package:wallet_app/extensions/chat_message_ext.dart';
@@ -70,6 +71,19 @@ class _AIAgent extends State<AIAgent>
     loadHistory();
     _refreshCoinInfo();
     AItools.generatedImageUrl.addListener(_onImageGenerated);
+    AItools.pendingTweet.addListener(() {
+      final tweet = AItools.pendingTweet.value;
+      if (tweet == null) return;
+      AItools.pendingTweet.value = null; // reset
+
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => _MemeShareSheet(
+          tweet: tweet,
+          imageUrl: AItools.lastMemeImageUrl,
+        ),
+      );
+    });
   }
 
   void _onImageGenerated() {
@@ -569,5 +583,45 @@ class _AIAgent extends State<AIAgent>
         }),
       ];
     });
+  }
+}
+
+class _MemeShareSheet extends StatelessWidget {
+  final String tweet;
+  final String? imageUrl;
+
+  const _MemeShareSheet({required this.tweet, this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (imageUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(imageUrl!, height: 120, width: 120),
+            ),
+          const SizedBox(height: 16),
+          Text(tweet, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.share),
+            label: const Text('Share on X (Twitter)'),
+            onPressed: () async {
+              final encoded = Uri.encodeComponent(tweet);
+              final url =
+                  Uri.parse('https://twitter.com/intent/tweet?text=$encoded');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
