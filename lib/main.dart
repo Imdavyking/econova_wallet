@@ -38,6 +38,8 @@ import 'package:wallet_app/coins/nano_coin.dart';
 import 'package:wallet_app/coins/tezos_coin.dart';
 import 'package:wallet_app/coins/algorand_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/cosmos_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/xlm_fungible_coin.dart';
+import 'package:wallet_app/coins/fungible_tokens/xlm_041_ft_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/erc_fungible_coin.dart';
 import 'package:wallet_app/coins/fungible_tokens/fuse_4337_ft.dart';
 import 'package:wallet_app/coins/fungible_tokens/stack_ft_coin.dart';
@@ -93,6 +95,8 @@ final mnemonicSuggester = Trie();
 
 List<T> getChains<T extends Coin>() {
   List<Coin> all = [
+    ...getStellarSep041Coins(),
+    ...getStellarFungibleCoins(),
     ...getNimiqBlockchains(),
     ...getNanoBlockChains(),
     ...getWavesBlockChains(),

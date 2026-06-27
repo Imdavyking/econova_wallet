@@ -3,7 +3,7 @@
 import 'dart:math';
 import 'package:wallet_app/model/seed_phrase_root.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
-
+import 'package:wallet_app/coins/fungible_tokens/xlm_fungible_coin.dart';
 import '../service/wallet_service.dart';
 import 'package:eth_sig_util/util/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -121,6 +121,8 @@ class StellarCoin extends Coin {
 
     return data;
   }
+
+  List<Coin> get networkTokens => getStellarFungibleCoins();
 
   @override
   bool get supportBip39Seed => true;
