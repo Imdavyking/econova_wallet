@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "soroban-ultrahonk-verifier",  "swap","wbtc-token","usdc_private",
+]
+
+[workspace.dependencies]
+soroban-sdk = { version = "26.0.1", default-features = false, features = ["alloc"] }
+soroban-token-sdk = { version ="26.0.1"}
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
