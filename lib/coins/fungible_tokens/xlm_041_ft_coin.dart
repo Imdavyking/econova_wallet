@@ -1,12 +1,13 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
 import 'package:wallet_app/coins/stellar_coin.dart';
-import 'package:wallet_app/coins/fungible_tokens/xlm_fungible_coin.dart';
 import 'package:wallet_app/interface/ft_explorer.dart';
 import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/wallet_service.dart';
+import 'dart:convert';
 import 'package:wallet_app/utils/app_config.dart';
 
 class StellarSep041Coin extends StellarCoin implements FTExplorer {
@@ -138,7 +139,9 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
 
   int _pow10(int exp) {
     int result = 1;
-    for (int i = 0; i < exp; i++) result *= 10;
+    for (int i = 0; i < exp; i++) {
+      result *= 10;
+    }
     return result;
   }
 
@@ -153,6 +156,14 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
       arguments: args,
     );
     return stellar.InvokeHostFuncOpBuilder(hostFn);
+  }
+
+  Uint8List _decodeXdrBytes(String xdr) {
+    // Base64 strings only contain A-Z, a-z, 0-9, +, /, =
+    // Hex strings only contain 0-9, a-f, A-F
+    final isHex = RegExp(r'^[0-9a-fA-F]+$').hasMatch(xdr);
+
+    return isHex ? stellar.Util.hexToBytes(xdr) : base64Decode(xdr);
   }
 
   /// Simulate a read-only call and return the result SCVal
@@ -183,7 +194,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
     }
 
     return stellar.XdrSCVal.decode(
-      stellar.XdrDataInputStream(stellar.Util.hexToBytes(resultXdr)),
+      stellar.XdrDataInputStream(_decodeXdrBytes(resultXdr)),
     );
   }
 
@@ -195,6 +206,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
       args: [_accountAddressVal(address)],
       callerAddress: address,
     );
+
     return _i128ToDouble(result);
   }
 
