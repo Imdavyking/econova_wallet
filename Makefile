@@ -51,27 +51,7 @@ deploy-verifier: upload-verifier
 	bash scripts/deploy_verifier.sh
 
 
-# ─── USDC Token Contract ──────────────────────────────────────────────────────
 
-build-wbtc:
-	stellar contract build \
-		--manifest-path contracts/wbtc-token/Cargo.toml \
-		--optimize
-
-upload-wbtc: build-wbtc
-	stellar contract upload \
-		--wasm contracts/target/wasm32v1-none/release/wbtc_token.wasm \
-		--network testnet \
-		--source dave
-
-deploy-wbtc: upload-wbtc
-	stellar contract deploy \
-		--wasm contracts/target/wasm32v1-none/release/wbtc_token.wasm \
-		--network testnet \
-		--source dave
-
-# ─── Registry Contract (deploys the Executor internally) ─────────────────────
- 
 build-contract:
 	stellar contract build \
 		--manifest-path contracts/Cargo.toml \
@@ -79,7 +59,7 @@ build-contract:
  
 upload-contract: build-contract
 	stellar contract upload \
-		--wasm contracts/target/wasm32v1-none/release/swap.wasm \
+		--wasm contracts/target/wasm32v1-none/release/usdc_private.wasm \
 		--network testnet \
 		--source dave
  
@@ -89,14 +69,12 @@ upload-contract: build-contract
 # uploaded — so we capture it inline rather than needing a separate step.
 deploy-contract: upload-contract
 	stellar contract deploy \
-		--wasm contracts/target/wasm32v1-none/release/swap.wasm \
+		--wasm contracts/target/wasm32v1-none/release/usdc_private.wasm \
 		--network testnet \
 		--source dave \
 		--fee 1000000 \
 		-- \
-		--owner $$(stellar keys address dave) \
-		--verifier $(VERIFIER) \
-		--wbtc $(WBTC)
+		--verifier $(VERIFIER)
  
 # ─── Executor Contract ────────────────────────────────────────────────────────
 #

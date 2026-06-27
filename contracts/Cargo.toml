@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "soroban-ultrahonk-verifier",  "swap","wbtc-token","usdc_private",
+    "soroban-ultrahonk-verifier", "usdc_private",
 ]
 
 [workspace.dependencies]

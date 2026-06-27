@@ -224,27 +224,17 @@ impl PrivateVault {
     /// ```
     /// stellar contract id asset \
     ///   --asset USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN \
-    ///   --network mainnet --source YOUR_KEY
+    ///   --network testnet --source YOUR_KEY
     /// ```
     /// CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
     pub fn __constructor(env: Env,verifier: Address) {
-        owner.require_auth();
         let usdc_addr = Address::from_str(&env, USDC_SAC);
-
-        env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Verifier, &verifier);
         env.storage()
             .instance()
             .set(&DataKey::AssetContract, &usdc_addr);
         let tree = IncrementalMerkleTree::initializer(&env, TREE_DEPTH);
         save_tree(&env, &tree);
-        env.events().publish(
-            (Symbol::new(&env, "ownership_transferred"),),
-            OwnershipTransferredEvent {
-                previous_owner: owner.clone(),
-                new_owner: owner,
-            },
-        );
     }
 
     // ── DEPOSIT ───────────────────────────────────────────────────────────────
@@ -378,12 +368,6 @@ impl PrivateVault {
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized))
     }
 
-    pub fn owner(env: Env) -> Address {
-        env.storage()
-            .instance()
-            .get(&DataKey::Owner)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized))
-    }
 
     pub fn deposit_amount(_env: Env) -> i128 {
         DEPOSIT_AMOUNT
