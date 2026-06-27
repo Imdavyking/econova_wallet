@@ -4,6 +4,7 @@ import 'package:wallet_app/screens/add_custom_token.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/zkproof.dart';
 
 class WalletAssetsHeader extends StatelessWidget {
   const WalletAssetsHeader({super.key});
@@ -23,13 +24,16 @@ class WalletAssetsHeader extends StatelessWidget {
           ),
           if (WalletService.isBip39PhraseOrSeedHexKey())
             GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                PageTransition(
-                  type: PageTransitionType.rightToLeft,
-                  child: const AddCustomToken(),
-                ),
-              ),
+              onTap: () {
+                ZkProofBridge.instance.generateProof({});
+                // Navigator.push(
+                //   context,
+                //   PageTransition(
+                //     type: PageTransitionType.rightToLeft,
+                //     child: const AddCustomToken(),
+                //   ),
+                // );
+              },
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 padding:

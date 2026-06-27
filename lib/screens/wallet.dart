@@ -6,6 +6,7 @@ import 'package:wallet_app/screens/ai_agent.dart';
 import 'package:wallet_app/screens/wallet_main_body.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'package:wallet_app/utils/rpc_urls.dart';
+import 'package:wallet_app/utils/zkproof.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -26,6 +27,15 @@ class _WalletState extends State<Wallet> {
     super.initState();
     enableScreenShot();
     FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
+  void dispose() {
+    // Reset proving state so a future login starts from a clean slate
+    // rather than reusing a stale WebView controller / completers.
+    ZkProofBridge.instance.reset();
+    pageController.dispose();
+    super.dispose();
   }
 
   _onTapped(int index) {
@@ -117,11 +127,24 @@ class _WalletState extends State<Wallet> {
           )
         ],
       ),
-      body: PageView(
-        physics: const NeverScrollableScrollPhysics(),
-        controller: pageController,
-        onPageChanged: onPageChanged,
-        children: pages,
+      body: Stack(
+        children: [
+          PageView(
+            physics: const NeverScrollableScrollPhysics(),
+            controller: pageController,
+            onPageChanged: onPageChanged,
+            children: pages,
+          ),
+          // Hidden ZK proving WebView — mounted once for the lifetime of
+          // Wallet(), survives tab switches and pushed sub-routes
+          // (e.g. the shielded-send screen) as long as they don't
+          // pushReplacement over this screen.
+          Positioned(
+            left: -10,
+            top: -10,
+            child: ZkProofBridge.instance.buildHiddenWebView(),
+          ),
+        ],
       ),
     );
   }
