@@ -4,6 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+class ZkNote {
+  final String nullifier;
+  final String secret;
+  final String commitment;
+  const ZkNote({
+    required this.nullifier,
+    required this.secret,
+    required this.commitment,
+  });
+}
+
 class ZkProofBridge {
   ZkProofBridge._internal();
   static final ZkProofBridge instance = ZkProofBridge._internal();
@@ -140,6 +151,53 @@ class ZkProofBridge {
       );
       offset += chunkSize;
     }
+  }
+
+  /// Generates a fresh nullifier + secret + commitment via Poseidon2 in JS.
+  /// Dart never touches the crypto — everything stays in the zkworker.
+  Future<ZkNote> generateNote() async {
+    if (!_ready || _controller == null) {
+      throw Exception('ZkBridge not ready yet');
+    }
+
+    final completer = Completer<ZkNote>();
+
+    // One-shot handler — we use a unique name to avoid collision
+    const handlerName = 'ZkNoteResult';
+    _controller!.addJavaScriptHandler(
+      handlerName: handlerName,
+      callback: (args) {
+        if (args.isEmpty) {
+          completer.completeError(Exception('ZkNoteResult: empty response'));
+          return;
+        }
+        final data = jsonDecode(args[0].toString()) as Map<String, dynamic>;
+        if (data['error'] != null) {
+          completer.completeError(Exception(data['error']));
+        } else {
+          completer.complete(ZkNote(
+            nullifier: data['nullifier'] as String,
+            secret: data['secret'] as String,
+            commitment: data['commitment'] as String,
+          ));
+        }
+      },
+    );
+
+    await _controller!.evaluateJavascript(source: '''
+    (() => {
+      try {
+        const result = window.__zkGenerateNote();
+        window.flutter_inappwebview.callHandler('$handlerName',
+          JSON.stringify(result));
+      } catch(e) {
+        window.flutter_inappwebview.callHandler('$handlerName',
+          JSON.stringify({ error: e.toString() }));
+      }
+    })();
+  ''');
+
+    return completer.future.timeout(const Duration(seconds: 10));
   }
 
   Future<ZkProofResult> generateProof(Map<String, dynamic> input) async {
