@@ -37,7 +37,6 @@ class ZkProofBridge {
           debugPrint('ZkWorker console: ${msg.message}');
         },
         onWebViewCreated: (controller) {
-          print('yes');
           _controller = controller;
 
           controller.addJavaScriptHandler(
@@ -77,10 +76,20 @@ class ZkProofBridge {
         onLoadStop: (controller, url) {
           // Inject the bridge callers after page loads
           controller.evaluateJavascript(source: '''
-            window.ZkBridgeReady = { postMessage: (msg) => window.flutter_inappwebview.callHandler('ZkBridgeReady', msg) };
-            window.ZkBridge = { postMessage: (msg) => window.flutter_inappwebview.callHandler('ZkBridge', msg) };
-            return undefined;
-          ''');
+const interval = setInterval(() => {
+  if (window.isFlutterInAppWebViewReady) {
+    clearInterval(interval);
+    window.ZkBridgeReady = {
+      postMessage: (msg) =>
+        window.flutter_inappwebview.callHandler("ZkBridgeReady", msg),
+    };
+    window.ZkBridge = {
+      postMessage: (msg) =>
+        window.flutter_inappwebview.callHandler("ZkBridge", msg),
+    };
+  }
+}, 100);
+           ''');
         },
       ),
     );
