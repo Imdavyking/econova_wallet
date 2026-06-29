@@ -140,6 +140,7 @@ dependencies:
   pinenacl: 0.6.0
   video_player: 2.9.5
   pointycastle: 3.9.1
+  flutter_js: ^0.8.7
   poseidon: ^0.0.1
   image: 4.3.0
   reown_walletkit: "1.1.3"

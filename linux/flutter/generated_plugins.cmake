@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   agent_dart
   file_selector_linux
+  flutter_js
   flutter_secure_storage_linux
   printing
   rive_common
