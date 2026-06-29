@@ -233,7 +233,6 @@ flutter:
     - assets/currency_flags/
     - assets/images/
     - assets/zkworker/
-    - assets/zkworker/assets/
     - json/
     - js/
     - assets/sounds/speech_to_text_listening.m4r
