@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class ZkProofBridge {
@@ -11,14 +12,28 @@ class ZkProofBridge {
   bool _ready = false;
   final _pending = <String, Completer<ZkProofResult>>{};
 
-  /// True once the WASM prover has finished initializing.
+  // Cached so we only read from assets once per app lifecycle
+  String? _acvmB64;
+  String? _noircB64;
+
   bool get isReady => _ready;
 
-  /// Listenable counterpart of [isReady], for disabling/enabling
-  /// send buttons while proving isn't available yet.
   final readyNotifier = ValueNotifier<bool>(false);
 
-  // Call this once in main — add the widget to your tree but keep it hidden
+  /// Pre-loads WASM bytes from Flutter assets into base64 strings.
+  /// Call this once at startup (e.g. in main() after WidgetsFlutterBinding)
+  /// so it's ready before the WebView even opens.
+  Future<void> preloadWasm() async {
+    if (_acvmB64 != null && _noircB64 != null) return;
+    final results = await Future.wait([
+      rootBundle.load('assets/zkworker/acvm_js_bg.wasm'),
+      rootBundle.load('assets/zkworker/noirc_abi_wasm_bg.wasm'),
+    ]);
+    _acvmB64 = base64Encode(results[0].buffer.asUint8List());
+    _noircB64 = base64Encode(results[1].buffer.asUint8List());
+    debugPrint('ZkBridge: WASM assets preloaded ✅');
+  }
+
   Widget buildHiddenWebView() {
     return SizedBox(
       width: 1,
@@ -27,10 +42,8 @@ class ZkProofBridge {
         initialFile: "assets/zkworker/index.html",
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,
-          // Required for SharedArrayBuffer (Barretenberg threads)
           allowUniversalAccessFromFileURLs: true,
           allowFileAccessFromFileURLs: true,
-          // Android needs these for COOP/COEP
           mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
         ),
         onConsoleMessage: (controller, msg) {
@@ -73,9 +86,60 @@ class ZkProofBridge {
             },
           );
         },
-// Remove onLoadStop entirely — not needed anymore  ),
+        onLoadStop: (controller, url) async {
+          // Inject WASM bytes as JS globals immediately after page load,
+          // before zkworker.ts init() polls for them.
+          await _injectWasmAssets(controller);
+        },
       ),
     );
+  }
+
+  Future<void> _injectWasmAssets(InAppWebViewController controller) async {
+    try {
+      // Preload if not already done (defensive — should be called at startup)
+      await preloadWasm();
+
+      // Split into chunks to avoid evaluateJavascript string size limits.
+      // Each chunk is 512KB of base64 characters.
+      const chunkSize = 512 * 1024;
+
+      await _injectB64InChunks(
+          controller, '__acvmWasmB64', _acvmB64!, chunkSize);
+      await _injectB64InChunks(
+          controller, '__noircWasmB64', _noircB64!, chunkSize);
+
+      debugPrint('ZkBridge: WASM bytes injected into WebView ✅');
+    } catch (e) {
+      debugPrint('ZkBridge: failed to inject WASM assets: $e');
+    }
+  }
+
+  /// Injects a large base64 string into a JS global by concatenating
+  /// chunks, avoiding single evaluateJavascript call size limits.
+  Future<void> _injectB64InChunks(
+    InAppWebViewController controller,
+    String varName,
+    String b64,
+    int chunkSize,
+  ) async {
+    // Initialise to empty string
+    await controller.evaluateJavascript(source: 'window.$varName = "";');
+
+    var offset = 0;
+    while (offset < b64.length) {
+      final chunk = b64.substring(
+        offset,
+        (offset + chunkSize).clamp(0, b64.length),
+      );
+      // Escape backslashes and quotes just in case (base64 is safe,
+      // but be defensive)
+      final escaped = chunk.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+      await controller.evaluateJavascript(
+        source: 'window.$varName += "$escaped";',
+      );
+      offset += chunkSize;
+    }
   }
 
   Future<ZkProofResult> generateProof(Map<String, dynamic> input) async {
@@ -91,13 +155,13 @@ class ZkProofBridge {
       (async () => {
         try {
           const result = await window.__zkGenerateProof(${jsonEncode(input)});
-          window.ZkBridge.postMessage(JSON.stringify({
+          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
             id: "$id", success: true,
             proofBytesHex: result.proofBytesHex,
             publicInputsHex: result.publicInputsHex
           }));
         } catch(e) {
-          window.ZkBridge.postMessage(JSON.stringify({
+          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
             id: "$id", success: false, error: e.toString()
           }));
         }
@@ -107,15 +171,10 @@ class ZkProofBridge {
     try {
       return await completer.future.timeout(const Duration(minutes: 3));
     } finally {
-      // Ensure no dangling completer remains if the timeout fires
-      // before a late JS response arrives.
       _pending.remove(id);
     }
   }
 
-  /// Tears down proving state, e.g. on logout. The hidden WebView widget
-  /// itself will be re-created with a fresh controller the next time
-  /// Wallet() (or wherever buildHiddenWebView() is mounted) builds.
   void reset() {
     _controller = null;
     _ready = false;

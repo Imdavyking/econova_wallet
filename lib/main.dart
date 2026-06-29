@@ -16,6 +16,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:page_transition/page_transition.dart';
 import 'package:safe_device/safe_device.dart';
+import 'package:wallet_app/utils/zkproof.dart';
 import 'coins/aptos_coin.dart';
 import 'data_structures/trie.dart';
 import 'interface/coin.dart';
@@ -261,6 +262,8 @@ Future<void> _initMisc() async {
 
   await DeadManSwitchService.checkOnAppOpen();
   unawaited(cacheSupportedCurrencies()); // intentionally fire-and-forget
+
+  unawaited(ZkProofBridge.instance.preloadWasm());
 }
 
 Future<void> cacheSupportedCurrencies() async {
