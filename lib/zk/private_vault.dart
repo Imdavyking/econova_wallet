@@ -139,7 +139,7 @@ class VaultNoteStore {
   VaultNoteStore._();
   static final VaultNoteStore instance = VaultNoteStore._();
 
-  static const _boxKey = 'econovaVaultNotes';
+  static const _boxKey = 'econovaVaultNotes_';
 
   String _storeKey(String ownerAddress) => '$_boxKey:$ownerAddress';
 
