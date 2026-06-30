@@ -212,43 +212,27 @@ class ZkProofBridge {
     _pending[id] = completer;
 
     await _controller!.evaluateJavascript(source: '''
-  try {
-    const result = await window.__zkGenerateProof(${jsonEncode(input)});
-    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-      id: "$id", success: true,
-      proofBytesHex: result.proofBytesHex,
-      publicInputsHex: result.publicInputsHex
-    }));
-  } catch(e) {
-    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-      id: "$id", success: false, error: e.toString()
-    }));
-  }
-''');
+    if(window.flutter_inappwebview){
+    window.__zkGenerateProof(${jsonEncode(input)})
+        .then((result) => {
+          console.log("PROOF RESULT:", result);
+                window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+                id: "$id", success: true,
+                proofBytesHex: result.proofBytesHex,
+                publicInputsHex: result.publicInputsHex
+              }));
+        })
+        .catch((e) => {
+          console.error("PROOF FAILED:", e);
+            window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+            id: "$id", success: false, error: e.toString()
+          }));
+        });
 
-//     await _controller!.evaluateJavascript(source: '''
-//     window.__zkGenerateProof({
-//             nullifier:
-//               "0x866d86ccdbbbae15951539aa950076ac135982e49e139e6a8ad45488b7143f",
-//             secret:
-//               "0xce2accb4d9c2befb72d19dc9c9497b494cb4cd7c186b8836ffcbc2e3c058ef",
-//             commitment:
-//               "6968901238639841340449384697361615858797901214170004573979049867882899542618",
-//             recipient:
-//               "GAPO2J457ED6JL2SP7DEUNJ7HRC47RA7ML6OJ4OPQ46HVW2BBZKCLNWC",
-//             commitments: [
-//               "6968901238639841340449384697361615858797901214170004573979049867882899542618",
-//             ],
-//           })
-//         .then((result) => {
-//           console.log("PROOF RESULT:", result);
-//           alert(JSON.stringify(result));
-//         })
-//         .catch((e) => {
-//           console.error("PROOF FAILED:", e);
-//           alert("FAILED: " + e.message);
-//         });
-// ''');
+    }
+    
+
+''');
 
     try {
       return await completer.future.timeout(const Duration(minutes: 3));
