@@ -37,6 +37,7 @@ class _SendFormState extends State<SendForm> {
   final _amountCtrl = TextEditingController();
   final _memoCtrl = TextEditingController();
   bool _isLoading = false;
+  bool _privateMode = false;
   late Coin _coin;
 
   @override
@@ -109,6 +110,7 @@ class _SendFormState extends State<SendForm> {
           coin: _coin,
           cryptoDomain: cryptoDomain,
           memo: memo,
+          isPrivate: _privateMode,
         ),
       ),
     );
@@ -217,6 +219,13 @@ class _SendFormState extends State<SendForm> {
                         controller: _amountCtrl,
                         onMax: () => _coin.getMaxTransfer(),
                       ),
+                      if (_coin.supportsPrivateSend) ...[
+                        const SizedBox(height: 16),
+                        _PrivateToggle(
+                          value: _privateMode,
+                          onChanged: (v) => setState(() => _privateMode = v),
+                        ),
+                      ],
                       if (_coin.requireMemo()) ...[
                         const SizedBox(height: 20),
                         _MemoField(controller: _memoCtrl, localization: l),
@@ -273,6 +282,67 @@ class _MemoField extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 child: Text(localization.paste),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivateToggle extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _PrivateToggle({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: value
+              ? Colors.indigo.withOpacity(0.12)
+              : Theme.of(context).inputDecorationTheme.fillColor ??
+                  Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border:
+              value ? Border.all(color: Colors.indigo.withOpacity(0.4)) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              value ? Icons.lock : Icons.lock_open,
+              size: 18,
+              color: value ? Colors.indigo : Colors.grey,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value ? 'Private send' : 'Regular send',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: value ? Colors.indigo : null,
+                    ),
+                  ),
+                  if (value)
+                    const Text(
+                      'Sent in \$1 increments · amount rounded down',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                ],
+              ),
+            ),
+            Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeColor: Colors.indigo,
             ),
           ],
         ),

@@ -9,6 +9,12 @@ import 'package:wallet_app/main.dart';
 import 'package:wallet_app/service/wallet_service.dart';
 import 'dart:convert';
 import 'package:wallet_app/utils/app_config.dart';
+import 'package:wallet_app/utils/zkproof.dart';
+import 'package:wallet_app/zk/private_vault.dart';
+import 'package:wallet_app/zk/private_vault_contract.dart';
+
+const USDC_CONTRACT_ID =
+    'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
 
 class StellarSep041Coin extends StellarCoin implements FTExplorer {
   final String contractId;
@@ -16,6 +22,9 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
   final String _geckoID;
 
   late final stellar.SorobanServer _soroban;
+
+  @override
+  bool get supportsPrivateSend => contractId == USDC_CONTRACT_ID;
 
   StellarSep041Coin({
     required super.blockExplorer,
@@ -164,6 +173,118 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
     final isHex = RegExp(r'^[0-9a-fA-F]+$').hasMatch(xdr);
 
     return isHex ? stellar.Util.hexToBytes(xdr) : base64Decode(xdr);
+  }
+
+  @override
+  Future<({String txHash, String? txRaw})?> transferTokenPrivate(
+    String amount,
+    String to,
+  ) async {
+    final dollarAmount = double.parse(amount).floor();
+    if (dollarAmount <= 0) {
+      throw Exception('Private send minimum is \$1 USDC');
+    }
+
+    final data = WalletService.getActiveKey(walletImportType)!.data;
+    final stellarDetails = await importData(data);
+    final keyPair = stellar.KeyPair.fromSecretSeed(stellarDetails.privateKey!);
+    final address = keyPair.accountId;
+
+    final vault = PrivateVaultClient.instance;
+    final store = VaultNoteStore.instance;
+
+    // ── 1. Auto-shield if not enough spendable notes ──────────────────────────
+    final spendable = await store.spendableNotes(address);
+    final shortfall = dollarAmount - spendable.length;
+
+    if (shortfall > 0) {
+      final usdcBalance = await getBalance(false);
+      if (usdcBalance < shortfall) {
+        throw Exception(
+          'Not enough USDC. Need \$$shortfall more to shield first.',
+        );
+      }
+
+      // One approval for the entire shortfall
+      await vault.approveUsdc(
+        callerKeyPair: keyPair,
+        dollarCount: shortfall,
+      );
+
+      // Deposit shortfall notes sequentially
+      for (var i = 0; i < shortfall; i++) {
+        final note = await vault.generateNote(ownerAddress: address);
+        await vault.deposit(callerKeyPair: keyPair, note: note);
+      }
+    }
+
+    // ── 2. Re-fetch spendable after auto-shield ───────────────────────────────
+    final toSpend =
+        (await store.spendableNotes(address)).take(dollarAmount).toList();
+
+    if (toSpend.length < dollarAmount) {
+      throw Exception(
+        'Not enough spendable notes after shielding. '
+        'Expected $dollarAmount, got ${toSpend.length}.',
+      );
+    }
+
+    // ── 3. Fetch commitments once — shared across all proofs ──────────────────
+    final allCommitments = await vault.fetchAllCommitments();
+
+    // ── 4. Generate all proofs sequentially (WebView is single-threaded) ──────
+    final proofs = <ZkProofResult>[];
+    for (final note in toSpend) {
+      final proof = await ZkProofBridge.instance.generateProof({
+        'nullifier': note.nullifier,
+        'secret': note.secret,
+        'commitment': note.commitment,
+        'recipient': to,
+        'commitments': allCommitments,
+      });
+      proofs.add(proof);
+    }
+
+    // ── 5. Submit all withdrawals in parallel with per-note error recovery ─────
+    final results = await Future.wait(
+      List.generate(toSpend.length, (i) async {
+        try {
+          final updated = await vault.withdrawWithProof(
+            callerKeyPair: keyPair,
+            note: toSpend[i],
+            proof: proofs[i],
+            recipientAddress: to,
+          );
+          return (
+            note: toSpend[i],
+            txHash: updated.withdrawTxHash!,
+            failed: false,
+          );
+        } catch (e) {
+          debugPrint(
+            'PrivateVault: note ${toSpend[i].id} withdraw failed: $e',
+          );
+          return (note: toSpend[i], txHash: '', failed: true);
+        }
+      }),
+    );
+
+    // ── 6. Recover any failed notes back to deposited ─────────────────────────
+    final failed = results.where((r) => r.failed).toList();
+    if (failed.isNotEmpty) {
+      for (final r in failed) {
+        await store.updateNote(
+          r.note.copyWith(status: VaultNoteStatus.deposited),
+        );
+      }
+      final succeeded = results.length - failed.length;
+      throw Exception(
+        '$succeeded of ${toSpend.length} notes sent. '
+        '\$${failed.length} failed — still in your private balance.',
+      );
+    }
+
+    return (txHash: results.last.txHash, txRaw: null);
   }
 
   /// Simulate a read-only call and return the result SCVal
@@ -328,7 +449,7 @@ List<StellarSep041Coin> getStellarSep041Coins() {
         symbol: 'USDC',
         image: 'assets/wusd.png',
         // SAC address for USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
-        contractId: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
+        contractId: USDC_CONTRACT_ID,
         mintDecimals: 7,
         geckoID: 'usd-coin',
       ),

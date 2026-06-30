@@ -151,6 +151,42 @@ class PrivateVaultClient {
     throw Exception('Transaction timed out: $hash');
   }
 
+  Future<VaultNote> withdrawWithProof({
+    required stellar.KeyPair callerKeyPair,
+    required VaultNote note,
+    required ZkProofResult proof,
+    required String recipientAddress,
+  }) async {
+    final account = await _sdk.accounts.account(callerKeyPair.accountId);
+    final proofBytes = _hexToBytes(proof.proofBytesHex);
+    final publicInputBytes = _hexToBytes(proof.publicInputsHex);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'zk_withdraw',
+            args: [
+              _addressVal(recipientAddress),
+              _bytesVal(proofBytes),
+              _bytesVal(publicInputBytes),
+            ],
+          ).build(),
+        )
+        .build();
+
+    final hash = await _prepareSignAndSubmit(keyPair: callerKeyPair, tx: tx);
+
+    final updated = note.copyWith(
+      status: VaultNoteStatus.spent,
+      spentAt: DateTime.now(),
+      withdrawTxHash: hash,
+      spentToAddress: recipientAddress,
+    );
+    await VaultNoteStore.instance.updateNote(updated);
+    return updated;
+  }
+
   // ── Step 1: Approve ───────────────────────────────────────────────────────
 
   /// Approve the vault contract to spend DEPOSIT_AMOUNT of USDC on behalf
@@ -160,16 +196,19 @@ class PrivateVaultClient {
   /// Default 720 ≈ 1 hour at ~5s/ledger.
   Future<String> approveUsdc({
     required stellar.KeyPair callerKeyPair,
+    int dollarCount = 1, // ← how many $1 notes to approve for
     int expirationLedger = 720,
   }) async {
-    debugPrint('PrivateVault: approving USDC spend…');
+    debugPrint('PrivateVault: approving USDC spend for $dollarCount note(s)…');
 
     final account = await _sdk.accounts.account(callerKeyPair.accountId);
 
-    // Get current ledger for expiration calculation
     final ledgerResponse = await _soroban.getLatestLedger();
     final currentLedger = ledgerResponse.sequence ?? 0;
     final expiry = currentLedger + expirationLedger;
+
+    final totalAmount =
+        privateVaultDepositAmount * dollarCount; // e.g. 3 × 10_000_000
 
     final tx = stellar.TransactionBuilder(account)
         .addOperation(
@@ -177,24 +216,19 @@ class PrivateVaultClient {
             contractId: privateVaultUsdcContractId,
             functionName: 'approve',
             args: [
-              _addressVal(callerKeyPair.accountId), // from
-              _contractAddressVal(privateVaultContractId), // spender
-              _i128Val(privateVaultDepositAmount), // amount
-              stellar.XdrSCVal.forU32(expiry), // expiration_ledger
+              _addressVal(callerKeyPair.accountId),
+              _contractAddressVal(privateVaultContractId),
+              _i128Val(totalAmount), // ← total not per-note
+              stellar.XdrSCVal.forU32(expiry),
             ],
           ).build(),
         )
         .build();
 
-    final hash = await _prepareSignAndSubmit(
-      keyPair: callerKeyPair,
-      tx: tx,
-    );
-
+    final hash = await _prepareSignAndSubmit(keyPair: callerKeyPair, tx: tx);
     debugPrint('PrivateVault: USDC approved ✅ tx=$hash');
     return hash;
   }
-
   // ── Step 2: Generate note ─────────────────────────────────────────────────
 
   /// Generates a fresh note via the ZK bridge (Poseidon2 in JS).

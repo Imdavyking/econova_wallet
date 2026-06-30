@@ -19,10 +19,12 @@ class ConfirmTransfer extends StatelessWidget {
   final String recipient;
   final String amount;
   final String? memo;
+  final bool isPrivate;
 
   const ConfirmTransfer({
     super.key,
     required this.coin,
+    this.isPrivate = false,
     this.cryptoDomain,
     required this.recipient,
     this.memo,
@@ -32,12 +34,16 @@ class ConfirmTransfer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localization = AppLocalizations.of(context)!;
+    final privateAmount =
+        isPrivate ? double.parse(amount).floor().toDouble() : null;
 
     return ConfirmTransferScaffold(
       coin: coin,
-      amount: amount,
+      amount: isPrivate ? privateAmount.toString() : amount,
       recipient: recipient,
-      onSend: () => coin.transferToken(amount, recipient, memo: memo),
+      onSend: () => isPrivate
+          ? coin.transferTokenPrivate(amount, recipient)
+          : coin.transferToken(amount, recipient, memo: memo),
       onSuccess: ({required txHash}) async {
         final coinDecimals = coin.decimals();
         final userAddress = await coin.getAddress();

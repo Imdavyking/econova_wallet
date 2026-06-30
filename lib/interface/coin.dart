@@ -263,6 +263,12 @@ abstract class Coin {
   String? tokenAddress() => null;
 
   String? get badgeImage => null;
+  bool get supportsPrivateSend => false;
+  Future<({String txHash, String? txRaw})?> transferTokenPrivate(
+    String amount,
+    String to,
+  ) async =>
+      null;
 
   Future<DeployMeme> deployMemeCoin({
     required String name,
