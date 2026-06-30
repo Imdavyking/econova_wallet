@@ -32,7 +32,7 @@ class PrivateVaultClient {
     _initialized = true;
   }
 
-  stellar.XdrSCVal _u256FromHex(String hex) {
+  static stellar.XdrSCVal _u256FromHex(String hex) {
     final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
     final padded = clean.padLeft(64, '0');
 
@@ -69,13 +69,12 @@ class PrivateVaultClient {
   String _u256ValToHex(stellar.XdrSCVal val) {
     final u256 = val.u256;
     if (u256 == null) return '0x0';
-    // Each part is XdrUint64 whose .uint64 is BigInt
     final hex = [
       u256.hiHi.uint64,
       u256.hiLo.uint64,
       u256.loHi.uint64,
       u256.loLo.uint64,
-    ].map((p) => p.toRadixString(16).padLeft(16, '0')).join('');
+    ].map((p) => p.toUnsigned(64).toRadixString(16).padLeft(16, '0')).join('');
     return '0x$hex';
   }
 
@@ -424,6 +423,7 @@ class PrivateVaultClient {
       final commitmentVal = entry.map?.first.val;
       if (commitmentVal == null) return '0';
       final hex = _u256ValToHex(commitmentVal); // '0x2a3f...'
+      print("Hex commitms:$hex");
       // Strip 0x and parse as bigint decimal string — what Noir expects
       final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
       return BigInt.parse(clean, radix: 16).toString();

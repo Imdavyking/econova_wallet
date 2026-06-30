@@ -239,6 +239,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
     final proofs = <ZkProofResult>[];
     for (final note in toSpend) {
       final commitment = note.commitment;
+      print("Hex note:${note.commitment}");
       final clean =
           commitment.startsWith('0x') ? commitment.substring(2) : commitment;
       final finalCommitment = BigInt.parse(clean, radix: 16).toString();
