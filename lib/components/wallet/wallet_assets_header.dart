@@ -26,7 +26,7 @@ class WalletAssetsHeader extends StatelessWidget {
             GestureDetector(
               onTap: () async {
                 final info = await ZkProofBridge.instance.generateNote();
-                print(info);
+    
                 // Navigator.push(
                 //   context,
                 //   PageTransition(

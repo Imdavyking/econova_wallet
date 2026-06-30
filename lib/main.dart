@@ -17,6 +17,7 @@ import 'package:http/http.dart' as http;
 import 'package:page_transition/page_transition.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/utils/zkproof.dart';
+import 'package:wallet_app/zk/private_vault.dart';
 import 'coins/aptos_coin.dart';
 import 'data_structures/trie.dart';
 import 'interface/coin.dart';
@@ -214,6 +215,7 @@ Future<void> _initStorage() async {
 
   walletImportType = WalletService.getType();
   await WebNotificationPermissionDb.loadSavedPermissions();
+  await VaultNoteStore.openBox();
 }
 
 Future<void> _loadAssets() async {
@@ -264,6 +266,10 @@ Future<void> _initMisc() async {
   unawaited(cacheSupportedCurrencies()); // intentionally fire-and-forget
 
   unawaited(ZkProofBridge.instance.preloadWasm());
+
+  PrivateVaultClient.instance.init(
+    testnet: stellar.cluster == stellar.Network.TESTNET,
+  );
 }
 
 Future<void> cacheSupportedCurrencies() async {

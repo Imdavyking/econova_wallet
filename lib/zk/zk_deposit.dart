@@ -1,0 +1,431 @@
+// lib/utils/private_vault_contract.dart
+
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
+import 'package:wallet_app/coins/stellar_coin.dart';
+import 'package:wallet_app/utils/zkproof.dart';
+import 'package:wallet_app/zk/private_vault.dart';
+
+// ── Client ────────────────────────────────────────────────────────────────────
+
+class PrivateVaultClient {
+  PrivateVaultClient._();
+  static final PrivateVaultClient instance = PrivateVaultClient._();
+
+  late final stellar.SorobanServer _soroban;
+  late final stellar.StellarSDK _sdk;
+  late final stellar.Network _network;
+
+  bool _initialized = false;
+
+  void init({required bool testnet}) {
+    if (_initialized) return;
+    _network = testnet ? stellar.Network.TESTNET : stellar.Network.PUBLIC;
+    _sdk = testnet ? stellar.StellarSDK.TESTNET : stellar.StellarSDK.PUBLIC;
+    _soroban = stellar.SorobanServer(
+      testnet
+          ? 'https://soroban-testnet.stellar.org'
+          : 'https://soroban.stellar.org',
+    );
+    _initialized = true;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  stellar.XdrSCVal _addressVal(String accountId) =>
+      stellar.Address.forAccountId(accountId).toXdrSCVal();
+
+  stellar.XdrSCVal _contractAddressVal(String contractId) =>
+      stellar.Address.forContractId(contractId).toXdrSCVal();
+
+  stellar.XdrSCVal _i128Val(int amount) {
+    final big = BigInt.from(amount).toSigned(128);
+    final hi = (big >> 64).toSigned(64).toInt();
+    final lo =
+        (big & BigInt.parse('0xFFFFFFFFFFFFFFFF')).toUnsigned(64).toInt();
+    return stellar.XdrSCVal.forI128Parts(hi, lo);
+  }
+
+  /// Hex string → U256 SCVal (commitment / nullifier hash field elements)
+  stellar.XdrSCVal _u256FromHex(String hex) {
+    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final padded = clean.padLeft(64, '0');
+    final p1 = BigInt.parse(padded.substring(0, 16), radix: 16);
+    final p2 = BigInt.parse(padded.substring(16, 32), radix: 16);
+    final p3 = BigInt.parse(padded.substring(32, 48), radix: 16);
+    final p4 = BigInt.parse(padded.substring(48, 64), radix: 16);
+    return stellar.XdrSCVal.forU256Parts(
+      p1.toInt(),
+      p2.toInt(),
+      p3.toInt(),
+      p4.toInt(),
+    );
+  }
+
+  stellar.XdrSCVal _bytesVal(Uint8List bytes) =>
+      stellar.XdrSCVal.forBytes(stellar.XdrSCBytes(bytes));
+
+  Uint8List _hexToBytes(String hex) {
+    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final result = Uint8List(clean.length ~/ 2);
+    for (var i = 0; i < result.length; i++) {
+      result[i] = int.parse(clean.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    return result;
+  }
+
+  stellar.InvokeHostFuncOpBuilder _invokeOp({
+    required String contractId,
+    required String functionName,
+    required List<stellar.XdrSCVal> args,
+  }) {
+    final hostFn = stellar.InvokeContractHostFunction(
+      contractId,
+      functionName,
+      arguments: args,
+    );
+    return stellar.InvokeHostFuncOpBuilder(hostFn);
+  }
+
+  /// Simulate → attach Soroban data → sign → submit → poll
+  Future<String> _prepareSignAndSubmit({
+    required stellar.KeyPair keyPair,
+    required stellar.AbstractTransaction tx,
+  }) async {
+    final simRequest =
+        stellar.SimulateTransactionRequest(tx as stellar.Transaction);
+    final simResponse = await _soroban.simulateTransaction(simRequest);
+
+    if (simResponse.error != null) {
+      throw Exception('Simulate failed: ${simResponse.error}');
+    }
+
+    final prepared = tx;
+    prepared.sorobanTransactionData = simResponse.transactionData;
+    prepared.addResourceFee(simResponse.minResourceFee!);
+
+    final authEntries = simResponse.sorobanAuth;
+    if (authEntries != null && authEntries.isNotEmpty) {
+      prepared.setSorobanAuth(authEntries);
+    }
+
+    prepared.sign(keyPair, _network);
+
+    final sendResponse = await _soroban.sendTransaction(prepared);
+    if (sendResponse.error != null) {
+      throw Exception('Send failed: ${sendResponse.error?.message}');
+    }
+
+    final hash = sendResponse.hash!;
+    return _pollForSuccess(hash);
+  }
+
+  Future<String> _pollForSuccess(String hash) async {
+    for (var i = 0; i < 30; i++) {
+      await Future.delayed(const Duration(seconds: 2));
+      final resp = await _soroban.getTransaction(hash);
+      if (resp.status == stellar.GetTransactionResponse.STATUS_SUCCESS) {
+        return hash;
+      }
+      if (resp.status == stellar.GetTransactionResponse.STATUS_FAILED) {
+        throw Exception('Transaction failed on-chain: $hash');
+      }
+    }
+    throw Exception('Transaction timed out: $hash');
+  }
+
+  // ── Step 1: Approve ───────────────────────────────────────────────────────
+
+  /// Approve the vault contract to spend DEPOSIT_AMOUNT of USDC on behalf
+  /// of [callerKeyPair]. Must be called before [deposit].
+  ///
+  /// [expirationLedger] — how many ledgers the approval is valid for.
+  /// Default 720 ≈ 1 hour at ~5s/ledger.
+  Future<String> approveUsdc({
+    required stellar.KeyPair callerKeyPair,
+    int expirationLedger = 720,
+  }) async {
+    debugPrint('PrivateVault: approving USDC spend…');
+
+    final account = await _sdk.accounts.account(callerKeyPair.accountId);
+
+    // Get current ledger for expiration calculation
+    final ledgerResponse = await _soroban.getLatestLedger();
+    final currentLedger = ledgerResponse.sequence ?? 0;
+    final expiry = currentLedger + expirationLedger;
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultUsdcContractId,
+            functionName: 'approve',
+            args: [
+              _addressVal(callerKeyPair.accountId), // from
+              _contractAddressVal(privateVaultContractId), // spender
+              _i128Val(privateVaultDepositAmount), // amount
+              stellar.XdrSCVal.forU32(expiry), // expiration_ledger
+            ],
+          ).build(),
+        )
+        .build();
+
+    final hash = await _prepareSignAndSubmit(
+      keyPair: callerKeyPair,
+      tx: tx,
+    );
+
+    debugPrint('PrivateVault: USDC approved ✅ tx=$hash');
+    return hash;
+  }
+
+  // ── Step 2: Generate note ─────────────────────────────────────────────────
+
+  /// Generates a fresh note via the ZK bridge (Poseidon2 in JS).
+  /// Stores it locally as [VaultNoteStatus.pending].
+  Future<VaultNote> generateNote({
+    required String ownerAddress,
+  }) async {
+    debugPrint('PrivateVault: generating note…');
+
+    final zkNote = await ZkProofBridge.instance.generateNote();
+
+    final note = VaultNote(
+      id: '${DateTime.now().microsecondsSinceEpoch}',
+      nullifier: zkNote.nullifier,
+      secret: zkNote.secret,
+      commitment: zkNote.commitment,
+      ownerAddress: ownerAddress,
+      status: VaultNoteStatus.pending,
+    );
+
+    await VaultNoteStore.instance.addNote(note);
+    debugPrint(
+        'PrivateVault: note generated — ${note.commitment.substring(0, 14)}…');
+    return note;
+  }
+
+  // ── Step 3: Deposit ───────────────────────────────────────────────────────
+
+  /// Deposits one note into the on-chain Merkle tree.
+  /// Assumes [approveUsdc] was already called.
+  /// Updates note status to [VaultNoteStatus.deposited] on success.
+  Future<VaultNote> deposit({
+    required stellar.KeyPair callerKeyPair,
+    required VaultNote note,
+  }) async {
+    debugPrint(
+        'PrivateVault: depositing commitment ${note.commitment.substring(0, 14)}…');
+
+    final account = await _sdk.accounts.account(callerKeyPair.accountId);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'deposit',
+            args: [
+              _addressVal(callerKeyPair.accountId), // caller
+              _u256FromHex(note.commitment), // commitment as U256
+            ],
+          ).build(),
+        )
+        .build();
+
+    final hash = await _prepareSignAndSubmit(
+      keyPair: callerKeyPair,
+      tx: tx,
+    );
+
+    // Mark note as deposited
+    final updated = note.copyWith(
+      status: VaultNoteStatus.deposited,
+      depositedAt: DateTime.now(),
+      depositTxHash: hash,
+    );
+    await VaultNoteStore.instance.updateNote(updated);
+
+    debugPrint('PrivateVault: deposit confirmed ✅ tx=$hash');
+    return updated;
+  }
+
+  // ── Approve + Deposit combined ────────────────────────────────────────────
+
+  /// Convenience: approve → generate note → deposit in one call.
+  /// Returns the confirmed note.
+  Future<VaultNote> approveAndDeposit({
+    required stellar.KeyPair callerKeyPair,
+  }) async {
+    await approveUsdc(callerKeyPair: callerKeyPair);
+    final note = await generateNote(ownerAddress: callerKeyPair.accountId);
+    return deposit(callerKeyPair: callerKeyPair, note: note);
+  }
+
+  // ── Step 4: Withdraw ──────────────────────────────────────────────────────
+
+  /// Withdraws a note to [recipientAddress] using a ZK proof.
+  ///
+  /// Flow:
+  /// 1. Fetches all on-chain commitments
+  /// 2. Generates proof via ZK bridge (Merkle + UltraHonk)
+  /// 3. Calls zk_withdraw on the contract
+  /// 4. Marks note as spent
+  Future<VaultNote> withdraw({
+    required stellar.KeyPair callerKeyPair,
+    required VaultNote note,
+    required String recipientAddress,
+  }) async {
+    debugPrint('PrivateVault: withdrawing note to $recipientAddress…');
+
+    // ── 1. Fetch all commitments from chain ───────────────────────────────
+    final commitments = await fetchAllCommitments();
+    debugPrint('PrivateVault: fetched ${commitments.length} commitments');
+
+    // ── 2. Generate ZK proof ──────────────────────────────────────────────
+    debugPrint('PrivateVault: generating ZK proof…');
+    final proofResult = await ZkProofBridge.instance.generateProof({
+      'nullifier': note.nullifier,
+      'secret': note.secret,
+      'commitment': note.commitment,
+      'recipient': recipientAddress,
+      'commitments': commitments,
+    });
+    debugPrint('PrivateVault: proof generated ✅');
+
+    // ── 3. Submit zk_withdraw ─────────────────────────────────────────────
+    final account = await _sdk.accounts.account(callerKeyPair.accountId);
+
+    final proofBytes = _hexToBytes(proofResult.proofBytesHex);
+    final publicInputBytes = _hexToBytes(proofResult.publicInputsHex);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'zk_withdraw',
+            args: [
+              _addressVal(recipientAddress), // recipient
+              _bytesVal(proofBytes), // proof_bytes
+              _bytesVal(publicInputBytes), // public_inputs
+            ],
+          ).build(),
+        )
+        .build();
+
+    final hash = await _prepareSignAndSubmit(
+      keyPair: callerKeyPair,
+      tx: tx,
+    );
+
+    // ── 4. Mark note spent ────────────────────────────────────────────────
+    final updated = note.copyWith(
+      status: VaultNoteStatus.spent,
+      spentAt: DateTime.now(),
+      withdrawTxHash: hash,
+      spentToAddress: recipientAddress,
+    );
+    await VaultNoteStore.instance.updateNote(updated);
+
+    debugPrint('PrivateVault: withdrawal confirmed ✅ tx=$hash');
+    return updated;
+  }
+
+  // ── Views ─────────────────────────────────────────────────────────────────
+
+  /// Fetches all deposit commitments from the on-chain log.
+  /// Used to rebuild the Merkle tree for proof generation.
+  Future<List<String>> fetchAllCommitments() async {
+    // Use a dummy account for simulation — any valid G... works
+    // We use the USDC issuer as a stable known account
+    const dummyCaller =
+        'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+    final account = await _sdk.accounts.account(dummyCaller);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'get_all_deposits',
+            args: [],
+          ).build(),
+        )
+        .build();
+
+    final simRequest = stellar.SimulateTransactionRequest(tx);
+    final simResponse = await _soroban.simulateTransaction(simRequest);
+
+    if (simResponse.error != null) {
+      throw Exception('get_all_deposits failed: ${simResponse.error}');
+    }
+
+    final resultXdr = simResponse.results?.first.xdr;
+    if (resultXdr == null) return [];
+
+    final decoded = stellar.XdrSCVal.decode(
+      stellar.XdrDataInputStream(
+        _decodeXdrBytes(resultXdr),
+      ),
+    );
+
+    // Result is Vec<DepositEntry { commitment: U256, leaf_index: u32 }>
+    final entries = decoded.vec ?? [];
+    return entries.map((entry) {
+      // Each entry is a struct — commitment is the first field
+      final commitmentVal = entry.map?.first.val;
+      if (commitmentVal == null) return '0x0';
+      return _u256ValToHex(commitmentVal);
+    }).toList();
+  }
+
+  Future<int> fetchNextLeafIndex() async {
+    const dummyCaller =
+        'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+    final account = await _sdk.accounts.account(dummyCaller);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'next_leaf_index',
+            args: [],
+          ).build(),
+        )
+        .build();
+
+    final simRequest = stellar.SimulateTransactionRequest(tx);
+    final simResponse = await _soroban.simulateTransaction(simRequest);
+
+    if (simResponse.error != null) return 0;
+
+    final resultXdr = simResponse.results?.first.xdr;
+    if (resultXdr == null) return 0;
+
+    final decoded = stellar.XdrSCVal.decode(
+      stellar.XdrDataInputStream(_decodeXdrBytes(resultXdr)),
+    );
+
+    return decoded.u32?.uint32 ?? 0;
+  }
+
+  // ── Internal XDR utils ────────────────────────────────────────────────────
+
+  Uint8List _decodeXdrBytes(String xdr) {
+    final isHex = RegExp(r'^[0-9a-fA-F]+$').hasMatch(xdr);
+    return isHex ? stellar.Util.hexToBytes(xdr) : base64Decode(xdr);
+  }
+
+  String _u256ValToHex(stellar.XdrSCVal val) {
+    final u256 = val.u256;
+    if (u256 == null) return '0x0';
+    final parts = [
+      u256.hiHi.uint64,
+      u256.hiLo.uint64,
+      u256.loHi.uint64,
+      u256.loLo.uint64,
+    ];
+    final hex = parts.map((p) => p.toRadixString(16).padLeft(16, '0')).join('');
+    return '0x$hex';
+  }
+}
