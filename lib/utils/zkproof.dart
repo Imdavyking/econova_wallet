@@ -124,7 +124,7 @@ class ZkProofBridge {
           height: 1,
           child: InAppWebView(
             initialUrlRequest: URLRequest(
-              url: WebUri('http://127.0.0.1:$port/index.html'),
+              url: WebUri('http://127.0.0.1:5500/index.html'),
             ),
             initialSettings: InAppWebViewSettings(
               javaScriptEnabled: true,
@@ -137,6 +137,14 @@ class ZkProofBridge {
             },
             onWebViewCreated: (controller) {
               _controller = controller;
+
+              controller.addJavaScriptHandler(
+                handlerName: 'ZkGlobalError',
+                callback: (args) {
+                  final msg = args.isNotEmpty ? args[0].toString() : 'unknown';
+                  debugPrint('ZkBridge GLOBAL ERROR: $msg');
+                },
+              );
 
               controller.addJavaScriptHandler(
                 handlerName: 'ZkBridgeReady',
@@ -173,6 +181,7 @@ class ZkProofBridge {
               );
             },
             onLoadStop: (controller, url) async {
+              await _injectErrorListeners(controller);
               // Inject WASM bytes as JS globals immediately after page load,
               // before zkworker.ts init() polls for them.
               await _injectWasmAssets(controller);
@@ -200,6 +209,39 @@ class ZkProofBridge {
       debugPrint('ZkBridge: WASM bytes injected into WebView ✅');
     } catch (e) {
       debugPrint('ZkBridge: failed to inject WASM assets: $e');
+    }
+  }
+
+  Future<void> _injectErrorListeners(InAppWebViewController controller) async {
+    try {
+      await controller.evaluateJavascript(source: '''
+      (() => {
+        if (window.__zkErrorListenersInstalled) return;
+        window.__zkErrorListenersInstalled = true;
+
+        window.addEventListener('error', function(event) {
+          try {
+            var msg = 'window.onerror: ' + (event.message || '') +
+              ' @ ' + (event.filename || '') + ':' + (event.lineno || '') +
+              ' stack=' + (event.error && event.error.stack ? event.error.stack : 'n/a');
+            window.flutter_inappwebview.callHandler('ZkGlobalError', msg);
+          } catch (e) {}
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+          try {
+            var reason = event.reason;
+            var msg = 'unhandledrejection: ' +
+              (reason && reason.message ? reason.message : String(reason)) +
+              ' stack=' + (reason && reason.stack ? reason.stack : 'n/a');
+            window.flutter_inappwebview.callHandler('ZkGlobalError', msg);
+          } catch (e) {}
+        });
+      })();
+    ''');
+      debugPrint('ZkBridge: global error listeners installed ✅');
+    } catch (e) {
+      debugPrint('ZkBridge: failed to install error listeners: $e');
     }
   }
 
@@ -286,22 +328,22 @@ class ZkProofBridge {
     final completer = Completer<ZkProofResult>();
     _pending[id] = completer;
 
-    await _controller!.evaluateJavascript(source: '''
-      (async () => {
-        try {
-          const result = await window.__zkGenerateProof(${jsonEncode(input)});
-          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-            id: "$id", success: true,
-            proofBytesHex: result.proofBytesHex,
-            publicInputsHex: result.publicInputsHex
-          }));
-        } catch(e) {
-          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-            id: "$id", success: false, error: e.toString()
-          }));
-        }
-      })();
-    ''');
+    print(jsonEncode(input));
+
+    await _controller!.callAsyncJavaScript(functionBody: '''
+  try {
+    const result = await window.__zkGenerateProof(${jsonEncode(input)});
+    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+      id: "$id", success: true,
+      proofBytesHex: result.proofBytesHex,
+      publicInputsHex: result.publicInputsHex
+    }));
+  } catch(e) {
+    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+      id: "$id", success: false, error: e.toString()
+    }));
+  }
+''');
 
     try {
       return await completer.future.timeout(const Duration(minutes: 3));
