@@ -32,6 +32,23 @@ class PrivateVaultClient {
     _initialized = true;
   }
 
+  stellar.XdrSCVal _u256FromHex(String hex) {
+    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
+    final padded = clean.padLeft(64, '0');
+
+    // Parse each 16-char chunk as a 64-bit int
+    // BigInt.toInt() is safe here — these are unsigned 64-bit values
+    // stored as hex, fitting within Dart's int on 64-bit platforms
+    final hiHi = BigInt.parse(padded.substring(0, 16), radix: 16).toInt();
+    final hiLo = BigInt.parse(padded.substring(16, 32), radix: 16).toInt();
+    final loHi = BigInt.parse(padded.substring(32, 48), radix: 16).toInt();
+    final loLo = BigInt.parse(padded.substring(48, 64), radix: 16).toInt();
+
+    final val = stellar.XdrSCVal(stellar.XdrSCValType.SCV_U256);
+    val.u256 =
+        stellar.XdrUInt256Parts.forHiHiHiLoLoHiLoLo(hiHi, hiLo, loHi, loLo);
+    return val;
+  }
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   stellar.XdrSCVal _addressVal(String accountId) =>
@@ -49,23 +66,21 @@ class PrivateVaultClient {
   }
 
   /// Hex string → U256 SCVal (commitment / nullifier hash field elements)
-  stellar.XdrSCVal _u256FromHex(String hex) {
-    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
-    final padded = clean.padLeft(64, '0');
-    final p1 = BigInt.parse(padded.substring(0, 16), radix: 16);
-    final p2 = BigInt.parse(padded.substring(16, 32), radix: 16);
-    final p3 = BigInt.parse(padded.substring(32, 48), radix: 16);
-    final p4 = BigInt.parse(padded.substring(48, 64), radix: 16);
-    return stellar.XdrSCVal.forU256Parts(
-      p1.toInt(),
-      p2.toInt(),
-      p3.toInt(),
-      p4.toInt(),
-    );
+  String _u256ValToHex(stellar.XdrSCVal val) {
+    final u256 = val.u256;
+    if (u256 == null) return '0x0';
+    // Each part is XdrUint64 whose .uint64 is BigInt
+    final hex = [
+      u256.hiHi.uint64,
+      u256.hiLo.uint64,
+      u256.loHi.uint64,
+      u256.loLo.uint64,
+    ].map((p) => p.toRadixString(16).padLeft(16, '0')).join('');
+    return '0x$hex';
   }
 
   stellar.XdrSCVal _bytesVal(Uint8List bytes) =>
-      stellar.XdrSCVal.forBytes(stellar.XdrSCBytes(bytes));
+      stellar.XdrSCVal.forBytes(bytes);
 
   Uint8List _hexToBytes(String hex) {
     final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
@@ -414,18 +429,5 @@ class PrivateVaultClient {
   Uint8List _decodeXdrBytes(String xdr) {
     final isHex = RegExp(r'^[0-9a-fA-F]+$').hasMatch(xdr);
     return isHex ? stellar.Util.hexToBytes(xdr) : base64Decode(xdr);
-  }
-
-  String _u256ValToHex(stellar.XdrSCVal val) {
-    final u256 = val.u256;
-    if (u256 == null) return '0x0';
-    final parts = [
-      u256.hiHi.uint64,
-      u256.hiLo.uint64,
-      u256.loHi.uint64,
-      u256.loLo.uint64,
-    ];
-    final hex = parts.map((p) => p.toRadixString(16).padLeft(16, '0')).join('');
-    return '0x$hex';
   }
 }
