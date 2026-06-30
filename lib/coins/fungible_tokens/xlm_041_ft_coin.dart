@@ -232,10 +232,13 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
 
     // ── 3. Fetch commitments once — shared across all proofs ──────────────────
     final allCommitments = await vault.fetchAllCommitments();
+    print("============");
+    print(allCommitments);
 
     // ── 4. Generate all proofs sequentially (WebView is single-threaded) ──────
     final proofs = <ZkProofResult>[];
     for (final note in toSpend) {
+      print(note.commitment);
       final proof = await ZkProofBridge.instance.generateProof({
         'nullifier': note.nullifier,
         'secret': note.secret,
