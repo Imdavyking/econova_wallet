@@ -419,15 +419,15 @@ class PrivateVaultClient {
     );
 
     // Result is Vec<DepositEntry { commitment: U256, leaf_index: u32 }>
-final entries = decoded.vec ?? [];
-  return entries.map((entry) {
-    final commitmentVal = entry.map?.first.val;
-    if (commitmentVal == null) return '0';
-    final hex = _u256ValToHex(commitmentVal); // '0x2a3f...'
-    // Strip 0x and parse as bigint decimal string — what Noir expects
-    final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
-    return BigInt.parse(clean, radix: 16).toString();
-  }).toList();
+    final entries = decoded.vec ?? [];
+    return entries.map((entry) {
+      final commitmentVal = entry.map?.first.val;
+      if (commitmentVal == null) return '0';
+      final hex = _u256ValToHex(commitmentVal); // '0x2a3f...'
+      // Strip 0x and parse as bigint decimal string — what Noir expects
+      final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
+      return BigInt.parse(clean, radix: 16).toString();
+    }).toList();
   }
 
   Future<int> fetchNextLeafIndex() async {
