@@ -13,8 +13,9 @@ import 'package:wallet_app/utils/zkproof.dart';
 import 'package:wallet_app/zk/private_vault.dart';
 import 'package:wallet_app/zk/private_vault_contract.dart';
 
-const USDC_CONTRACT_ID =
-    'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
+final USDC_CONTRACT_ID = enableTestNet
+    ? 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
+    : 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75';
 
 class StellarSep041Coin extends StellarCoin implements FTExplorer {
   final String contractId;
@@ -463,7 +464,7 @@ List<StellarSep041Coin> getStellarSep041Coins() {
       symbol: 'USDC',
       image: 'assets/wusd.png',
       // Run: stellar contract id asset --asset USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --network mainnet
-      contractId: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',
+      contractId: USDC_CONTRACT_ID,
       mintDecimals: 7,
       geckoID: 'usd-coin',
     ),

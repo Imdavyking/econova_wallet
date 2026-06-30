@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, library_private_types_in_public_api
 
 import 'dart:async';
+import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
 import 'dart:convert';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,7 @@ import 'package:page_transition/page_transition.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:wallet_app/utils/zkproof.dart';
 import 'package:wallet_app/zk/private_vault.dart';
+import 'package:wallet_app/zk/private_vault_contract.dart';
 import 'coins/aptos_coin.dart';
 import 'data_structures/trie.dart';
 import 'interface/coin.dart';
@@ -268,7 +270,7 @@ Future<void> _initMisc() async {
   unawaited(ZkProofBridge.instance.preloadWasm());
 
   PrivateVaultClient.instance.init(
-    testnet: stellar.cluster == stellar.Network.TESTNET,
+    testnet: enableTestNet,
   );
 }
 

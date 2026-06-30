@@ -15,8 +15,6 @@ import '../main.dart';
 import '../utils/app_config.dart';
 
 const stellarDecimals = 6;
-const USDC_PRIVATE_CONTRACT =
-    'CASKLFN5CPSILRDS6G6AGY4CXVT5HMWGIXCPJSJX7JJG4AZFCUOTSPAP';
 
 class StellarCoin extends Coin {
   stellar.Network cluster;
