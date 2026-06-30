@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -14,70 +13,6 @@ class ZkNote {
     required this.secret,
     required this.commitment,
   });
-}
-
-// ── Local server ────────────────────────────────────────────────────────────
-// Serves assets/zkworker/* over http://127.0.0.1:<port> with COOP/COEP
-// headers set, since file:// has no headers and may block SharedArrayBuffer
-// (which bb.js's UltraHonkBackend likely needs for threaded WASM proving).
-class ZkLocalServer {
-  ZkLocalServer._();
-  static final ZkLocalServer instance = ZkLocalServer._();
-
-  HttpServer? _server;
-  int? _port;
-
-  bool get isRunning => _server != null;
-
-  Future<int> start() async {
-    if (_server != null) return _port!;
-
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    _port = _server!.port;
-    debugPrint('ZkLocalServer: listening on http://127.0.0.1:$_port');
-
-    _server!.listen((HttpRequest request) async {
-      try {
-        var path = request.uri.path;
-        if (path == '/' || path.isEmpty) path = '/index.html';
-
-        final assetPath = 'assets/zkworker$path';
-        final data = await rootBundle.load(assetPath);
-        final bytes = data.buffer.asUint8List(
-          data.offsetInBytes,
-          data.lengthInBytes,
-        );
-
-        request.response
-          ..headers.set('Cross-Origin-Opener-Policy', 'same-origin')
-          ..headers.set('Cross-Origin-Embedder-Policy', 'require-corp')
-          ..headers.set('Content-Type', _contentTypeFor(path))
-          ..statusCode = HttpStatus.ok
-          ..add(bytes);
-      } catch (e) {
-        debugPrint('ZkLocalServer: 404 for ${request.uri.path} — $e');
-        request.response.statusCode = HttpStatus.notFound;
-      } finally {
-        await request.response.close();
-      }
-    });
-
-    return _port!;
-  }
-
-  String _contentTypeFor(String path) {
-    if (path.endsWith('.html')) return 'text/html';
-    if (path.endsWith('.js')) return 'application/javascript';
-    if (path.endsWith('.wasm')) return 'application/wasm';
-    if (path.endsWith('.json')) return 'application/json';
-    return 'application/octet-stream';
-  }
-
-  Future<void> stop() async {
-    await _server?.close(force: true);
-    _server = null;
-    _port = null;
-  }
 }
 
 class ZkProofBridge {
@@ -111,84 +46,63 @@ class ZkProofBridge {
   }
 
   Widget buildHiddenWebView() {
-    return FutureBuilder<int>(
-      future: ZkLocalServer.instance.start(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          // Server still starting — render nothing yet.
-          return const SizedBox.shrink();
-        }
-        final port = snapshot.data!;
-        return SizedBox(
-          width: 1,
-          height: 1,
-          child: InAppWebView(
-            initialUrlRequest: URLRequest(
-              url: WebUri('http://127.0.0.1:5500/index.html'),
-            ),
-            initialSettings: InAppWebViewSettings(
-              javaScriptEnabled: true,
-              allowUniversalAccessFromFileURLs: true,
-              allowFileAccessFromFileURLs: true,
-              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-            ),
-            onConsoleMessage: (controller, msg) {
-              debugPrint('ZkWorker console: ${msg.message}');
-            },
-            onWebViewCreated: (controller) {
-              _controller = controller;
+    return SizedBox(
+      width: 1,
+      height: 1,
+      child: InAppWebView(
+        initialFile: "assets/zkworker/index.html",
+        initialSettings: InAppWebViewSettings(
+          javaScriptEnabled: true,
+          allowUniversalAccessFromFileURLs: true,
+          allowFileAccessFromFileURLs: true,
+          mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+        ),
+        onConsoleMessage: (controller, msg) {
+          debugPrint('ZkWorker console: ${msg.message}');
+        },
+        onWebViewCreated: (controller) {
+          _controller = controller;
 
-              controller.addJavaScriptHandler(
-                handlerName: 'ZkGlobalError',
-                callback: (args) {
-                  final msg = args.isNotEmpty ? args[0].toString() : 'unknown';
-                  debugPrint('ZkBridge GLOBAL ERROR: $msg');
-                },
-              );
-
-              controller.addJavaScriptHandler(
-                handlerName: 'ZkBridgeReady',
-                callback: (args) {
-                  final msg = args.isNotEmpty ? args[0].toString() : '';
-                  if (msg.startsWith('error:')) {
-                    debugPrint('ZkBridge init failed: $msg');
-                  } else {
-                    _ready = true;
-                    readyNotifier.value = true;
-                    debugPrint('ZkBridge ready ✅');
-                  }
-                },
-              );
-
-              controller.addJavaScriptHandler(
-                handlerName: 'ZkBridge',
-                callback: (args) {
-                  if (args.isEmpty) return;
-                  final data =
-                      jsonDecode(args[0].toString()) as Map<String, dynamic>;
-                  final id = data['id'] as String;
-                  final completer = _pending.remove(id);
-                  if (completer == null) return;
-                  if (data['success'] == true) {
-                    completer.complete(ZkProofResult(
-                      proofBytesHex: data['proofBytesHex'],
-                      publicInputsHex: data['publicInputsHex'],
-                    ));
-                  } else {
-                    completer.completeError(Exception(data['error']));
-                  }
-                },
-              );
+          controller.addJavaScriptHandler(
+            handlerName: 'ZkBridgeReady',
+            callback: (args) {
+              final msg = args.isNotEmpty ? args[0].toString() : '';
+              if (msg.startsWith('error:')) {
+                debugPrint('ZkBridge init failed: $msg');
+              } else {
+                _ready = true;
+                readyNotifier.value = true;
+                debugPrint('ZkBridge ready ✅');
+              }
             },
-            onLoadStop: (controller, url) async {
-              await _injectErrorListeners(controller);
-              // Inject WASM bytes as JS globals immediately after page load,
-              // before zkworker.ts init() polls for them.
-              await _injectWasmAssets(controller);
+          );
+
+          controller.addJavaScriptHandler(
+            handlerName: 'ZkBridge',
+            callback: (args) {
+              if (args.isEmpty) return;
+              final data =
+                  jsonDecode(args[0].toString()) as Map<String, dynamic>;
+              final id = data['id'] as String;
+              final completer = _pending.remove(id);
+              if (completer == null) return;
+              if (data['success'] == true) {
+                completer.complete(ZkProofResult(
+                  proofBytesHex: data['proofBytesHex'],
+                  publicInputsHex: data['publicInputsHex'],
+                ));
+              } else {
+                completer.completeError(Exception(data['error']));
+              }
             },
-          ),
-        );
-      },
+          );
+        },
+        onLoadStop: (controller, url) async {
+          // Inject WASM bytes as JS globals immediately after page load,
+          // before zkworker.ts init() polls for them.
+          await _injectWasmAssets(controller);
+        },
+      ),
     );
   }
 
@@ -209,39 +123,6 @@ class ZkProofBridge {
       debugPrint('ZkBridge: WASM bytes injected into WebView ✅');
     } catch (e) {
       debugPrint('ZkBridge: failed to inject WASM assets: $e');
-    }
-  }
-
-  Future<void> _injectErrorListeners(InAppWebViewController controller) async {
-    try {
-      await controller.evaluateJavascript(source: '''
-      (() => {
-        if (window.__zkErrorListenersInstalled) return;
-        window.__zkErrorListenersInstalled = true;
-
-        window.addEventListener('error', function(event) {
-          try {
-            var msg = 'window.onerror: ' + (event.message || '') +
-              ' @ ' + (event.filename || '') + ':' + (event.lineno || '') +
-              ' stack=' + (event.error && event.error.stack ? event.error.stack : 'n/a');
-            window.flutter_inappwebview.callHandler('ZkGlobalError', msg);
-          } catch (e) {}
-        });
-
-        window.addEventListener('unhandledrejection', function(event) {
-          try {
-            var reason = event.reason;
-            var msg = 'unhandledrejection: ' +
-              (reason && reason.message ? reason.message : String(reason)) +
-              ' stack=' + (reason && reason.stack ? reason.stack : 'n/a');
-            window.flutter_inappwebview.callHandler('ZkGlobalError', msg);
-          } catch (e) {}
-        });
-      })();
-    ''');
-      debugPrint('ZkBridge: global error listeners installed ✅');
-    } catch (e) {
-      debugPrint('ZkBridge: failed to install error listeners: $e');
     }
   }
 
@@ -328,22 +209,22 @@ class ZkProofBridge {
     final completer = Completer<ZkProofResult>();
     _pending[id] = completer;
 
-    print(jsonEncode(input));
-
-    await _controller!.callAsyncJavaScript(functionBody: '''
-  try {
-    const result = await window.__zkGenerateProof(${jsonEncode(input)});
-    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-      id: "$id", success: true,
-      proofBytesHex: result.proofBytesHex,
-      publicInputsHex: result.publicInputsHex
-    }));
-  } catch(e) {
-    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-      id: "$id", success: false, error: e.toString()
-    }));
-  }
-''');
+    await _controller!.evaluateJavascript(source: '''
+      (async () => {
+        try {
+          const result = await window.__zkGenerateProof(${jsonEncode(input)});
+          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+            id: "$id", success: true,
+            proofBytesHex: result.proofBytesHex,
+            publicInputsHex: result.publicInputsHex
+          }));
+        } catch(e) {
+          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+            id: "$id", success: false, error: e.toString()
+          }));
+        }
+      })();
+    ''');
 
     try {
       return await completer.future.timeout(const Duration(minutes: 3));
@@ -362,7 +243,6 @@ class ZkProofBridge {
       }
     }
     _pending.clear();
-    ZkLocalServer.instance.stop();
   }
 }
 
