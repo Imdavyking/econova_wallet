@@ -209,22 +209,20 @@ class ZkProofBridge {
     final completer = Completer<ZkProofResult>();
     _pending[id] = completer;
 
-    await _controller!.evaluateJavascript(source: '''
-      (async () => {
-        try {
-          const result = await window.__zkGenerateProof(${jsonEncode(input)});
-          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-            id: "$id", success: true,
-            proofBytesHex: result.proofBytesHex,
-            publicInputsHex: result.publicInputsHex
-          }));
-        } catch(e) {
-          window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
-            id: "$id", success: false, error: e.toString()
-          }));
-        }
-      })();
-    ''');
+    await _controller!.callAsyncJavaScript(functionBody: '''
+  try {
+    const result = await window.__zkGenerateProof(${jsonEncode(input)});
+    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+      id: "$id", success: true,
+      proofBytesHex: result.proofBytesHex,
+      publicInputsHex: result.publicInputsHex
+    }));
+  } catch(e) {
+    window.flutter_inappwebview.callHandler('ZkBridge', JSON.stringify({
+      id: "$id", success: false, error: e.toString()
+    }));
+  }
+''');
 
     try {
       return await completer.future.timeout(const Duration(minutes: 3));
