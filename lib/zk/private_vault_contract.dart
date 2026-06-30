@@ -270,6 +270,7 @@ class PrivateVaultClient {
 
     final account = await _sdk.accounts.account(callerKeyPair.accountId);
     final scVal = _u256FromHex(note.commitment);
+
     final roundTripped = _u256ValToHex(scVal);
     final originalClean = (note.commitment.startsWith('0x')
             ? note.commitment.substring(2)
