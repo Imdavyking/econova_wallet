@@ -38,6 +38,7 @@ class WalletAssetsHeader extends StatelessWidget {
                     "6968901238639841340449384697361615858797901214170004573979049867882899542618",
                   ],
                 });
+                debugPrint("done right now");
 
                 // Navigator.push(
                 //   context,

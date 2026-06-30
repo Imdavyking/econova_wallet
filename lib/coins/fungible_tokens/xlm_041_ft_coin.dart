@@ -244,6 +244,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
           commitment.startsWith('0x') ? commitment.substring(2) : commitment;
       final finalCommitment = BigInt.parse(clean, radix: 16).toString();
       print(finalCommitment);
+
       final proof = await ZkProofBridge.instance.generateProof({
         'nullifier': note.nullifier,
         'secret': note.secret,

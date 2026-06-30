@@ -9,6 +9,7 @@ import 'package:wallet_app/utils/rpc_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localization.dart';
 import 'package:intl/intl.dart';
+import 'package:wallet_app/utils/zkproof.dart';
 
 import '../main.dart';
 import '../service/crypto_transaction.dart';
@@ -41,9 +42,11 @@ class ConfirmTransfer extends StatelessWidget {
       coin: coin,
       amount: isPrivate ? privateAmount.toString() : amount,
       recipient: recipient,
-      onSend: () => isPrivate
-          ? coin.transferTokenPrivate(amount, recipient)
-          : coin.transferToken(amount, recipient, memo: memo),
+      onSend: () async {
+        return isPrivate
+            ? coin.transferTokenPrivate(amount, recipient)
+            : coin.transferToken(amount, recipient, memo: memo);
+      },
       onSuccess: ({required txHash}) async {
         final coinDecimals = coin.decimals();
         final userAddress = await coin.getAddress();
