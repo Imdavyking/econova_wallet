@@ -73,7 +73,10 @@ class PrivateVaultClient {
       u256.hiLo.uint64,
       u256.loHi.uint64,
       u256.loLo.uint64,
-    ].map((p) => p.toUnsigned(64).toRadixString(16).padLeft(16, '0')).join('');
+    ]
+        .map((p) =>
+            BigInt.from(p).toUnsigned(64).toRadixString(16).padLeft(16, '0'))
+        .join('');
     return '0x$hex';
   }
 

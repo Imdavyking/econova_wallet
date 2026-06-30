@@ -122,6 +122,7 @@ class StellarCoin extends Coin {
     return data;
   }
 
+  @override
   List<Coin> get networkTokens => getStellarFungibleCoins();
 
   @override
