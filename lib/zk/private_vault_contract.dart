@@ -430,6 +430,8 @@ class PrivateVaultClient {
     final resultXdr = simResponse.results?.first.xdr;
     if (resultXdr == null) return [];
 
+    print(resultXdr);
+
     final decoded = stellar.XdrSCVal.decode(
       stellar.XdrDataInputStream(
         _decodeXdrBytes(resultXdr),
@@ -489,7 +491,10 @@ class PrivateVaultClient {
   // ── Internal XDR utils ────────────────────────────────────────────────────
 
   Uint8List _decodeXdrBytes(String xdr) {
-    final isHex = RegExp(r'^[0-9a-fA-F]+$').hasMatch(xdr);
-    return isHex ? stellar.Util.hexToBytes(xdr) : base64Decode(xdr);
+    try {
+      return base64Decode(xdr);
+    } catch (e) {
+      return stellar.Util.hexToBytes(xdr);
+    }
   }
 }
