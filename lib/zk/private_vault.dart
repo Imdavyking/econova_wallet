@@ -7,7 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const privateVaultContractId =
-    'CC7RHDFN2YLK2PPG6M5Z3V6GIJZEEQJ24CTV4IRVW36QM4JWHKTRDUGB';
+    'CBBDZOHTM3QG3TXKZHQ2HLBPWGL6WT4CS5DOARKLQ4CHHM6LUUR44OTK';
 
 /// 1 USDC — Stellar uses 7 decimal places
 const privateVaultDepositAmount = 10000000;

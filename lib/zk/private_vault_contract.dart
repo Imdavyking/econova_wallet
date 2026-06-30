@@ -36,20 +36,19 @@ class PrivateVaultClient {
     final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
     final padded = clean.padLeft(64, '0');
 
-    // Parse each 16-char chunk as a 64-bit int
-    // BigInt.toInt() is safe here — these are unsigned 64-bit values
-    // stored as hex, fitting within Dart's int on 64-bit platforms
-    final hiHi = BigInt.parse(padded.substring(0, 16), radix: 16).toInt();
-    final hiLo = BigInt.parse(padded.substring(16, 32), radix: 16).toInt();
-    final loHi = BigInt.parse(padded.substring(32, 48), radix: 16).toInt();
-    final loLo = BigInt.parse(padded.substring(48, 64), radix: 16).toInt();
+    int chunkToInt(String chunk) =>
+        BigInt.parse(chunk, radix: 16).toUnsigned(64).toSigned(64).toInt();
+
+    final hiHi = chunkToInt(padded.substring(0, 16));
+    final hiLo = chunkToInt(padded.substring(16, 32));
+    final loHi = chunkToInt(padded.substring(32, 48));
+    final loLo = chunkToInt(padded.substring(48, 64));
 
     final val = stellar.XdrSCVal(stellar.XdrSCValType.SCV_U256);
     val.u256 =
         stellar.XdrUInt256Parts.forHiHiHiLoLoHiLoLo(hiHi, hiLo, loHi, loLo);
     return val;
-  }
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  } // ── Helpers ───────────────────────────────────────────────────────────────
 
   stellar.XdrSCVal _addressVal(String accountId) =>
       stellar.Address.forAccountId(accountId).toXdrSCVal();
@@ -267,6 +266,26 @@ class PrivateVaultClient {
         'PrivateVault: depositing commitment ${note.commitment.substring(0, 14)}…');
 
     final account = await _sdk.accounts.account(callerKeyPair.accountId);
+    final scVal = _u256FromHex(note.commitment);
+    final roundTripped = _u256ValToHex(scVal);
+    final originalClean = (note.commitment.startsWith('0x')
+            ? note.commitment.substring(2)
+            : note.commitment)
+        .padLeft(64, '0')
+        .toLowerCase();
+    final roundTrippedClean = (roundTripped.startsWith('0x')
+            ? roundTripped.substring(2)
+            : roundTripped)
+        .toLowerCase();
+
+    if (originalClean != roundTrippedClean) {
+      debugPrint('PrivateVault: ⚠️ ROUND-TRIP MISMATCH');
+      debugPrint('  original:      0x$originalClean');
+      debugPrint('  round-tripped: 0x$roundTrippedClean');
+      throw Exception('failed');
+    } else {
+      debugPrint('PrivateVault: ✅ round-trip OK — 0x$originalClean');
+    }
 
     final tx = stellar.TransactionBuilder(account)
         .addOperation(
@@ -421,7 +440,14 @@ class PrivateVaultClient {
     final entries = decoded.vec ?? [];
     return entries.map((entry) {
       final commitmentVal = entry.map?.first.val;
+
       if (commitmentVal == null) return '0';
+      print('id');
+      print(commitmentVal.u256?.hiHi.uint64);
+      print(commitmentVal.u256?.hiLo.uint64);
+      print(commitmentVal.u256?.loHi.uint64);
+      print(commitmentVal.u256?.loLo.uint64);
+      print('id end');
       final hex = _u256ValToHex(commitmentVal); // '0x2a3f...'
       print("Hex commitms:$hex");
       // Strip 0x and parse as bigint decimal string — what Noir expects
