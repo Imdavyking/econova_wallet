@@ -74,6 +74,7 @@ deploy-contract: upload-contract
 		--source dave \
 		--fee 1000000 \
 		-- \
+		--owner $$(stellar keys address dave) \
 		--verifier $(VERIFIER)
  
 # ─── Executor Contract ────────────────────────────────────────────────────────

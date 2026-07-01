@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script type="module" src="./zkworker.js"></script>
+    <script>
+      window.addEventListener("error", (e) => {
+        console.error(
+          "window.onerror:",
+          e.message,
+          e.filename,
+          e.lineno,
+          e.error?.stack,
+        );
+      });
+      window.addEventListener("unhandledrejection", (e) => {
+        console.error(
+          "unhandledrejection:",
+          e.reason?.message ?? e.reason,
+          e.reason?.stack,
+        );
+      });
+
+      function waitForProofFn(timeoutMs = 30000) {
+        return new Promise((resolve, reject) => {
+          const start = Date.now();
+          const poll = () => {
+            if (typeof window.__zkGenerateProof === "function") {
+              resolve();
+            } else if (Date.now() - start > timeoutMs) {
+              reject(new Error("Timed out waiting for __zkGenerateProof"));
+            } else {
+              setTimeout(poll, 100);
+            }
+          };
+          poll();
+        });
+      }
+
+      // waitForProofFn()
+      //   .then(() =>
+      //     window.__zkGenerateProof({
+      //       nullifier:
+      //         "0x866d86ccdbbbae15951539aa950076ac135982e49e139e6a8ad45488b7143f",
+      //       secret:
+      //         "0xce2accb4d9c2befb72d19dc9c9497b494cb4cd7c186b8836ffcbc2e3c058ef",
+      //       commitment:
+      //         "6968901238639841340449384697361615858797901214170004573979049867882899542618",
+      //       recipient:
+      //         "GAPO2J457ED6JL2SP7DEUNJ7HRC47RA7ML6OJ4OPQ46HVW2BBZKCLNWC",
+      //       commitments: [
+      //         "6968901238639841340449384697361615858797901214170004573979049867882899542618",
+      //       ],
+      //     }),
+      //   )
+      //   .then((result) => {
+      //     console.log("PROOF RESULT:", result);
+      //     alert(JSON.stringify(result));
+      //   })
+      //   .catch((e) => {
+      //     console.error("PROOF FAILED:", e);
+      //     alert("FAILED: " + e.message);
+      //   });
+    </script>
+  </body>
+</html>

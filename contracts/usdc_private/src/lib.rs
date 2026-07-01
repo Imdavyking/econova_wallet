@@ -227,8 +227,10 @@ impl PrivateVault {
     ///   --network testnet --source YOUR_KEY
     /// ```
     /// CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
-    pub fn __constructor(env: Env,verifier: Address) {
+    pub fn __constructor(env: Env, owner: Address, verifier: Address) {
+        owner.require_auth();
         let usdc_addr = Address::from_str(&env, USDC_SAC);
+        env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Verifier, &verifier);
         env.storage()
             .instance()
@@ -367,7 +369,6 @@ impl PrivateVault {
             .get(&DataKey::Verifier)
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized))
     }
-
 
     pub fn deposit_amount(_env: Env) -> i128 {
         DEPOSIT_AMOUNT

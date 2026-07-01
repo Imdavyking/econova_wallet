@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:stellar_flutter_sdk/stellar_flutter_sdk.dart' as stellar;
+import 'package:wallet_app/coins/fungible_tokens/xlm_041_ft_coin.dart';
 import 'package:wallet_app/coins/stellar_coin.dart';
 import 'package:wallet_app/utils/zkproof.dart';
 import 'package:wallet_app/zk/private_vault.dart';
@@ -112,6 +113,7 @@ class PrivateVaultClient {
   }) async {
     final simRequest =
         stellar.SimulateTransactionRequest(tx as stellar.Transaction);
+    _soroban.enableLogging = true;
     final simResponse = await _soroban.simulateTransaction(simRequest);
 
     print('sim error: ${simResponse.error}');
@@ -201,6 +203,47 @@ class PrivateVaultClient {
     return updated;
   }
 
+  // ── Admin ─────────────────────────────────────────────────────────────────
+
+  /// **TESTNET DEBUG ONLY** — drains [amount] (in stroops, e.g.
+  /// 10_000_000 = $1 USDC) from the vault to [recipientAddress].
+  /// Requires [callerKeyPair] to be the contract owner — will revert
+  /// on-chain with `NotOwner` otherwise.
+  ///
+  /// Use this to recover stuck funds instead of hitting the faucet again.
+  Future<String> adminWithdraw({
+    required stellar.KeyPair callerKeyPair,
+    required String recipientAddress,
+    required int amount,
+  }) async {
+    debugPrint(
+        'PrivateVault: admin draining $amount stroops to $recipientAddress…');
+
+    final account = await _sdk.accounts.account(callerKeyPair.accountId);
+
+    final tx = stellar.TransactionBuilder(account)
+        .addOperation(
+          _invokeOp(
+            contractId: privateVaultContractId,
+            functionName: 'admin_withdraw',
+            args: [
+              _addressVal(callerKeyPair.accountId), // caller
+              _addressVal(recipientAddress), // recipient
+              _i128Val(amount), // amount
+            ],
+          ).build(),
+        )
+        .build();
+
+    final hash = await _prepareSignAndSubmit(
+      keyPair: callerKeyPair,
+      tx: tx,
+    );
+
+    debugPrint('PrivateVault: admin_withdraw confirmed ✅ tx=$hash');
+    return hash;
+  }
+
   // ── Step 1: Approve ───────────────────────────────────────────────────────
 
   /// Approve the vault contract to spend DEPOSIT_AMOUNT of USDC on behalf
@@ -227,7 +270,7 @@ class PrivateVaultClient {
     final tx = stellar.TransactionBuilder(account)
         .addOperation(
           _invokeOp(
-            contractId: privateVaultUsdcContractId,
+            contractId: XLM_USDC_CONTRACT_ID,
             functionName: 'approve',
             args: [
               _addressVal(callerKeyPair.accountId),

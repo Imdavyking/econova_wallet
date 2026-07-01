@@ -7,14 +7,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const privateVaultContractId =
-    'CBBDZOHTM3QG3TXKZHQ2HLBPWGL6WT4CS5DOARKLQ4CHHM6LUUR44OTK';
+    'CBNU564NJH7R7NKFBMIG766BPHGJMDQEBQQ2YKCFD2BGUJPIOZX3U2LS';
 
 /// 1 USDC — Stellar uses 7 decimal places
 const privateVaultDepositAmount = 10000000;
-
-/// Testnet USDC SAC
-const privateVaultUsdcContractId =
-    'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
 
 // ── Note status ───────────────────────────────────────────────────────────────
 
@@ -139,7 +135,7 @@ class VaultNoteStore {
   VaultNoteStore._();
   static final VaultNoteStore instance = VaultNoteStore._();
 
-  static const _boxKey = 'econovaVaultNotes_';
+  static const _boxKey = '2ec75367d3e8econovaVaultNotes';
 
   String _storeKey(String ownerAddress) => '$_boxKey:$ownerAddress';
 

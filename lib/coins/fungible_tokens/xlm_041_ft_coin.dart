@@ -13,7 +13,7 @@ import 'package:wallet_app/utils/zkproof.dart';
 import 'package:wallet_app/zk/private_vault.dart';
 import 'package:wallet_app/zk/private_vault_contract.dart';
 
-final USDC_CONTRACT_ID = enableTestNet
+final XLM_USDC_CONTRACT_ID = enableTestNet
     ? 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
     : 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75';
 
@@ -25,7 +25,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
   late final stellar.SorobanServer _soroban;
 
   @override
-  bool get supportsPrivateSend => contractId == USDC_CONTRACT_ID;
+  bool get supportsPrivateSend => contractId == XLM_USDC_CONTRACT_ID;
 
   StellarSep041Coin({
     required super.blockExplorer,
@@ -196,6 +196,7 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
 
     // ── 1. Auto-shield if not enough spendable notes ──────────────────────────
     final spendable = await store.spendableNotes(address);
+
     final shortfall = dollarAmount - spendable.length;
 
     if (shortfall > 0) {
@@ -232,18 +233,15 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
 
     // ── 3. Fetch commitments once — shared across all proofs ──────────────────
     final allCommitments = await vault.fetchAllCommitments();
-    print("============");
-    print(allCommitments);
 
     // ── 4. Generate all proofs sequentially (WebView is single-threaded) ──────
     final proofs = <ZkProofResult>[];
     for (final note in toSpend) {
       final commitment = note.commitment;
-      print("Hex note:${note.commitment}");
+
       final clean =
           commitment.startsWith('0x') ? commitment.substring(2) : commitment;
       final finalCommitment = BigInt.parse(clean, radix: 16).toString();
-      print(finalCommitment);
 
       final proof = await ZkProofBridge.instance.generateProof({
         'nullifier': note.nullifier,
@@ -254,9 +252,6 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
       });
       proofs.add(proof);
     }
-
-    print(proofs[0].proofBytesHex);
-    print(proofs[0].publicInputsHex);
 
     // ── 5. Submit all withdrawals in parallel with per-note error recovery ─────
     final results = await Future.wait(
@@ -462,7 +457,7 @@ List<StellarSep041Coin> getStellarSep041Coins() {
         symbol: 'USDC',
         image: 'assets/wusd.png',
         // SAC address for USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
-        contractId: USDC_CONTRACT_ID,
+        contractId: XLM_USDC_CONTRACT_ID,
         mintDecimals: 7,
         geckoID: 'usd-coin',
       ),
@@ -476,7 +471,7 @@ List<StellarSep041Coin> getStellarSep041Coins() {
       symbol: 'USDC',
       image: 'assets/wusd.png',
       // Run: stellar contract id asset --asset USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --network mainnet
-      contractId: USDC_CONTRACT_ID,
+      contractId: XLM_USDC_CONTRACT_ID,
       mintDecimals: 7,
       geckoID: 'usd-coin',
     ),
