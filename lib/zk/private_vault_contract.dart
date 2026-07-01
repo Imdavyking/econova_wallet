@@ -114,6 +114,12 @@ class PrivateVaultClient {
         stellar.SimulateTransactionRequest(tx as stellar.Transaction);
     final simResponse = await _soroban.simulateTransaction(simRequest);
 
+    print('sim error: ${simResponse.error}');
+    print('sim results: ${simResponse.results}');
+    print('sim restorePreamble: ${simResponse.restorePreamble}');
+    print('sim minResourceFee: ${simResponse.minResourceFee}');
+    print('sim transactionData: ${simResponse.transactionData}');
+
     if (simResponse.error != null) {
       throw Exception('Simulate failed: ${simResponse.error}');
     }
@@ -133,9 +139,14 @@ class PrivateVaultClient {
     if (sendResponse.error != null) {
       throw Exception('Send failed: ${sendResponse.error?.message}');
     }
+    if (sendResponse.hash == null) {
+      throw Exception(
+        'Send returned no error but also no hash. Raw status: '
+        '${sendResponse.status}',
+      );
+    }
 
-    final hash = sendResponse.hash!;
-    return _pollForSuccess(hash);
+    return _pollForSuccess(sendResponse.hash!);
   }
 
   Future<String> _pollForSuccess(String hash) async {
@@ -175,6 +186,8 @@ class PrivateVaultClient {
           ).build(),
         )
         .build();
+
+    print('PrivateVault: submitting zk_withdraw tx…');
 
     final hash = await _prepareSignAndSubmit(keyPair: callerKeyPair, tx: tx);
 

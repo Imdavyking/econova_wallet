@@ -41,14 +41,15 @@ class WalletAssetsHeader extends StatelessWidget {
                   ],
                 });
                 debugPrint("done right now");
-
-                // Navigator.push(
-                //   context,
-                //   PageTransition(
-                //     type: PageTransitionType.rightToLeft,
-                //     child: const AddCustomToken(),
-                //   ),
-                // );
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    PageTransition(
+                      type: PageTransitionType.rightToLeft,
+                      child: const AddCustomToken(),
+                    ),
+                  );
+                }
               },
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),

@@ -255,6 +255,9 @@ class StellarSep041Coin extends StellarCoin implements FTExplorer {
       proofs.add(proof);
     }
 
+    print(proofs[0].proofBytesHex);
+    print(proofs[0].publicInputsHex);
+
     // ── 5. Submit all withdrawals in parallel with per-note error recovery ─────
     final results = await Future.wait(
       List.generate(toSpend.length, (i) async {
