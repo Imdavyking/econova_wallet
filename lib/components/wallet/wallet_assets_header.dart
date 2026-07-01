@@ -25,6 +25,8 @@ class WalletAssetsHeader extends StatelessWidget {
           if (WalletService.isBip39PhraseOrSeedHexKey())
             GestureDetector(
               onTap: () async {
+                final note = await ZkProofBridge.instance.generateNote();
+
                 final info = await ZkProofBridge.instance.generateProof({
                   "nullifier":
                       "0x866d86ccdbbbae15951539aa950076ac135982e49e139e6a8ad45488b7143f",

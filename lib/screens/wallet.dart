@@ -25,6 +25,8 @@ class _WalletState extends State<Wallet> {
   @override
   void initState() {
     super.initState();
+    ZkProofBridge.instance.ensureStarted();
+
     enableScreenShot();
     FocusManager.instance.primaryFocus?.unfocus();
   }
@@ -127,24 +129,11 @@ class _WalletState extends State<Wallet> {
           )
         ],
       ),
-      body: Stack(
-        children: [
-          PageView(
-            physics: const NeverScrollableScrollPhysics(),
-            controller: pageController,
-            onPageChanged: onPageChanged,
-            children: pages,
-          ),
-          // Hidden ZK proving WebView — mounted once for the lifetime of
-          // Wallet(), survives tab switches and pushed sub-routes
-          // (e.g. the shielded-send screen) as long as they don't
-          // pushReplacement over this screen.
-          Positioned(
-            left: -10,
-            top: -10,
-            child: ZkProofBridge.instance.buildHiddenWebView(),
-          ),
-        ],
+      body: PageView(
+        physics: const NeverScrollableScrollPhysics(),
+        controller: pageController,
+        onPageChanged: onPageChanged,
+        children: pages,
       ),
     );
   }
